@@ -406,6 +406,20 @@ function runSim() {
   return {gr,r16,qf,sf,champion:champ,runnerUp:sf.find(x=>x!==champ)};
 }
 
+const handleResetScores = () => {
+  // 1. Clear it from the browser's memory
+  localStorage.removeItem("wc2026_saved");
+  
+  // 2. Reset your app state back to empty (or your default matches)
+  // Replace 'setResults' with whatever your score/results state setter is named!
+  if (typeof setResults === "function") {
+    setResults({}); 
+  }
+  
+  // 3. Refresh the page automatically to give you a completely blank slate
+  window.location.reload();
+}
+
 // ── CRESTS ────────────────────────────────────────────────────────────────
 const _cc = {};
 const TSDB_NAMES = {
@@ -798,6 +812,21 @@ function GrpTab({onTeam}) {
     </div>}
   </div>;
 }
+<button 
+  onClick={handleResetScores}
+  style={{
+    backgroundColor: '#dc3545', // Red "danger" color
+    color: 'white',
+    padding: '8px 16px',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontWeight: 'bold',
+    marginLeft: '10px'
+  }}
+>
+  Reset Scores
+</button>
 
 // ── STATS TAB ─────────────────────────────────────────────────────────────
 function StatsTab({initial=""}) {
