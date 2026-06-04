@@ -25,6 +25,37 @@ const GROUPS = {
 
 const getFlag = t => { for (const g of Object.values(GROUPS)) { const i = g.teams.indexOf(t); if (i !== -1) return g.flags[i]; } return "🏳️"; };
 
+const VENUE_COORDS = {
+  "Mexico City Stadium, Mexico City":"19.3029,-99.1505",
+  "Estadio Guadalajara, Zapopan":"20.6867,-103.4079",
+  "Toronto Stadium, Toronto":"43.6333,-79.3891",
+  "SoFi Stadium, Los Angeles":"33.9535,-118.3392",
+  "San Francisco Bay Area Stadium, San Francisco":"37.4031,-121.9694",
+  "New York New Jersey Stadium, East Rutherford":"40.8135,-74.0745",
+  "Boston Stadium, Boston":"42.3467,-71.0972",
+  "BC Place, Vancouver":"49.2767,-123.1115",
+  "Houston Stadium, Houston":"29.6847,-95.4107",
+  "Dallas Stadium, Dallas":"32.7474,-97.0945",
+  "Philadelphia Stadium, Philadelphia":"39.9012,-75.1675",
+  "Estadio Monterrey, Guadalupe":"25.6694,-100.2436",
+  "Atlanta Stadium, Atlanta":"33.7553,-84.4006",
+  "Miami Stadium, Miami":"25.9580,-80.2389",
+  "Kansas City Stadium, Kansas City":"39.0489,-94.4839",
+  "Seattle Stadium, Seattle":"47.5952,-122.3316",
+};
+
+function openMaps(venue) {
+  const coords = VENUE_COORDS[venue];
+  const q = encodeURIComponent(venue);
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  const isMac = /Macintosh/.test(navigator.userAgent);
+  if (isIOS || isMac) {
+    window.open(`maps://maps.apple.com/?q=${q}${coords?`&ll=${coords}`:""}`, "_blank");
+  } else {
+    window.open(`https://www.google.com/maps/search/?api=1&query=${q}${coords?`+${coords}`:""}`, "_blank");
+  }
+}
+
 const MATCHES = [
   // ── GROUP STAGE ──────────────────────────────────────────────────────────
   // Jun 11
@@ -1079,7 +1110,7 @@ function SchedTab({onAction}) {
               <span style={{fontWeight:700,color:C.text,flex:1,textAlign:"right",fontSize:14}}>{m.away}</span><Crest team={m.away} size={24}/>
             </div>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:m.tv?5:0}}>
-              <span style={{fontSize:11,color:C.dim}}>📍 {m.venue}</span>
+              <span onClick={()=>openMaps(m.venue)} style={{fontSize:11,color:C.blue,cursor:"pointer",textDecoration:"underline",textDecorationStyle:"dotted"}}>📍 {m.venue}</span>
               <button onClick={()=>onAction(m)} style={{background:`${C.green}22`,border:`1px solid ${C.greenS}`,color:C.green,padding:"3px 11px",borderRadius:20,fontSize:11,fontWeight:600,cursor:"pointer"}}>+ Add</button>
             </div>
             {m.tv && <div style={{fontSize:11,color:C.gold}}>📺 {m.tv}</div>}
