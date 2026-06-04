@@ -370,14 +370,6 @@ function openMaps(venue) {
 }
 
 // ── SIMULATOR ─────────────────────────────────────────────────────────────
-function simMatch(h, a) {
-  const hs = gs(h)+3, as = gs(a), t = hs+as, r = Math.random();
-  const res = r < hs/t*0.65 ? "home" : r < hs/t*0.65+0.22 ? "draw" : "away";
-  const hg = res==="home"?Math.floor(Math.random()*3)+1:res==="draw"?Math.floor(Math.random()*2)+1:Math.floor(Math.random()*2);
-  const ag = res==="away"?Math.floor(Math.random()*3)+1:res==="draw"?hg:Math.floor(Math.random()*2);
-  return {hg, ag, res};
-}
-
 function calcStandings(letter, results) {
   const teams = GROUPS[letter].teams;
   const tbl = Object.fromEntries(teams.map(t=>[t,{team:t,p:0,w:0,d:0,l:0,gf:0,ga:0,gd:0,pts:0}]));
