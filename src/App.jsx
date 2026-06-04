@@ -757,16 +757,34 @@ function runSim() {
   return {gr,r16,qf,sf,champion:champ,runnerUp:sf.find(x=>x!==champ)};
 }
 
-// Team crest from Wikipedia
+// Team crest from TheSportsDB
 const _cc = {};
+const TSDB_NAMES = {
+  "Czechia":"Czech Republic",
+  "Turkiye":"Turkey",
+  "Bosnia & Herz.":"Bosnia and Herzegovina",
+  "United States":"United States",
+  "South Korea":"South Korea",
+  "DR Congo":"DR Congo",
+  "Ivory Coast":"Ivory Coast",
+  "New Zealand":"New Zealand",
+  "Saudi Arabia":"Saudi Arabia",
+  "Cape Verde":"Cape Verde",
+};
 function Crest({ team, size=26 }) {
-  const slugs = {"Mexico":"Mexico_national_football_team","South Africa":"South_Africa_national_football_team","South Korea":"South_Korea_national_football_team","Czechia":"Czech_Republic_national_football_team","Canada":"Canada_national_soccer_team","Bosnia & Herz.":"Bosnia_and_Herzegovina_national_football_team","Qatar":"Qatar_national_football_team","Switzerland":"Switzerland_national_football_team","Brazil":"Brazil_national_football_team","Morocco":"Morocco_national_football_team","Haiti":"Haiti_national_football_team","Scotland":"Scotland_national_football_team","United States":"United_States_men%27s_national_soccer_team","Paraguay":"Paraguay_national_football_team","Australia":"Australia_national_football_team","Turkiye":"Turkey_national_football_team","Germany":"Germany_national_football_team","Curacao":"Curacao_national_football_team","Ivory Coast":"Ivory_Coast_national_football_team","Ecuador":"Ecuador_national_football_team","Netherlands":"Netherlands_national_football_team","Japan":"Japan_national_football_team","Sweden":"Sweden_national_football_team","Tunisia":"Tunisia_national_football_team","Belgium":"Belgium_national_football_team","Egypt":"Egypt_national_football_team","Iran":"Iran_national_football_team","New Zealand":"New_Zealand_national_football_team","Spain":"Spain_national_football_team","Cape Verde":"Cape_Verde_national_football_team","Saudi Arabia":"Saudi_Arabia_national_football_team","Uruguay":"Uruguay_national_football_team","France":"France_national_football_team","Senegal":"Senegal_national_football_team","Iraq":"Iraq_national_football_team","Norway":"Norway_national_football_team","Argentina":"Argentina_national_football_team","Algeria":"Algeria_national_football_team","Austria":"Austria_national_football_team","Jordan":"Jordan_national_football_team","Portugal":"Portugal_national_football_team","DR Congo":"DR_Congo_national_football_team","Uzbekistan":"Uzbekistan_national_football_team","Colombia":"Colombia_national_football_team","England":"England_national_football_team","Croatia":"Croatia_national_football_team","Ghana":"Ghana_national_football_team","Panama":"Panama_national_football_team"};
   const [url, setUrl] = useState(_cc[team]||null);
   const [err, setErr] = useState(false);
   useEffect(()=>{
-    if(url||err||!slugs[team])return;
-    fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${slugs[team]}`)
-      .then(r=>r.json()).then(d=>{const s=d?.thumbnail?.source;if(s){_cc[team]=s;setUrl(s);}else setErr(true);}).catch(()=>setErr(true));
+    if(url||err)return;
+    const q = TSDB_NAMES[team]||team;
+    fetch(`https://www.thesportsdb.com/api/v1/json/3/searchteams.php?t=${encodeURIComponent(q)}`)
+      .then(r=>r.json())
+      .then(d=>{
+        const badge = d?.teams?.[0]?.strBadge;
+        if(badge){const u=badge+"/preview";_cc[team]=u;setUrl(u);}
+        else setErr(true);
+      })
+      .catch(()=>setErr(true));
   },[team]);
   if(!url||err) return <span style={{fontSize:size*0.7,lineHeight:1}}>{getFlag(team)}</span>;
   return <img src={url} alt={team} width={size} height={size} style={{objectFit:"contain",flexShrink:0,borderRadius:2}} onError={()=>setErr(true)}/>;
