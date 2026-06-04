@@ -34,7 +34,7 @@ const MATCHES = [
   {id:3,  date:"Jun 12", time:"3PM ET",      home:"Canada",            away:"Bosnia & Herz.",     venue:"Toronto Stadium, Toronto",              group:"B",tv:"FS1 · Telemundo"},
   {id:4,  date:"Jun 12", time:"9PM ET",      home:"United States",     away:"Paraguay",           venue:"SoFi Stadium, Los Angeles",             group:"D",tv:"FOX · Telemundo · Tubi (free)"},
   // Jun 13
-  {id:5,  date:"Jun 13", time:"3PM PT",      home:"Qatar",             away:"Switzerland",        venue:"San Francisco Bay Area Stadium, San Francisco", group:"B",tv:"FS1 · Telemundo"},
+  {id:5,  date:"Jun 13", time:"3PM ET",      home:"Qatar",             away:"Switzerland",        venue:"San Francisco Bay Area Stadium, San Francisco", group:"B",tv:"FS1 · Telemundo"},
   {id:6,  date:"Jun 13", time:"6PM ET",      home:"Brazil",            away:"Morocco",            venue:"New York New Jersey Stadium, East Rutherford", group:"C",tv:"FOX · Telemundo"},
   {id:7,  date:"Jun 13", time:"9PM ET",      home:"Haiti",             away:"Scotland",           venue:"Boston Stadium, Boston",                group:"C",tv:"FS1 · Telemundo"},
   {id:8,  date:"Jun 13", time:"11:59PM ET",  home:"Australia",         away:"Turkiye",            venue:"BC Place, Vancouver",                   group:"D",tv:"FS1 · Telemundo"},
@@ -1084,10 +1084,15 @@ function GrpTab({onTeam}) {
   const [sel,setSel] = useState("A");
   const [view,setView] = useState("standings");
   const [allR,setAllR] = useState(()=>{
+    try {
+      const s = localStorage.getItem("wc2026_scores");
+      if (s) return JSON.parse(s);
+    } catch {}
     const init={};
     Object.keys(GROUPS).forEach(g=>{init[g]=MATCHES.filter(m=>m.group===g).map(m=>({id:m.id,home:m.home,away:m.away,date:m.date,hg:"",ag:""}));});
     return init;
   });
+  useEffect(()=>{ try { localStorage.setItem("wc2026_scores", JSON.stringify(allR)); } catch {} },[allR]);
   const results = allR[sel]||[];
   const standings = calcStandings(sel,results);
   const upd = (id,f,v) => setAllR(p=>({...p,[sel]:p[sel].map(r=>r.id===id?{...r,[f]:v.replace(/\D/g,"")}:r)}));
@@ -1449,7 +1454,13 @@ export default function App() {
   const [tab,setTab] = useState("live");
   const [statsTeam,setStatsTeam] = useState("");
   const [modal,setModal] = useState({open:false,match:null});
-  const [saved,setSaved] = useState([]);
+  const [saved,setSaved] = useState(()=>{
+    try {
+      const s = localStorage.getItem("wc2026_saved");
+      return s ? JSON.parse(s) : [];
+    } catch { return []; }
+  });
+  useEffect(()=>{ try { localStorage.setItem("wc2026_saved", JSON.stringify(saved)); } catch {} },[saved]);
   const [toast,setToast] = useState("");
 
   const onTeam = t => { setStatsTeam(t); setTab("stats"); };
