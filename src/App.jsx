@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, createContext, useCallback } from "react";
+import React, { useState, useEffect, useContext, createContext, useCallback, useMemo } from "react";
 
 // ── THEME ─────────────────────────────────────────────────────────────────
 const C = {
@@ -135,42 +135,42 @@ const MATCHES = [
 // ── TEAM DATA ─────────────────────────────────────────────────────────────
 const TEAMS = {
   "Argentina":{flag:"🇦🇷",conf:"CONMEBOL",rank:1,ss:8.1,titles:3,coach:"Lionel Scaloni",base:"Kansas City, MO",form:["W","W","D","W","W"],stats:{ATT:8.4,MID:7.9,DEF:7.8,FIT:8.0},players:[{name:"Lionel Messi",pos:"FW",club:"Inter Miami",caps:191,goals:109,ss:9.2,note:"GOAT · 2022 WC Golden Ball"},{name:"Lautaro Martínez",pos:"FW",club:"Inter Milan",caps:65,goals:32,ss:8.3,note:"Lethal striker"},{name:"Enzo Fernández",pos:"MF",club:"Chelsea",caps:38,goals:6,ss:8.0,note:"Box-to-box dynamo"},{name:"E. Martínez",pos:"GK",club:"Aston Villa",caps:43,goals:0,ss:8.1,note:"2022 WC Golden Glove"}],note:"Defending champions. Messi hunting a historic second title alongside a new generation."},
-  "France":{flag:"🇫🇷",conf:"UEFA",rank:3,ss:8.3,titles:2,coach:"Didier Deschamps",base:"TBC",form:["W","W","W","D","W"],stats:{ATT:9.0,MID:8.1,DEF:8.2,FIT:8.5},players:[{name:"Kylian Mbappe",pos:"FW",club:"Real Madrid",caps:87,goals:51,ss:9.4,note:"Golden Boot favourite"},{name:"Antoine Griezmann",pos:"FW",club:"Atletico Madrid",caps:137,goals:46,ss:8.2,note:"2018 Golden Ball"},{name:"A. Tchouameni",pos:"MF",club:"Real Madrid",caps:47,goals:6,ss:7.9,note:"World-class DM"},{name:"Mike Maignan",pos:"GK",club:"AC Milan",caps:28,goals:0,ss:8.3,note:"Elite keeper"}],note:"Most talented squad on paper. Mbappe is the standout Golden Boot favourite."},
-  "Brazil":{flag:"🇧🇷",conf:"CONMEBOL",rank:6,ss:8.0,titles:5,coach:"Carlo Ancelotti",base:"Morristown, NJ",form:["W","D","W","W","W"],stats:{ATT:8.8,MID:7.8,DEF:7.6,FIT:8.1},players:[{name:"Vinicius Jr.",pos:"FW",club:"Real Madrid",caps:39,goals:14,ss:9.1,note:"Ballon d'Or contender"},{name:"Neymar Jr.",pos:"FW",club:"Santos FC",caps:128,goals:79,ss:8.3,note:"Legend returns at Santos"},{name:"Raphinha",pos:"FW",club:"Barcelona",caps:55,goals:22,ss:8.2,note:"Barcelona star"},{name:"Bruno Guimaraes",pos:"MF",club:"Newcastle",caps:44,goals:7,ss:8.0,note:"Midfield dynamo"}],note:"Neymar's stunning return adds a new dimension. Ancelotti builds around Vinicius and Raphinha."},
-  "England":{flag:"🏴󠁧󠁢󠁥󠁮󠁧󠁿",conf:"UEFA",rank:4,ss:8.1,titles:1,coach:"Thomas Tuchel",base:"Kansas City, MO",form:["W","W","W","W","D"],stats:{ATT:8.5,MID:8.6,DEF:8.0,FIT:8.2},players:[{name:"Jude Bellingham",pos:"MF",club:"Real Madrid",caps:52,goals:17,ss:9.0,note:"World-class midfielder"},{name:"Harry Kane",pos:"FW",club:"Bayern Munich",caps:98,goals:68,ss:8.7,note:"All-time England top scorer"},{name:"Phil Foden",pos:"MF",club:"Man City",caps:46,goals:13,ss:8.3,note:"PL Player of Year"},{name:"Jordan Pickford",pos:"GK",club:"Everton",caps:64,goals:0,ss:7.8,note:"Shootout specialist"}],note:"Tuchel's England hunting their first title since 1966. Bellingham + Kane is a devastating partnership."},
-  "Spain":{flag:"🇪🇸",conf:"UEFA",rank:1,ss:8.5,titles:1,coach:"Luis de la Fuente",base:"Chattanooga, TN",form:["W","W","W","W","W"],stats:{ATT:8.7,MID:9.1,DEF:8.3,FIT:8.4},players:[{name:"Pedri",pos:"MF",club:"Barcelona",caps:42,goals:7,ss:8.9,note:"Generational talent"},{name:"Lamine Yamal",pos:"FW",club:"Barcelona",caps:28,goals:12,ss:9.1,note:"Euro 2024 star"},{name:"Rodri",pos:"MF",club:"Man City",caps:61,goals:9,ss:8.8,note:"2024 Ballon d'Or"},{name:"Dani Carvajal",pos:"DF",club:"Real Madrid",caps:76,goals:4,ss:7.9,note:"Euro 2024 winner"}],note:"Ranked #1 globally, back-to-back Euro champions. The most attractive football on earth."},
-  "Germany":{flag:"🇩🇪",conf:"UEFA",rank:12,ss:7.8,titles:4,coach:"Julian Nagelsmann",base:"TBC",form:["W","W","D","W","W"],stats:{ATT:8.3,MID:8.5,DEF:7.9,FIT:8.3},players:[{name:"Jamal Musiala",pos:"MF",club:"Bayern Munich",caps:42,goals:15,ss:8.9,note:"Silky dribbler"},{name:"Florian Wirtz",pos:"MF",club:"Bayer Leverkusen",caps:35,goals:12,ss:8.8,note:"Bundesliga's best"},{name:"Kai Havertz",pos:"FW",club:"Arsenal",caps:68,goals:23,ss:7.8,note:"Big-game scorer"},{name:"Manuel Neuer",pos:"GK",club:"Bayern Munich",caps:124,goals:1,ss:7.5,note:"Final WC"}],note:"Musiala + Wirtz is the most exciting young midfield pair in Europe. Genuine dark horse."},
-  "Portugal":{flag:"🇵🇹",conf:"UEFA",rank:7,ss:7.9,titles:0,coach:"Roberto Martínez",base:"TBC",form:["W","W","W","W","D"],stats:{ATT:8.4,MID:7.8,DEF:7.7,FIT:7.9},players:[{name:"Cristiano Ronaldo",pos:"FW",club:"Al Nassr",caps:217,goals:135,ss:8.0,note:"All-time international top scorer"},{name:"Bruno Fernandes",pos:"MF",club:"Man United",caps:84,goals:25,ss:8.3,note:"Captain"},{name:"Rafael Leao",pos:"FW",club:"AC Milan",caps:38,goals:11,ss:8.1,note:"Electric winger"},{name:"Ruben Dias",pos:"DF",club:"Man City",caps:67,goals:5,ss:8.4,note:"Elite CB"}],note:"Ronaldo's last World Cup at 41. Will CR7 finally win the one trophy that has eluded him?"},
-  "Netherlands":{flag:"🇳🇱",conf:"UEFA",rank:8,ss:7.8,titles:0,coach:"Ronald Koeman",base:"TBC",form:["W","D","W","W","W"],stats:{ATT:7.9,MID:7.6,DEF:8.5,FIT:8.0},players:[{name:"Virgil van Dijk",pos:"DF",club:"Liverpool",caps:75,goals:9,ss:8.7,note:"World's best CB"},{name:"Cody Gakpo",pos:"FW",club:"Liverpool",caps:40,goals:18,ss:8.1,note:"2022 WC breakout star"},{name:"Xavi Simons",pos:"MF",club:"PSG",caps:29,goals:8,ss:8.0,note:"Rising star"},{name:"Memphis Depay",pos:"FW",club:"Atletico Madrid",caps:103,goals:45,ss:7.6,note:"Experienced"}],note:"Three-time finalist, never won. Van Dijk leads a balanced squad."},
+  "France":{flag:"🇫🇷",conf:"UEFA",rank:3,ss:8.3,titles:2,coach:"Didier Deschamps",base:"TBC",form:["L","W","W","D","W"],stats:{ATT:9.0,MID:8.1,DEF:8.2,FIT:8.5},players:[{name:"Kylian Mbappe",pos:"FW",club:"Real Madrid",caps:87,goals:51,ss:9.4,note:"Golden Boot favourite"},{name:"Antoine Griezmann",pos:"FW",club:"Atletico Madrid",caps:137,goals:46,ss:8.2,note:"2018 Golden Ball"},{name:"A. Tchouameni",pos:"MF",club:"Real Madrid",caps:47,goals:6,ss:7.9,note:"World-class DM"},{name:"Mike Maignan",pos:"GK",club:"AC Milan",caps:28,goals:0,ss:8.3,note:"Elite keeper"}],note:"Most talented squad on paper. Mbappe is the standout Golden Boot favourite."},
+  "Brazil":{flag:"🇧🇷",conf:"CONMEBOL",rank:6,ss:8.0,titles:5,coach:"Carlo Ancelotti",base:"Morristown, NJ",form:["W","W","L","W","W"],stats:{ATT:8.8,MID:7.8,DEF:7.6,FIT:8.1},players:[{name:"Vinicius Jr.",pos:"FW",club:"Real Madrid",caps:39,goals:14,ss:9.1,note:"Ballon d'Or contender"},{name:"Neymar Jr.",pos:"FW",club:"Santos FC",caps:128,goals:79,ss:8.3,note:"Legend returns at Santos"},{name:"Raphinha",pos:"FW",club:"Barcelona",caps:55,goals:22,ss:8.2,note:"Barcelona star"},{name:"Bruno Guimaraes",pos:"MF",club:"Newcastle",caps:44,goals:7,ss:8.0,note:"Midfield dynamo"}],note:"Neymar's stunning return adds a new dimension. Ancelotti builds around Vinicius and Raphinha."},
+  "England":{flag:"🏴󠁧󠁢󠁥󠁮󠁧󠁿",conf:"UEFA",rank:4,ss:8.1,titles:1,coach:"Thomas Tuchel",base:"Kansas City, MO",form:["L","D","W","W","W"],stats:{ATT:8.5,MID:8.6,DEF:8.0,FIT:8.2},players:[{name:"Jude Bellingham",pos:"MF",club:"Real Madrid",caps:52,goals:17,ss:9.0,note:"World-class midfielder"},{name:"Harry Kane",pos:"FW",club:"Bayern Munich",caps:98,goals:68,ss:8.7,note:"All-time England top scorer"},{name:"Phil Foden",pos:"MF",club:"Man City",caps:46,goals:13,ss:8.3,note:"PL Player of Year"},{name:"Jordan Pickford",pos:"GK",club:"Everton",caps:64,goals:0,ss:7.8,note:"Shootout specialist"}],note:"Tuchel's England hunting their first title since 1966. Bellingham + Kane is a devastating partnership."},
+  "Spain":{flag:"🇪🇸",conf:"UEFA",rank:1,ss:8.5,titles:1,coach:"Luis de la Fuente",base:"Chattanooga, TN",form:["D","D","D","W","W"],stats:{ATT:8.7,MID:9.1,DEF:8.3,FIT:8.4},players:[{name:"Pedri",pos:"MF",club:"Barcelona",caps:42,goals:7,ss:8.9,note:"Generational talent"},{name:"Lamine Yamal",pos:"FW",club:"Barcelona",caps:28,goals:12,ss:9.1,note:"Euro 2024 star"},{name:"Rodri",pos:"MF",club:"Man City",caps:61,goals:9,ss:8.8,note:"2024 Ballon d'Or"},{name:"Dani Carvajal",pos:"DF",club:"Real Madrid",caps:76,goals:4,ss:7.9,note:"Euro 2024 winner"}],note:"Ranked #1 globally, back-to-back Euro champions. The most attractive football on earth."},
+  "Germany":{flag:"🇩🇪",conf:"UEFA",rank:12,ss:7.8,titles:4,coach:"Julian Nagelsmann",base:"TBC",form:["W","L","W","W","W"],stats:{ATT:8.3,MID:8.5,DEF:7.9,FIT:8.3},players:[{name:"Jamal Musiala",pos:"MF",club:"Bayern Munich",caps:42,goals:15,ss:8.9,note:"Silky dribbler"},{name:"Florian Wirtz",pos:"MF",club:"Bayer Leverkusen",caps:35,goals:12,ss:8.8,note:"Bundesliga's best"},{name:"Kai Havertz",pos:"FW",club:"Arsenal",caps:68,goals:23,ss:7.8,note:"Big-game scorer"},{name:"Manuel Neuer",pos:"GK",club:"Bayern Munich",caps:124,goals:1,ss:7.5,note:"Final WC"}],note:"Musiala + Wirtz is the most exciting young midfield pair in Europe. Genuine dark horse."},
+  "Portugal":{flag:"🇵🇹",conf:"UEFA",rank:7,ss:7.9,titles:0,coach:"Roberto Martínez",base:"TBC",form:["W","D","W","W","D"],stats:{ATT:8.4,MID:7.8,DEF:7.7,FIT:7.9},players:[{name:"Cristiano Ronaldo",pos:"FW",club:"Al Nassr",caps:217,goals:135,ss:8.0,note:"All-time international top scorer"},{name:"Bruno Fernandes",pos:"MF",club:"Man United",caps:84,goals:25,ss:8.3,note:"Captain"},{name:"Rafael Leao",pos:"FW",club:"AC Milan",caps:38,goals:11,ss:8.1,note:"Electric winger"},{name:"Ruben Dias",pos:"DF",club:"Man City",caps:67,goals:5,ss:8.4,note:"Elite CB"}],note:"Ronaldo's last World Cup at 41. Will CR7 finally win the one trophy that has eluded him?"},
+  "Netherlands":{flag:"🇳🇱",conf:"UEFA",rank:8,ss:7.8,titles:0,coach:"Ronald Koeman",base:"TBC",form:["L","D","W","W","W"],stats:{ATT:7.9,MID:7.6,DEF:8.5,FIT:8.0},players:[{name:"Virgil van Dijk",pos:"DF",club:"Liverpool",caps:75,goals:9,ss:8.7,note:"World's best CB"},{name:"Cody Gakpo",pos:"FW",club:"Liverpool",caps:40,goals:18,ss:8.1,note:"2022 WC breakout star"},{name:"Xavi Simons",pos:"MF",club:"PSG",caps:29,goals:8,ss:8.0,note:"Rising star"},{name:"Memphis Depay",pos:"FW",club:"Atletico Madrid",caps:103,goals:45,ss:7.6,note:"Experienced"}],note:"Three-time finalist, never won. Van Dijk leads a balanced squad."},
   "Belgium":{flag:"🇧🇪",conf:"UEFA",rank:3,ss:7.7,titles:0,coach:"Rudi Garcia",base:"TBC",form:["W","W","D","W","D"],stats:{ATT:8.1,MID:7.8,DEF:7.7,FIT:7.8},players:[{name:"Kevin De Bruyne",pos:"MF",club:"Napoli",caps:102,goals:27,ss:8.9,note:"World's best midfielder"},{name:"Romelu Lukaku",pos:"FW",club:"Napoli",caps:110,goals:73,ss:8.1,note:"Belgium all-time top scorer"},{name:"Jeremy Doku",pos:"FW",club:"Man City",caps:34,goals:7,ss:8.1,note:"Explosive winger"},{name:"Thibaut Courtois",pos:"GK",club:"Real Madrid",caps:101,goals:0,ss:8.8,note:"World's best GK"}],note:"De Bruyne now at Napoli alongside Lukaku — last chance for this golden generation."},
-  "Norway":{flag:"🇳🇴",conf:"UEFA",rank:31,ss:7.1,titles:0,coach:"Stale Solbakken",base:"TBC",form:["W","W","D","W","W"],stats:{ATT:7.6,MID:7.0,DEF:7.0,FIT:8.0},players:[{name:"Erling Haaland",pos:"FW",club:"Man City",caps:38,goals:32,ss:9.3,note:"Most prolific striker on Earth"},{name:"Martin Odegaard",pos:"MF",club:"Arsenal",caps:71,goals:24,ss:8.7,note:"Arsenal captain"},{name:"Alexander Sorloth",pos:"FW",club:"Atletico Madrid",caps:52,goals:25,ss:7.8,note:"Physical striker"},{name:"Ørjan Nyland",pos:"GK",club:"Inter Milan",caps:48,goals:0,ss:7.2,note:"Serie A winner"}],note:"Haaland + Odegaard: potentially the most devastating partnership in the tournament. Dark horse."},
-  "Mexico":{flag:"🇲🇽",conf:"CONCACAF",rank:15,ss:7.2,titles:0,coach:"Javier Aguirre",base:"Mexico City",form:["W","D","W","D","W"],stats:{ATT:7.2,MID:7.4,DEF:7.5,FIT:7.8},players:[{name:"Hirving Lozano",pos:"FW",club:"PSV",caps:101,goals:31,ss:7.8,note:"Pacey winger"},{name:"Raul Jimenez",pos:"FW",club:"Fulham",caps:93,goals:36,ss:7.5,note:"Target man"},{name:"Edson Alvarez",pos:"MF",club:"Fenerbahce",caps:86,goals:9,ss:7.7,note:"Dominant DM"},{name:"Guillermo Ochoa",pos:"GK",club:"AEL Limassol",caps:148,goals:0,ss:7.9,note:"6th World Cup"}],note:"Host nation opening at the iconic Estadio Azteca. Home crowd advantage is massive."},
-  "United States":{flag:"🇺🇸",conf:"CONCACAF",rank:11,ss:7.4,titles:0,coach:"Mauricio Pochettino",base:"New Jersey",form:["W","W","D","W","W"],stats:{ATT:7.6,MID:7.5,DEF:7.4,FIT:8.4},players:[{name:"Christian Pulisic",pos:"FW",club:"AC Milan",caps:72,goals:27,ss:7.9,note:"Captain"},{name:"Gio Reyna",pos:"MF",club:"Dortmund",caps:32,goals:8,ss:7.7,note:"Gifted playmaker"},{name:"Weston McKennie",pos:"MF",club:"Juventus",caps:61,goals:13,ss:7.5,note:"Box-to-box"},{name:"Matt Turner",pos:"GK",club:"Crystal Palace",caps:43,goals:0,ss:7.2,note:"Reliable"}],note:"Host nation transformed by Pochettino. Massive home crowd advantage."},
+  "Norway":{flag:"🇳🇴",conf:"UEFA",rank:31,ss:7.1,titles:0,coach:"Stale Solbakken",base:"TBC",form:["W","L","W","W","W"],stats:{ATT:7.6,MID:7.0,DEF:7.0,FIT:8.0},players:[{name:"Erling Haaland",pos:"FW",club:"Man City",caps:38,goals:32,ss:9.3,note:"Most prolific striker on Earth"},{name:"Martin Odegaard",pos:"MF",club:"Arsenal",caps:71,goals:24,ss:8.7,note:"Arsenal captain"},{name:"Alexander Sorloth",pos:"FW",club:"Atletico Madrid",caps:52,goals:25,ss:7.8,note:"Physical striker"},{name:"Ørjan Nyland",pos:"GK",club:"Inter Milan",caps:48,goals:0,ss:7.2,note:"Serie A winner"}],note:"Haaland + Odegaard: potentially the most devastating partnership in the tournament. Dark horse."},
+  "Mexico":{flag:"🇲🇽",conf:"CONCACAF",rank:15,ss:7.2,titles:0,coach:"Javier Aguirre",base:"Mexico City",form:["W","D","D","D","W"],stats:{ATT:7.2,MID:7.4,DEF:7.5,FIT:7.8},players:[{name:"Hirving Lozano",pos:"FW",club:"PSV",caps:101,goals:31,ss:7.8,note:"Pacey winger"},{name:"Raul Jimenez",pos:"FW",club:"Fulham",caps:93,goals:36,ss:7.5,note:"Target man"},{name:"Edson Alvarez",pos:"MF",club:"Fenerbahce",caps:86,goals:9,ss:7.7,note:"Dominant DM"},{name:"Guillermo Ochoa",pos:"GK",club:"AEL Limassol",caps:148,goals:0,ss:7.9,note:"6th World Cup"}],note:"Host nation opening at the iconic Estadio Azteca. Home crowd advantage is massive."},
+  "United States":{flag:"🇺🇸",conf:"CONCACAF",rank:11,ss:7.4,titles:0,coach:"Mauricio Pochettino",base:"New Jersey",form:["W","L","L","W","W"],stats:{ATT:7.6,MID:7.5,DEF:7.4,FIT:8.4},players:[{name:"Christian Pulisic",pos:"FW",club:"AC Milan",caps:72,goals:27,ss:7.9,note:"Captain"},{name:"Gio Reyna",pos:"MF",club:"Dortmund",caps:32,goals:8,ss:7.7,note:"Gifted playmaker"},{name:"Weston McKennie",pos:"MF",club:"Juventus",caps:61,goals:13,ss:7.5,note:"Box-to-box"},{name:"Matt Turner",pos:"GK",club:"Crystal Palace",caps:43,goals:0,ss:7.2,note:"Reliable"}],note:"Host nation transformed by Pochettino. Massive home crowd advantage."},
   "Morocco":{flag:"🇲🇦",conf:"CAF",rank:14,ss:7.3,titles:0,coach:"Walid Regragui",base:"Basking Ridge, NJ",form:["W","W","D","W","L"],stats:{ATT:7.1,MID:7.4,DEF:7.9,FIT:8.1},players:[{name:"Achraf Hakimi",pos:"DF",club:"PSG",caps:82,goals:14,ss:8.5,note:"World's best RB"},{name:"Hakim Ziyech",pos:"MF",club:"Galatasaray",caps:60,goals:22,ss:7.5,note:"Creative"},{name:"Y. En-Nesyri",pos:"FW",club:"Fenerbahce",caps:49,goals:26,ss:7.6,note:"Striker"},{name:"Yassine Bounou",pos:"GK",club:"Al Hilal",caps:48,goals:0,ss:8.2,note:"World-class"}],note:"2022 semi-finalists. Hakimi is world-class. Hard to break down."},
-  "Uruguay":{flag:"🇺🇾",conf:"CONMEBOL",rank:9,ss:7.4,titles:2,coach:"Marcelo Bielsa",base:"Playa del Carmen",form:["W","W","D","W","L"],stats:{ATT:7.4,MID:7.3,DEF:7.8,FIT:7.9},players:[{name:"Darwin Nunez",pos:"FW",club:"Liverpool",caps:43,goals:22,ss:7.9,note:"Powerful striker"},{name:"Federico Valverde",pos:"MF",club:"Real Madrid",caps:56,goals:13,ss:8.5,note:"World-class engine"},{name:"R. Bentancur",pos:"MF",club:"Tottenham",caps:59,goals:8,ss:7.6,note:"Technical"},{name:"Sergio Rochet",pos:"GK",club:"Nacional",caps:28,goals:0,ss:7.1,note:"Keeper"}],note:"Valverde and Nunez make Uruguay dangerous. Always battle hard."},
-  "Croatia":{flag:"🇭🇷",conf:"UEFA",rank:10,ss:7.5,titles:0,coach:"Zlatko Dalic",base:"TBC",form:["W","D","W","W","D"],stats:{ATT:7.3,MID:8.1,DEF:7.6,FIT:7.7},players:[{name:"Luka Modric",pos:"MF",club:"Real Madrid",caps:173,goals:24,ss:8.4,note:"2018 Golden Ball · final WC"},{name:"Mateo Kovacic",pos:"MF",club:"Man City",caps:100,goals:5,ss:8.0,note:"PL champion"},{name:"Ivan Perisic",pos:"FW",club:"Hajduk Split",caps:130,goals:33,ss:7.2,note:"Veteran"},{name:"D. Livakovic",pos:"GK",club:"Fenerbahce",caps:50,goals:0,ss:7.8,note:"2022 shootout hero"}],note:"Modric at 40 — his final World Cup. Croatia always over-perform."},
+  "Uruguay":{flag:"🇺🇾",conf:"CONMEBOL",rank:9,ss:7.4,titles:2,coach:"Marcelo Bielsa",base:"Playa del Carmen",form:["D","D","W","W","L"],stats:{ATT:7.4,MID:7.3,DEF:7.8,FIT:7.9},players:[{name:"Darwin Nunez",pos:"FW",club:"Liverpool",caps:43,goals:22,ss:7.9,note:"Powerful striker"},{name:"Federico Valverde",pos:"MF",club:"Real Madrid",caps:56,goals:13,ss:8.5,note:"World-class engine"},{name:"R. Bentancur",pos:"MF",club:"Tottenham",caps:59,goals:8,ss:7.6,note:"Technical"},{name:"Sergio Rochet",pos:"GK",club:"Nacional",caps:28,goals:0,ss:7.1,note:"Keeper"}],note:"Valverde and Nunez make Uruguay dangerous. Always battle hard."},
+  "Croatia":{flag:"🇭🇷",conf:"UEFA",rank:10,ss:7.5,titles:0,coach:"Zlatko Dalic",base:"TBC",form:["L","L","L","W","D"],stats:{ATT:7.3,MID:8.1,DEF:7.6,FIT:7.7},players:[{name:"Luka Modric",pos:"MF",club:"Real Madrid",caps:173,goals:24,ss:8.4,note:"2018 Golden Ball · final WC"},{name:"Mateo Kovacic",pos:"MF",club:"Man City",caps:100,goals:5,ss:8.0,note:"PL champion"},{name:"Ivan Perisic",pos:"FW",club:"Hajduk Split",caps:130,goals:33,ss:7.2,note:"Veteran"},{name:"D. Livakovic",pos:"GK",club:"Fenerbahce",caps:50,goals:0,ss:7.8,note:"2022 shootout hero"}],note:"Modric at 40 — his final World Cup. Croatia always over-perform."},
   "Japan":{flag:"🇯🇵",conf:"AFC",rank:20,ss:7.4,titles:0,coach:"Hajime Moriyasu",base:"Nashville, TN",form:["W","W","W","D","W"],stats:{ATT:7.4,MID:7.5,DEF:7.2,FIT:8.3},players:[{name:"Takefusa Kubo",pos:"MF",club:"Real Sociedad",caps:41,goals:10,ss:8.0,note:"Japan's golden boy"},{name:"Ritsu Doan",pos:"MF",club:"Freiburg",caps:55,goals:17,ss:7.7,note:"Bundesliga star"},{name:"Daichi Kamada",pos:"MF",club:"Lazio",caps:47,goals:14,ss:7.5,note:"Technical"},{name:"Daniel Schmidt",pos:"GK",club:"Sint-Truiden",caps:20,goals:0,ss:7.1,note:"Keeper"}],note:"Beat Germany and Spain at 2022. The most improved AFC team."},
-  "Senegal":{flag:"🇸🇳",conf:"CAF",rank:17,ss:7.3,titles:0,coach:"Aliou Cisse",base:"TBC",form:["W","D","W","W","D"],stats:{ATT:7.4,MID:7.2,DEF:7.3,FIT:8.3},players:[{name:"Sadio Mane",pos:"FW",club:"Al Nassr",caps:99,goals:39,ss:8.0,note:"Africa's greatest"},{name:"Idrissa Gueye",pos:"MF",club:"Everton",caps:98,goals:4,ss:7.2,note:"Veteran"},{name:"Ismila Sarr",pos:"FW",club:"Marseille",caps:51,goals:16,ss:7.7,note:"Explosive winger"},{name:"E. Mendy",pos:"GK",club:"Al Ahli",caps:42,goals:0,ss:7.8,note:"Former Chelsea"}],note:"2021 AFCON champions. Mane still world class."},
-  "Egypt":{flag:"🇪🇬",conf:"CAF",rank:35,ss:6.8,titles:0,coach:"Hossam El-Badry",base:"TBC",form:["W","D","W","W","L"],stats:{ATT:7.2,MID:6.8,DEF:6.9,FIT:7.4},players:[{name:"Mohamed Salah",pos:"FW",club:"Liverpool",caps:98,goals:58,ss:9.0,note:"World's best"},{name:"Omar Marmoush",pos:"FW",club:"Man City",caps:26,goals:10,ss:7.8,note:"Man City star"},{name:"Tarek Hamed",pos:"MF",club:"Sharjah",caps:66,goals:2,ss:6.5,note:"Veteran DM"},{name:"M. El Shenawy",pos:"GK",club:"Al Ahly",caps:55,goals:0,ss:7.2,note:"Keeper"}],note:"Salah and Marmoush is a devastating partnership."},
-  "Colombia":{flag:"🇨🇴",conf:"CONMEBOL",rank:10,ss:7.3,titles:0,coach:"Néstor Lorenzo",base:"Guadalajara, Mexico",form:["W","W","D","W","D"],stats:{ATT:7.6,MID:7.4,DEF:7.1,FIT:7.8},players:[{name:"James Rodriguez",pos:"MF",club:"Rayo Vallecano",caps:101,goals:35,ss:7.5,note:"2014 Golden Boot"},{name:"Luis Diaz",pos:"FW",club:"Liverpool",caps:59,goals:21,ss:8.3,note:"Electric winger"},{name:"Richard Rios",pos:"MF",club:"Palmeiras",caps:28,goals:4,ss:7.6,note:"Energetic"},{name:"Camilo Vargas",pos:"GK",club:"Atlas",caps:41,goals:0,ss:7.1,note:"Keeper"}],note:"2024 Copa America runners-up. Luis Diaz is Premier League class."},
-  "South Korea":{flag:"🇰🇷",conf:"AFC",rank:23,ss:7.0,titles:0,coach:"Hong Myung-bo",base:"Guadalajara, Mexico",form:["W","D","W","L","W"],stats:{ATT:7.0,MID:7.2,DEF:6.9,FIT:8.0},players:[{name:"Son Heung-min",pos:"FW",club:"Tottenham",caps:126,goals:50,ss:8.3,note:"Captain"},{name:"Kim Min-jae",pos:"DF",club:"Bayern Munich",caps:61,goals:5,ss:8.0,note:"Elite CB"},{name:"Lee Jae-sung",pos:"MF",club:"Mainz",caps:77,goals:14,ss:7.1,note:"Midfielder"},{name:"Jo Hyeon-woo",pos:"GK",club:"Ulsan HD",caps:40,goals:0,ss:7.0,note:"Keeper"}],note:"Son carries enormous expectations. Kim Min-jae is world-class."},
-  "Canada":{flag:"🇨🇦",conf:"CONCACAF",rank:47,ss:6.8,titles:0,coach:"Jesse Marsch",base:"Vancouver, BC",form:["W","W","D","W","L"],stats:{ATT:6.9,MID:6.8,DEF:6.7,FIT:8.2},players:[{name:"Alphonso Davies",pos:"DF",club:"Bayern Munich",caps:63,goals:13,ss:8.4,note:"World-class LB"},{name:"Jonathan David",pos:"FW",club:"Lille",caps:50,goals:30,ss:8.0,note:"Lethal finisher"},{name:"Tajon Buchanan",pos:"MF",club:"Inter Milan",caps:42,goals:8,ss:7.4,note:"Winger"},{name:"M. Crepeau",pos:"GK",club:"LA Galaxy",caps:34,goals:0,ss:7.0,note:"Keeper"}],note:"Host nation with genuine talent. Davies and David are top European players."},
-  "Switzerland":{flag:"🇨🇭",conf:"UEFA",rank:19,ss:7.1,titles:0,coach:"Murat Yakin",base:"San Diego, CA",form:["D","W","W","D","W"],stats:{ATT:7.0,MID:7.3,DEF:7.4,FIT:7.5},players:[{name:"Granit Xhaka",pos:"MF",club:"Bayer Leverkusen",caps:127,goals:17,ss:7.8,note:"Captain"},{name:"Breel Embolo",pos:"FW",club:"Monaco",caps:66,goals:17,ss:7.5,note:"Physical FW"},{name:"Xherdan Shaqiri",pos:"MF",club:"Chicago Fire",caps:116,goals:32,ss:7.2,note:"Experienced"},{name:"Yann Sommer",pos:"GK",club:"Inter Milan",caps:95,goals:0,ss:8.0,note:"Elite keeper"}],note:"Always reliable. Switzerland punch above their weight every tournament."},
+  "Senegal":{flag:"🇸🇳",conf:"CAF",rank:17,ss:7.3,titles:0,coach:"Aliou Cisse",base:"TBC",form:["L","W","D","W","D"],stats:{ATT:7.4,MID:7.2,DEF:7.3,FIT:8.3},players:[{name:"Sadio Mane",pos:"FW",club:"Al Nassr",caps:99,goals:39,ss:8.0,note:"Africa's greatest"},{name:"Idrissa Gueye",pos:"MF",club:"Everton",caps:98,goals:4,ss:7.2,note:"Veteran"},{name:"Ismila Sarr",pos:"FW",club:"Marseille",caps:51,goals:16,ss:7.7,note:"Explosive winger"},{name:"E. Mendy",pos:"GK",club:"Al Ahli",caps:42,goals:0,ss:7.8,note:"Former Chelsea"}],note:"2021 AFCON champions. Mane still world class."},
+  "Egypt":{flag:"🇪🇬",conf:"CAF",rank:35,ss:6.8,titles:0,coach:"Hossam El-Badry",base:"TBC",form:["D","W","D","W","L"],stats:{ATT:7.2,MID:6.8,DEF:6.9,FIT:7.4},players:[{name:"Mohamed Salah",pos:"FW",club:"Liverpool",caps:98,goals:58,ss:9.0,note:"World's best"},{name:"Omar Marmoush",pos:"FW",club:"Man City",caps:26,goals:10,ss:7.8,note:"Man City star"},{name:"Tarek Hamed",pos:"MF",club:"Sharjah",caps:66,goals:2,ss:6.5,note:"Veteran DM"},{name:"M. El Shenawy",pos:"GK",club:"Al Ahly",caps:55,goals:0,ss:7.2,note:"Keeper"}],note:"Salah and Marmoush is a devastating partnership."},
+  "Colombia":{flag:"🇨🇴",conf:"CONMEBOL",rank:10,ss:7.3,titles:0,coach:"Néstor Lorenzo",base:"Guadalajara, Mexico",form:["W","W","W","D","D"],stats:{ATT:7.6,MID:7.4,DEF:7.1,FIT:7.8},players:[{name:"James Rodriguez",pos:"MF",club:"Rayo Vallecano",caps:101,goals:35,ss:7.5,note:"2014 Golden Boot"},{name:"Luis Diaz",pos:"FW",club:"Liverpool",caps:59,goals:21,ss:8.3,note:"Electric winger"},{name:"Richard Rios",pos:"MF",club:"Palmeiras",caps:28,goals:4,ss:7.6,note:"Energetic"},{name:"Camilo Vargas",pos:"GK",club:"Atlas",caps:41,goals:0,ss:7.1,note:"Keeper"}],note:"2024 Copa America runners-up. Luis Diaz is Premier League class."},
+  "South Korea":{flag:"🇰🇷",conf:"AFC",rank:23,ss:7.0,titles:0,coach:"Hong Myung-bo",base:"Guadalajara, Mexico",form:["W","W","D","L","W"],stats:{ATT:7.0,MID:7.2,DEF:6.9,FIT:8.0},players:[{name:"Son Heung-min",pos:"FW",club:"Tottenham",caps:126,goals:50,ss:8.3,note:"Captain"},{name:"Kim Min-jae",pos:"DF",club:"Bayern Munich",caps:61,goals:5,ss:8.0,note:"Elite CB"},{name:"Lee Jae-sung",pos:"MF",club:"Mainz",caps:77,goals:14,ss:7.1,note:"Midfielder"},{name:"Jo Hyeon-woo",pos:"GK",club:"Ulsan HD",caps:40,goals:0,ss:7.0,note:"Keeper"}],note:"Son carries enormous expectations. Kim Min-jae is world-class."},
+  "Canada":{flag:"🇨🇦",conf:"CONCACAF",rank:47,ss:6.8,titles:0,coach:"Jesse Marsch",base:"Vancouver, BC",form:["W","D","W","L","W"],stats:{ATT:6.9,MID:6.8,DEF:6.7,FIT:8.2},players:[{name:"Alphonso Davies",pos:"DF",club:"Bayern Munich",caps:63,goals:13,ss:8.4,note:"World-class LB"},{name:"Jonathan David",pos:"FW",club:"Lille",caps:50,goals:30,ss:8.0,note:"Lethal finisher"},{name:"Tajon Buchanan",pos:"MF",club:"Inter Milan",caps:42,goals:8,ss:7.4,note:"Winger"},{name:"M. Crepeau",pos:"GK",club:"LA Galaxy",caps:34,goals:0,ss:7.0,note:"Keeper"}],note:"Host nation with genuine talent. Davies and David are top European players."},
+  "Switzerland":{flag:"🇨🇭",conf:"UEFA",rank:19,ss:7.1,titles:0,coach:"Murat Yakin",base:"San Diego, CA",form:["W","L","W","D","W"],stats:{ATT:7.0,MID:7.3,DEF:7.4,FIT:7.5},players:[{name:"Granit Xhaka",pos:"MF",club:"Bayer Leverkusen",caps:127,goals:17,ss:7.8,note:"Captain"},{name:"Breel Embolo",pos:"FW",club:"Monaco",caps:66,goals:17,ss:7.5,note:"Physical FW"},{name:"Xherdan Shaqiri",pos:"MF",club:"Chicago Fire",caps:116,goals:32,ss:7.2,note:"Experienced"},{name:"Yann Sommer",pos:"GK",club:"Inter Milan",caps:95,goals:0,ss:8.0,note:"Elite keeper"}],note:"Always reliable. Switzerland punch above their weight every tournament."},
   "Austria":{flag:"🇦🇹",conf:"UEFA",rank:25,ss:6.9,titles:0,coach:"Ralf Rangnick",base:"TBC",form:["W","W","W","D","W"],stats:{ATT:7.0,MID:7.2,DEF:7.0,FIT:7.9},players:[{name:"David Alaba",pos:"DF",club:"Real Madrid",caps:101,goals:16,ss:8.0,note:"Captain"},{name:"C. Baumgartner",pos:"MF",club:"RB Leipzig",caps:42,goals:12,ss:7.7,note:"Creative"},{name:"Marcel Sabitzer",pos:"MF",club:"Dortmund",caps:72,goals:18,ss:7.5,note:"Box-to-box"},{name:"Patrick Pentz",pos:"GK",club:"Brondby",caps:18,goals:0,ss:7.3,note:"Keeper"}],note:"Rangnick's high press has transformed Austria. Euro 2024 quarter-finalists."},
   "Sweden":{flag:"🇸🇪",conf:"UEFA",rank:28,ss:7.0,titles:0,coach:"Graham Potter",base:"Frisco, TX",form:["D","W","W","D","W"],stats:{ATT:7.1,MID:7.0,DEF:7.2,FIT:7.8},players:[{name:"Alexander Isak",pos:"FW",club:"Newcastle",caps:37,goals:20,ss:8.2,note:"Elite PL striker"},{name:"Dejan Kulusevski",pos:"MF",club:"Tottenham",caps:44,goals:12,ss:8.0,note:"Creative"},{name:"Victor Lindelof",pos:"DF",club:"Man United",caps:80,goals:5,ss:7.2,note:"CB"},{name:"Robin Olsen",pos:"GK",club:"Aston Villa",caps:56,goals:0,ss:7.2,note:"Keeper"}],note:"Isak and Kulusevski give Sweden serious quality. Graham Potter's first tournament."},
   "Iran":{flag:"🇮🇷",conf:"AFC",rank:21,ss:6.9,titles:0,coach:"Cheragh Ghalenoei",base:"Tijuana, Mexico",form:["W","D","W","D","W"],stats:{ATT:6.7,MID:7.0,DEF:7.3,FIT:7.7},players:[{name:"Mehdi Taremi",pos:"FW",club:"Inter Milan",caps:89,goals:44,ss:7.8,note:"Inter striker"},{name:"Sardar Azmoun",pos:"FW",club:"Roma",caps:72,goals:43,ss:7.6,note:"Technical"},{name:"A. Jahanbakhsh",pos:"MF",club:"Feyenoord",caps:80,goals:20,ss:7.2,note:"Winger"},{name:"A. Beiranvand",pos:"GK",club:"Antwerp",caps:55,goals:0,ss:7.5,note:"Keeper"}],note:"Taremi at Inter gives them a top European striker."},
   "Algeria":{flag:"🇩🇿",conf:"CAF",rank:32,ss:6.7,titles:0,coach:"Vladimir Petkovic",base:"TBC",form:["W","D","W","L","W"],stats:{ATT:6.8,MID:6.9,DEF:6.7,FIT:7.5},players:[{name:"Riyad Mahrez",pos:"FW",club:"Al Ahli",caps:99,goals:30,ss:7.6,note:"Algeria's greatest"},{name:"Ismael Bennacer",pos:"MF",club:"AC Milan",caps:50,goals:3,ss:7.8,note:"Serie A star"},{name:"Youcef Atal",pos:"DF",club:"Nottingham Forest",caps:34,goals:7,ss:7.3,note:"RB"},{name:"Rais M'Bolhi",pos:"GK",club:"Al-Qadsia",caps:87,goals:0,ss:6.8,note:"Veteran"}],note:"Mahrez and Bennacer give real quality. Drawn against Argentina in Group J."},
-  "Ecuador":{flag:"🇪🇨",conf:"CONMEBOL",rank:44,ss:6.6,titles:0,coach:"Sebastián Beccacece",base:"Columbus, OH",form:["W","D","W","L","W"],stats:{ATT:6.7,MID:6.5,DEF:6.6,FIT:7.7},players:[{name:"Moises Caicedo",pos:"MF",club:"Chelsea",caps:44,goals:5,ss:8.1,note:"World-class DM"},{name:"Enner Valencia",pos:"FW",club:"Internacional",caps:87,goals:40,ss:7.0,note:"All-time scorer"},{name:"Jeremy Sarmiento",pos:"MF",club:"Brighton",caps:25,goals:4,ss:7.2,note:"Winger"},{name:"A. Dominguez",pos:"GK",club:"LDU Quito",caps:75,goals:0,ss:6.8,note:"Keeper"}],note:"Caicedo is genuinely world-class. Could cause trouble for Germany in Group E."},
+  "Ecuador":{flag:"🇪🇨",conf:"CONMEBOL",rank:44,ss:6.6,titles:0,coach:"Sebastián Beccacece",base:"Columbus, OH",form:["D","W","W","L","W"],stats:{ATT:6.7,MID:6.5,DEF:6.6,FIT:7.7},players:[{name:"Moises Caicedo",pos:"MF",club:"Chelsea",caps:44,goals:5,ss:8.1,note:"World-class DM"},{name:"Enner Valencia",pos:"FW",club:"Internacional",caps:87,goals:40,ss:7.0,note:"All-time scorer"},{name:"Jeremy Sarmiento",pos:"MF",club:"Brighton",caps:25,goals:4,ss:7.2,note:"Winger"},{name:"A. Dominguez",pos:"GK",club:"LDU Quito",caps:75,goals:0,ss:6.8,note:"Keeper"}],note:"Caicedo is genuinely world-class. Could cause trouble for Germany in Group E."},
   "Paraguay":{flag:"🇵🇾",conf:"CONMEBOL",rank:53,ss:6.4,titles:0,coach:"Gustavo Alfaro",base:"TBC",form:["D","W","L","D","W"],stats:{ATT:6.2,MID:6.4,DEF:6.7,FIT:7.4},players:[{name:"Miguel Almiron",pos:"MF",club:"Atletico Madrid",caps:67,goals:13,ss:7.6,note:"Tireless"},{name:"Julio Enciso",pos:"FW",club:"Brighton",caps:24,goals:6,ss:7.4,note:"Explosive talent"},{name:"Omar Alderete",pos:"DF",club:"Getafe",caps:35,goals:2,ss:6.7,note:"Defender"},{name:"Antony Silva",pos:"GK",club:"Libertad",caps:84,goals:0,ss:6.8,note:"Veteran"}],note:"Almiron and Enciso give Paraguay options."},
-  "Scotland":{flag:"🏴󠁧󠁢󠁳󠁣󠁴󠁿",conf:"UEFA",rank:39,ss:6.6,titles:0,coach:"Steve Clarke",base:"TBC",form:["D","W","W","D","L"],stats:{ATT:6.5,MID:6.8,DEF:6.7,FIT:7.5},players:[{name:"Andy Robertson",pos:"DF",club:"Liverpool",caps:82,goals:5,ss:8.0,note:"World-class LB"},{name:"Scott McTominay",pos:"MF",club:"Napoli",caps:57,goals:16,ss:7.8,note:"Goals machine"},{name:"Che Adams",pos:"FW",club:"Torino",caps:33,goals:12,ss:7.1,note:"FW"},{name:"Angus Gunn",pos:"GK",club:"Norwich",caps:18,goals:0,ss:6.9,note:"Keeper"}],note:"McTominay fired Scotland to qualification. Robertson is world-class."},
+  "Scotland":{flag:"🏴󠁧󠁢󠁳󠁣󠁴󠁿",conf:"UEFA",rank:39,ss:6.6,titles:0,coach:"Steve Clarke",base:"TBC",form:["L","D","W","W","D"],stats:{ATT:6.5,MID:6.8,DEF:6.7,FIT:7.5},players:[{name:"Andy Robertson",pos:"DF",club:"Liverpool",caps:82,goals:5,ss:8.0,note:"World-class LB"},{name:"Scott McTominay",pos:"MF",club:"Napoli",caps:57,goals:16,ss:7.8,note:"Goals machine"},{name:"Che Adams",pos:"FW",club:"Torino",caps:33,goals:12,ss:7.1,note:"FW"},{name:"Angus Gunn",pos:"GK",club:"Norwich",caps:18,goals:0,ss:6.9,note:"Keeper"}],note:"McTominay fired Scotland to qualification. Robertson is world-class."},
   "Australia":{flag:"🇦🇺",conf:"AFC",rank:24,ss:6.9,titles:0,coach:"Tony Popovic",base:"TBC",form:["W","D","W","W","L"],stats:{ATT:6.8,MID:7.0,DEF:6.9,FIT:8.0},players:[{name:"Mathew Ryan",pos:"GK",club:"Levante",caps:86,goals:0,ss:7.4,note:"La Liga keeper"},{name:"Ajdin Hrustic",pos:"MF",club:"Heracles Almelo",caps:36,goals:7,ss:7.2,note:"Creative"},{name:"Nestory Irankunda",pos:"FW",club:"Watford",caps:12,goals:3,ss:7.4,note:"Exciting young talent"},{name:"Milos Degenek",pos:"DF",club:"APOEL",caps:58,goals:2,ss:6.8,note:"CB"}],note:"Back-to-back Round of 16 appearances. Australia always compete hard."},
   "Turkiye":{flag:"🇹🇷",conf:"UEFA",rank:29,ss:7.0,titles:0,coach:"Vincenzo Montella",base:"TBC",form:["W","W","D","W","L"],stats:{ATT:7.3,MID:7.1,DEF:6.8,FIT:7.6},players:[{name:"Hakan Calhanoglu",pos:"MF",club:"Inter Milan",caps:89,goals:22,ss:8.2,note:"Serie A champion"},{name:"Arda Guler",pos:"MF",club:"Real Madrid",caps:22,goals:8,ss:8.0,note:"Teen sensation"},{name:"Kerem Akturkoglu",pos:"FW",club:"Galatasaray",caps:38,goals:13,ss:7.7,note:"Winger"},{name:"Altay Bayindir",pos:"GK",club:"Man United",caps:20,goals:0,ss:7.2,note:"GK"}],note:"Arda Guler could be the tournament's revelation. Calhanoglu is world-class."},
-  "Ivory Coast":{flag:"🇨🇮",conf:"CAF",rank:48,ss:6.8,titles:0,coach:"Emerse Fae",base:"Philadelphia, PA",form:["W","W","D","W","L"],stats:{ATT:7.0,MID:6.9,DEF:6.6,FIT:7.8},players:[{name:"Sebastien Haller",pos:"FW",club:"Dortmund",caps:44,goals:19,ss:7.5,note:"Inspirational comeback"},{name:"Franck Kessie",pos:"MF",club:"Barcelona",caps:71,goals:12,ss:7.4,note:"Box-to-box"},{name:"Simon Adingra",pos:"FW",club:"Brighton",caps:22,goals:8,ss:7.6,note:"Exciting winger"},{name:"Yahia Fofana",pos:"GK",club:"Chelsea",caps:30,goals:0,ss:7.3,note:"Chelsea GK"}],note:"2023 AFCON champions. Full of European talent."},
+  "Ivory Coast":{flag:"🇨🇮",conf:"CAF",rank:48,ss:6.8,titles:0,coach:"Emerse Fae",base:"Philadelphia, PA",form:["W","W","D","W","L"],stats:{ATT:7.0,MID:6.9,DEF:6.6,FIT:7.8},players:[{name:"Sebastien Haller",pos:"FW",club:"Dortmund",caps:44,goals:19,ss:7.5,note:"Inspirational comeback"},{name:"Franck Kessie",pos:"MF",club:"Barcelona",caps:71,goals:12,ss:7.4,note:"Box-to-box"},{name:"Simon Adingra",pos:"FW",club:"Brighton",caps:22,goals:8,ss:7.6,note:"Exciting winger"},{name:"Yahia Fofana",pos:"GK",club:"Chelsea",caps:30,goals:0,ss:7.3,note:"Chelsea GK"}],note:"2023 AFCON champions. Upset France 2-1 in their final warm-up. Full of European talent."},
   "Tunisia":{flag:"🇹🇳",conf:"CAF",rank:30,ss:6.7,titles:0,coach:"Faouzi Benzarti",base:"Monterrey, Mexico",form:["W","D","L","W","D"],stats:{ATT:6.6,MID:6.8,DEF:7.0,FIT:7.5},players:[{name:"Wahbi Khazri",pos:"FW",club:"Montpellier",caps:71,goals:25,ss:7.0,note:"Veteran FW"},{name:"Aissa Laidouni",pos:"MF",club:"Watford",caps:34,goals:3,ss:7.2,note:"Midfielder"},{name:"Youssef Msakni",pos:"MF",club:"Al-Qadsia",caps:99,goals:30,ss:6.8,note:"Technical"},{name:"Aymen Dahmen",pos:"GK",club:"Al Qadsiah",caps:24,goals:0,ss:7.0,note:"Keeper"}],note:"Organized and hard to beat."},
-  "Saudi Arabia":{flag:"🇸🇦",conf:"AFC",rank:58,ss:6.3,titles:0,coach:"Herve Renard",base:"Austin, TX",form:["D","W","L","W","D"],stats:{ATT:6.3,MID:6.4,DEF:6.5,FIT:7.3},players:[{name:"Salem Al-Dawsari",pos:"FW",club:"Al Hilal",caps:89,goals:25,ss:7.1,note:"Scored vs Argentina 2022"},{name:"Mohamed Kanno",pos:"MF",club:"Al Hilal",caps:51,goals:7,ss:6.9,note:"Midfielder"},{name:"Ali Al-Bulayhi",pos:"DF",club:"Al Hilal",caps:79,goals:2,ss:6.7,note:"Defender"},{name:"M. Al-Owais",pos:"GK",club:"Al Hilal",caps:64,goals:0,ss:7.2,note:"Best Saudi GK"}],note:"Famous for beating Argentina in 2022. Group H with Spain is very tough."},
+  "Saudi Arabia":{flag:"🇸🇦",conf:"AFC",rank:58,ss:6.3,titles:0,coach:"Herve Renard",base:"Austin, TX",form:["L","D","W","L","W"],stats:{ATT:6.3,MID:6.4,DEF:6.5,FIT:7.3},players:[{name:"Salem Al-Dawsari",pos:"FW",club:"Al Hilal",caps:89,goals:25,ss:7.1,note:"Scored vs Argentina 2022"},{name:"Mohamed Kanno",pos:"MF",club:"Al Hilal",caps:51,goals:7,ss:6.9,note:"Midfielder"},{name:"Ali Al-Bulayhi",pos:"DF",club:"Al Hilal",caps:79,goals:2,ss:6.7,note:"Defender"},{name:"M. Al-Owais",pos:"GK",club:"Al Hilal",caps:64,goals:0,ss:7.2,note:"Best Saudi GK"}],note:"Famous for beating Argentina in 2022. Group H with Spain is very tough."},
   "Ghana":{flag:"🇬🇭",conf:"CAF",rank:60,ss:6.5,titles:0,coach:"Otto Addo",base:"Providence, RI",form:["W","D","L","W","D"],stats:{ATT:6.6,MID:6.5,DEF:6.4,FIT:7.9},players:[{name:"Mohammed Kudus",pos:"MF",club:"West Ham",caps:39,goals:16,ss:8.1,note:"West Ham star"},{name:"Thomas Partey",pos:"MF",club:"Arsenal",caps:55,goals:14,ss:7.8,note:"Arsenal DM"},{name:"Jordan Ayew",pos:"FW",club:"Leicester",caps:99,goals:23,ss:7.1,note:"Veteran"},{name:"L. Ati-Zigi",pos:"GK",club:"Lorient",caps:22,goals:0,ss:7.2,note:"Keeper"}],note:"Kudus and Partey are PL stars."},
   "DR Congo":{flag:"🇨🇩",conf:"CAF",rank:52,ss:6.4,titles:0,coach:"Sébastien Desabre",base:"Houston, TX",form:["W","W","D","L","W"],stats:{ATT:6.5,MID:6.4,DEF:6.3,FIT:7.9},players:[{name:"Cedric Bakambu",pos:"FW",club:"Marseille",caps:72,goals:28,ss:7.2,note:"Top scorer"},{name:"Chancel Mbemba",pos:"DF",club:"Marseille",caps:55,goals:4,ss:7.4,note:"Solid CB"},{name:"Meschak Elia",pos:"FW",club:"Young Boys",caps:22,goals:6,ss:7.1,note:"Winger"},{name:"Joel Kiassumbua",pos:"GK",club:"OH Leuven",caps:45,goals:0,ss:6.8,note:"Keeper"}],note:"Some real European talent. Group K with Portugal is a massive challenge."},
-  "Uzbekistan":{flag:"🇺🇿",conf:"AFC",rank:74,ss:6.1,titles:0,coach:"Srecko Katanec",base:"TBC",form:["W","D","W","D","W"],stats:{ATT:5.9,MID:6.2,DEF:6.2,FIT:7.5},players:[{name:"Eldor Shomurodov",pos:"FW",club:"Roma",caps:60,goals:24,ss:7.3,note:"Serie A striker"},{name:"J. Masharipov",pos:"MF",club:"Pakhtakor",caps:62,goals:18,ss:6.8,note:"Creative"},{name:"D. Khamdamov",pos:"MF",club:"AGMK",caps:18,goals:4,ss:6.6,note:"Young talent"},{name:"Utkir Yusupov",pos:"GK",club:"Pakhtakor",caps:39,goals:0,ss:6.7,note:"Keeper"}],note:"First World Cup. Shomurodov at Roma shows they have top-level talent."},
+  "Uzbekistan":{flag:"🇺🇿",conf:"AFC",rank:74,ss:6.1,titles:0,coach:"Srecko Katanec",base:"TBC",form:["L","W","D","W","W"],stats:{ATT:5.9,MID:6.2,DEF:6.2,FIT:7.5},players:[{name:"Eldor Shomurodov",pos:"FW",club:"Roma",caps:60,goals:24,ss:7.3,note:"Serie A striker"},{name:"J. Masharipov",pos:"MF",club:"Pakhtakor",caps:62,goals:18,ss:6.8,note:"Creative"},{name:"D. Khamdamov",pos:"MF",club:"AGMK",caps:18,goals:4,ss:6.6,note:"Young talent"},{name:"Utkir Yusupov",pos:"GK",club:"Pakhtakor",caps:39,goals:0,ss:6.7,note:"Keeper"}],note:"First World Cup. Shomurodov at Roma shows they have top-level talent."},
   "Cape Verde":{flag:"🇨🇻",conf:"CAF",rank:61,ss:6.2,titles:0,coach:"Pedro Brito Bubista",base:"TBC",form:["W","D","W","L","W"],stats:{ATT:6.1,MID:6.3,DEF:6.2,FIT:7.6},players:[{name:"Garry Rodrigues",pos:"FW",club:"Moreirense",caps:55,goals:17,ss:6.8,note:"Winger"},{name:"Ryan Mendes",pos:"FW",club:"Angers",caps:58,goals:20,ss:6.7,note:"Top scorer"},{name:"Stopira",pos:"DF",club:"Kaiserslautern",caps:72,goals:3,ss:6.5,note:"Veteran"},{name:"Vozinha",pos:"GK",club:"Al Fayha",caps:42,goals:0,ss:6.9,note:"GK"}],note:"First World Cup appearance. A proud moment for the island nation."},
   "Qatar":{flag:"🇶🇦",conf:"AFC",rank:58,ss:6.0,titles:0,coach:"Julen Lopetegui",base:"Santa Barbara, CA",form:["L","D","W","L","W"],stats:{ATT:5.8,MID:6.1,DEF:6.0,FIT:7.2},players:[{name:"Akram Afif",pos:"FW",club:"Al Sadd",caps:75,goals:34,ss:7.2,note:"Best player"},{name:"Almoez Ali",pos:"FW",club:"Al Duhail",caps:80,goals:42,ss:6.9,note:"Top scorer"},{name:"Hassan Al-Haydos",pos:"MF",club:"Al Sadd",caps:170,goals:38,ss:6.7,note:"Captain"},{name:"M. Barsham",pos:"GK",club:"Al Sadd",caps:35,goals:0,ss:6.8,note:"GK"}],note:"Hosts of 2022, now guests managed by Lopetegui."},
   "Bosnia & Herz.":{flag:"🇧🇦",conf:"UEFA",rank:55,ss:6.5,titles:0,coach:"Sergej Barbarez",base:"Sandy, UT",form:["W","D","L","W","D"],stats:{ATT:6.7,MID:6.4,DEF:6.3,FIT:7.0},players:[{name:"Edin Dzeko",pos:"FW",club:"FC Schalke 04",caps:130,goals:65,ss:7.0,note:"All-time scorer"},{name:"Ermedin Demirovic",pos:"FW",club:"VfB Stuttgart",caps:40,goals:18,ss:7.4,note:"Bundesliga star"},{name:"Sead Kolasinac",pos:"DF",club:"Atalanta",caps:62,goals:3,ss:6.6,note:"LB"},{name:"Nikola Vasilj",pos:"GK",club:"FC St. Pauli",caps:25,goals:0,ss:7.0,note:"Bundesliga GK"}],note:"The Golden Generation era nearing its end. Physical style could cause upsets."},
@@ -178,19 +178,165 @@ const TEAMS = {
   "Haiti":{flag:"🇭🇹",conf:"CONCACAF",rank:83,ss:5.5,titles:0,coach:"Sébastien Migné",base:"TBC",form:["W","L","D","L","W"],stats:{ATT:5.4,MID:5.6,DEF:5.5,FIT:7.3},players:[{name:"Duckens Nazon",pos:"FW",club:"Pau FC",caps:44,goals:18,ss:6.3,note:"Top scorer"},{name:"Frantzdy Pierrot",pos:"FW",club:"Nashville SC",caps:38,goals:14,ss:6.1,note:"MLS FW"},{name:"Steeven Saba",pos:"MF",club:"Rodez AF",caps:30,goals:5,ss:5.9,note:"Midfielder"},{name:"Josue Duverger",pos:"GK",club:"Violette AC",caps:35,goals:0,ss:6.0,note:"GK"}],note:"Historic return to the World Cup after 52 years."},
   "New Zealand":{flag:"🇳🇿",conf:"OFC",rank:97,ss:5.9,titles:0,coach:"Darren Bazeley",base:"TBC",form:["W","D","L","W","D"],stats:{ATT:5.6,MID:6.0,DEF:6.1,FIT:7.4},players:[{name:"Chris Wood",pos:"FW",club:"Nottingham Forest",caps:90,goals:31,ss:7.2,note:"PL striker"},{name:"Liberato Cacace",pos:"DF",club:"Empoli",caps:29,goals:2,ss:7.1,note:"LB"},{name:"Clayton Lewis",pos:"MF",club:"Al-Qadsiah",caps:39,goals:6,ss:6.8,note:"Midfielder"},{name:"Max Crocombe",pos:"GK",club:"St Mirren",caps:21,goals:0,ss:6.6,note:"GK"}],note:"OFC representatives. Chris Wood is a proven Premier League striker."},
   "Jordan":{flag:"🇯🇴",conf:"AFC",rank:69,ss:6.0,titles:0,coach:"Hussein Ammouta",base:"Portland, OR",form:["D","W","L","D","W"],stats:{ATT:5.8,MID:6.0,DEF:6.2,FIT:7.2},players:[{name:"Yazan Al-Naimat",pos:"FW",club:"Al Wihdat",caps:31,goals:12,ss:6.4,note:"Top scorer"},{name:"Baha Faisal",pos:"MF",club:"Al Faisaly",caps:38,goals:6,ss:6.2,note:"Midfielder"},{name:"Sanad Nasser",pos:"DF",club:"Al Faisaly",caps:44,goals:1,ss:6.3,note:"CB"},{name:"Amer Shafi",pos:"GK",club:"Al Ahli Amman",caps:88,goals:0,ss:6.7,note:"Legend"}],note:"Jordan's first ever World Cup. A historic moment."},
-  "Iraq":{flag:"🇮🇶",conf:"AFC",rank:62,ss:6.0,titles:0,coach:"Jesus Casas",base:"TBC",form:["W","D","L","W","D"],stats:{ATT:5.9,MID:6.1,DEF:6.0,FIT:7.1},players:[{name:"Amjed Attwan",pos:"FW",club:"Al Zawraa",caps:38,goals:14,ss:6.4,note:"Top scorer"},{name:"Mohanad Ali",pos:"MF",club:"Al Quwa Al Jawiya",caps:32,goals:8,ss:6.3,note:"Midfielder"},{name:"Ali Adnan",pos:"DF",club:"Al Zawraa",caps:72,goals:6,ss:6.8,note:"LB"},{name:"Jalal Hassan",pos:"GK",club:"Erbil SC",caps:52,goals:0,ss:6.5,note:"GK"}],note:"Iraq's return to the WC after 40 years."},
+  "Iraq":{flag:"🇮🇶",conf:"AFC",rank:62,ss:6.0,titles:0,coach:"Jesus Casas",base:"TBC",form:["D","W","D","L","W"],stats:{ATT:5.9,MID:6.1,DEF:6.0,FIT:7.1},players:[{name:"Amjed Attwan",pos:"FW",club:"Al Zawraa",caps:38,goals:14,ss:6.4,note:"Top scorer"},{name:"Mohanad Ali",pos:"MF",club:"Al Quwa Al Jawiya",caps:32,goals:8,ss:6.3,note:"Midfielder"},{name:"Ali Adnan",pos:"DF",club:"Al Zawraa",caps:72,goals:6,ss:6.8,note:"LB"},{name:"Jalal Hassan",pos:"GK",club:"Erbil SC",caps:52,goals:0,ss:6.5,note:"GK"}],note:"Held Spain to a 1-1 draw in their final warm-up. Iraq's return to the WC after 40 years."},
   "Panama":{flag:"🇵🇦",conf:"CONCACAF",rank:49,ss:6.2,titles:0,coach:"Thomas Christiansen",base:"TBC",form:["D","W","D","W","L"],stats:{ATT:6.0,MID:6.2,DEF:6.5,FIT:7.6},players:[{name:"Ismael Diaz",pos:"FW",club:"Porto",caps:25,goals:9,ss:7.3,note:"Porto FW"},{name:"A. Carrasquilla",pos:"MF",club:"Houston Dynamo",caps:45,goals:8,ss:7.0,note:"Creative"},{name:"R. Blackburn",pos:"FW",club:"Club Tijuana",caps:34,goals:12,ss:6.7,note:"Physical"},{name:"Luis Mejia",pos:"GK",club:"Modena",caps:32,goals:0,ss:7.0,note:"Keeper"}],note:"Will defend resolutely and look for set-piece goals."},
   "Curacao":{flag:"🇨🇼",conf:"CONCACAF",rank:79,ss:5.8,titles:0,coach:"Fred Rutten",base:"TBC",form:["W","L","D","W","L"],stats:{ATT:5.7,MID:5.9,DEF:5.8,FIT:7.1},players:[{name:"Leandro Bacuna",pos:"MF",club:"Cardiff City",caps:61,goals:11,ss:6.8,note:"Most capped"},{name:"Quentin Bericot",pos:"FW",club:"Guingamp",caps:20,goals:7,ss:6.3,note:"FW"},{name:"Eloy Room",pos:"GK",club:"Alaves",caps:47,goals:0,ss:6.9,note:"GK"},{name:"Cuco Martina",pos:"DF",club:"retired",caps:55,goals:2,ss:6.2,note:"Veteran"}],note:"Historic debut at the World Cup. Drawn against Germany."},
   "Czechia":{flag:"🇨🇿",conf:"UEFA",rank:36,ss:6.7,titles:0,coach:"Miroslav Koubek",base:"Mansfield, TX",form:["W","W","D","L","W"],stats:{ATT:6.6,MID:6.8,DEF:6.9,FIT:7.1},players:[{name:"Patrik Schick",pos:"FW",club:"Bayer Leverkusen",caps:53,goals:27,ss:7.6,note:"Clinical"},{name:"Tomas Soucek",pos:"MF",club:"West Ham",caps:79,goals:18,ss:7.3,note:"Box-to-box"},{name:"Vladimir Coufal",pos:"DF",club:"West Ham",caps:44,goals:2,ss:6.8,note:"RB"},{name:"Jiri Stanek",pos:"GK",club:"Atletico Madrid",caps:22,goals:0,ss:7.1,note:"Keeper"}],note:"First WC in 20 years. Schick and Soucek are genuine top-level players."},
 };
 
+// ── RECENT4 — verified as of Jun 5, 2026 ─────────────────────────────────
+// Once WC starts (Jun 11), RecentForm component auto-upgrades to live API data.
 const RECENT4 = {
-  "Argentina":[{date:"Apr 1, 2026",opp:"Zambia",score:"5-0",loc:"Buenos Aires",comp:"Friendly",res:"W"},{date:"Mar 28, 2026",opp:"Mauritania",score:"2-1",loc:"Buenos Aires",comp:"Friendly",res:"W"},{date:"Nov 14, 2025",opp:"Angola",score:"2-0",loc:"Luanda",comp:"Friendly",res:"W"},{date:"Oct 15, 2025",opp:"Puerto Rico",score:"6-0",loc:"San Juan",comp:"Friendly",res:"W"}],
-  "France":[{date:"Mar 29, 2026",opp:"Colombia",score:"3-1",loc:"Paris",comp:"Friendly",res:"W"},{date:"Mar 26, 2026",opp:"Brazil",score:"2-1",loc:"Paris",comp:"Friendly",res:"W"},{date:"Nov 16, 2025",opp:"Azerbaijan",score:"3-1",loc:"Baku",comp:"WC Qualifier",res:"W"},{date:"Nov 13, 2025",opp:"Iceland",score:"2-2",loc:"Reykjavik",comp:"WC Qualifier",res:"D"}],
-  "Brazil":[{date:"Mar 26, 2026",opp:"France",score:"1-2",loc:"Paris",comp:"Friendly",res:"L"},{date:"Mar 22, 2026",opp:"Germany",score:"2-1",loc:"Frankfurt",comp:"Friendly",res:"W"},{date:"Nov 18, 2025",opp:"Uruguay",score:"2-1",loc:"Montevideo",comp:"WC Qualifier",res:"W"},{date:"Nov 14, 2025",opp:"Venezuela",score:"3-0",loc:"Brasilia",comp:"WC Qualifier",res:"W"}],
-  "England":[{date:"Mar 31, 2026",opp:"Japan",score:"0-1",loc:"Wembley",comp:"Friendly",res:"L"},{date:"Mar 27, 2026",opp:"Uruguay",score:"1-1",loc:"Wembley",comp:"Friendly",res:"D"},{date:"Nov 16, 2025",opp:"Albania",score:"2-0",loc:"Tirana",comp:"WC Qualifier",res:"W"},{date:"Nov 13, 2025",opp:"Serbia",score:"2-0",loc:"Wembley",comp:"WC Qualifier",res:"W"}],
-  "Spain":[{date:"Mar 28, 2026",opp:"Portugal",score:"1-1",loc:"Seville",comp:"Friendly",res:"D"},{date:"Mar 25, 2026",opp:"Germany",score:"2-0",loc:"Madrid",comp:"Friendly",res:"W"},{date:"Nov 15, 2025",opp:"Turkiye",score:"2-2",loc:"Istanbul",comp:"WC Qualifier",res:"D"},{date:"Nov 11, 2025",opp:"Denmark",score:"3-0",loc:"Madrid",comp:"WC Qualifier",res:"W"}],
-  "Germany":[{date:"May 26, 2026",opp:"Ghana",score:"2-1",loc:"Nuremberg",comp:"Friendly",res:"W"},{date:"Mar 25, 2026",opp:"Spain",score:"0-2",loc:"Madrid",comp:"Friendly",res:"L"},{date:"Mar 22, 2026",opp:"Brazil",score:"1-2",loc:"Frankfurt",comp:"Friendly",res:"L"},{date:"Nov 16, 2025",opp:"Slovakia",score:"6-0",loc:"Dusseldorf",comp:"WC Qualifier",res:"W"}],
+  "Argentina":[
+    {date:"Apr 1, 2026",  opp:"Zambia",      score:"5-0", loc:"Buenos Aires", comp:"Friendly",     res:"W"},
+    {date:"Mar 28, 2026", opp:"Mauritania",  score:"2-1", loc:"Buenos Aires", comp:"Friendly",     res:"W"},
+    {date:"Nov 14, 2025", opp:"Angola",      score:"2-0", loc:"Luanda",       comp:"Friendly",     res:"W"},
+    {date:"Oct 15, 2025", opp:"Puerto Rico", score:"6-0", loc:"San Juan",     comp:"Friendly",     res:"W"},
+  ],
+  "France":[
+    {date:"Jun 4, 2026",  opp:"Ivory Coast", score:"1-2", loc:"Nantes",       comp:"Friendly",     res:"L"},
+    {date:"Mar 29, 2026", opp:"Colombia",    score:"3-1", loc:"Paris",        comp:"Friendly",     res:"W"},
+    {date:"Mar 26, 2026", opp:"Brazil",      score:"2-1", loc:"Boston",       comp:"Friendly",     res:"W"},
+    {date:"Nov 16, 2025", opp:"Azerbaijan",  score:"3-1", loc:"Baku",         comp:"WC Qualifier", res:"W"},
+  ],
+  "Brazil":[
+    {date:"Jun 1, 2026",  opp:"Panama",  score:"6-2", loc:"Rio de Janeiro", comp:"Friendly",     res:"W"},
+    {date:"Mar 31, 2026", opp:"Croatia", score:"3-1", loc:"Orlando",        comp:"Friendly",     res:"W"},
+    {date:"Mar 26, 2026", opp:"France",  score:"1-2", loc:"Boston",         comp:"Friendly",     res:"L"},
+    {date:"Nov 18, 2025", opp:"Uruguay", score:"2-1", loc:"Montevideo",     comp:"WC Qualifier", res:"W"},
+  ],
+  "England":[
+    {date:"Mar 31, 2026", opp:"Japan",   score:"0-1", loc:"Wembley", comp:"Friendly",     res:"L"},
+    {date:"Mar 27, 2026", opp:"Uruguay", score:"1-1", loc:"Wembley", comp:"Friendly",     res:"D"},
+    {date:"Nov 16, 2025", opp:"Albania", score:"2-0", loc:"Tirana",  comp:"WC Qualifier", res:"W"},
+    {date:"Nov 13, 2025", opp:"Serbia",  score:"2-0", loc:"Wembley", comp:"WC Qualifier", res:"W"},
+  ],
+  "Spain":[
+    {date:"Jun 4, 2026",  opp:"Iraq",     score:"1-1", loc:"La Coruña", comp:"Friendly",     res:"D"},
+    {date:"Mar 31, 2026", opp:"Egypt",    score:"0-0", loc:"Madrid",    comp:"Friendly",     res:"D"},
+    {date:"Mar 28, 2026", opp:"Portugal", score:"1-1", loc:"Seville",   comp:"Friendly",     res:"D"},
+    {date:"Nov 15, 2025", opp:"Turkiye",  score:"2-2", loc:"Istanbul",  comp:"WC Qualifier", res:"D"},
+  ],
+  "Germany":[
+    {date:"May 26, 2026", opp:"Ghana",       score:"2-1", loc:"Nuremberg", comp:"Friendly", res:"W"},
+    {date:"Mar 28, 2026", opp:"Switzerland", score:"4-3", loc:"Basel",     comp:"Friendly", res:"W"},
+    {date:"Mar 31, 2026", opp:"Brazil",      score:"1-3", loc:"Orlando",   comp:"Friendly", res:"L"},
+    {date:"Nov 2025",     opp:"Slovakia",    score:"6-0", loc:"Dusseldorf",comp:"WC Qualifier", res:"W"},
+  ],
+  "Portugal":[
+    {date:"Mar 31, 2026", opp:"United States", score:"2-0", loc:"Atlanta",     comp:"Friendly",     res:"W"},
+    {date:"Mar 28, 2026", opp:"Spain",         score:"1-1", loc:"Seville",     comp:"Friendly",     res:"D"},
+    {date:"Mar 28, 2026", opp:"Mexico",        score:"0-0", loc:"Mexico City", comp:"Friendly",     res:"D"},
+    {date:"Nov 2025",     opp:"Poland",        score:"5-1", loc:"Lisbon",      comp:"WC Qualifier", res:"W"},
+  ],
+  "Netherlands":[
+    {date:"Jun 3, 2026",  opp:"Algeria",  score:"0-1", loc:"Rotterdam",  comp:"Friendly",     res:"L"},
+    {date:"Mar 31, 2026", opp:"Ecuador",  score:"1-1", loc:"Amsterdam",  comp:"Friendly",     res:"D"},
+    {date:"Mar 27, 2026", opp:"Norway",   score:"2-1", loc:"Amsterdam",  comp:"Friendly",     res:"W"},
+    {date:"Nov 2025",     opp:"Finland",  score:"4-0", loc:"Amsterdam",  comp:"WC Qualifier", res:"W"},
+  ],
+  "Belgium":[
+    {date:"Jun 2, 2026",  opp:"Croatia",        score:"2-0", loc:"Brussels", comp:"Friendly",     res:"W"},
+    {date:"Mar 28, 2026", opp:"United States",  score:"5-2", loc:"Atlanta",  comp:"Friendly",     res:"W"},
+    {date:"Mar 31, 2026", opp:"Mexico",         score:"1-1", loc:"Chicago",  comp:"Friendly",     res:"D"},
+    {date:"Nov 2025",     opp:"Italy",          score:"1-0", loc:"Brussels", comp:"WC Qualifier", res:"W"},
+  ],
+  "Norway":[
+    {date:"Jun 1, 2026",  opp:"Sweden",      score:"3-1", loc:"Oslo",      comp:"Friendly",     res:"W"},
+    {date:"Mar 27, 2026", opp:"Netherlands", score:"1-2", loc:"Amsterdam", comp:"Friendly",     res:"L"},
+    {date:"Nov 2025",     opp:"Germany",     score:"1-3", loc:"Oslo",      comp:"WC Qualifier", res:"L"},
+    {date:"Oct 2025",     opp:"Austria",     score:"2-1", loc:"Oslo",      comp:"WC Qualifier", res:"W"},
+  ],
+  "Mexico":[
+    {date:"May 23, 2026", opp:"Ghana",    score:"2-0", loc:"Toluca",      comp:"Friendly",     res:"W"},
+    {date:"Mar 31, 2026", opp:"Belgium",  score:"1-1", loc:"Chicago",     comp:"Friendly",     res:"D"},
+    {date:"Mar 28, 2026", opp:"Portugal", score:"0-0", loc:"Mexico City", comp:"Friendly",     res:"D"},
+    {date:"Nov 2025",     opp:"Canada",   score:"2-1", loc:"Mexico City", comp:"WC Qualifier", res:"W"},
+  ],
+  "United States":[
+    {date:"May 31, 2026", opp:"Senegal",  score:"3-2", loc:"Charlotte", comp:"Friendly", res:"W"},
+    {date:"Mar 31, 2026", opp:"Portugal", score:"0-2", loc:"Atlanta",   comp:"Friendly", res:"L"},
+    {date:"Mar 28, 2026", opp:"Belgium",  score:"2-5", loc:"Atlanta",   comp:"Friendly", res:"L"},
+    {date:"Nov 2025",     opp:"Paraguay", score:"2-1", loc:"Kansas City",comp:"Friendly", res:"W"},
+  ],
+  "Morocco":[
+    {date:"May 26, 2026", opp:"Burundi",  score:"5-0", loc:"Rabat",       comp:"Friendly",     res:"W"},
+    {date:"Mar 2026",     opp:"Cameroon", score:"3-0", loc:"Rabat",       comp:"Friendly",     res:"W"},
+    {date:"Nov 2025",     opp:"Angola",   score:"1-0", loc:"Casablanca",  comp:"WC Qualifier", res:"W"},
+    {date:"Oct 2025",     opp:"Tanzania", score:"3-0", loc:"Casablanca",  comp:"WC Qualifier", res:"W"},
+  ],
+  "Uruguay":[
+    {date:"Mar 31, 2026", opp:"Algeria", score:"0-0", loc:"Montevideo", comp:"Friendly",     res:"D"},
+    {date:"Mar 27, 2026", opp:"England", score:"1-1", loc:"Wembley",    comp:"Friendly",     res:"D"},
+    {date:"Nov 2025",     opp:"Bolivia", score:"3-0", loc:"Montevideo", comp:"WC Qualifier", res:"W"},
+    {date:"Oct 2025",     opp:"Paraguay",score:"1-0", loc:"Asuncion",   comp:"WC Qualifier", res:"W"},
+  ],
+  "Croatia":[
+    {date:"Jun 2, 2026",  opp:"Belgium",  score:"0-2", loc:"Brussels", comp:"Friendly", res:"L"},
+    {date:"Mar 31, 2026", opp:"Brazil",   score:"1-3", loc:"Orlando",  comp:"Friendly", res:"L"},
+    {date:"Mar 29, 2026", opp:"Colombia", score:"1-3", loc:"Orlando",  comp:"Friendly", res:"L"},
+    {date:"Nov 2025",     opp:"Greece",   score:"2-1", loc:"Split",    comp:"WC Qualifier", res:"W"},
+  ],
+  "Japan":[
+    {date:"Mar 31, 2026", opp:"England",  score:"1-0", loc:"Wembley",  comp:"Friendly",     res:"W"},
+    {date:"May 2026",     opp:"Iceland",  score:"1-0", loc:"Tokyo",    comp:"Friendly",     res:"W"},
+    {date:"Nov 2025",     opp:"Vietnam",  score:"2-0", loc:"Tokyo",    comp:"WC Qualifier", res:"W"},
+    {date:"Oct 2025",     opp:"Bahrain",  score:"3-0", loc:"Tokyo",    comp:"WC Qualifier", res:"W"},
+  ],
+  "Algeria":[
+    {date:"Jun 3, 2026",  opp:"Netherlands", score:"1-0", loc:"Rotterdam",     comp:"Friendly", res:"W"},
+    {date:"Mar 31, 2026", opp:"Uruguay",     score:"0-0", loc:"Montevideo",    comp:"Friendly", res:"D"},
+    {date:"Mar 27, 2026", opp:"Guatemala",   score:"7-0", loc:"Guatemala City",comp:"Friendly", res:"W"},
+    {date:"Jan 6, 2026",  opp:"DR Congo",    score:"1-0", loc:"Algiers",       comp:"Friendly", res:"W"},
+  ],
+  "Ecuador":[
+    {date:"Mar 31, 2026", opp:"Netherlands",  score:"1-1", loc:"Amsterdam", comp:"Friendly",     res:"D"},
+    {date:"Mar 27, 2026", opp:"Saudi Arabia", score:"2-1", loc:"Quito",     comp:"Friendly",     res:"W"},
+    {date:"Nov 2025",     opp:"Bolivia",      score:"1-0", loc:"Quito",     comp:"WC Qualifier", res:"W"},
+    {date:"Oct 2025",     opp:"Chile",        score:"2-0", loc:"Santiago",  comp:"WC Qualifier", res:"W"},
+  ],
+  "Colombia":[
+    {date:"Jun 2, 2026",  opp:"Costa Rica", score:"3-1", loc:"San José", comp:"Friendly", res:"W"},
+    {date:"Mar 29, 2026", opp:"Croatia",    score:"3-1", loc:"Orlando",  comp:"Friendly", res:"W"},
+    {date:"Mar 29, 2026", opp:"France",     score:"1-3", loc:"Paris",    comp:"Friendly", res:"L"},
+    {date:"Nov 2025",     opp:"Venezuela",  score:"2-0", loc:"Bogota",   comp:"WC Qualifier", res:"W"},
+  ],
+  "Switzerland":[
+    {date:"May 2026",     opp:"Jordan",  score:"4-1", loc:"Bern",   comp:"Friendly", res:"W"},
+    {date:"Mar 28, 2026", opp:"Germany", score:"3-4", loc:"Basel",  comp:"Friendly", res:"L"},
+    {date:"Nov 2025",     opp:"Romania", score:"2-0", loc:"Bern",   comp:"WC Qualifier", res:"W"},
+    {date:"Oct 2025",     opp:"Kosovo",  score:"2-1", loc:"Bern",   comp:"WC Qualifier", res:"W"},
+  ],
+  "Canada":[
+    {date:"Jun 2, 2026",  opp:"Uzbekistan", score:"2-0", loc:"Vancouver", comp:"Friendly",     res:"W"},
+    {date:"Mar 2026",     opp:"Tunisia",    score:"0-0", loc:"Toronto",   comp:"Friendly",     res:"D"},
+    {date:"Nov 2025",     opp:"Cuba",       score:"4-0", loc:"Toronto",   comp:"WC Qualifier", res:"W"},
+    {date:"Oct 2025",     opp:"Panama",     score:"2-0", loc:"Toronto",   comp:"WC Qualifier", res:"W"},
+  ],
+  "Senegal":[
+    {date:"May 31, 2026", opp:"United States", score:"2-3", loc:"Charlotte",   comp:"Friendly",     res:"L"},
+    {date:"Mar 2026",     opp:"Ivory Coast",   score:"0-1", loc:"Abidjan",     comp:"Friendly",     res:"L"},
+    {date:"Nov 2025",     opp:"Benin",         score:"2-0", loc:"Dakar",       comp:"WC Qualifier", res:"W"},
+    {date:"Oct 2025",     opp:"Rwanda",        score:"3-0", loc:"Dakar",       comp:"WC Qualifier", res:"W"},
+  ],
+  "Ivory Coast":[
+    {date:"Jun 4, 2026",  opp:"France",     score:"2-1", loc:"Nantes",  comp:"Friendly",     res:"W"},
+    {date:"Mar 2026",     opp:"Senegal",    score:"1-0", loc:"Abidjan", comp:"Friendly",     res:"W"},
+    {date:"Nov 2025",     opp:"Nigeria",    score:"1-1", loc:"Abidjan", comp:"WC Qualifier", res:"D"},
+    {date:"Oct 2025",     opp:"Uganda",     score:"3-0", loc:"Abidjan", comp:"WC Qualifier", res:"W"},
+  ],
+  "South Korea":[
+    {date:"May 2026",     opp:"Trinidad & Tobago", score:"5-0", loc:"Seoul",    comp:"Friendly",     res:"W"},
+    {date:"Mar 2026",     opp:"Japan",             score:"1-0", loc:"Tokyo",    comp:"Friendly",     res:"W"},
+    {date:"Nov 2025",     opp:"Oman",              score:"2-0", loc:"Seoul",    comp:"WC Qualifier", res:"W"},
+    {date:"Oct 2025",     opp:"Kuwait",            score:"3-0", loc:"Seoul",    comp:"WC Qualifier", res:"W"},
+  ],
+  "Scotland":[
+    {date:"Mar 2026",     opp:"Denmark", score:"1-2", loc:"Glasgow", comp:"Friendly",     res:"L"},
+    {date:"Nov 2025",     opp:"Poland",  score:"2-1", loc:"Glasgow", comp:"WC Qualifier", res:"W"},
+    {date:"Oct 2025",     opp:"Slovakia",score:"1-0", loc:"Glasgow", comp:"WC Qualifier", res:"W"},
+    {date:"Sep 2025",     opp:"Lithuania",score:"3-0",loc:"Glasgow", comp:"WC Qualifier", res:"W"},
+  ],
 };
 
 const PREDS = [
@@ -207,7 +353,7 @@ const PREDS = [
 const STR = {Spain:87,France:86,England:83,Brazil:82,Argentina:81,Germany:79,Portugal:77,Netherlands:76,Belgium:73,Uruguay:71,Colombia:70,Mexico:69,Morocco:68,"United States":67,Croatia:66,Japan:65,Senegal:64,Switzerland:63,Sweden:62,"South Korea":61,Ecuador:60,Norway:59,Australia:57,Austria:56,Czechia:55,"Bosnia & Herz.":54,"Ivory Coast":53,Paraguay:52,Ghana:51,Algeria:50,Iran:48,"DR Congo":46,Uzbekistan:41,"New Zealand":40,Jordan:39,Iraq:38,Panama:38,Curacao:37,Haiti:36,"South Africa":43,"Cape Verde":42,Qatar:44,Tunisia:50,Turkiye:60,Egypt:66,Scotland:58,"Saudi Arabia":49};
 const gs = (t) => STR[t] || 48;
 const HOME_VENUES = {"United States":["SoFi Stadium, Los Angeles","New York New Jersey Stadium, East Rutherford","Dallas Stadium, Dallas","San Francisco Bay Area Stadium, San Francisco","Seattle Stadium, Seattle","Kansas City Stadium, Kansas City","Philadelphia Stadium, Philadelphia","Boston Stadium, Boston","Atlanta Stadium, Atlanta","Miami Stadium, Miami","Houston Stadium, Houston"],"Canada":["Toronto Stadium, Toronto","BC Place, Vancouver"],"Mexico":["Mexico City Stadium, Mexico City","Estadio Guadalajara, Zapopan","Estadio Monterrey, Guadalupe"]};
-const FORM_DATA = {"Spain":["W","W","W","W","W"],"France":["W","W","W","D","W"],"England":["W","W","W","W","D"],"Brazil":["W","D","W","W","W"],"Argentina":["W","W","D","W","W"],"Germany":["W","W","D","W","W"],"Portugal":["W","W","W","W","D"],"Netherlands":["W","D","W","W","W"],"Belgium":["W","W","D","W","D"],"Norway":["W","W","D","W","W"],"Mexico":["W","D","W","D","W"],"United States":["W","W","D","W","W"],"Morocco":["W","W","D","W","L"],"Uruguay":["W","W","D","W","L"],"Croatia":["W","D","W","W","D"],"Japan":["W","W","W","D","W"],"Senegal":["W","D","W","W","D"],"Colombia":["W","W","D","W","D"],"Switzerland":["D","W","W","D","W"],"Austria":["W","W","W","D","W"],"Sweden":["D","W","W","D","W"],"South Korea":["W","D","W","L","W"],"Egypt":["W","D","W","W","L"],"Ecuador":["W","D","W","L","W"],"Turkiye":["W","W","D","W","L"],"Ivory Coast":["W","W","D","W","L"],"Iran":["W","D","W","D","W"],"Algeria":["W","D","W","L","W"],"Ghana":["W","D","L","W","D"],"Paraguay":["D","W","L","D","W"],"Scotland":["D","W","W","D","L"],"Australia":["W","D","W","W","L"],"Czechia":["W","W","D","L","W"],"Tunisia":["W","D","L","W","D"],"Saudi Arabia":["D","W","L","W","D"],"Canada":["W","W","D","W","L"],"Bosnia & Herz.":["W","D","L","W","D"],"DR Congo":["W","W","D","L","W"],"Uzbekistan":["W","D","W","D","W"],"Cape Verde":["W","D","W","L","W"],"South Africa":["D","W","L","D","W"],"Qatar":["L","D","W","L","W"],"Haiti":["W","L","D","L","W"],"New Zealand":["W","D","L","W","D"],"Jordan":["D","W","L","D","W"],"Iraq":["W","D","L","W","D"],"Panama":["D","W","D","W","L"],"Curacao":["W","L","D","W","L"]};
+const FORM_DATA = {"Spain":["D","D","D","W","W"],"France":["L","W","W","D","W"],"England":["L","D","W","W","W"],"Brazil":["W","W","L","W","W"],"Argentina":["W","W","D","W","W"],"Germany":["W","L","W","W","W"],"Portugal":["W","D","W","W","D"],"Netherlands":["L","D","W","W","W"],"Belgium":["W","W","D","W","D"],"Norway":["W","L","W","W","W"],"Mexico":["W","D","D","D","W"],"United States":["W","L","L","W","W"],"Morocco":["W","W","D","W","L"],"Uruguay":["D","D","W","W","L"],"Croatia":["L","L","L","W","D"],"Japan":["W","W","W","D","W"],"Senegal":["L","W","D","W","D"],"Colombia":["W","W","W","D","D"],"Switzerland":["W","L","W","D","W"],"Austria":["W","W","W","D","W"],"Sweden":["D","W","W","D","W"],"South Korea":["W","W","D","L","W"],"Egypt":["D","W","D","W","L"],"Ecuador":["D","W","W","L","W"],"Turkiye":["W","W","D","W","L"],"Ivory Coast":["W","W","D","W","L"],"Iran":["W","D","W","D","W"],"Algeria":["W","D","W","L","W"],"Ghana":["W","D","L","W","D"],"Paraguay":["D","W","L","D","W"],"Scotland":["L","D","W","W","D"],"Australia":["W","D","W","W","L"],"Czechia":["W","W","D","L","W"],"Tunisia":["W","D","L","W","D"],"Saudi Arabia":["D","W","L","W","D"],"Canada":["W","D","W","L","W"],"Bosnia & Herz.":["W","D","L","W","D"],"DR Congo":["W","W","D","L","W"],"Uzbekistan":["L","W","D","W","W"],"Cape Verde":["W","D","W","L","W"],"South Africa":["D","W","L","D","W"],"Qatar":["L","D","W","L","W"],"Haiti":["W","L","D","L","W"],"New Zealand":["W","D","L","W","D"],"Jordan":["D","W","L","D","W"],"Iraq":["D","W","D","L","W"],"Panama":["D","W","D","W","L"],"Curacao":["W","L","D","W","L"]};
 const formScore = (team) => { const form = FORM_DATA[team] || ["D","D","D","D","D"]; const pts = form.slice(-5).reduce((s,r) => s+(r==="W"?1:r==="D"?0.5:0), 0); return 0.9+(pts/5)*0.2; };
 const poisson = (lambda) => { const L = Math.exp(-lambda); let k=0, p=1; do { k++; p*=Math.random(); } while(p>L); return k-1; };
 const xG = (rating) => 0.6 + ((rating-37)/(87-37))*1.5;
@@ -237,8 +383,6 @@ const runFullSim = () => {
 };
 
 // ── LIVE SCORES CONTEXT ───────────────────────────────────────────────────
-// Calls /api/livescores — a Vercel serverless function that holds the API key
-// server-side. Key never touches the browser.
 const LiveScoresCtx = createContext({scores:{},getScore:()=>null,isLive:()=>false,isFinished:()=>false,lastFetch:null});
 
 const statusIsLive = (s) => ["1H","HT","2H","ET","BT","P","LIVE","inprogress","first_half","halftime","second_half","extra_time","penalties"].includes(s);
@@ -272,16 +416,16 @@ const normTeam = (n) => API_NAME_MAP[n] || n;
 
 function LiveScoresProvider({ children }) {
   const [scores, setScores] = useState({});
+  const [allFixtures, setAllFixtures] = useState([]);
   const [lastFetch, setLastFetch] = useState(null);
 
   const fetchAll = useCallback(async () => {
     try {
-      // Calls our own serverless proxy — key stays server-side
       const res = await fetch("/api/livescores");
       if(!res.ok) throw new Error(`/api/livescores returned ${res.status}`);
       const data = await res.json();
-
       const all = data?.response || [];
+      setAllFixtures(all);
       const map = {};
       all.forEach(f => {
         const h = normTeam(f?.teams?.home?.name || "");
@@ -292,7 +436,6 @@ function LiveScoresProvider({ children }) {
         const ag = f?.goals?.away ?? null;
         if(h && a) map[`${h}|${a}`] = { hg, ag, status, elapsed };
       });
-
       setScores(map);
       setLastFetch(new Date());
     } catch(e) {
@@ -304,117 +447,22 @@ function LiveScoresProvider({ children }) {
   const getScore = (h,a) => scores[`${h}|${a}`]||null;
   const isLive = (h,a) => { const s=getScore(h,a); return s?statusIsLive(s.status):false; };
   const isFinished = (h,a) => { const s=getScore(h,a); return s?statusIsFinished(s.status):false; };
-  return <LiveScoresCtx.Provider value={{scores,getScore,isLive,isFinished,lastFetch}}>{children}</LiveScoresCtx.Provider>;
+  return <LiveScoresCtx.Provider value={{scores,allFixtures,getScore,isLive,isFinished,lastFetch}}>{children}</LiveScoresCtx.Provider>;
 }
 
 // ── VENUE DATA ────────────────────────────────────────────────────────────
 const VENUE_COORDS = {"Mexico City Stadium, Mexico City":"19.3029,-99.1505","Estadio Guadalajara, Zapopan":"20.6867,-103.4079","Toronto Stadium, Toronto":"43.6333,-79.3891","SoFi Stadium, Los Angeles":"33.9535,-118.3392","San Francisco Bay Area Stadium, San Francisco":"37.4031,-121.9694","New York New Jersey Stadium, East Rutherford":"40.8135,-74.0745","Boston Stadium, Boston":"42.3467,-71.0972","BC Place, Vancouver":"49.2767,-123.1115","Houston Stadium, Houston":"29.6847,-95.4107","Dallas Stadium, Dallas":"32.7474,-97.0945","Philadelphia Stadium, Philadelphia":"39.9012,-75.1675","Estadio Monterrey, Guadalupe":"25.6694,-100.2436","Atlanta Stadium, Atlanta":"33.7553,-84.4006","Miami Stadium, Miami":"25.9580,-80.2389","Kansas City Stadium, Kansas City":"39.0489,-94.4839","Seattle Stadium, Seattle":"47.5952,-122.3316"};
-
-// IANA timezone for each venue
-const VENUE_TZ = {
-  "Mexico City Stadium, Mexico City":           "America/Mexico_City",
-  "Estadio Guadalajara, Zapopan":               "America/Mexico_City",
-  "Estadio Monterrey, Guadalupe":               "America/Monterrey",
-  "Toronto Stadium, Toronto":                   "America/Toronto",
-  "BC Place, Vancouver":                        "America/Vancouver",
-  "SoFi Stadium, Los Angeles":                  "America/Los_Angeles",
-  "San Francisco Bay Area Stadium, San Francisco":"America/Los_Angeles",
-  "Seattle Stadium, Seattle":                   "America/Los_Angeles",
-  "Dallas Stadium, Dallas":                     "America/Chicago",
-  "Houston Stadium, Houston":                   "America/Chicago",
-  "Kansas City Stadium, Kansas City":           "America/Chicago",
-  "New York New Jersey Stadium, East Rutherford":"America/New_York",
-  "Boston Stadium, Boston":                     "America/New_York",
-  "Philadelphia Stadium, Philadelphia":         "America/New_York",
-  "Atlanta Stadium, Atlanta":                   "America/New_York",
-  "Miami Stadium, Miami":                       "America/New_York",
-};
-
-// UTC kickoff times for each match id
-const MATCH_UTC = {
-  1:"2026-06-11T19:00:00Z",  2:"2026-06-12T02:00:00Z",
-  3:"2026-06-12T19:00:00Z",  4:"2026-06-13T01:00:00Z",
-  5:"2026-06-13T19:00:00Z",  6:"2026-06-13T22:00:00Z",
-  7:"2026-06-14T01:00:00Z",  8:"2026-06-14T03:59:00Z",
-  9:"2026-06-14T17:00:00Z",  10:"2026-06-14T20:00:00Z",
-  11:"2026-06-14T23:00:00Z", 12:"2026-06-15T02:00:00Z",
-  13:"2026-06-15T16:00:00Z", 14:"2026-06-15T19:00:00Z",
-  15:"2026-06-15T22:00:00Z", 16:"2026-06-16T01:00:00Z",
-  17:"2026-06-16T19:00:00Z", 18:"2026-06-16T22:00:00Z",
-  19:"2026-06-17T01:00:00Z", 20:"2026-06-17T03:59:00Z",
-  21:"2026-06-17T17:00:00Z", 22:"2026-06-17T20:00:00Z",
-  23:"2026-06-17T23:00:00Z", 24:"2026-06-18T02:00:00Z",
-  25:"2026-06-18T16:00:00Z", 26:"2026-06-18T19:00:00Z",
-  27:"2026-06-18T22:00:00Z", 28:"2026-06-19T01:00:00Z",
-  29:"2026-06-19T19:00:00Z", 30:"2026-06-19T22:00:00Z",
-  31:"2026-06-20T00:30:00Z", 32:"2026-06-20T03:00:00Z",
-  33:"2026-06-20T17:00:00Z", 34:"2026-06-20T20:00:00Z",
-  35:"2026-06-21T01:00:00Z", 36:"2026-06-21T03:59:00Z",
-  37:"2026-06-21T16:00:00Z", 38:"2026-06-21T19:00:00Z",
-  39:"2026-06-21T22:00:00Z", 40:"2026-06-22T01:00:00Z",
-  41:"2026-06-22T17:00:00Z", 42:"2026-06-22T21:00:00Z",
-  43:"2026-06-23T00:00:00Z", 44:"2026-06-23T03:00:00Z",
-  45:"2026-06-23T17:00:00Z", 46:"2026-06-23T20:00:00Z",
-  47:"2026-06-23T23:00:00Z", 48:"2026-06-24T02:00:00Z",
-  49:"2026-06-24T19:00:00Z", 50:"2026-06-24T19:00:00Z",
-  51:"2026-06-24T22:00:00Z", 52:"2026-06-24T22:00:00Z",
-  53:"2026-06-25T01:00:00Z", 54:"2026-06-25T01:00:00Z",
-  55:"2026-06-25T20:00:00Z", 56:"2026-06-25T20:00:00Z",
-  57:"2026-06-25T23:00:00Z", 58:"2026-06-25T23:00:00Z",
-  59:"2026-06-26T02:00:00Z", 60:"2026-06-26T02:00:00Z",
-  61:"2026-06-26T19:00:00Z", 62:"2026-06-26T19:00:00Z",
-  63:"2026-06-27T00:00:00Z", 64:"2026-06-27T00:00:00Z",
-  65:"2026-06-27T03:00:00Z", 66:"2026-06-27T03:00:00Z",
-  67:"2026-06-27T21:00:00Z", 68:"2026-06-27T21:00:00Z",
-  69:"2026-06-27T23:30:00Z", 70:"2026-06-27T23:30:00Z",
-  71:"2026-06-28T02:00:00Z", 72:"2026-06-28T02:00:00Z",
-};
-
-// User's IANA timezone
+const VENUE_TZ = {"Mexico City Stadium, Mexico City":"America/Mexico_City","Estadio Guadalajara, Zapopan":"America/Mexico_City","Estadio Monterrey, Guadalupe":"America/Monterrey","Toronto Stadium, Toronto":"America/Toronto","BC Place, Vancouver":"America/Vancouver","SoFi Stadium, Los Angeles":"America/Los_Angeles","San Francisco Bay Area Stadium, San Francisco":"America/Los_Angeles","Seattle Stadium, Seattle":"America/Los_Angeles","Dallas Stadium, Dallas":"America/Chicago","Houston Stadium, Houston":"America/Chicago","Kansas City Stadium, Kansas City":"America/Chicago","New York New Jersey Stadium, East Rutherford":"America/New_York","Boston Stadium, Boston":"America/New_York","Philadelphia Stadium, Philadelphia":"America/New_York","Atlanta Stadium, Atlanta":"America/New_York","Miami Stadium, Miami":"America/New_York"};
+const MATCH_UTC = {1:"2026-06-11T19:00:00Z",2:"2026-06-12T02:00:00Z",3:"2026-06-12T19:00:00Z",4:"2026-06-13T01:00:00Z",5:"2026-06-13T19:00:00Z",6:"2026-06-13T22:00:00Z",7:"2026-06-14T01:00:00Z",8:"2026-06-14T03:59:00Z",9:"2026-06-14T17:00:00Z",10:"2026-06-14T20:00:00Z",11:"2026-06-14T23:00:00Z",12:"2026-06-15T02:00:00Z",13:"2026-06-15T16:00:00Z",14:"2026-06-15T19:00:00Z",15:"2026-06-15T22:00:00Z",16:"2026-06-16T01:00:00Z",17:"2026-06-16T19:00:00Z",18:"2026-06-16T22:00:00Z",19:"2026-06-17T01:00:00Z",20:"2026-06-17T03:59:00Z",21:"2026-06-17T17:00:00Z",22:"2026-06-17T20:00:00Z",23:"2026-06-17T23:00:00Z",24:"2026-06-18T02:00:00Z",25:"2026-06-18T16:00:00Z",26:"2026-06-18T19:00:00Z",27:"2026-06-18T22:00:00Z",28:"2026-06-19T01:00:00Z",29:"2026-06-19T19:00:00Z",30:"2026-06-19T22:00:00Z",31:"2026-06-20T00:30:00Z",32:"2026-06-20T03:00:00Z",33:"2026-06-20T17:00:00Z",34:"2026-06-20T20:00:00Z",35:"2026-06-21T01:00:00Z",36:"2026-06-21T03:59:00Z",37:"2026-06-21T16:00:00Z",38:"2026-06-21T19:00:00Z",39:"2026-06-21T22:00:00Z",40:"2026-06-22T01:00:00Z",41:"2026-06-22T17:00:00Z",42:"2026-06-22T21:00:00Z",43:"2026-06-23T00:00:00Z",44:"2026-06-23T03:00:00Z",45:"2026-06-23T17:00:00Z",46:"2026-06-23T20:00:00Z",47:"2026-06-23T23:00:00Z",48:"2026-06-24T02:00:00Z",49:"2026-06-24T19:00:00Z",50:"2026-06-24T19:00:00Z",51:"2026-06-24T22:00:00Z",52:"2026-06-24T22:00:00Z",53:"2026-06-25T01:00:00Z",54:"2026-06-25T01:00:00Z",55:"2026-06-25T20:00:00Z",56:"2026-06-25T20:00:00Z",57:"2026-06-25T23:00:00Z",58:"2026-06-25T23:00:00Z",59:"2026-06-26T02:00:00Z",60:"2026-06-26T02:00:00Z",61:"2026-06-26T19:00:00Z",62:"2026-06-26T19:00:00Z",63:"2026-06-27T00:00:00Z",64:"2026-06-27T00:00:00Z",65:"2026-06-27T03:00:00Z",66:"2026-06-27T03:00:00Z",67:"2026-06-27T21:00:00Z",68:"2026-06-27T21:00:00Z",69:"2026-06-27T23:30:00Z",70:"2026-06-27T23:30:00Z",71:"2026-06-28T02:00:00Z",72:"2026-06-28T02:00:00Z"};
 const USER_TZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
-const isEastern = USER_TZ === "America/New_York" || USER_TZ === "America/Detroit" ||
-                  USER_TZ === "America/Indiana/Indianapolis" || USER_TZ === "America/Kentucky/Louisville";
-
-// Format a UTC ISO string into a time string in a given IANA tz
-function fmtTime(isoStr, tz) {
-  return new Intl.DateTimeFormat("en-US", {
-    hour: "numeric", minute: "2-digit", hour12: true, timeZone: tz,
-  }).format(new Date(isoStr));
-}
-
-// Format date label in user's tz (e.g. "Jun 11")
-function fmtDate(isoStr, tz) {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short", day: "numeric", timeZone: tz,
-  }).format(new Date(isoStr));
-}
-
-// For a match, return { localTime, venueTime, dateLabel }
-function matchTimes(m) {
-  const iso = MATCH_UTC[m.id];
-  if(!iso) return { localTime: m.time, venueTime: null, dateLabel: m.date };
-
-  const venueTz = VENUE_TZ[m.venue] || "America/New_York";
-
-  // For Eastern users: midnight games (originally "11:59PM ET") keep their
-  // original ET date label so they group with the right match day
-  const isOriginalMidnight = m.time && m.time.includes("11:59");
-  const dateLabel = isEastern && isOriginalMidnight
-    ? m.date  // keep the original "previous day" grouping
-    : fmtDate(iso, USER_TZ);
-
-  const localTime = fmtTime(iso, USER_TZ);
-  const venueTime = (venueTz === USER_TZ) ? null : fmtTime(iso, venueTz);
-
-  return { localTime, venueTime, dateLabel };
-}
-const openMaps = (venue) => { const coords=VENUE_COORDS[venue]; const q=encodeURIComponent(venue); const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream; if(isIOS||/Macintosh/.test(navigator.userAgent)) window.open(`maps://maps.apple.com/?q=${q}${coords?`&ll=${coords}`:""}`, "_blank"); else window.open(`https://www.google.com/maps/search/?api=1&query=${q}${coords?`+${coords}`:""}`, "_blank"); };
+const isEastern = USER_TZ==="America/New_York"||USER_TZ==="America/Detroit"||USER_TZ==="America/Indiana/Indianapolis"||USER_TZ==="America/Kentucky/Louisville";
+function fmtTime(isoStr,tz){return new Intl.DateTimeFormat("en-US",{hour:"numeric",minute:"2-digit",hour12:true,timeZone:tz}).format(new Date(isoStr));}
+function fmtDate(isoStr,tz){return new Intl.DateTimeFormat("en-US",{month:"short",day:"numeric",timeZone:tz}).format(new Date(isoStr));}
+function matchTimes(m){const iso=MATCH_UTC[m.id];if(!iso)return{localTime:m.time,venueTime:null,dateLabel:m.date};const venueTz=VENUE_TZ[m.venue]||"America/New_York";const isOriginalMidnight=m.time&&m.time.includes("11:59");const dateLabel=isEastern&&isOriginalMidnight?m.date:fmtDate(iso,USER_TZ);const localTime=fmtTime(iso,USER_TZ);const venueTime=(venueTz===USER_TZ)?null:fmtTime(iso,venueTz);return{localTime,venueTime,dateLabel};}
+const openMaps=(venue)=>{const coords=VENUE_COORDS[venue];const q=encodeURIComponent(venue);const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream;if(isIOS||/Macintosh/.test(navigator.userAgent))window.open(`maps://maps.apple.com/?q=${q}${coords?`&ll=${coords}`:""}`, "_blank");else window.open(`https://www.google.com/maps/search/?api=1&query=${q}${coords?`+${coords}`:""}`, "_blank");};
 
 // ── CRESTS ────────────────────────────────────────────────────────────────
-
-
 const FLAG_CODES = {"Mexico":"mx","South Africa":"za","South Korea":"kr","Czechia":"cz","Canada":"ca","Bosnia & Herz.":"ba","Qatar":"qa","Switzerland":"ch","Brazil":"br","Morocco":"ma","Haiti":"ht","Scotland":"gb-sct","United States":"us","Paraguay":"py","Australia":"au","Turkiye":"tr","Germany":"de","Curacao":"cw","Ivory Coast":"ci","Ecuador":"ec","Netherlands":"nl","Japan":"jp","Sweden":"se","Tunisia":"tn","Belgium":"be","Egypt":"eg","Iran":"ir","New Zealand":"nz","Spain":"es","Cape Verde":"cv","Saudi Arabia":"sa","Uruguay":"uy","France":"fr","Senegal":"sn","Iraq":"iq","Norway":"no","Argentina":"ar","Algeria":"dz","Austria":"at","Jordan":"jo","Portugal":"pt","DR Congo":"cd","Uzbekistan":"uz","Colombia":"co","England":"gb-eng","Croatia":"hr","Ghana":"gh","Panama":"pa"};
-
 function Crest({ team, size=26 }) {
   const code = FLAG_CODES[team];
   const [err, setErr] = useState(false);
@@ -435,7 +483,7 @@ const RO = [{l:"15 min before",v:15},{l:"30 min before",v:30},{l:"1 hour before"
 function generateICS(saved) {
   const pad=n=>String(n).padStart(2,"0");
   const toICS=iso=>{const d=new Date(iso);return`${d.getUTCFullYear()}${pad(d.getUTCMonth()+1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}00Z`;};
-  const isoMap={1:"2026-06-11T19:00:00Z",2:"2026-06-12T02:00:00Z",3:"2026-06-12T19:00:00Z",4:"2026-06-13T01:00:00Z",5:"2026-06-13T22:00:00Z",6:"2026-06-13T22:00:00Z",7:"2026-06-14T01:00:00Z",8:"2026-06-14T16:00:00Z",9:"2026-06-14T17:00:00Z",10:"2026-06-14T20:00:00Z",11:"2026-06-14T23:00:00Z",12:"2026-06-15T02:00:00Z",13:"2026-06-15T16:00:00Z",14:"2026-06-15T19:00:00Z",15:"2026-06-15T22:00:00Z",16:"2026-06-16T01:00:00Z",17:"2026-06-16T19:00:00Z",18:"2026-06-16T22:00:00Z",19:"2026-06-17T01:00:00Z",20:"2026-06-17T04:00:00Z",21:"2026-06-17T17:00:00Z",22:"2026-06-17T20:00:00Z",23:"2026-06-17T23:00:00Z",24:"2026-06-18T02:00:00Z",25:"2026-06-18T16:00:00Z",26:"2026-06-18T19:00:00Z",27:"2026-06-18T22:00:00Z",28:"2026-06-19T01:00:00Z",29:"2026-06-19T19:00:00Z",30:"2026-06-19T22:00:00Z",31:"2026-06-20T00:30:00Z",32:"2026-06-20T03:00:00Z",33:"2026-06-20T17:00:00Z",34:"2026-06-20T20:00:00Z",35:"2026-06-21T00:00:00Z",36:"2026-06-21T04:00:00Z",37:"2026-06-21T16:00:00Z",38:"2026-06-21T19:00:00Z",39:"2026-06-21T22:00:00Z",40:"2026-06-22T01:00:00Z",41:"2026-06-22T17:00:00Z",42:"2026-06-22T21:00:00Z",43:"2026-06-23T00:00:00Z",44:"2026-06-23T03:00:00Z",45:"2026-06-23T17:00:00Z",46:"2026-06-23T20:00:00Z",47:"2026-06-23T23:00:00Z",48:"2026-06-24T02:00:00Z"};
+  const isoMap=MATCH_UTC;
   const now=toICS(new Date().toISOString());
   const lines=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//FIFA World Cup 2026//EN","CALSCALE:GREGORIAN","METHOD:PUBLISH","X-WR-CALNAME:FIFA World Cup 2026"];
   saved.forEach(item=>{const m=item.match,startISO=isoMap[m.id]||"2026-06-11T19:00:00Z",startDT=toICS(startISO);const endD=new Date(startISO);endD.setUTCHours(endD.getUTCHours()+2);lines.push("BEGIN:VEVENT",`UID:wc2026-${m.id}@app`,`DTSTAMP:${now}`,`DTSTART:${startDT}`,`DTEND:${toICS(endD.toISOString())}`,`SUMMARY:⚽ ${m.home} vs ${m.away} - WC 2026`,`LOCATION:${m.venue}`,`TRANSP:${item.avail==="free"?"TRANSPARENT":"OPAQUE"}`,"STATUS:CONFIRMED");if(item.type==="rem")lines.push("BEGIN:VALARM","ACTION:DISPLAY",`DESCRIPTION:Reminder: ${m.home} vs ${m.away}`,`TRIGGER:-PT${item.mins}M`,"END:VALARM");lines.push("END:VEVENT");});
@@ -565,7 +613,7 @@ function LiveTab({ onAction }) {
     <div>
       <div style={{background:`linear-gradient(135deg,#0a1f10,#0c2815)`,border:`1px solid ${C.b2}`,borderRadius:12,padding:14,marginBottom:14}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-          <div><div style={{fontWeight:700,fontSize:18,color:C.green}}>LIVE SCORES</div><div style={{fontSize:11,color:C.dim}}>Auto-refreshes every 60s · FIFA Rankings: Jun 5 live (ARG #1, ESP #2, FRA #3)</div></div>
+          <div><div style={{fontWeight:700,fontSize:18,color:C.green}}>LIVE SCORES</div><div style={{fontSize:11,color:C.dim}}>Auto-refreshes every 60s · Tournament starts Jun 11</div></div>
           {lastUpdate && <span style={{fontSize:11,color:C.dim,flexShrink:0}}>Updated {lastUpdate}</span>}
         </div>
       </div>
@@ -586,7 +634,7 @@ function LiveTab({ onAction }) {
 // ── SCHEDULE TAB ──────────────────────────────────────────────────────────
 function SchedTab({ onAction }) {
   const [filterMode, setFilterMode] = useState("group");
-  const [timeMode, setTimeMode] = useState("local"); // "local" | "venue"
+  const [timeMode, setTimeMode] = useState("local");
   const [groupF, setGroupF] = useState("All");
   const [teamF, setTeamF] = useState("");
   const [venueF, setVenueF] = useState("");
@@ -598,27 +646,14 @@ function SchedTab({ onAction }) {
     if(filterMode==="venue") return !venueF||m.venue===venueF;
     return true;
   });
-  const byDate = shown.reduce((a,m)=>{
-    const { dateLabel } = matchTimes(m);
-    const key = dateLabel || m.date;
-    (a[key]=a[key]||[]).push(m);
-    return a;
-  },{});
-  const ss = (active) => ({padding:"5px 12px",borderRadius:20,border:`1px solid ${active?C.green:C.b1}`,background:active?`${C.green}18`:"transparent",color:active?C.green:C.mid,fontSize:12,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap"});
+  const byDate = shown.reduce((a,m)=>{ const {dateLabel}=matchTimes(m); const key=dateLabel||m.date; (a[key]=a[key]||[]).push(m); return a; },{});
+  const ss=(active)=>({padding:"5px 12px",borderRadius:20,border:`1px solid ${active?C.green:C.b1}`,background:active?`${C.green}18`:"transparent",color:active?C.green:C.mid,fontSize:12,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap"});
   return (
     <div>
-      {/* Filter mode + time toggle row */}
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-        <div style={{display:"flex",gap:8}}>
-          <button style={ss(filterMode==="group")} onClick={()=>setFilterMode("group")}>🗂 Group</button>
-          <button style={ss(filterMode==="team")} onClick={()=>setFilterMode("team")}>👥 Team</button>
-          <button style={ss(filterMode==="venue")} onClick={()=>setFilterMode("venue")}>📍 Venue</button>
-        </div>
-        {/* Time toggle */}
-        <div style={{display:"flex",background:C.s2,borderRadius:20,border:`1px solid ${C.b2}`,padding:2,gap:2,flexShrink:0}}>
-          <button onClick={()=>setTimeMode("local")} style={{padding:"4px 10px",borderRadius:18,border:"none",cursor:"pointer",fontSize:10,fontWeight:700,background:timeMode==="local"?C.green:"transparent",color:timeMode==="local"?"#030a05":C.dim,transition:"all .15s"}}>My Time</button>
-          <button onClick={()=>setTimeMode("venue")} style={{padding:"4px 10px",borderRadius:18,border:"none",cursor:"pointer",fontSize:10,fontWeight:700,background:timeMode==="venue"?C.gold:"transparent",color:timeMode==="venue"?"#030a05":C.dim,transition:"all .15s"}}>Venue</button>
-        </div>
+      <div style={{display:"flex",gap:8,marginBottom:12}}>
+        <button style={ss(filterMode==="group")} onClick={()=>setFilterMode("group")}>🗂 Group</button>
+        <button style={ss(filterMode==="team")} onClick={()=>setFilterMode("team")}>👥 Team</button>
+        <button style={ss(filterMode==="venue")} onClick={()=>setFilterMode("venue")}>📍 Venue</button>
       </div>
       {filterMode==="group" && (
         <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:8,marginBottom:14,scrollbarWidth:"none"}}>
@@ -647,6 +682,13 @@ function SchedTab({ onAction }) {
           {ms.map(m=><MatchCard key={m.id} m={m} onAction={onAction} timeMode={timeMode}/>)}
         </div>
       ))}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",margin:"4px 0 16px",padding:"10px 14px",background:C.s1,border:`1px solid ${C.b1}`,borderRadius:12}}>
+        <span style={{fontSize:12,color:C.mid,fontWeight:600}}>⏰ Times shown in</span>
+        <div style={{display:"flex",background:C.s2,borderRadius:20,border:`1px solid ${C.b2}`,padding:2,gap:2}}>
+          <button onClick={()=>setTimeMode("local")} style={{padding:"5px 14px",borderRadius:18,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:timeMode==="local"?C.green:"transparent",color:timeMode==="local"?"#030a05":C.dim,transition:"all .15s"}}>My Time</button>
+          <button onClick={()=>setTimeMode("venue")} style={{padding:"5px 14px",borderRadius:18,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:timeMode==="venue"?C.gold:"transparent",color:timeMode==="venue"?"#030a05":C.dim,transition:"all .15s"}}>Venue</button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -662,8 +704,8 @@ function GrpTab({ onTeam }) {
   });
   const results = allR[sel]||[];
   const standings = calcStandings(sel, results);
-  const upd = (id,f,v) => setAllR(p=>({...p,[sel]:p[sel].map(r=>r.id===id?{...r,[f]:v.replace(/\D/g,"")}:r)}));
-  const qc = (pos) => pos<=2?C.green:pos===3?C.gold:"transparent";
+  const upd=(id,f,v)=>setAllR(p=>({...p,[sel]:p[sel].map(r=>r.id===id?{...r,[f]:v.replace(/\D/g,"")}:r)}));
+  const qc=(pos)=>pos<=2?C.green:pos===3?C.gold:"transparent";
   return (
     <div>
       <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:6,marginBottom:12,scrollbarWidth:"none"}}>
@@ -734,10 +776,7 @@ function GrpTab({ onTeam }) {
 }
 
 // ── ZAFRONIX DATA LAYER ───────────────────────────────────────────────────
-// All calls go through /api/zafronix?endpoint=X which has server-side caching
-
-const zCache = {}; // client-side cache to avoid duplicate fetches within session
-
+const zCache = {};
 async function zafronixGet(endpoint, params = {}) {
   const key = endpoint + JSON.stringify(params);
   if (zCache[key]) return zCache[key];
@@ -753,55 +792,99 @@ async function zafronixGet(endpoint, params = {}) {
     return null;
   }
 }
-
-// Normalize Zafronix team name to our internal name
-const Z_NAME_MAP = {
-  "Czech Republic": "Czechia",
-  "Bosnia and Herzegovina": "Bosnia & Herz.",
-  "Côte d'Ivoire": "Ivory Coast", "Cote d'Ivoire": "Ivory Coast",
-  "DR Congo": "DR Congo", "Democratic Republic of Congo": "DR Congo",
-  "Korea Republic": "South Korea", "Republic of Korea": "South Korea",
-  "IR Iran": "Iran",
-  "Curaçao": "Curacao", "Cabo Verde": "Cape Verde",
-  "Turkey": "Turkiye",
-  "United States of America": "United States",
-};
+const Z_NAME_MAP = {"Czech Republic":"Czechia","Bosnia and Herzegovina":"Bosnia & Herz.","Côte d'Ivoire":"Ivory Coast","Cote d'Ivoire":"Ivory Coast","DR Congo":"DR Congo","Democratic Republic of Congo":"DR Congo","Korea Republic":"South Korea","Republic of Korea":"South Korea","IR Iran":"Iran","Curaçao":"Curacao","Cabo Verde":"Cape Verde","Turkey":"Turkiye","United States of America":"United States"};
 const zNorm = n => Z_NAME_MAP[n] || n;
-
-// Extract captain from Zafronix player name (e.g. "Lionel Messi (captain)")
-function parseName(raw) {
-  return raw?.replace(/\s*\(captain\)\s*/i, "").trim() || raw;
-}
-function isCaptain(raw) {
-  return /\(captain\)/i.test(raw || "");
-}
-
-const POS_COLOR = { GK: C.blue, DF: C.green, MF: C.gold, FW: C.red };
-const posLabel = p => {
-  if(!p) return "?";
-  if(p==="Goalkeeper"||p==="GK") return "GK";
-  if(p==="Defender"||p==="DF") return "DEF";
-  if(p==="Midfielder"||p==="MF") return "MID";
-  if(p==="Forward"||p==="FW"||p==="Attacker") return "FWD";
-  return p.slice(0,3);
-};
-const posColor = p => {
-  const l = posLabel(p);
-  return l==="GK"?C.blue:l==="DEF"?C.green:l==="MID"?C.gold:C.red;
-};
-const posSort = p => {
-  const l = posLabel(p);
-  return l==="GK"?0:l==="DEF"?1:l==="MID"?2:3;
-};
-
+function parseName(raw){return raw?.replace(/\s*\(captain\)\s*/i,"").trim()||raw;}
+function isCaptain(raw){return/\(captain\)/i.test(raw||"");}
+const posLabel = p => { if(!p)return"?"; if(p==="Goalkeeper"||p==="GK")return"GK"; if(p==="Defender"||p==="DF")return"DEF"; if(p==="Midfielder"||p==="MF")return"MID"; if(p==="Forward"||p==="FW"||p==="Attacker")return"FWD"; return p.slice(0,3); };
+const posColor = p => { const l=posLabel(p); return l==="GK"?C.blue:l==="DEF"?C.green:l==="MID"?C.gold:C.red; };
+const posSort = p => { const l=posLabel(p); return l==="GK"?0:l==="DEF"?1:l==="MID"?2:3; };
 function PlayerPhoto({ src, name, size=32 }) {
   const [err, setErr] = useState(false);
-  if(!src || err || src.includes("unknown.svg")) return (
-    <div style={{width:size,height:size,borderRadius:"50%",background:C.b2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:size*0.45,color:C.mid,flexShrink:0,fontWeight:700}}>
-      {parseName(name)?.[0]||"?"}
-    </div>
-  );
+  if(!src || err || src.includes("unknown.svg")) return <div style={{width:size,height:size,borderRadius:"50%",background:C.b2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:size*0.45,color:C.mid,flexShrink:0,fontWeight:700}}>{parseName(name)?.[0]||"?"}</div>;
   return <img src={src} alt={name} width={size} height={size} style={{borderRadius:"50%",objectFit:"cover",flexShrink:0,border:`1px solid ${C.b2}`}} onError={()=>setErr(true)}/>;
+}
+
+// ── RECENT FORM — dynamic, auto-upgrades to live WC data after Jun 11 ─────
+function RecentForm({ team, staticData }) {
+  const { allFixtures } = useContext(LiveScoresCtx);
+  const [matches, setMatches] = useState(null);
+  const [isLiveData, setIsLiveData] = useState(false);
+
+  useEffect(() => {
+    if (!team || !allFixtures) return;
+
+    // Try to find finished WC matches for this team in the live feed
+    const teamMatches = allFixtures
+      .filter(f => {
+        const h = normTeam(f?.teams?.home?.name || "");
+        const a = normTeam(f?.teams?.away?.name || "");
+        const status = f?.fixture?.status?.short || "";
+        return (h === team || a === team) && statusIsFinished(status);
+      })
+      .sort((a, b) => new Date(b?.fixture?.date||0) - new Date(a?.fixture?.date||0))
+      .slice(0, 4)
+      .map(f => {
+        const h = normTeam(f?.teams?.home?.name || "");
+        const a = normTeam(f?.teams?.away?.name || "");
+        const hg = f?.goals?.home ?? 0;
+        const ag = f?.goals?.away ?? 0;
+        const isHome = h === team;
+        const opp = isHome ? a : h;
+        const teamGoals = isHome ? hg : ag;
+        const oppGoals  = isHome ? ag : hg;
+        const score = `${teamGoals}-${oppGoals}`;
+        const res = teamGoals > oppGoals ? "W" : teamGoals === oppGoals ? "D" : "L";
+        const dateStr = f?.fixture?.date
+          ? new Date(f.fixture.date).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})
+          : "";
+        return { date: dateStr, opp, score, loc: f?.fixture?.venue?.city || "", comp: "WC 2026", res };
+      });
+
+    if (teamMatches.length > 0) {
+      setMatches(teamMatches);
+      setIsLiveData(true);
+    } else {
+      setMatches(staticData || []);
+      setIsLiveData(false);
+    }
+  }, [team, allFixtures, staticData]);
+
+  const display = matches || staticData || [];
+  if (!display.length) return null;
+
+  return (
+    <Card>
+      <div style={{padding:"10px 14px",borderBottom:`1px solid ${C.b1}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <span style={{fontWeight:700,color:C.green,fontSize:13}}>LAST 4 MATCHES</span>
+        {isLiveData
+          ? <Badge color={C.green}>🔴 Live WC data</Badge>
+          : <Badge color={C.dim}>Pre-tournament</Badge>
+        }
+      </div>
+      {display.map((g,i) => {
+        const rc = g.res==="W" ? C.green : g.res==="D" ? C.gold : C.red;
+        return (
+          <div key={i} style={{padding:"10px 14px",borderBottom:i<display.length-1?`1px solid ${C.b1}`:"none"}}>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <div style={{width:26,height:26,borderRadius:"50%",background:`${rc}22`,border:`2px solid ${rc}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,color:rc,flexShrink:0}}>{g.res}</div>
+              <div style={{flex:1}}>
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <span style={{fontWeight:700,color:C.text,fontSize:13}}>vs {g.opp}</span>
+                  <span style={{fontWeight:700,color:rc,fontSize:13}}>{g.score}</span>
+                </div>
+                <div style={{fontSize:11,color:C.dim,marginTop:2}}>{g.date}{g.loc ? ` · ${g.loc}` : ""}</div>
+              </div>
+              <span style={{fontSize:10,padding:"2px 7px",borderRadius:10,
+                background:g.comp==="WC 2026"?`${C.green}22`:g.comp==="Friendly"?`${C.dim}22`:`${C.blue}18`,
+                color:g.comp==="WC 2026"?C.green:g.comp==="Friendly"?C.mid:C.blue,
+                fontWeight:600,flexShrink:0}}>{g.comp}</span>
+            </div>
+          </div>
+        );
+      })}
+    </Card>
+  );
 }
 
 // ── STATS TAB ──────────────────────────────────────────────────────────────
@@ -816,46 +899,19 @@ function StatsTab({ initial="" }) {
   useEffect(() => {
     if(!sel) return;
     setSquad(null); setErr(false); setLoading(true); setPosFilter("All");
-    // Map our internal name to Zafronix name
-    const zName = sel === "Czechia" ? "Czech Republic"
-      : sel === "Bosnia & Herz." ? "Bosnia and Herzegovina"
-      : sel === "Ivory Coast" ? "Côte d'Ivoire"
-      : sel === "DR Congo" ? "DR Congo"
-      : sel === "South Korea" ? "South Korea"
-      : sel === "Turkiye" ? "Turkey"
-      : sel === "Curacao" ? "Curaçao"
-      : sel;
-    zafronixGet("roster", { name: zName }).then(data => {
+    const zName = sel==="Czechia"?"Czech Republic":sel==="Bosnia & Herz."?"Bosnia and Herzegovina":sel==="Ivory Coast"?"Côte d'Ivoire":sel==="DR Congo"?"DR Congo":sel==="South Korea"?"South Korea":sel==="Turkiye"?"Turkey":sel==="Curacao"?"Curaçao":sel;
+    zafronixGet("roster",{name:zName}).then(data => {
       setLoading(false);
-      if(!data) { setErr(true); return; }
-      // Zafronix returns the team object with squad array
-      const players = (data?.squad || data?.players || data?.roster || [])
-        .map(p => ({
-          name: parseName(p.name),
-          rawName: p.name,
-          captain: isCaptain(p.name),
-          pos: p.position,
-          jersey: p.jersey,
-          age: p.ageAtTournament ?? p.age,
-          born: p.born,
-          club: p.club?.name ?? p.club,
-          clubCountry: p.club?.country,
-          photo: p.photo ?? null,
-          flagUrl: data?.flag?.flagUrl ?? null,
-        }))
-        .sort((a,b) => posSort(a.pos)-posSort(b.pos) || (a.jersey||99)-(b.jersey||99));
+      if(!data){setErr(true);return;}
+      const players=(data?.squad||data?.players||data?.roster||[])
+        .map(p=>({name:parseName(p.name),rawName:p.name,captain:isCaptain(p.name),pos:p.position,jersey:p.jersey,age:p.ageAtTournament??p.age,born:p.born,club:p.club?.name??p.club,clubCountry:p.club?.country,photo:p.photo??null,flagUrl:data?.flag?.flagUrl??null}))
+        .sort((a,b)=>posSort(a.pos)-posSort(b.pos)||(a.jersey||99)-(b.jersey||99));
       setSquad(players);
     });
   }, [sel]);
 
-  const posCounts = squad ? {
-    All: squad.length,
-    GK: squad.filter(p=>posLabel(p.pos)==="GK").length,
-    DEF: squad.filter(p=>posLabel(p.pos)==="DEF").length,
-    MID: squad.filter(p=>posLabel(p.pos)==="MID").length,
-    FWD: squad.filter(p=>posLabel(p.pos)==="FWD").length,
-  } : {};
-  const filtered = squad ? (posFilter==="All" ? squad : squad.filter(p=>posLabel(p.pos)===posFilter)) : [];
+  const posCounts = squad?{All:squad.length,GK:squad.filter(p=>posLabel(p.pos)==="GK").length,DEF:squad.filter(p=>posLabel(p.pos)==="DEF").length,MID:squad.filter(p=>posLabel(p.pos)==="MID").length,FWD:squad.filter(p=>posLabel(p.pos)==="FWD").length}:{};
+  const filtered = squad?(posFilter==="All"?squad:squad.filter(p=>posLabel(p.pos)===posFilter)):[];
 
   return (
     <div>
@@ -863,12 +919,9 @@ function StatsTab({ initial="" }) {
         <option value="">Select a team</option>
         {Object.keys(GROUPS).map(g=><optgroup key={g} label={`Group ${g}`}>{GROUPS[g].teams.map(t=><option key={t} value={t}>{getFlag(t)} {t}</option>)}</optgroup>)}
       </select>
-
       {!sel && <div style={{textAlign:"center",padding:"44px 20px",color:C.dim,fontSize:13}}>Select any of the 48 teams to view their squad</div>}
-
       {sel && d && (
         <div>
-          {/* Team header */}
           <Card style={{marginBottom:12}}>
             <div style={{padding:14}}>
               <div style={{display:"flex",gap:12,alignItems:"center",marginBottom:12}}>
@@ -883,7 +936,6 @@ function StatsTab({ initial="" }) {
                   </div>
                 </div>
               </div>
-              {/* Sofascore attributes */}
               <div style={{fontSize:10,color:C.dim,fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:7}}>Sofascore Attributes</div>
               <div style={{display:"flex",justifyContent:"space-between",gap:4}}>
                 {Object.entries(d.stats).map(([k,v])=>(
@@ -895,32 +947,26 @@ function StatsTab({ initial="" }) {
               </div>
             </div>
           </Card>
-
-          {/* Analysis */}
           <Card style={{marginBottom:12}}>
             <div style={{padding:13}}>
               <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:7}}>2026 Analysis</div>
               <p style={{fontSize:13,color:C.mid,lineHeight:1.7,margin:0}}>{d.note}</p>
             </div>
           </Card>
-
-          {/* Live squad from Zafronix */}
           <Card style={{marginBottom:12}}>
             <div style={{padding:"10px 14px",borderBottom:`1px solid ${C.b1}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-              <span style={{fontWeight:700,color:C.green,fontSize:13}}>OFFICIAL SQUAD · ZAFRONIX</span>
+              <span style={{fontWeight:700,color:C.green,fontSize:13}}>PREDICTED SQUAD · ZAFRONIX</span>
               {squad && <span style={{fontSize:11,color:C.dim}}>{squad.length} players</span>}
             </div>
-
             {loading && (
               <div style={{padding:"32px 0",textAlign:"center"}}>
                 <div style={{width:28,height:28,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto 10px"}}/>
-                <div style={{fontSize:12,color:C.mid}}>Fetching official squad...</div>
+                <div style={{fontSize:12,color:C.mid}}>Fetching squad...</div>
               </div>
             )}
-
             {err && (
               <div style={{padding:14}}>
-                <div style={{fontSize:12,color:C.dim,marginBottom:10}}>Squad unavailable — showing key players</div>
+                <div style={{fontSize:12,color:C.dim,marginBottom:10}}>Predicted squad — showing key players</div>
                 {d.players.map((p,i)=>(
                   <div key={p.name} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 0",borderBottom:i<d.players.length-1?`1px solid ${C.b1}`:"none"}}>
                     <span style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:8,background:`${posColor(p.pos)}22`,color:posColor(p.pos)}}>{p.pos}</span>
@@ -931,21 +977,17 @@ function StatsTab({ initial="" }) {
                 ))}
               </div>
             )}
-
             {squad && !loading && (
               <div>
-                {/* Position filter */}
                 <div style={{display:"flex",gap:6,padding:"10px 12px",borderBottom:`1px solid ${C.b1}`,overflowX:"auto",scrollbarWidth:"none"}}>
                   {["All","GK","DEF","MID","FWD"].map(pos=>(
-                    <Pill key={pos} active={posFilter===pos} onClick={()=>setPosFilter(pos)}
-                      color={pos==="GK"?C.blue:pos==="DEF"?C.green:pos==="MID"?C.gold:pos==="FWD"?C.red:C.green}>
+                    <Pill key={pos} active={posFilter===pos} onClick={()=>setPosFilter(pos)} color={pos==="GK"?C.blue:pos==="DEF"?C.green:pos==="MID"?C.gold:pos==="FWD"?C.red:C.green}>
                       {pos}{posCounts[pos]!==undefined?` (${posCounts[pos]})`:""}
                     </Pill>
                   ))}
                 </div>
-                {/* Player rows */}
                 {filtered.map((p,i)=>{
-                  const pc = posColor(p.pos);
+                  const pc=posColor(p.pos);
                   return (
                     <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 14px",borderBottom:i<filtered.length-1?`1px solid ${C.b1}`:"none"}}>
                       {p.jersey && <span style={{fontSize:12,color:C.dim,minWidth:22,textAlign:"center",fontFamily:"monospace"}}>#{p.jersey}</span>}
@@ -955,42 +997,21 @@ function StatsTab({ initial="" }) {
                           <span style={{fontWeight:600,color:C.text,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</span>
                           {p.captain && <span style={{fontSize:9,background:`${C.gold}33`,color:C.gold,padding:"1px 5px",borderRadius:6,fontWeight:700,flexShrink:0}}>C</span>}
                         </div>
-                        <div style={{fontSize:10,color:C.dim,marginTop:1}}>
-                          {p.club}{p.clubCountry ? ` · ${p.clubCountry}` : ""}{p.age ? ` · Age ${p.age}` : ""}
-                        </div>
+                        <div style={{fontSize:10,color:C.dim,marginTop:1}}>{p.club}{p.clubCountry?` · ${p.clubCountry}`:""}{p.age?` · Age ${p.age}`:""}</div>
                       </div>
                       <span style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:8,background:`${pc}22`,color:pc,flexShrink:0}}>{posLabel(p.pos)}</span>
                     </div>
                   );
                 })}
                 <div style={{padding:"8px 14px",borderTop:`1px solid ${C.b1}`}}>
-                  <span style={{fontSize:10,color:C.dim}}>Official squads via Zafronix FIFA World Cup API</span>
+                  <span style={{fontSize:10,color:C.dim}}>Squad data via Zafronix FIFA World Cup API</span>
                 </div>
               </div>
             )}
           </Card>
 
-          {/* Recent form */}
-          {RECENT4[sel] && (
-            <Card>
-              <div style={{padding:"10px 14px",borderBottom:`1px solid ${C.b1}`}}><span style={{fontWeight:700,color:C.green,fontSize:13}}>LAST 4 MATCHES</span></div>
-              {RECENT4[sel].map((g,i)=>{
-                const rc=g.res==="W"?C.green:g.res==="D"?C.gold:C.red;
-                return (
-                  <div key={i} style={{padding:"10px 14px",borderBottom:i<3?`1px solid ${C.b1}`:"none"}}>
-                    <div style={{display:"flex",alignItems:"center",gap:8}}>
-                      <div style={{width:26,height:26,borderRadius:"50%",background:`${rc}22`,border:`2px solid ${rc}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,color:rc,flexShrink:0}}>{g.res}</div>
-                      <div style={{flex:1}}>
-                        <div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontWeight:700,color:C.text,fontSize:13}}>vs {g.opp}</span><span style={{fontWeight:700,color:rc,fontSize:13}}>{g.score}</span></div>
-                        <div style={{fontSize:11,color:C.dim,marginTop:2}}>{g.date} · {g.loc}</div>
-                      </div>
-                      <span style={{fontSize:10,padding:"2px 7px",borderRadius:10,background:g.comp==="Friendly"?`${C.dim}22`:`${C.blue}18`,color:g.comp==="Friendly"?C.dim:C.blue,fontWeight:600,flexShrink:0}}>{g.comp}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </Card>
-          )}
+          {/* Dynamic recent form — auto-switches to live WC data after Jun 11 */}
+          <RecentForm team={sel} staticData={RECENT4[sel]}/>
         </div>
       )}
     </div>
@@ -1006,7 +1027,7 @@ function PredTab() {
     <div>
       <div style={{background:`linear-gradient(135deg,#0a1f10,#0c2815)`,border:`1px solid ${C.b2}`,borderRadius:12,padding:14,marginBottom:14}}>
         <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
-          <div><div style={{fontWeight:700,fontSize:18,color:C.green}}>POLYMARKET ODDS</div><div style={{fontSize:11,color:C.dim}}>Updated May 19, 2026</div></div>
+          <div><div style={{fontWeight:700,fontSize:18,color:C.green}}>POLYMARKET ODDS</div><div style={{fontSize:11,color:C.dim}}>Updated Jun 5, 2026</div></div>
           <a href="https://polymarket.com" target="_blank" rel="noopener noreferrer" style={{fontSize:11,color:C.green,textDecoration:"none",border:`1px solid ${C.greenS}`,padding:"3px 9px",borderRadius:20}}>Live →</a>
         </div>
       </div>
@@ -1036,8 +1057,8 @@ function SimTab() {
   const [running, setRunning] = useState(false);
   const [sims, setSims] = useState(1000);
   const [mc, setMc] = useState(null);
-  const doSingle = () => { setRunning(true); setTimeout(()=>{setRes(runFullSim());setMc(null);setRunning(false);},80); };
-  const doMC = () => { setRunning(true); setTimeout(()=>{ const c={}; for(let i=0;i<sims;i++){const r=runFullSim();c[r.champion]=(c[r.champion]||0)+1;} setMc(Object.entries(c).sort((a,b)=>b[1]-a[1]).map(([t,n])=>({team:t,pct:((n/sims)*100).toFixed(1)}))); setRes(null); setRunning(false); },50); };
+  const doSingle=()=>{setRunning(true);setTimeout(()=>{setRes(runFullSim());setMc(null);setRunning(false);},80);};
+  const doMC=()=>{setRunning(true);setTimeout(()=>{const c={};for(let i=0;i<sims;i++){const r=runFullSim();c[r.champion]=(c[r.champion]||0)+1;}setMc(Object.entries(c).sort((a,b)=>b[1]-a[1]).map(([t,n])=>({team:t,pct:((n/sims)*100).toFixed(1)})));setRes(null);setRunning(false);},50);};
   return (
     <div>
       <div style={{background:`linear-gradient(135deg,#0a1f10,#0c2815)`,border:`1px solid ${C.b2}`,borderRadius:12,padding:14,marginBottom:14}}>
@@ -1091,49 +1112,150 @@ function SimTab() {
   );
 }
 
-// ── MY BRACKET TAB ─────────────────────────────────────────────────────────
-const defaultBracketGroups = () => Object.fromEntries(Object.entries(GROUPS).map(([g,{teams}])=>[g,[...teams]]));
-
-function BracketMatchup({ t1, t2, winner }) {
+// ── HEAD TO HEAD TAB ──────────────────────────────────────────────────────
+const ALL_TEAMS = Object.values(GROUPS).flatMap(g => g.teams).sort();
+function H2HBar({ label, v1, v2, color1=C.green, color2=C.red }) {
+  const total=(v1||0)+(v2||0);
+  const p1=total?Math.round((v1/total)*100):50;
+  const p2=100-p1;
   return (
-    <div style={{background:C.s1,border:`1px solid ${C.b1}`,borderRadius:8,overflow:"hidden",minWidth:110,maxWidth:150}}>
-      {[t1,t2].map((t,i)=>{
-        const isW = winner && t===winner;
-        return (
-          <div key={i} style={{display:"flex",alignItems:"center",gap:5,padding:"4px 7px",background:isW?`${C.green}22`:"transparent",borderBottom:i===0?`1px solid ${C.b1}`:"none"}}>
-            <Crest team={t||"TBD"} size={13}/>
-            <span style={{fontSize:11,color:isW?C.green:t?C.text:C.dim,fontWeight:isW?700:400,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",flex:1}}>{t||"TBD"}</span>
-            {isW && <span style={{fontSize:9,color:C.green}}>✓</span>}
+    <div style={{marginBottom:10}}>
+      <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:C.mid,marginBottom:4}}>
+        <span style={{fontWeight:700,color:color1}}>{v1}</span>
+        <span style={{color:C.dim}}>{label}</span>
+        <span style={{fontWeight:700,color:color2}}>{v2}</span>
+      </div>
+      <div style={{height:6,borderRadius:3,background:C.s2,overflow:"hidden",display:"flex"}}>
+        <div style={{width:`${p1}%`,background:color1,transition:"width .5s"}}/>
+        <div style={{width:`${p2}%`,background:color2,transition:"width .5s"}}/>
+      </div>
+    </div>
+  );
+}
+function H2HTab() {
+  const [team1, setTeam1] = useState("Argentina");
+  const [team2, setTeam2] = useState("France");
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState(false);
+  const swap=()=>{setTeam1(team2);setTeam2(team1);setData(null);};
+  const fetch2=useCallback(async()=>{
+    if(!team1||!team2||team1===team2)return;
+    setLoading(true);setErr(false);setData(null);
+    const zName=t=>t==="Czechia"?"Czech Republic":t==="Bosnia & Herz."?"Bosnia and Herzegovina":t==="Ivory Coast"?"Côte d'Ivoire":t==="Turkiye"?"Turkey":t==="Curacao"?"Curaçao":t;
+    const result=await zafronixGet("compare",{team1:zName(team1),team2:zName(team2)});
+    setLoading(false);
+    if(result)setData(result);else setErr(true);
+  },[team1,team2]);
+  const simOdds=useMemo(()=>{
+    if(!team1||!team2||team1===team2)return null;
+    const N=10000;let w1=0,w2=0,d=0;
+    for(let i=0;i<N;i++){const r=simMatch(team1,team2);if(r.res==="home")w1++;else if(r.res==="away")w2++;else d++;}
+    return{win1:((w1/N)*100).toFixed(1),draw:((d/N)*100).toFixed(1),win2:((w2/N)*100).toFixed(1)};
+  },[team1,team2]);
+  const poly1=PREDS.find(p=>p.team===team1);
+  const poly2=PREDS.find(p=>p.team===team2);
+  const t1=TEAMS[team1];const t2=TEAMS[team2];
+  return (
+    <div>
+      <Card style={{marginBottom:14}}>
+        <div style={{padding:14}}>
+          <div style={{fontWeight:700,color:C.green,fontSize:16,marginBottom:12}}>⚔️ HEAD TO HEAD</div>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <div style={{flex:1}}>
+              <div style={{fontSize:10,color:C.dim,marginBottom:4,fontWeight:600}}>TEAM 1</div>
+              <select value={team1} onChange={e=>{setTeam1(e.target.value);setData(null);}} style={{width:"100%",padding:"8px 10px",background:C.s2,border:`1px solid ${C.b2}`,borderRadius:8,color:C.text,fontSize:13,outline:"none"}}>
+                {ALL_TEAMS.map(t=><option key={t} value={t}>{getFlag(t)} {t}</option>)}
+              </select>
+            </div>
+            <button onClick={swap} style={{padding:"8px 10px",background:C.b1,border:`1px solid ${C.b2}`,borderRadius:8,color:C.mid,fontSize:16,cursor:"pointer",flexShrink:0,marginTop:18}}>⇄</button>
+            <div style={{flex:1}}>
+              <div style={{fontSize:10,color:C.dim,marginBottom:4,fontWeight:600}}>TEAM 2</div>
+              <select value={team2} onChange={e=>{setTeam2(e.target.value);setData(null);}} style={{width:"100%",padding:"8px 10px",background:C.s2,border:`1px solid ${C.b2}`,borderRadius:8,color:C.text,fontSize:13,outline:"none"}}>
+                {ALL_TEAMS.map(t=><option key={t} value={t}>{getFlag(t)} {t}</option>)}
+              </select>
+            </div>
           </div>
-        );
-      })}
+          {team1!==team2 && (
+            <button onClick={fetch2} disabled={loading} style={{width:"100%",marginTop:12,padding:"10px 0",borderRadius:10,background:`linear-gradient(135deg,${C.green},#22c55e)`,border:"none",color:"#030a05",fontWeight:700,fontSize:14,cursor:"pointer",opacity:loading?0.6:1}}>
+              {loading?"Loading...":"🔍 Get H2H History"}
+            </button>
+          )}
+        </div>
+      </Card>
+      {team1!==team2 && simOdds && (
+        <Card style={{marginBottom:12}}>
+          <div style={{padding:"10px 14px",borderBottom:`1px solid ${C.b1}`}}>
+            <span style={{fontWeight:700,color:C.gold,fontSize:13}}>🎮 SIMULATED ODDS (10,000 runs)</span>
+          </div>
+          <div style={{padding:14}}>
+            <div style={{display:"flex",gap:8,marginBottom:12}}>
+              <div style={{flex:1,textAlign:"center",padding:"10px 6px",background:`${C.green}18`,border:`1px solid ${C.green}44`,borderRadius:10}}>
+                <div style={{fontSize:10,color:C.dim,marginBottom:4}}>{getFlag(team1)} {team1}</div>
+                <div style={{fontWeight:900,fontSize:24,color:C.green}}>{simOdds.win1}%</div>
+                <div style={{fontSize:10,color:C.dim}}>Win</div>
+              </div>
+              <div style={{flex:1,textAlign:"center",padding:"10px 6px",background:`${C.gold}18`,border:`1px solid ${C.gold}44`,borderRadius:10}}>
+                <div style={{fontSize:10,color:C.dim,marginBottom:4}}>Draw</div>
+                <div style={{fontWeight:900,fontSize:24,color:C.gold}}>{simOdds.draw}%</div>
+                <div style={{fontSize:10,color:C.dim}}>After 90'</div>
+              </div>
+              <div style={{flex:1,textAlign:"center",padding:"10px 6px",background:`${C.red}18`,border:`1px solid ${C.red}44`,borderRadius:10}}>
+                <div style={{fontSize:10,color:C.dim,marginBottom:4}}>{getFlag(team2)} {team2}</div>
+                <div style={{fontWeight:900,fontSize:24,color:C.red}}>{simOdds.win2}%</div>
+                <div style={{fontSize:10,color:C.dim}}>Win</div>
+              </div>
+            </div>
+            <H2HBar label="Team Strength" v1={gs(team1)} v2={gs(team2)} color1={C.green} color2={C.red}/>
+            {t1&&t2&&<><H2HBar label="Attack" v1={t1.stats.ATT} v2={t2.stats.ATT} color1={C.green} color2={C.red}/><H2HBar label="Midfield" v1={t1.stats.MID} v2={t2.stats.MID} color1={C.green} color2={C.red}/><H2HBar label="Defence" v1={t1.stats.DEF} v2={t2.stats.DEF} color1={C.green} color2={C.red}/><H2HBar label="Fitness" v1={t1.stats.FIT} v2={t2.stats.FIT} color1={C.green} color2={C.red}/></>}
+            {(poly1||poly2) && (
+              <div style={{marginTop:14,padding:14,background:`linear-gradient(135deg,#1a1a2e,#16213e)`,border:`1px solid #4ade8033`,borderRadius:12}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
+                  <div><div style={{fontWeight:700,color:C.green,fontSize:13,marginBottom:2}}>🎯 POLYMARKET · WC WINNER ODDS</div><div style={{fontSize:10,color:C.dim}}>Crowd-sourced prediction market</div></div>
+                  <a href="https://polymarket.com/event/world-cup-winner" target="_blank" rel="noopener noreferrer" style={{fontSize:11,color:C.green,textDecoration:"none",border:`1px solid ${C.greenS}`,padding:"4px 10px",borderRadius:20,fontWeight:600,flexShrink:0}}>Trade →</a>
+                </div>
+                <div style={{display:"flex",gap:10,marginBottom:12}}>
+                  {poly1 && <a href="https://polymarket.com/event/world-cup-winner" target="_blank" rel="noopener noreferrer" style={{flex:1,textDecoration:"none"}}><div style={{textAlign:"center",padding:"12px 8px",background:`${C.green}18`,border:`1px solid ${C.green}44`,borderRadius:10,cursor:"pointer"}}><div style={{fontSize:11,color:C.mid,marginBottom:4}}>{getFlag(team1)} {team1}</div><div style={{fontWeight:900,fontSize:28,color:C.green}}>{poly1.poly}%</div><div style={{fontSize:10,color:C.dim,marginTop:2}}>to win WC</div><div style={{fontSize:10,color:C.dim}}>{poly1.odds}</div></div></a>}
+                  {poly2 && <a href="https://polymarket.com/event/world-cup-winner" target="_blank" rel="noopener noreferrer" style={{flex:1,textDecoration:"none"}}><div style={{textAlign:"center",padding:"12px 8px",background:`${C.red}18`,border:`1px solid ${C.red}44`,borderRadius:10,cursor:"pointer"}}><div style={{fontSize:11,color:C.mid,marginBottom:4}}>{getFlag(team2)} {team2}</div><div style={{fontWeight:900,fontSize:28,color:C.red}}>{poly2.poly}%</div><div style={{fontSize:10,color:C.dim,marginTop:2}}>to win WC</div><div style={{fontSize:10,color:C.dim}}>{poly2.odds}</div></div></a>}
+                </div>
+                <div style={{fontSize:10,color:C.dim,textAlign:"center"}}><a href="https://polymarket.com/sports/world-cup/games" target="_blank" rel="noopener noreferrer" style={{color:C.green}}>Check match-specific markets →</a></div>
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
+      {loading && <div style={{textAlign:"center",padding:"32px 0"}}><div style={{width:28,height:28,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto 10px"}}/><div style={{fontSize:13,color:C.mid}}>Fetching H2H history...</div></div>}
+      {err && <Card><div style={{padding:14,textAlign:"center",color:C.dim,fontSize:13}}>H2H history not available for this matchup yet. Simulated odds above are still valid.</div></Card>}
+      {data && !loading && (
+        <Card>
+          <div style={{padding:"10px 14px",borderBottom:`1px solid ${C.b1}`}}><span style={{fontWeight:700,color:C.green,fontSize:13}}>📜 HISTORICAL H2H · ZAFRONIX</span></div>
+          <div style={{padding:14}}><pre style={{fontSize:11,color:C.mid,whiteSpace:"pre-wrap",wordBreak:"break-all"}}>{JSON.stringify(data,null,2)}</pre></div>
+        </Card>
+      )}
     </div>
   );
 }
 
+// ── MY BRACKET TAB ────────────────────────────────────────────────────────
+const defaultBracketGroups=()=>Object.fromEntries(Object.entries(GROUPS).map(([g,{teams}])=>[g,[...teams]]));
+function BracketMatchup({ t1, t2, winner }) {
+  return (
+    <div style={{background:C.s1,border:`1px solid ${C.b1}`,borderRadius:8,overflow:"hidden",minWidth:110,maxWidth:150}}>
+      {[t1,t2].map((t,i)=>{const isW=winner&&t===winner;return(<div key={i} style={{display:"flex",alignItems:"center",gap:5,padding:"4px 7px",background:isW?`${C.green}22`:"transparent",borderBottom:i===0?`1px solid ${C.b1}`:"none"}}><Crest team={t||"TBD"} size={13}/><span style={{fontSize:11,color:isW?C.green:t?C.text:C.dim,fontWeight:isW?700:400,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",flex:1}}>{t||"TBD"}</span>{isW&&<span style={{fontSize:9,color:C.green}}>✓</span>}</div>);})}
+    </div>
+  );
+}
 function MyBracketTab() {
-  const [stage, setStage] = useState("groups");
-  const [groups, setGroups] = useState(defaultBracketGroups);
-  const [thirds, setThirds] = useState([]);
-  const [result, setResult] = useState(null);
-  const [running, setRunning] = useState(false);
-  const allThirds = Object.entries(groups).map(([g,teams])=>({group:g,team:teams[2]}));
-  const moveUp = (g,idx) => { if(idx===0)return; setGroups(p=>{const a=[...p[g]];[a[idx-1],a[idx]]=[a[idx],a[idx-1]];return{...p,[g]:a};}); };
-  const moveDown = (g,idx) => { const arr=groups[g]; if(idx===arr.length-1)return; setGroups(p=>{const a=[...p[g]];[a[idx],a[idx+1]]=[a[idx+1],a[idx]];return{...p,[g]:a};}); };
-  const toggleThird = (t) => { setThirds(p=>p.includes(t)?p.filter(x=>x!==t):[...p,t].slice(0,8)); };
-  const runBracket = () => {
-    setRunning(true);
-    setTimeout(()=>{
-      const qualifiers = [];
-      Object.entries(groups).forEach(([,teams])=>{ qualifiers.push(teams[0],teams[1]); });
-      const r32 = [...qualifiers,...thirds.slice(0,8)];
-      const ko = (arr) => { const n=[]; for(let i=0;i<arr.length;i+=2) n.push(simKO(arr[i],arr[i+1])); return n; };
-      const r16=ko(r32), qf=ko(r16), sf=ko(qf), champ=simKO(sf[0],sf[1]);
-      setResult({r32,r16,qf,sf,champion:champ,runnerUp:sf.find(x=>x!==champ)});
-      setStage("bracket");
-      setRunning(false);
-    },80);
-  };
+  const [stage,setStage]=useState("groups");
+  const [groups,setGroups]=useState(defaultBracketGroups);
+  const [thirds,setThirds]=useState([]);
+  const [result,setResult]=useState(null);
+  const [running,setRunning]=useState(false);
+  const allThirds=Object.entries(groups).map(([g,teams])=>({group:g,team:teams[2]}));
+  const moveUp=(g,idx)=>{if(idx===0)return;setGroups(p=>{const a=[...p[g]];[a[idx-1],a[idx]]=[a[idx],a[idx-1]];return{...p,[g]:a};});};
+  const moveDown=(g,idx)=>{const arr=groups[g];if(idx===arr.length-1)return;setGroups(p=>{const a=[...p[g]];[a[idx],a[idx+1]]=[a[idx+1],a[idx]];return{...p,[g]:a};});};
+  const toggleThird=(t)=>{setThirds(p=>p.includes(t)?p.filter(x=>x!==t):[...p,t].slice(0,8));};
+  const runBracket=()=>{setRunning(true);setTimeout(()=>{const qualifiers=[];Object.entries(groups).forEach(([,teams])=>{qualifiers.push(teams[0],teams[1]);});const r32=[...qualifiers,...thirds.slice(0,8)];const ko=(arr)=>{const n=[];for(let i=0;i<arr.length;i+=2)n.push(simKO(arr[i],arr[i+1]));return n;};const r16=ko(r32),qf=ko(r16),sf=ko(qf),champ=simKO(sf[0],sf[1]);setResult({r32,r16,qf,sf,champion:champ,runnerUp:sf.find(x=>x!==champ)});setStage("bracket");setRunning(false);},80);};
   return (
     <div>
       <div style={{display:"flex",gap:8,marginBottom:14}}>
@@ -1148,22 +1270,7 @@ function MyBracketTab() {
             <Card key={g} style={{marginBottom:10}}>
               <div style={{padding:"8px 12px",borderBottom:`1px solid ${C.b1}`,background:"#0a1810"}}><span style={{fontWeight:700,color:C.green,fontSize:14}}>GROUP {g}</span></div>
               <div style={{padding:"8px 10px"}}>
-                {teams.map((team,idx)=>{
-                  const col=idx===0?C.green:idx===1?C.gold:idx===2?"#94a3b8":C.dim;
-                  return (
-                    <div key={team} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 4px",borderRadius:8,background:idx<2?`${col}08`:"transparent",marginBottom:2}}>
-                      <span style={{fontSize:12,color:col,fontWeight:700,minWidth:16}}>{idx+1}</span>
-                      <Crest team={team} size={20}/>
-                      <span style={{fontSize:13,color:idx<2?col:C.text,fontWeight:idx<2?600:400,flex:1}}>{team}</span>
-                      {idx<2 && <span style={{fontSize:9,color:col,fontWeight:700,background:`${col}22`,padding:"1px 5px",borderRadius:6}}>Q</span>}
-                      {idx===2 && <span style={{fontSize:9,color:col,background:`${col}18`,padding:"1px 5px",borderRadius:6}}>3rd</span>}
-                      <div style={{display:"flex",gap:4}}>
-                        <button onClick={()=>moveUp(g,idx)} disabled={idx===0} style={{width:22,height:22,borderRadius:6,border:`1px solid ${C.b2}`,background:idx===0?"transparent":C.s2,color:idx===0?C.dim:C.mid,fontSize:11,cursor:idx===0?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>↑</button>
-                        <button onClick={()=>moveDown(g,idx)} disabled={idx===teams.length-1} style={{width:22,height:22,borderRadius:6,border:`1px solid ${C.b2}`,background:idx===teams.length-1?"transparent":C.s2,color:idx===teams.length-1?C.dim:C.mid,fontSize:11,cursor:idx===teams.length-1?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>↓</button>
-                      </div>
-                    </div>
-                  );
-                })}
+                {teams.map((team,idx)=>{const col=idx===0?C.green:idx===1?C.gold:idx===2?"#94a3b8":C.dim;return(<div key={team} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 4px",borderRadius:8,background:idx<2?`${col}08`:"transparent",marginBottom:2}}><span style={{fontSize:12,color:col,fontWeight:700,minWidth:16}}>{idx+1}</span><Crest team={team} size={20}/><span style={{fontSize:13,color:idx<2?col:C.text,fontWeight:idx<2?600:400,flex:1}}>{team}</span>{idx<2&&<span style={{fontSize:9,color:col,fontWeight:700,background:`${col}22`,padding:"1px 5px",borderRadius:6}}>Q</span>}{idx===2&&<span style={{fontSize:9,color:col,background:`${col}18`,padding:"1px 5px",borderRadius:6}}>3rd</span>}<div style={{display:"flex",gap:4}}><button onClick={()=>moveUp(g,idx)} disabled={idx===0} style={{width:22,height:22,borderRadius:6,border:`1px solid ${C.b2}`,background:idx===0?"transparent":C.s2,color:idx===0?C.dim:C.mid,fontSize:11,cursor:idx===0?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>↑</button><button onClick={()=>moveDown(g,idx)} disabled={idx===teams.length-1} style={{width:22,height:22,borderRadius:6,border:`1px solid ${C.b2}`,background:idx===teams.length-1?"transparent":C.s2,color:idx===teams.length-1?C.dim:C.mid,fontSize:11,cursor:idx===teams.length-1?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>↓</button></div></div>);})}
               </div>
             </Card>
           ))}
@@ -1175,28 +1282,12 @@ function MyBracketTab() {
           <div style={{fontSize:12,color:C.mid,marginBottom:6,lineHeight:1.6}}>Select exactly <strong style={{color:C.gold}}>8 of 12</strong> third-place teams to advance.</div>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
             <span style={{fontSize:13,color:thirds.length===8?C.green:C.gold,fontWeight:700}}>{thirds.length}/8 selected</span>
-            <button onClick={()=>{ const sorted=[...allThirds].sort((a,b)=>gs(b.team)-gs(a.team)).slice(0,8).map(x=>x.team); setThirds(sorted); }} style={{fontSize:11,padding:"4px 10px",borderRadius:10,background:`${C.gold}22`,border:`1px solid ${C.gold}55`,color:C.gold,cursor:"pointer",fontWeight:600}}>Auto-select best 8</button>
+            <button onClick={()=>{const sorted=[...allThirds].sort((a,b)=>gs(b.team)-gs(a.team)).slice(0,8).map(x=>x.team);setThirds(sorted);}} style={{fontSize:11,padding:"4px 10px",borderRadius:10,background:`${C.gold}22`,border:`1px solid ${C.gold}55`,color:C.gold,cursor:"pointer",fontWeight:600}}>Auto-select best 8</button>
           </div>
-          {allThirds.map(({group,team})=>{
-            const sel=thirds.includes(team);
-            return (
-              <div key={team} onClick={()=>toggleThird(team)} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:10,marginBottom:6,cursor:"pointer",background:sel?`${C.green}18`:C.s1,border:`1px solid ${sel?C.green:C.b1}`}}>
-                <div style={{width:20,height:20,borderRadius:6,border:`2px solid ${sel?C.green:C.dim}`,background:sel?C.green:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                  {sel && <span style={{color:"#030a05",fontSize:12,fontWeight:900}}>✓</span>}
-                </div>
-                <Crest team={team} size={24}/>
-                <div style={{flex:1}}>
-                  <div style={{fontSize:13,fontWeight:600,color:sel?C.green:C.text}}>{team}</div>
-                  <div style={{fontSize:10,color:C.dim}}>3rd place Group {group} · STR {gs(team)}</div>
-                </div>
-              </div>
-            );
-          })}
+          {allThirds.map(({group,team})=>{const sel=thirds.includes(team);return(<div key={team} onClick={()=>toggleThird(team)} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:10,marginBottom:6,cursor:"pointer",background:sel?`${C.green}18`:C.s1,border:`1px solid ${sel?C.green:C.b1}`}}><div style={{width:20,height:20,borderRadius:6,border:`2px solid ${sel?C.green:C.dim}`,background:sel?C.green:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{sel&&<span style={{color:"#030a05",fontSize:12,fontWeight:900}}>✓</span>}</div><Crest team={team} size={24}/><div style={{flex:1}}><div style={{fontSize:13,fontWeight:600,color:sel?C.green:C.text}}>{team}</div><div style={{fontSize:10,color:C.dim}}>3rd place Group {group} · STR {gs(team)}</div></div></div>);})}
           <div style={{display:"flex",gap:8,marginTop:8}}>
             <button onClick={()=>setStage("groups")} style={{flex:1,padding:"11px 0",borderRadius:12,background:"transparent",border:`1px solid ${C.b2}`,color:C.mid,fontWeight:600,fontSize:14,cursor:"pointer"}}>← Back</button>
-            <button onClick={runBracket} disabled={thirds.length!==8||running} style={{flex:2,padding:"11px 0",borderRadius:12,background:thirds.length===8?`linear-gradient(135deg,${C.green},#22c55e)`:C.b2,border:"none",color:thirds.length===8?"#030a05":C.dim,fontWeight:700,fontSize:14,cursor:thirds.length===8?"pointer":"default",opacity:running?0.6:1}}>
-              {running?"Simulating...":"🎲 Simulate My Bracket →"}
-            </button>
+            <button onClick={runBracket} disabled={thirds.length!==8||running} style={{flex:2,padding:"11px 0",borderRadius:12,background:thirds.length===8?`linear-gradient(135deg,${C.green},#22c55e)`:C.b2,border:"none",color:thirds.length===8?"#030a05":C.dim,fontWeight:700,fontSize:14,cursor:thirds.length===8?"pointer":"default",opacity:running?0.6:1}}>{running?"Simulating...":"🎲 Simulate My Bracket →"}</button>
           </div>
         </div>
       )}
@@ -1208,28 +1299,16 @@ function MyBracketTab() {
           </div>
           <div style={{background:`linear-gradient(135deg,${C.green}22,${C.gold}18)`,border:`1px solid ${C.greenS}`,borderRadius:14,padding:16,marginBottom:16,textAlign:"center"}}>
             <div style={{fontSize:11,color:C.dim,letterSpacing:"0.15em",fontWeight:700,marginBottom:8}}>🏆 YOUR SIMULATED CHAMPION</div>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:12,marginBottom:6}}>
-              <Crest team={result.champion} size={52}/>
-              <span style={{fontWeight:900,fontSize:28,color:C.green}}>{result.champion}</span>
-            </div>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:12,marginBottom:6}}><Crest team={result.champion} size={52}/><span style={{fontWeight:900,fontSize:28,color:C.green}}>{result.champion}</span></div>
             <div style={{fontSize:13,color:C.mid}}>Runner-up: {getFlag(result.runnerUp)} {result.runnerUp}</div>
           </div>
           <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10}}>Full Bracket</div>
           <div style={{overflowX:"auto",paddingBottom:8}}>
             <div style={{display:"flex",gap:10,minWidth:620}}>
-              {[
-                {label:"R32",rounds:result.r32,next:result.r16},
-                {label:"R16",rounds:result.r16,next:result.qf},
-                {label:"QF",rounds:result.qf,next:result.sf},
-                {label:"SF",rounds:result.sf,next:result.champion?[result.champion]:[]},
-              ].map(({label,rounds,next})=>(
+              {[{label:"R32",rounds:result.r32,next:result.r16},{label:"R16",rounds:result.r16,next:result.qf},{label:"QF",rounds:result.qf,next:result.sf},{label:"SF",rounds:result.sf,next:result.champion?[result.champion]:[]}].map(({label,rounds,next})=>(
                 <div key={label} style={{flex:1,display:"flex",flexDirection:"column",gap:6}}>
                   <div style={{fontSize:10,fontWeight:700,color:C.dim,textAlign:"center",marginBottom:4}}>{label}</div>
-                  {rounds.reduce((a,t,i)=>i%2===0?[...a,[t,rounds[i+1]]]:a,[]).map(([t1,t2],mi)=>{
-                    const w = next && next.find(t=>t===t1||t===t2);
-                    return <BracketMatchup key={mi} t1={t1} t2={t2} winner={w}/>;
-                  })}
-                </div>
+                  {rounds.reduce((a,t,i)=>i%2===0?[...a,[t,rounds[i+1]]]:a,[]).map(([t1,t2],mi)=>{const w=next&&next.find(t=>t===t1||t===t2);return<BracketMatchup key={mi} t1={t1} t2={t2} winner={w}/>;})}</div>
               ))}
               <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:6}}>
                 <div style={{fontSize:10,fontWeight:700,color:C.gold,textAlign:"center",marginBottom:4}}>FINAL</div>
@@ -1240,9 +1319,7 @@ function MyBracketTab() {
           {[["SEMI-FINALS",result.sf],["QUARTER-FINALS",result.qf],["ROUND OF 16",result.r16]].map(([label,teams])=>(
             <div key={label} style={{marginTop:14}}>
               <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:7}}>{label}</div>
-              <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
-                {(teams||[]).map(t=><div key={t} style={{display:"flex",alignItems:"center",gap:5,background:C.s2,border:`1px solid ${C.b1}`,borderRadius:8,padding:"4px 9px"}}><Crest team={t} size={16}/><span style={{fontSize:12,color:C.text}}>{t}</span></div>)}
-              </div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:6}}>{(teams||[]).map(t=><div key={t} style={{display:"flex",alignItems:"center",gap:5,background:C.s2,border:`1px solid ${C.b1}`,borderRadius:8,padding:"4px 9px"}}><Crest team={t} size={16}/><span style={{fontSize:12,color:C.text}}>{t}</span></div>)}</div>
             </div>
           ))}
         </div>
@@ -1254,7 +1331,7 @@ function MyBracketTab() {
 // ── SAVED TAB ──────────────────────────────────────────────────────────────
 function SavedTab({ saved, onRemove }) {
   const [synced, setSynced] = useState(false);
-  const handleSync = () => { downloadICS(saved); setSynced(true); setTimeout(()=>setSynced(false),3000); };
+  const handleSync=()=>{downloadICS(saved);setSynced(true);setTimeout(()=>setSynced(false),3000);};
   if(saved.length===0) return (
     <div style={{textAlign:"center",padding:"50px 20px"}}>
       <div style={{fontSize:"2.8rem",marginBottom:10}}>📅</div>
@@ -1268,7 +1345,7 @@ function SavedTab({ saved, onRemove }) {
         <div style={{fontWeight:700,color:C.text,fontSize:14,marginBottom:4}}>📅 Sync to Calendar</div>
         <div style={{fontSize:12,color:C.mid,marginBottom:12,lineHeight:1.5}}>Download a <strong style={{color:C.green}}>.ics file</strong> to import into Google Calendar, Apple Calendar, or Outlook.</div>
         <button onClick={handleSync} style={{width:"100%",padding:"11px 0",borderRadius:10,cursor:"pointer",background:synced?`${C.green}33`:`linear-gradient(135deg,${C.green},#22c55e)`,border:synced?`1px solid ${C.green}`:"none",color:synced?C.green:"#030a05",fontWeight:700,fontSize:14}}>
-          {synced ? "✅ Opening..." : `📅 Export (${saved.length} match${saved.length!==1?"es":""})`}
+          {synced?"✅ Opening...":`📅 Export (${saved.length} match${saved.length!==1?"es":""})`}
         </button>
       </div>
       {saved.map(item=>(
@@ -1302,6 +1379,7 @@ const TABS = [
   {id:"schedule",icon:"📋",label:"Schedule"},
   {id:"groups",icon:"🗂️",label:"Groups"},
   {id:"stats",icon:"📊",label:"Stats"},
+  {id:"h2h",icon:"⚔️",label:"H2H"},
   {id:"predict",icon:"🎯",label:"Odds"},
   {id:"sim",icon:"🎮",label:"Simulator"},
   {id:"bracket",icon:"🏆",label:"My Bracket"},
@@ -1314,11 +1392,11 @@ export default function App() {
   const [modal, setModal] = useState({open:false,match:null});
   const [saved, setSaved] = useState([]);
   const [toast, setToast] = useState("");
-  const onTeam = (t) => { setStatsTeam(t); setTab("stats"); };
-  const onAction = (m) => setModal({open:true,match:m});
-  const onCal = (m,avail) => { const id=`c${m.id}`; setSaved(s=>[...s.filter(x=>x.id!==id),{id,type:"cal",match:m,avail}]); setToast("Added to calendar"); };
-  const onRem = (m,ch,mins,contact) => { const id=`r${m.id}`; setSaved(s=>[...s.filter(x=>x.id!==id),{id,type:"rem",match:m,ch,mins,contact}]); setToast("Reminder set"); };
-  const onRemove = (id) => setSaved(s=>s.filter(x=>x.id!==id));
+  const onTeam=(t)=>{setStatsTeam(t);setTab("stats");};
+  const onAction=(m)=>setModal({open:true,match:m});
+  const onCal=(m,avail)=>{const id=`c${m.id}`;setSaved(s=>[...s.filter(x=>x.id!==id),{id,type:"cal",match:m,avail}]);setToast("Added to calendar");};
+  const onRem=(m,ch,mins,contact)=>{const id=`r${m.id}`;setSaved(s=>[...s.filter(x=>x.id!==id),{id,type:"rem",match:m,ch,mins,contact}]);setToast("Reminder set");};
+  const onRemove=(id)=>setSaved(s=>s.filter(x=>x.id!==id));
   return (
     <LiveScoresProvider>
       <div style={{minHeight:"100vh",background:C.bg,maxWidth:700,margin:"0 auto",fontFamily:"system-ui,sans-serif"}}>
@@ -1326,7 +1404,7 @@ export default function App() {
         <div style={{background:`linear-gradient(180deg,#091510,${C.bg})`,padding:"14px 14px 0",borderBottom:`1px solid ${C.b1}`,position:"sticky",top:0,zIndex:100,backdropFilter:"blur(10px)"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
             <div style={{display:"flex",alignItems:"center",gap:10}}>
-            <div>
+              <div>
                 <div style={{fontSize:9,color:C.dim,letterSpacing:"0.2em",fontWeight:700}}>FIFA</div>
                 <div style={{fontSize:20,fontWeight:900,color:C.text,lineHeight:1}}>WORLD CUP</div>
                 <div style={{fontSize:20,fontWeight:900,color:C.green,lineHeight:1}}>2026™</div>
@@ -1348,14 +1426,15 @@ export default function App() {
           </div>
         </div>
         <div style={{padding:"14px 13px 100px"}}>
-          {tab==="live"    && <LiveTab onAction={onAction}/>}
-          {tab==="schedule"&& <SchedTab onAction={onAction}/>}
-          {tab==="groups"  && <GrpTab onTeam={onTeam}/>}
-          {tab==="stats"   && <StatsTab initial={statsTeam}/>}
-          {tab==="predict" && <PredTab/>}
-          {tab==="sim"     && <SimTab/>}
-          {tab==="bracket" && <MyBracketTab/>}
-          {tab==="saved"   && <SavedTab saved={saved} onRemove={onRemove}/>}
+          {tab==="live"     && <LiveTab onAction={onAction}/>}
+          {tab==="schedule" && <SchedTab onAction={onAction}/>}
+          {tab==="groups"   && <GrpTab onTeam={onTeam}/>}
+          {tab==="stats"    && <StatsTab initial={statsTeam}/>}
+          {tab==="h2h"      && <H2HTab/>}
+          {tab==="predict"  && <PredTab/>}
+          {tab==="sim"      && <SimTab/>}
+          {tab==="bracket"  && <MyBracketTab/>}
+          {tab==="saved"    && <SavedTab saved={saved} onRemove={onRemove}/>}
         </div>
         <AddModal match={modal.match} open={modal.open} onClose={()=>setModal({open:false,match:null})} onCal={onCal} onRem={onRem}/>
         <Toast msg={toast} onDone={()=>setToast("")}/>
