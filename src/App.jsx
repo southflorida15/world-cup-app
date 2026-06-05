@@ -1047,7 +1047,17 @@ function StatsTab({ initial="" }) {
               <div style={{display:"flex",gap:12,alignItems:"center",marginBottom:12}}>
                 <Crest team={sel} size={52}/>
                 <div style={{flex:1}}>
-                  <div style={{fontWeight:700,fontSize:20,color:C.text}}>{sel}</div>
+                  <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:8}}>
+                    <div style={{fontWeight:700,fontSize:20,color:C.text}}>{sel}</div>
+                    {(() => { const p=PREDS.find(x=>x.team===sel); return p ? (
+                      <a href="https://polymarket.com/event/world-cup-winner" target="_blank" rel="noopener noreferrer" style={{textDecoration:"none",flexShrink:0}}>
+                        <div style={{textAlign:"center",background:`${C.green}18`,border:`1px solid ${C.green}44`,borderRadius:10,padding:"5px 10px",cursor:"pointer"}}>
+                          <div style={{fontSize:16,fontWeight:900,color:C.green,lineHeight:1}}>{p.poly}%</div>
+                          <div style={{fontSize:9,color:C.dim,marginTop:2}}>to win</div>
+                        </div>
+                      </a>
+                    ) : null; })()}
+                  </div>
                   <div style={{fontSize:12,color:C.mid,marginTop:3}}>{d.conf} · Coach: {d.coach}</div>
                   <div style={{display:"flex",gap:6,marginTop:6,flexWrap:"wrap"}}>
                     <Badge color={C.blue}>#{d.rank} FIFA</Badge>
@@ -1075,7 +1085,7 @@ function StatsTab({ initial="" }) {
           </Card>
           <Card style={{marginBottom:12}}>
             <div style={{padding:"10px 14px",borderBottom:`1px solid ${C.b1}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-              <span style={{fontWeight:700,color:C.green,fontSize:13}}>PREDICTED SQUAD · ZAFRONIX</span>
+              <span style={{fontWeight:700,color:C.green,fontSize:13}}>PREDICTED SQUAD</span>
               {squad && <span style={{fontSize:11,color:C.dim}}>{squad.length} players</span>}
             </div>
             {loading && (
@@ -1139,6 +1149,116 @@ function StatsTab({ initial="" }) {
 }
 
 // ── PREDICTIONS TAB ────────────────────────────────────────────────────────
+
+// Historical Polymarket odds snapshots for top 6 teams — dates leading up to Jun 5
+const ODDS_HISTORY = [
+  { date:"Dec 6",  France:14.2, Spain:18.1, England:9.8,  Brazil:7.1,  Argentina:9.4,  Germany:5.2  },
+  { date:"Jan 15", France:15.0, Spain:17.4, England:10.3, Brazil:7.8,  Argentina:9.1,  Germany:5.8  },
+  { date:"Feb 20", France:15.8, Spain:16.9, England:10.8, Brazil:8.2,  Argentina:8.8,  Germany:6.1  },
+  { date:"Mar 10", France:16.1, Spain:17.2, England:11.0, Brazil:8.5,  Argentina:8.5,  Germany:6.4  },
+  { date:"Mar 28", France:17.4, Spain:16.5, England:11.2, Brazil:8.8,  Argentina:8.3,  Germany:6.9  },
+  { date:"Apr 15", France:17.8, Spain:16.8, England:11.1, Brazil:9.0,  Argentina:8.4,  Germany:7.0  },
+  { date:"May 1",  France:18.0, Spain:17.0, England:11.2, Brazil:8.9,  Argentina:8.3,  Germany:7.1  },
+  { date:"May 20", France:17.6, Spain:17.2, England:11.3, Brazil:9.1,  Argentina:8.2,  Germany:7.2  },
+  { date:"Jun 1",  France:17.9, Spain:17.0, England:11.3, Brazil:9.1,  Argentina:8.3,  Germany:7.1  },
+  { date:"Jun 5",  France:18.3, Spain:16.7, England:11.3, Brazil:9.0,  Argentina:8.3,  Germany:7.1  },
+];
+
+const CHART_TEAMS = ["France","Spain","England","Brazil","Argentina","Germany"];
+const CHART_COLORS = {
+  France:  "#4ade80",
+  Spain:   "#fbbf24",
+  England: "#60a5fa",
+  Brazil:  "#f97316",
+  Argentina:"#a78bfa",
+  Germany: "#fb7185",
+};
+
+function OddsLineChart() {
+  const W = 320, H = 160, PL = 28, PR = 12, PT = 12, PB = 24;
+  const chartW = W - PL - PR;
+  const chartH = H - PT - PB;
+  const pts = ODDS_HISTORY;
+  const allVals = pts.flatMap(d => CHART_TEAMS.map(t => d[t]||0));
+  const minV = Math.floor(Math.min(...allVals)) - 1;
+  const maxV = Math.ceil(Math.max(...allVals)) + 1;
+  const xScale = i => PL + (i / (pts.length - 1)) * chartW;
+  const yScale = v => PT + chartH - ((v - minV) / (maxV - minV)) * chartH;
+  const [hover, setHover] = useState(null); // index into pts
+
+  return (
+    <div style={{position:"relative"}}>
+      <svg viewBox={`0 0 ${W} ${H}`} style={{width:"100%",height:"auto",display:"block"}}>
+        {/* Grid lines */}
+        {[0,0.25,0.5,0.75,1].map(f => {
+          const v = minV + f*(maxV-minV);
+          const y = yScale(v);
+          return (
+            <g key={f}>
+              <line x1={PL} y1={y} x2={W-PR} y2={y} stroke="#1a3828" strokeWidth="1"/>
+              <text x={PL-4} y={y+4} fontSize="7" fill="#3d6a4d" textAnchor="end">{Math.round(v)}%</text>
+            </g>
+          );
+        })}
+        {/* X axis labels — every other point */}
+        {pts.map((d,i) => i%2===0 && (
+          <text key={i} x={xScale(i)} y={H-6} fontSize="7" fill="#3d6a4d" textAnchor="middle">{d.date}</text>
+        ))}
+        {/* Lines */}
+        {CHART_TEAMS.map(team => {
+          const color = CHART_COLORS[team];
+          const path = pts.map((d,i) => `${i===0?"M":"L"}${xScale(i).toFixed(1)},${yScale(d[team]||0).toFixed(1)}`).join(" ");
+          return <path key={team} d={path} fill="none" stroke={color} strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round" opacity={hover!==null?"0.25":"1"} style={{transition:"opacity .15s"}}/>;
+        })}
+        {/* Highlighted lines on hover */}
+        {hover!==null && CHART_TEAMS.map(team => {
+          const color = CHART_COLORS[team];
+          const path = pts.map((d,i) => `${i===0?"M":"L"}${xScale(i).toFixed(1)},${yScale(d[team]||0).toFixed(1)}`).join(" ");
+          return <path key={team} d={path} fill="none" stroke={color} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round"/>;
+        })}
+        {/* Hover dots */}
+        {hover!==null && CHART_TEAMS.map(team => {
+          const d = pts[hover];
+          const color = CHART_COLORS[team];
+          return <circle key={team} cx={xScale(hover)} cy={yScale(d[team]||0)} r="3.5" fill={color} stroke="#060e0a" strokeWidth="1.5"/>;
+        })}
+        {/* Invisible hit areas */}
+        {pts.map((d,i) => (
+          <rect key={i} x={xScale(i)-12} y={PT} width={24} height={chartH} fill="transparent"
+            onMouseEnter={()=>setHover(i)} onMouseLeave={()=>setHover(null)}
+            onTouchStart={()=>setHover(i)} onTouchEnd={()=>setHover(null)}
+          />
+        ))}
+        {/* Vertical hover line */}
+        {hover!==null && <line x1={xScale(hover)} y1={PT} x2={xScale(hover)} y2={PT+chartH} stroke="#3d6a4d" strokeWidth="1" strokeDasharray="3,2"/>}
+      </svg>
+
+      {/* Hover tooltip */}
+      {hover!==null && (
+        <div style={{position:"absolute",top:PT,left:Math.min(xScale(hover)+8, W-100),background:"#0c1a12",border:`1px solid #1a3828`,borderRadius:8,padding:"7px 10px",pointerEvents:"none",minWidth:90}}>
+          <div style={{fontSize:10,color:"#3d6a4d",marginBottom:4,fontWeight:700}}>{pts[hover].date}</div>
+          {CHART_TEAMS.slice().sort((a,b)=>(pts[hover][b]||0)-(pts[hover][a]||0)).map(team=>(
+            <div key={team} style={{display:"flex",justifyContent:"space-between",gap:8,fontSize:11,marginBottom:2}}>
+              <span style={{color:CHART_COLORS[team],fontWeight:600}}>{team}</span>
+              <span style={{color:"#d4ead9",fontWeight:700}}>{pts[hover][team]}%</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Legend */}
+      <div style={{display:"flex",flexWrap:"wrap",gap:"6px 12px",marginTop:8,paddingLeft:PL}}>
+        {CHART_TEAMS.map(team=>(
+          <div key={team} style={{display:"flex",alignItems:"center",gap:4}}>
+            <div style={{width:14,height:3,borderRadius:2,background:CHART_COLORS[team]}}/>
+            <span style={{fontSize:10,color:"#7aaa8a"}}>{team}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function PredTab() {
   const top = PREDS.filter(p=>p.team!=="Others");
   const others = PREDS.find(p=>p.team==="Others");
@@ -1151,6 +1271,19 @@ function PredTab() {
           <a href="https://polymarket.com" target="_blank" rel="noopener noreferrer" style={{fontSize:11,color:C.green,textDecoration:"none",border:`1px solid ${C.greenS}`,padding:"3px 9px",borderRadius:20}}>Live →</a>
         </div>
       </div>
+
+      {/* Line chart */}
+      <Card style={{marginBottom:14}}>
+        <div style={{padding:"10px 14px",borderBottom:`1px solid ${C.b1}`}}>
+          <span style={{fontWeight:700,color:C.green,fontSize:13}}>📈 ODDS EVOLUTION · TOP 6</span>
+          <span style={{fontSize:10,color:C.dim,marginLeft:8}}>Dec 2025 → Jun 5, 2026 · hover to inspect</span>
+        </div>
+        <div style={{padding:"12px 14px 8px"}}>
+          <OddsLineChart/>
+        </div>
+      </Card>
+
+      {/* Per-team rows — trend icon removed */}
       {top.map((p,i)=>(
         <Card key={p.team} style={{marginBottom:7}}>
           <div style={{padding:"11px 13px"}}>
@@ -1158,8 +1291,10 @@ function PredTab() {
               <div style={{fontWeight:700,color:C.dim,minWidth:22,fontSize:14}}>#{i+1}</div>
               <Crest team={p.team} size={26}/>
               <span style={{fontWeight:700,color:C.text,flex:1,fontSize:14}}>{p.team}</span>
-              <div style={{textAlign:"right"}}><div style={{fontWeight:700,fontSize:20,color:p.poly>=15?C.green:p.poly>=8?C.gold:C.mid}}>{p.poly}%</div><div style={{fontSize:10,color:C.dim}}>{p.odds}</div></div>
-              <span style={{fontSize:13}}>{p.trend}</span>
+              <div style={{textAlign:"right"}}>
+                <div style={{fontWeight:700,fontSize:20,color:p.poly>=15?C.green:p.poly>=8?C.gold:C.mid}}>{p.poly}%</div>
+                <div style={{fontSize:10,color:C.dim}}>{p.odds}</div>
+              </div>
             </div>
             <div style={{height:4,background:C.s2,borderRadius:2,overflow:"hidden"}}><div style={{height:4,borderRadius:2,width:`${(p.poly/max)*100}%`,background:`linear-gradient(90deg,#1a4a2a,${C.green})`}}/></div>
             {TEAMS[p.team] && <div style={{display:"flex",gap:6,marginTop:7}}><Badge color={C.blue}>SS {TEAMS[p.team].ss}</Badge><Badge color={C.dim}>#{TEAMS[p.team].rank} FIFA</Badge></div>}
