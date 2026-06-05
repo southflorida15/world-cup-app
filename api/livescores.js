@@ -1,6 +1,6 @@
 export default async function handler(req, res) {
   try {
-    const response = await fetch('YOUR_FIXTURES_ENDPOINT', {
+    const response = await fetch('https://free-api-live-football-data.p.rapidapi.com/football-get-matches-by-date?date=20241107', {
       headers: {
         'X-RapidAPI-Key': process.env.RAPIDAPI_KEY,
         'X-RapidAPI-Host': process.env.RAPIDAPI_HOST,
