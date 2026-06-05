@@ -238,7 +238,6 @@ const runFullSim = () => {
 
 // ── LIVE SCORES CONTEXT ───────────────────────────────────────────────────
 const LiveScoresCtx = createContext({scores:{},getScore:()=>null,isLive:()=>false,isFinished:()=>false});
-const RAPIDAPI_KEY = "79e084bb92mshe49889427f83390p16a3c7jsn793e5bc48bb0";
 const statusIsLive = (s) => ["1H","HT","2H","ET","BT","P"].includes(s);
 const statusIsFinished = (s) => ["FT","AET","PEN"].includes(s);
 const statusLabel = (s,e) => { if(s==="NS")return null; if(s==="1H")return`${e}'`; if(s==="HT")return"HT"; if(s==="2H")return`${e}'`; if(s==="ET")return`ET ${e}'`; if(s==="BT")return"BT"; if(s==="P")return"Pens"; if(s==="FT")return"FT"; if(s==="AET")return"AET"; if(s==="PEN")return"Pens"; return s; };
@@ -251,9 +250,8 @@ function LiveScoresProvider({ children }) {
     try {
       const today = new Date().toISOString().split("T")[0];
       const [lR,tR] = await Promise.all([
-        fetch(`https://api-football-v1.p.rapidapi.com/v3/fixtures?league=1&season=2026&live=all`,{headers:{"X-RapidAPI-Key":RAPIDAPI_KEY,"X-RapidAPI-Host":"api-football-v1.p.rapidapi.com"}}),
-        fetch(`https://api-football-v1.p.rapidapi.com/v3/fixtures?league=1&season=2026&date=${today}`,{headers:{"X-RapidAPI-Key":RAPIDAPI_KEY,"X-RapidAPI-Host":"api-football-v1.p.rapidapi.com"}}),
-      ]);
+        fetch('/api/livescores'),
+             ]);
       const [lD,tD] = await Promise.all([lR.json(),tR.json()]);
       const all = [...(lD.response||[]),...(tD.response||[])];
       const deduped = Object.values(Object.fromEntries(all.map(f=>[f.fixture.id,f])));
