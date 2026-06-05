@@ -134,15 +134,15 @@ const MATCHES = [
 
 // ── TEAM DATA ─────────────────────────────────────────────────────────────
 const TEAMS = {
-  "Argentina":{flag:"🇦🇷",conf:"CONMEBOL",rank:2,ss:8.1,titles:3,coach:"Lionel Scaloni",base:"Kansas City, MO",form:["W","W","D","W","W"],stats:{ATT:8.4,MID:7.9,DEF:7.8,FIT:8.0},players:[{name:"Lionel Messi",pos:"FW",club:"Inter Miami",caps:191,goals:109,ss:9.2,note:"GOAT · 2022 WC Golden Ball"},{name:"Lautaro Martínez",pos:"FW",club:"Inter Milan",caps:65,goals:32,ss:8.3,note:"Lethal striker"},{name:"Enzo Fernández",pos:"MF",club:"Chelsea",caps:38,goals:6,ss:8.0,note:"Box-to-box dynamo"},{name:"E. Martínez",pos:"GK",club:"Aston Villa",caps:43,goals:0,ss:8.1,note:"2022 WC Golden Glove"}],note:"Defending champions. Messi hunting a historic second title alongside a new generation."},
+  "Argentina":{flag:"🇦🇷",conf:"CONMEBOL",rank:1,ss:8.1,titles:3,coach:"Lionel Scaloni",base:"Kansas City, MO",form:["W","W","D","W","W"],stats:{ATT:8.4,MID:7.9,DEF:7.8,FIT:8.0},players:[{name:"Lionel Messi",pos:"FW",club:"Inter Miami",caps:191,goals:109,ss:9.2,note:"GOAT · 2022 WC Golden Ball"},{name:"Lautaro Martínez",pos:"FW",club:"Inter Milan",caps:65,goals:32,ss:8.3,note:"Lethal striker"},{name:"Enzo Fernández",pos:"MF",club:"Chelsea",caps:38,goals:6,ss:8.0,note:"Box-to-box dynamo"},{name:"E. Martínez",pos:"GK",club:"Aston Villa",caps:43,goals:0,ss:8.1,note:"2022 WC Golden Glove"}],note:"Defending champions. Messi hunting a historic second title alongside a new generation."},
   "France":{flag:"🇫🇷",conf:"UEFA",rank:3,ss:8.3,titles:2,coach:"Didier Deschamps",base:"TBC",form:["W","W","W","D","W"],stats:{ATT:9.0,MID:8.1,DEF:8.2,FIT:8.5},players:[{name:"Kylian Mbappe",pos:"FW",club:"Real Madrid",caps:87,goals:51,ss:9.4,note:"Golden Boot favourite"},{name:"Antoine Griezmann",pos:"FW",club:"Atletico Madrid",caps:137,goals:46,ss:8.2,note:"2018 Golden Ball"},{name:"A. Tchouameni",pos:"MF",club:"Real Madrid",caps:47,goals:6,ss:7.9,note:"World-class DM"},{name:"Mike Maignan",pos:"GK",club:"AC Milan",caps:28,goals:0,ss:8.3,note:"Elite keeper"}],note:"Most talented squad on paper. Mbappe is the standout Golden Boot favourite."},
-  "Brazil":{flag:"🇧🇷",conf:"CONMEBOL",rank:5,ss:8.0,titles:5,coach:"Carlo Ancelotti",base:"Morristown, NJ",form:["W","D","W","W","W"],stats:{ATT:8.8,MID:7.8,DEF:7.6,FIT:8.1},players:[{name:"Vinicius Jr.",pos:"FW",club:"Real Madrid",caps:39,goals:14,ss:9.1,note:"Ballon d'Or contender"},{name:"Neymar Jr.",pos:"FW",club:"Santos FC",caps:128,goals:79,ss:8.3,note:"Legend returns at Santos"},{name:"Raphinha",pos:"FW",club:"Barcelona",caps:55,goals:22,ss:8.2,note:"Barcelona star"},{name:"Bruno Guimaraes",pos:"MF",club:"Newcastle",caps:44,goals:7,ss:8.0,note:"Midfield dynamo"}],note:"Neymar's stunning return adds a new dimension. Ancelotti builds around Vinicius and Raphinha."},
+  "Brazil":{flag:"🇧🇷",conf:"CONMEBOL",rank:6,ss:8.0,titles:5,coach:"Carlo Ancelotti",base:"Morristown, NJ",form:["W","D","W","W","W"],stats:{ATT:8.8,MID:7.8,DEF:7.6,FIT:8.1},players:[{name:"Vinicius Jr.",pos:"FW",club:"Real Madrid",caps:39,goals:14,ss:9.1,note:"Ballon d'Or contender"},{name:"Neymar Jr.",pos:"FW",club:"Santos FC",caps:128,goals:79,ss:8.3,note:"Legend returns at Santos"},{name:"Raphinha",pos:"FW",club:"Barcelona",caps:55,goals:22,ss:8.2,note:"Barcelona star"},{name:"Bruno Guimaraes",pos:"MF",club:"Newcastle",caps:44,goals:7,ss:8.0,note:"Midfield dynamo"}],note:"Neymar's stunning return adds a new dimension. Ancelotti builds around Vinicius and Raphinha."},
   "England":{flag:"🏴󠁧󠁢󠁥󠁮󠁧󠁿",conf:"UEFA",rank:4,ss:8.1,titles:1,coach:"Thomas Tuchel",base:"Kansas City, MO",form:["W","W","W","W","D"],stats:{ATT:8.5,MID:8.6,DEF:8.0,FIT:8.2},players:[{name:"Jude Bellingham",pos:"MF",club:"Real Madrid",caps:52,goals:17,ss:9.0,note:"World-class midfielder"},{name:"Harry Kane",pos:"FW",club:"Bayern Munich",caps:98,goals:68,ss:8.7,note:"All-time England top scorer"},{name:"Phil Foden",pos:"MF",club:"Man City",caps:46,goals:13,ss:8.3,note:"PL Player of Year"},{name:"Jordan Pickford",pos:"GK",club:"Everton",caps:64,goals:0,ss:7.8,note:"Shootout specialist"}],note:"Tuchel's England hunting their first title since 1966. Bellingham + Kane is a devastating partnership."},
   "Spain":{flag:"🇪🇸",conf:"UEFA",rank:1,ss:8.5,titles:1,coach:"Luis de la Fuente",base:"Chattanooga, TN",form:["W","W","W","W","W"],stats:{ATT:8.7,MID:9.1,DEF:8.3,FIT:8.4},players:[{name:"Pedri",pos:"MF",club:"Barcelona",caps:42,goals:7,ss:8.9,note:"Generational talent"},{name:"Lamine Yamal",pos:"FW",club:"Barcelona",caps:28,goals:12,ss:9.1,note:"Euro 2024 star"},{name:"Rodri",pos:"MF",club:"Man City",caps:61,goals:9,ss:8.8,note:"2024 Ballon d'Or"},{name:"Dani Carvajal",pos:"DF",club:"Real Madrid",caps:76,goals:4,ss:7.9,note:"Euro 2024 winner"}],note:"Ranked #1 globally, back-to-back Euro champions. The most attractive football on earth."},
   "Germany":{flag:"🇩🇪",conf:"UEFA",rank:12,ss:7.8,titles:4,coach:"Julian Nagelsmann",base:"TBC",form:["W","W","D","W","W"],stats:{ATT:8.3,MID:8.5,DEF:7.9,FIT:8.3},players:[{name:"Jamal Musiala",pos:"MF",club:"Bayern Munich",caps:42,goals:15,ss:8.9,note:"Silky dribbler"},{name:"Florian Wirtz",pos:"MF",club:"Bayer Leverkusen",caps:35,goals:12,ss:8.8,note:"Bundesliga's best"},{name:"Kai Havertz",pos:"FW",club:"Arsenal",caps:68,goals:23,ss:7.8,note:"Big-game scorer"},{name:"Manuel Neuer",pos:"GK",club:"Bayern Munich",caps:124,goals:1,ss:7.5,note:"Final WC"}],note:"Musiala + Wirtz is the most exciting young midfield pair in Europe. Genuine dark horse."},
   "Portugal":{flag:"🇵🇹",conf:"UEFA",rank:7,ss:7.9,titles:0,coach:"Roberto Martínez",base:"TBC",form:["W","W","W","W","D"],stats:{ATT:8.4,MID:7.8,DEF:7.7,FIT:7.9},players:[{name:"Cristiano Ronaldo",pos:"FW",club:"Al Nassr",caps:217,goals:135,ss:8.0,note:"All-time international top scorer"},{name:"Bruno Fernandes",pos:"MF",club:"Man United",caps:84,goals:25,ss:8.3,note:"Captain"},{name:"Rafael Leao",pos:"FW",club:"AC Milan",caps:38,goals:11,ss:8.1,note:"Electric winger"},{name:"Ruben Dias",pos:"DF",club:"Man City",caps:67,goals:5,ss:8.4,note:"Elite CB"}],note:"Ronaldo's last World Cup at 41. Will CR7 finally win the one trophy that has eluded him?"},
   "Netherlands":{flag:"🇳🇱",conf:"UEFA",rank:8,ss:7.8,titles:0,coach:"Ronald Koeman",base:"TBC",form:["W","D","W","W","W"],stats:{ATT:7.9,MID:7.6,DEF:8.5,FIT:8.0},players:[{name:"Virgil van Dijk",pos:"DF",club:"Liverpool",caps:75,goals:9,ss:8.7,note:"World's best CB"},{name:"Cody Gakpo",pos:"FW",club:"Liverpool",caps:40,goals:18,ss:8.1,note:"2022 WC breakout star"},{name:"Xavi Simons",pos:"MF",club:"PSG",caps:29,goals:8,ss:8.0,note:"Rising star"},{name:"Memphis Depay",pos:"FW",club:"Atletico Madrid",caps:103,goals:45,ss:7.6,note:"Experienced"}],note:"Three-time finalist, never won. Van Dijk leads a balanced squad."},
-  "Belgium":{flag:"🇧🇪",conf:"UEFA",rank:3,ss:7.7,titles:0,coach:"Rudi Garcia",base:"TBC",form:["W","W","D","W","D"],stats:{ATT:8.1,MID:7.8,DEF:7.7,FIT:7.8},players:[{name:"Kevin De Bruyne",pos:"MF",club:"Napoli",caps:102,goals:27,ss:8.9,note:"World's best midfielder"},{name:"Romelu Lukaku",pos:"FW",club:"Napoli",caps:110,goals:73,ss:8.1,note:"Belgium all-time top scorer"},{name:"Jeremy Doku",pos:"FW",club:"Man City",caps:34,goals:7,ss:8.1,note:"Explosive winger"},{name:"Thibaut Courtois",pos:"GK",club:"Real Madrid",caps:101,goals:0,ss:8.8,note:"World's best GK"}],note:"Rudi Garcia takes charge. De Bruyne now at Napoli alongside Lukaku — last chance for this golden generation."},
+  "Belgium":{flag:"🇧🇪",conf:"UEFA",rank:3,ss:7.7,titles:0,coach:"Rudi Garcia",base:"TBC",form:["W","W","D","W","D"],stats:{ATT:8.1,MID:7.8,DEF:7.7,FIT:7.8},players:[{name:"Kevin De Bruyne",pos:"MF",club:"Napoli",caps:102,goals:27,ss:8.9,note:"World's best midfielder"},{name:"Romelu Lukaku",pos:"FW",club:"Napoli",caps:110,goals:73,ss:8.1,note:"Belgium all-time top scorer"},{name:"Jeremy Doku",pos:"FW",club:"Man City",caps:34,goals:7,ss:8.1,note:"Explosive winger"},{name:"Thibaut Courtois",pos:"GK",club:"Real Madrid",caps:101,goals:0,ss:8.8,note:"World's best GK"}],note:"De Bruyne now at Napoli alongside Lukaku — last chance for this golden generation."},
   "Norway":{flag:"🇳🇴",conf:"UEFA",rank:31,ss:7.1,titles:0,coach:"Stale Solbakken",base:"TBC",form:["W","W","D","W","W"],stats:{ATT:7.6,MID:7.0,DEF:7.0,FIT:8.0},players:[{name:"Erling Haaland",pos:"FW",club:"Man City",caps:38,goals:32,ss:9.3,note:"Most prolific striker on Earth"},{name:"Martin Odegaard",pos:"MF",club:"Arsenal",caps:71,goals:24,ss:8.7,note:"Arsenal captain"},{name:"Alexander Sorloth",pos:"FW",club:"Atletico Madrid",caps:52,goals:25,ss:7.8,note:"Physical striker"},{name:"Ørjan Nyland",pos:"GK",club:"Inter Milan",caps:48,goals:0,ss:7.2,note:"Serie A winner"}],note:"Haaland + Odegaard: potentially the most devastating partnership in the tournament. Dark horse."},
   "Mexico":{flag:"🇲🇽",conf:"CONCACAF",rank:15,ss:7.2,titles:0,coach:"Javier Aguirre",base:"Mexico City",form:["W","D","W","D","W"],stats:{ATT:7.2,MID:7.4,DEF:7.5,FIT:7.8},players:[{name:"Hirving Lozano",pos:"FW",club:"PSV",caps:101,goals:31,ss:7.8,note:"Pacey winger"},{name:"Raul Jimenez",pos:"FW",club:"Fulham",caps:93,goals:36,ss:7.5,note:"Target man"},{name:"Edson Alvarez",pos:"MF",club:"Fenerbahce",caps:86,goals:9,ss:7.7,note:"Dominant DM"},{name:"Guillermo Ochoa",pos:"GK",club:"AEL Limassol",caps:148,goals:0,ss:7.9,note:"6th World Cup"}],note:"Host nation opening at the iconic Estadio Azteca. Home crowd advantage is massive."},
   "United States":{flag:"🇺🇸",conf:"CONCACAF",rank:11,ss:7.4,titles:0,coach:"Mauricio Pochettino",base:"New Jersey",form:["W","W","D","W","W"],stats:{ATT:7.6,MID:7.5,DEF:7.4,FIT:8.4},players:[{name:"Christian Pulisic",pos:"FW",club:"AC Milan",caps:72,goals:27,ss:7.9,note:"Captain"},{name:"Gio Reyna",pos:"MF",club:"Dortmund",caps:32,goals:8,ss:7.7,note:"Gifted playmaker"},{name:"Weston McKennie",pos:"MF",club:"Juventus",caps:61,goals:13,ss:7.5,note:"Box-to-box"},{name:"Matt Turner",pos:"GK",club:"Crystal Palace",caps:43,goals:0,ss:7.2,note:"Reliable"}],note:"Host nation transformed by Pochettino. Massive home crowd advantage."},
@@ -158,7 +158,7 @@ const TEAMS = {
   "Switzerland":{flag:"🇨🇭",conf:"UEFA",rank:19,ss:7.1,titles:0,coach:"Murat Yakin",base:"San Diego, CA",form:["D","W","W","D","W"],stats:{ATT:7.0,MID:7.3,DEF:7.4,FIT:7.5},players:[{name:"Granit Xhaka",pos:"MF",club:"Bayer Leverkusen",caps:127,goals:17,ss:7.8,note:"Captain"},{name:"Breel Embolo",pos:"FW",club:"Monaco",caps:66,goals:17,ss:7.5,note:"Physical FW"},{name:"Xherdan Shaqiri",pos:"MF",club:"Chicago Fire",caps:116,goals:32,ss:7.2,note:"Experienced"},{name:"Yann Sommer",pos:"GK",club:"Inter Milan",caps:95,goals:0,ss:8.0,note:"Elite keeper"}],note:"Always reliable. Switzerland punch above their weight every tournament."},
   "Austria":{flag:"🇦🇹",conf:"UEFA",rank:25,ss:6.9,titles:0,coach:"Ralf Rangnick",base:"TBC",form:["W","W","W","D","W"],stats:{ATT:7.0,MID:7.2,DEF:7.0,FIT:7.9},players:[{name:"David Alaba",pos:"DF",club:"Real Madrid",caps:101,goals:16,ss:8.0,note:"Captain"},{name:"C. Baumgartner",pos:"MF",club:"RB Leipzig",caps:42,goals:12,ss:7.7,note:"Creative"},{name:"Marcel Sabitzer",pos:"MF",club:"Dortmund",caps:72,goals:18,ss:7.5,note:"Box-to-box"},{name:"Patrick Pentz",pos:"GK",club:"Brondby",caps:18,goals:0,ss:7.3,note:"Keeper"}],note:"Rangnick's high press has transformed Austria. Euro 2024 quarter-finalists."},
   "Sweden":{flag:"🇸🇪",conf:"UEFA",rank:28,ss:7.0,titles:0,coach:"Graham Potter",base:"Frisco, TX",form:["D","W","W","D","W"],stats:{ATT:7.1,MID:7.0,DEF:7.2,FIT:7.8},players:[{name:"Alexander Isak",pos:"FW",club:"Newcastle",caps:37,goals:20,ss:8.2,note:"Elite PL striker"},{name:"Dejan Kulusevski",pos:"MF",club:"Tottenham",caps:44,goals:12,ss:8.0,note:"Creative"},{name:"Victor Lindelof",pos:"DF",club:"Man United",caps:80,goals:5,ss:7.2,note:"CB"},{name:"Robin Olsen",pos:"GK",club:"Aston Villa",caps:56,goals:0,ss:7.2,note:"Keeper"}],note:"Isak and Kulusevski give Sweden serious quality. Graham Potter's first tournament."},
-  "Iran":{flag:"🇮🇷",conf:"AFC",rank:21,ss:6.9,titles:0,coach:"Cheragh Ghalenoei",base:"Tijuana, Mexico",form:["W","D","W","D","W"],stats:{ATT:6.7,MID:7.0,DEF:7.3,FIT:7.7},players:[{name:"Mehdi Taremi",pos:"FW",club:"Inter Milan",caps:89,goals:44,ss:7.8,note:"Inter striker"},{name:"Sardar Azmoun",pos:"FW",club:"Roma",caps:72,goals:43,ss:7.6,note:"Technical"},{name:"A. Jahanbakhsh",pos:"MF",club:"Feyenoord",caps:80,goals:20,ss:7.2,note:"Winger"},{name:"A. Beiranvand",pos:"GK",club:"Antwerp",caps:55,goals:0,ss:7.5,note:"Keeper"}],note:"Taremi at Inter gives them a top European striker. Based in Tijuana after last-minute switch."},
+  "Iran":{flag:"🇮🇷",conf:"AFC",rank:21,ss:6.9,titles:0,coach:"Cheragh Ghalenoei",base:"Tijuana, Mexico",form:["W","D","W","D","W"],stats:{ATT:6.7,MID:7.0,DEF:7.3,FIT:7.7},players:[{name:"Mehdi Taremi",pos:"FW",club:"Inter Milan",caps:89,goals:44,ss:7.8,note:"Inter striker"},{name:"Sardar Azmoun",pos:"FW",club:"Roma",caps:72,goals:43,ss:7.6,note:"Technical"},{name:"A. Jahanbakhsh",pos:"MF",club:"Feyenoord",caps:80,goals:20,ss:7.2,note:"Winger"},{name:"A. Beiranvand",pos:"GK",club:"Antwerp",caps:55,goals:0,ss:7.5,note:"Keeper"}],note:"Taremi at Inter gives them a top European striker."},
   "Algeria":{flag:"🇩🇿",conf:"CAF",rank:32,ss:6.7,titles:0,coach:"Vladimir Petkovic",base:"TBC",form:["W","D","W","L","W"],stats:{ATT:6.8,MID:6.9,DEF:6.7,FIT:7.5},players:[{name:"Riyad Mahrez",pos:"FW",club:"Al Ahli",caps:99,goals:30,ss:7.6,note:"Algeria's greatest"},{name:"Ismael Bennacer",pos:"MF",club:"AC Milan",caps:50,goals:3,ss:7.8,note:"Serie A star"},{name:"Youcef Atal",pos:"DF",club:"Nottingham Forest",caps:34,goals:7,ss:7.3,note:"RB"},{name:"Rais M'Bolhi",pos:"GK",club:"Al-Qadsia",caps:87,goals:0,ss:6.8,note:"Veteran"}],note:"Mahrez and Bennacer give real quality. Drawn against Argentina in Group J."},
   "Ecuador":{flag:"🇪🇨",conf:"CONMEBOL",rank:44,ss:6.6,titles:0,coach:"Sebastián Beccacece",base:"Columbus, OH",form:["W","D","W","L","W"],stats:{ATT:6.7,MID:6.5,DEF:6.6,FIT:7.7},players:[{name:"Moises Caicedo",pos:"MF",club:"Chelsea",caps:44,goals:5,ss:8.1,note:"World-class DM"},{name:"Enner Valencia",pos:"FW",club:"Internacional",caps:87,goals:40,ss:7.0,note:"All-time scorer"},{name:"Jeremy Sarmiento",pos:"MF",club:"Brighton",caps:25,goals:4,ss:7.2,note:"Winger"},{name:"A. Dominguez",pos:"GK",club:"LDU Quito",caps:75,goals:0,ss:6.8,note:"Keeper"}],note:"Caicedo is genuinely world-class. Could cause trouble for Germany in Group E."},
   "Paraguay":{flag:"🇵🇾",conf:"CONMEBOL",rank:53,ss:6.4,titles:0,coach:"Gustavo Alfaro",base:"TBC",form:["D","W","L","D","W"],stats:{ATT:6.2,MID:6.4,DEF:6.7,FIT:7.4},players:[{name:"Miguel Almiron",pos:"MF",club:"Atletico Madrid",caps:67,goals:13,ss:7.6,note:"Tireless"},{name:"Julio Enciso",pos:"FW",club:"Brighton",caps:24,goals:6,ss:7.4,note:"Explosive talent"},{name:"Omar Alderete",pos:"DF",club:"Getafe",caps:35,goals:2,ss:6.7,note:"Defender"},{name:"Antony Silva",pos:"GK",club:"Libertad",caps:84,goals:0,ss:6.8,note:"Veteran"}],note:"Almiron and Enciso give Paraguay options."},
@@ -237,34 +237,74 @@ const runFullSim = () => {
 };
 
 // ── LIVE SCORES CONTEXT ───────────────────────────────────────────────────
-const LiveScoresCtx = createContext({scores:{},getScore:()=>null,isLive:()=>false,isFinished:()=>false});
-const statusIsLive = (s) => ["1H","HT","2H","ET","BT","P"].includes(s);
-const statusIsFinished = (s) => ["FT","AET","PEN"].includes(s);
-const statusLabel = (s,e) => { if(s==="NS")return null; if(s==="1H")return`${e}'`; if(s==="HT")return"HT"; if(s==="2H")return`${e}'`; if(s==="ET")return`ET ${e}'`; if(s==="BT")return"BT"; if(s==="P")return"Pens"; if(s==="FT")return"FT"; if(s==="AET")return"AET"; if(s==="PEN")return"Pens"; return s; };
-const API_NAME_MAP = {"USA":"United States","Turkey":"Turkiye","Türkiye":"Turkiye","Czech Republic":"Czechia","Bosnia":"Bosnia & Herz.","Bosnia and Herzegovina":"Bosnia & Herz.","Côte d'Ivoire":"Ivory Coast","DR Congo":"DR Congo","Congo DR":"DR Congo","Korea Republic":"South Korea","IR Iran":"Iran"};
+// Calls /api/livescores — a Vercel serverless function that holds the API key
+// server-side. Key never touches the browser.
+const LiveScoresCtx = createContext({scores:{},getScore:()=>null,isLive:()=>false,isFinished:()=>false,lastFetch:null});
+
+const statusIsLive = (s) => ["1H","HT","2H","ET","BT","P","LIVE","inprogress","first_half","halftime","second_half","extra_time","penalties"].includes(s);
+const statusIsFinished = (s) => ["FT","AET","PEN","finished","ended","after_extra_time","after_penalties"].includes(s);
+const statusLabel = (s,e) => {
+  if(!s||s==="NS"||s==="notstarted") return null;
+  if(s==="1H"||s==="first_half"||s==="inprogress"||s==="LIVE") return e?`${e}'`:"LIVE";
+  if(s==="HT"||s==="halftime") return "HT";
+  if(s==="2H"||s==="second_half") return e?`${e}'`:"LIVE";
+  if(s==="ET"||s==="extra_time") return e?`ET ${e}'`:"ET";
+  if(s==="BT") return "BT";
+  if(s==="P"||s==="penalties") return "Pens";
+  if(s==="FT"||s==="finished"||s==="ended") return "FT";
+  if(s==="AET"||s==="after_extra_time") return "AET";
+  if(s==="PEN"||s==="after_penalties") return "Pens";
+  return s;
+};
+
+const API_NAME_MAP = {
+  "USA":"United States","United States of America":"United States",
+  "Turkey":"Turkiye","Türkiye":"Turkiye",
+  "Czech Republic":"Czechia",
+  "Bosnia":"Bosnia & Herz.","Bosnia and Herzegovina":"Bosnia & Herz.","Bosnia & Herzegovina":"Bosnia & Herz.",
+  "Côte d'Ivoire":"Ivory Coast","Cote d'Ivoire":"Ivory Coast",
+  "DR Congo":"DR Congo","Congo DR":"DR Congo","Democratic Republic of Congo":"DR Congo","Congo (DRC)":"DR Congo",
+  "Korea Republic":"South Korea","Republic of Korea":"South Korea",
+  "IR Iran":"Iran","Islamic Republic of Iran":"Iran",
+  "Curaçao":"Curacao","Cabo Verde":"Cape Verde",
+};
 const normTeam = (n) => API_NAME_MAP[n] || n;
 
 function LiveScoresProvider({ children }) {
   const [scores, setScores] = useState({});
+  const [lastFetch, setLastFetch] = useState(null);
+
   const fetchAll = useCallback(async () => {
     try {
-      const today = new Date().toISOString().split("T")[0];
-      const lR = await fetch('/api/livescores');
-      const lD = await lR.json();
-console.log("Response keys:", Object.keys(lD));
-console.log("Response:", lD.response);
-const all = lD.response || [];
-      const deduped = Object.values(Object.fromEntries(all.map(f=>[f.fixture.id,f])));
+      // Calls our own serverless proxy — key stays server-side
+      const res = await fetch("/api/livescores");
+      if(!res.ok) throw new Error(`/api/livescores returned ${res.status}`);
+      const data = await res.json();
+
+      const all = data?.response || [];
       const map = {};
-      deduped.forEach(f => { const h=normTeam(f.teams.home.name),a=normTeam(f.teams.away.name); map[`${h}|${a}`]={hg:f.goals.home,ag:f.goals.away,status:f.fixture.status.short,elapsed:f.fixture.status.elapsed}; });
+      all.forEach(f => {
+        const h = normTeam(f?.teams?.home?.name || "");
+        const a = normTeam(f?.teams?.away?.name || "");
+        const status = f?.fixture?.status?.short || "NS";
+        const elapsed = f?.fixture?.status?.elapsed || null;
+        const hg = f?.goals?.home ?? null;
+        const ag = f?.goals?.away ?? null;
+        if(h && a) map[`${h}|${a}`] = { hg, ag, status, elapsed };
+      });
+
       setScores(map);
-    } catch(e) {}
+      setLastFetch(new Date());
+    } catch(e) {
+      console.error("LiveScores fetch error:", e.message);
+    }
   }, []);
+
   useEffect(() => { fetchAll(); const t=setInterval(fetchAll,60000); return()=>clearInterval(t); }, [fetchAll]);
   const getScore = (h,a) => scores[`${h}|${a}`]||null;
   const isLive = (h,a) => { const s=getScore(h,a); return s?statusIsLive(s.status):false; };
   const isFinished = (h,a) => { const s=getScore(h,a); return s?statusIsFinished(s.status):false; };
-  return <LiveScoresCtx.Provider value={{scores,getScore,isLive,isFinished}}>{children}</LiveScoresCtx.Provider>;
+  return <LiveScoresCtx.Provider value={{scores,getScore,isLive,isFinished,lastFetch}}>{children}</LiveScoresCtx.Provider>;
 }
 
 // ── VENUE MAP ─────────────────────────────────────────────────────────────
@@ -272,104 +312,15 @@ const VENUE_COORDS = {"Mexico City Stadium, Mexico City":"19.3029,-99.1505","Est
 const openMaps = (venue) => { const coords=VENUE_COORDS[venue]; const q=encodeURIComponent(venue); const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream; if(isIOS||/Macintosh/.test(navigator.userAgent)) window.open(`maps://maps.apple.com/?q=${q}${coords?`&ll=${coords}`:""}`, "_blank"); else window.open(`https://www.google.com/maps/search/?api=1&query=${q}${coords?`+${coords}`:""}`, "_blank"); };
 
 // ── CRESTS ────────────────────────────────────────────────────────────────
-function WCLogo({ height = 54 }) {
-  const w = Math.round(height * 3.6);
-  const h = height;
-  const s = h / 60; // scale factor
 
-  return (
-    <svg width={w} height={h} viewBox="0 0 216 60" xmlns="http://www.w3.org/2000/svg" style={{flexShrink:0}}>
-      {/* Dark green background pill */}
-      <rect width="216" height="60" rx="8" fill="#0a4a2a"/>
 
-      {/* ── TROPHY ── */}
-      <g transform="translate(7,3)">
-        {/* Globe on top */}
-        <circle cx="22" cy="9" r="8.5" fill="#1565c0"/>
-        <ellipse cx="22" cy="9" rx="5.5" ry="8.5" fill="none" stroke="#42a5f5" strokeWidth="0.7"/>
-        <ellipse cx="22" cy="9" rx="8.5" ry="4" fill="none" stroke="#42a5f5" strokeWidth="0.7"/>
-        <line x1="13.5" y1="9" x2="30.5" y2="9" stroke="#42a5f5" strokeWidth="0.7"/>
-        {/* Globe shine */}
-        <ellipse cx="18" cy="5.5" rx="3" ry="2" fill="rgba(255,255,255,0.2)" transform="rotate(-20,18,5.5)"/>
-
-        {/* Cup body gradient fill */}
-        <defs>
-          <linearGradient id="trophyGrad" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="#8B6914"/>
-            <stop offset="30%" stopColor="#D4A017"/>
-            <stop offset="55%" stopColor="#F5D060"/>
-            <stop offset="75%" stopColor="#C8960C"/>
-            <stop offset="100%" stopColor="#8B6914"/>
-          </linearGradient>
-          <linearGradient id="baseGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#C8960C"/>
-            <stop offset="100%" stopColor="#7A5200"/>
-          </linearGradient>
-        </defs>
-
-        {/* Cup shape */}
-        <path d="M13 17 Q10 20 9 27 Q8 36 13 42 Q17 47 22 49 Q27 47 31 42 Q36 36 35 27 Q34 20 31 17 Z"
-          fill="url(#trophyGrad)"/>
-        {/* Cup highlight */}
-        <path d="M16 19 Q14 23 14 29 Q14 36 18 41 Q19 43 22 45 Q21 43 20 40 Q17 35 17 28 Q17 22 19 18 Z"
-          fill="rgba(255,255,255,0.18)"/>
-        {/* Left handle */}
-        <path d="M9 22 Q2 22 2 29 Q2 36 9 36" fill="none" stroke="url(#trophyGrad)" strokeWidth="4" strokeLinecap="round"/>
-        {/* Right handle */}
-        <path d="M35 22 Q42 22 42 29 Q42 36 35 36" fill="none" stroke="url(#trophyGrad)" strokeWidth="4" strokeLinecap="round"/>
-
-        {/* Neck */}
-        <rect x="19" y="49" width="6" height="5" fill="url(#baseGrad)"/>
-        {/* Base tier 1 */}
-        <rect x="14" y="54" width="16" height="3.5" rx="1.5" fill="url(#baseGrad)"/>
-        {/* Base tier 2 */}
-        <rect x="11" y="57" width="22" height="3" rx="1.5" fill="#5A3800"/>
-      </g>
-
-      {/* ── "26" ── huge bold white */}
-      <text x="52" y="52"
-        fontFamily="'Arial Black','Impact','Franklin Gothic Heavy',sans-serif"
-        fontWeight="900" fontSize="52" fill="white" letterSpacing="-3"
-        style={{dominantBaseline:"auto"}}>26</text>
-
-      {/* ── FIFA WORLD CUP 2026 ── */}
-      <text x="54" y="59"
-        fontFamily="Arial,sans-serif"
-        fontWeight="600" fontSize="7.2" fill="#a8d8b0"
-        letterSpacing="1.5">FIFA WORLD CUP 2026</text>
-    </svg>
-  );
-}
-const FLAG_CODES = {
-  "Mexico":"mx","South Africa":"za","South Korea":"kr","Czechia":"cz",
-  "Canada":"ca","Bosnia & Herz.":"ba","Qatar":"qa","Switzerland":"ch",
-  "Brazil":"br","Morocco":"ma","Haiti":"ht","Scotland":"gb-sct",
-  "United States":"us","Paraguay":"py","Australia":"au","Turkiye":"tr",
-  "Germany":"de","Curacao":"cw","Ivory Coast":"ci","Ecuador":"ec",
-  "Netherlands":"nl","Japan":"jp","Sweden":"se","Tunisia":"tn",
-  "Belgium":"be","Egypt":"eg","Iran":"ir","New Zealand":"nz",
-  "Spain":"es","Cape Verde":"cv","Saudi Arabia":"sa","Uruguay":"uy",
-  "France":"fr","Senegal":"sn","Iraq":"iq","Norway":"no",
-  "Argentina":"ar","Algeria":"dz","Austria":"at","Jordan":"jo",
-  "Portugal":"pt","DR Congo":"cd","Uzbekistan":"uz","Colombia":"co",
-  "England":"gb-eng","Croatia":"hr","Ghana":"gh","Panama":"pa",
-};
+const FLAG_CODES = {"Mexico":"mx","South Africa":"za","South Korea":"kr","Czechia":"cz","Canada":"ca","Bosnia & Herz.":"ba","Qatar":"qa","Switzerland":"ch","Brazil":"br","Morocco":"ma","Haiti":"ht","Scotland":"gb-sct","United States":"us","Paraguay":"py","Australia":"au","Turkiye":"tr","Germany":"de","Curacao":"cw","Ivory Coast":"ci","Ecuador":"ec","Netherlands":"nl","Japan":"jp","Sweden":"se","Tunisia":"tn","Belgium":"be","Egypt":"eg","Iran":"ir","New Zealand":"nz","Spain":"es","Cape Verde":"cv","Saudi Arabia":"sa","Uruguay":"uy","France":"fr","Senegal":"sn","Iraq":"iq","Norway":"no","Argentina":"ar","Algeria":"dz","Austria":"at","Jordan":"jo","Portugal":"pt","DR Congo":"cd","Uzbekistan":"uz","Colombia":"co","England":"gb-eng","Croatia":"hr","Ghana":"gh","Panama":"pa"};
 
 function Crest({ team, size=26 }) {
   const code = FLAG_CODES[team];
   const [err, setErr] = useState(false);
   if(!code || err) return <span style={{fontSize:size*0.75,lineHeight:1}}>{getFlag(team)}</span>;
-  // flagcdn gives clean rectangular flags; we clip to rounded rect to match FIFA style
-  return (
-    <img
-      src={`https://flagcdn.com/w${size*2}/${code}.png`}
-      alt={team}
-      width={size}
-      height={Math.round(size*0.67)}
-      style={{objectFit:"cover",flexShrink:0,borderRadius:3,boxShadow:"0 1px 3px rgba(0,0,0,0.4)"}}
-      onError={()=>setErr(true)}
-    />
-  );
+  return <img src={`https://flagcdn.com/w${size*2}/${code}.png`} alt={team} width={size} height={Math.round(size*0.67)} style={{objectFit:"cover",flexShrink:0,borderRadius:3,boxShadow:"0 1px 3px rgba(0,0,0,0.4)"}} onError={()=>setErr(true)}/>;
 }
 
 // ── UI PRIMITIVES ─────────────────────────────────────────────────────────
@@ -422,7 +373,7 @@ function AddModal({ match, open, onClose, onCal, onRem }) {
           <div style={{marginBottom:14}}>
             <div style={{fontSize:12,color:C.mid,marginBottom:8,fontWeight:600}}>Show as</div>
             <div style={{display:"flex",gap:8}}>
-              {["busy","free"].map(o => <button key={o} onClick={()=>setAvail(o)} style={{flex:1,padding:"10px 0",borderRadius:10,cursor:"pointer",border:`1px solid ${avail===o?C.green:C.b1}`,background:avail===o?`${C.green}22`:C.s2,color:avail===o?C.green:C.mid,fontSize:13,fontWeight:600}}>{o==="busy"?"🔴 Busy":"🟢 Free"}</button>)}
+              {["busy","free"].map(o=><button key={o} onClick={()=>setAvail(o)} style={{flex:1,padding:"10px 0",borderRadius:10,cursor:"pointer",border:`1px solid ${avail===o?C.green:C.b1}`,background:avail===o?`${C.green}22`:C.s2,color:avail===o?C.green:C.mid,fontSize:13,fontWeight:600}}>{o==="busy"?"🔴 Busy":"🟢 Free"}</button>)}
             </div>
           </div>
           <button onClick={()=>{onCal(match,avail);onClose();}} style={{width:"100%",padding:"12px 0",borderRadius:12,cursor:"pointer",background:`linear-gradient(135deg,${C.green},#22c55e)`,border:"none",color:"#030a05",fontWeight:700,fontSize:15}}>Add to Calendar</button>
@@ -433,7 +384,7 @@ function AddModal({ match, open, onClose, onCal, onRem }) {
           <div style={{marginBottom:14}}>
             <div style={{fontSize:12,color:C.mid,marginBottom:8,fontWeight:600}}>Via</div>
             <div style={{display:"flex",gap:8}}>
-              {[["email","✉️ Email"],["sms","📱 SMS"],["whatsapp","💬 WhatsApp"]].map(([v,l]) => <button key={v} onClick={()=>setCh(v)} style={{flex:1,padding:"9px 4px",borderRadius:10,cursor:"pointer",border:`1px solid ${ch===v?C.gold:C.b1}`,background:ch===v?`${C.gold}22`:C.s2,color:ch===v?C.gold:C.mid,fontSize:12,fontWeight:600}}>{l}</button>)}
+              {[["email","✉️ Email"],["sms","📱 SMS"],["whatsapp","💬 WhatsApp"]].map(([v,l])=><button key={v} onClick={()=>setCh(v)} style={{flex:1,padding:"9px 4px",borderRadius:10,cursor:"pointer",border:`1px solid ${ch===v?C.gold:C.b1}`,background:ch===v?`${C.gold}22`:C.s2,color:ch===v?C.gold:C.mid,fontSize:12,fontWeight:600}}>{l}</button>)}
             </div>
           </div>
           <div style={{marginBottom:12}}>
@@ -498,17 +449,16 @@ function MatchCard({ m, onAction }) {
 
 // ── LIVE TAB ──────────────────────────────────────────────────────────────
 function LiveTab({ onAction }) {
-  const { scores, getScore } = useContext(LiveScoresCtx);
-  const [lastUpdate, setLastUpdate] = useState(null);
-  useEffect(() => { if(Object.keys(scores).length>0) setLastUpdate(new Date().toLocaleTimeString()); }, [scores]);
+  const { scores, getScore, lastFetch } = useContext(LiveScoresCtx);
+  const lastUpdate = lastFetch ? lastFetch.toLocaleTimeString() : null;
   const liveMatches = MATCHES.filter(m => { const s=getScore(m.home,m.away); return s&&statusIsLive(s.status); });
   const finishedToday = MATCHES.filter(m => { const s=getScore(m.home,m.away); return s&&statusIsFinished(s.status); });
   return (
     <div>
       <div style={{background:`linear-gradient(135deg,#0a1f10,#0c2815)`,border:`1px solid ${C.b2}`,borderRadius:12,padding:14,marginBottom:14}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-          <div><div style={{fontWeight:700,fontSize:18,color:C.green}}>LIVE SCORES</div><div style={{fontSize:11,color:C.dim}}>Auto-refreshes every 60s</div></div>
-          {lastUpdate && <span style={{fontSize:11,color:C.dim}}>Updated {lastUpdate}</span>}
+          <div><div style={{fontWeight:700,fontSize:18,color:C.green}}>LIVE SCORES</div><div style={{fontSize:11,color:C.dim}}>Auto-refreshes every 60s · FIFA Rankings: Jun 5 live (ARG #1, ESP #2, FRA #3)</div></div>
+          {lastUpdate && <span style={{fontSize:11,color:C.dim,flexShrink:0}}>Updated {lastUpdate}</span>}
         </div>
       </div>
       {liveMatches.length>0 && <div><div style={{fontSize:11,color:C.green,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>🔴 Live Now</div>{liveMatches.map(m=><MatchCard key={m.id} m={m} onAction={onAction}/>)}</div>}
@@ -584,12 +534,10 @@ function GrpTab({ onTeam }) {
   const [sel, setSel] = useState("A");
   const [view, setView] = useState("standings");
   const [allR, setAllR] = useState(() => {
-    try { const s=localStorage.getItem("wc2026_scores"); if(s)return JSON.parse(s); } catch{}
     const init={};
     Object.keys(GROUPS).forEach(g=>{init[g]=MATCHES.filter(m=>m.group===g).map(m=>({id:m.id,home:m.home,away:m.away,date:m.date,hg:"",ag:""}));});
     return init;
   });
-  useEffect(()=>{ try{localStorage.setItem("wc2026_scores",JSON.stringify(allR));}catch{} },[allR]);
   const results = allR[sel]||[];
   const standings = calcStandings(sel, results);
   const upd = (id,f,v) => setAllR(p=>({...p,[sel]:p[sel].map(r=>r.id===id?{...r,[f]:v.replace(/\D/g,"")}:r)}));
@@ -663,32 +611,125 @@ function GrpTab({ onTeam }) {
   );
 }
 
+// ── API-FOOTBALL TEAM ID MAP (World Cup 2026 squads) ─────────────────────
+const TEAM_API_IDS = {
+  "Argentina":26,"France":2,"Brazil":6,"England":10,"Spain":9,"Germany":25,
+  "Portugal":27,"Netherlands":1118,"Belgium":1,"Norway":1107,"Mexico":16,
+  "United States":2,"Morocco":1108,"Uruguay":33,"Croatia":1106,"Japan":15,
+  "Senegal":1094,"Egypt":21,"Colombia":35,"South Korea":1109,
+  "Canada":29,"Switzerland":1099,"Austria":1110,"Sweden":1105,"Iran":1114,
+  "Algeria":1095,"Ecuador":1103,"Paraguay":1122,"Scotland":1115,
+  "Australia":1119,"Turkiye":1112,"Ivory Coast":1097,"Tunisia":1096,
+  "Saudi Arabia":1116,"Ghana":1098,"DR Congo":1120,"Uzbekistan":1101,
+  "Cape Verde":1123,"Qatar":1,"Bosnia & Herz.":1111,"South Africa":1117,
+  "Haiti":1124,"New Zealand":1125,"Jordan":1126,"Iraq":1127,
+  "Panama":1128,"Curacao":1129,"Czechia":1113,
+};
+
+const POS_ORDER = {G:0,D:1,M:2,F:3};
+const posLabel = p => {
+  if(!p) return "?";
+  const u = p.toUpperCase();
+  if(u.includes("G")) return "GK";
+  if(u.includes("D")) return "DEF";
+  if(u.includes("M")) return "MID";
+  if(u.includes("F")||u.includes("A")) return "FWD";
+  return p;
+};
+const posSort = p => {
+  const u = (p||"").toUpperCase();
+  if(u.includes("G")) return 0;
+  if(u.includes("D")) return 1;
+  if(u.includes("M")) return 2;
+  return 3;
+};
+
+const squadCache = {};
+
+async function fetchSquad(teamId) {
+  if(squadCache[teamId]) return squadCache[teamId];
+  try {
+    // Calls our own serverless proxy — key stays server-side
+    const res = await fetch(`/api/squad?teamId=${teamId}`);
+    if(!res.ok) throw new Error(`/api/squad returned ${res.status}`);
+    const data = await res.json();
+    const players = (data?.players || [])
+      .sort((a,b) => posSort(a.pos) - posSort(b.pos) || (a.number||99) - (b.number||99));
+    squadCache[teamId] = players;
+    return players;
+  } catch(e) {
+    return null;
+  }
+}
+
+function PlayerPhoto({ src, name, size=32 }) {
+  const [err, setErr] = useState(false);
+  if(!src || err) return (
+    <div style={{width:size,height:size,borderRadius:"50%",background:C.b2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:size*0.45,flexShrink:0}}>
+      {name?.[0]||"?"}
+    </div>
+  );
+  return <img src={src} alt={name} width={size} height={size} style={{borderRadius:"50%",objectFit:"cover",flexShrink:0,border:`1px solid ${C.b2}`}} onError={()=>setErr(true)}/>;
+}
+
 // ── STATS TAB ──────────────────────────────────────────────────────────────
 function StatsTab({ initial="" }) {
   const [sel, setSel] = useState(initial);
+  const [squad, setSquad] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [apiErr, setApiErr] = useState(false);
+  const [posFilter, setPosFilter] = useState("All");
   const d = sel ? TEAMS[sel] : null;
+
+  useEffect(() => {
+    if(!sel) return;
+    const teamId = TEAM_API_IDS[sel];
+    if(!teamId) return;
+    setSquad(null); setApiErr(false); setLoading(true); setPosFilter("All");
+    fetchSquad(teamId).then(players => {
+      setLoading(false);
+      if(players) setSquad(players);
+      else setApiErr(true);
+    });
+  }, [sel]);
+
+  const filtered = squad ? (posFilter==="All" ? squad : squad.filter(p => posLabel(p.pos)===posFilter)) : [];
+  const posCounts = squad ? {
+    All: squad.length,
+    GK: squad.filter(p=>posLabel(p.pos)==="GK").length,
+    DEF: squad.filter(p=>posLabel(p.pos)==="DEF").length,
+    MID: squad.filter(p=>posLabel(p.pos)==="MID").length,
+    FWD: squad.filter(p=>posLabel(p.pos)==="FWD").length,
+  } : {};
+
   return (
     <div>
       <select value={sel} onChange={e=>setSel(e.target.value)} style={{width:"100%",padding:"10px 14px",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:10,color:C.text,fontSize:14,outline:"none",marginBottom:14}}>
         <option value="">Select a team</option>
         {Object.keys(GROUPS).map(g=><optgroup key={g} label={`Group ${g}`}>{GROUPS[g].teams.map(t=><option key={t} value={t}>{getFlag(t)} {t}</option>)}</optgroup>)}
       </select>
-      {!d && <div style={{textAlign:"center",padding:"44px 20px",color:C.dim,fontSize:13}}>Select any team to view stats and analysis</div>}
-      {d && (
+
+      {!sel && <div style={{textAlign:"center",padding:"44px 20px",color:C.dim,fontSize:13}}>Select any team to view their squad and analysis</div>}
+
+      {sel && d && (
         <div>
+          {/* Team header */}
           <Card style={{marginBottom:12}}>
-            <div style={{padding:16}}>
-              <div style={{display:"flex",gap:12,alignItems:"center",marginBottom:14}}>
-                <Crest team={sel} size={58}/>
+            <div style={{padding:14}}>
+              <div style={{display:"flex",gap:12,alignItems:"center",marginBottom:12}}>
+                <Crest team={sel} size={52}/>
                 <div style={{flex:1}}>
                   <div style={{fontWeight:700,fontSize:20,color:C.text}}>{sel}</div>
-                  <div style={{fontSize:11,color:C.mid,marginTop:4}}>{d.conf} · Coach: {d.coach}</div>
-                  <div style={{fontSize:11,color:C.dim,marginTop:2}}>FIFA Rank: #{d.rank}</div>
-                  {d.base && d.base!=="TBC" && <div style={{fontSize:11,color:C.blue,marginTop:3}}>🏨 Base: {d.base}</div>}
+                  <div style={{fontSize:12,color:C.mid,marginTop:3}}>{d.conf} · Coach: {d.coach}</div>
+                  <div style={{display:"flex",gap:6,marginTop:6,flexWrap:"wrap"}}>
+                    <Badge color={C.blue}>#{d.rank} FIFA</Badge>
+                    <Badge color={C.gold}>{d.titles} 🏆 titles</Badge>
+                    {d.base && d.base!=="TBC" && <Badge color={C.dim}>🏨 {d.base}</Badge>}
+                  </div>
                 </div>
-                <RC v={d.ss} sz={48}/>
               </div>
-              <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:8}}>Attributes</div>
+              {/* Sofascore attributes */}
+              <div style={{fontSize:10,color:C.dim,fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:7}}>Sofascore Attributes</div>
               <div style={{display:"flex",justifyContent:"space-between",gap:4}}>
                 {Object.entries(d.stats).map(([k,v])=>(
                   <div key={k} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
@@ -699,35 +740,85 @@ function StatsTab({ initial="" }) {
               </div>
             </div>
           </Card>
+
+          {/* Analysis */}
           <Card style={{marginBottom:12}}>
-            <div style={{padding:"10px 13px",borderBottom:`1px solid ${C.b1}`}}><span style={{fontWeight:700,color:C.green,fontSize:13}}>KEY PLAYERS</span></div>
-            {d.players.map((p,i)=>(
-              <div key={p.name} style={{padding:"11px 13px",borderBottom:i<d.players.length-1?`1px solid ${C.b1}`:"none"}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:5}}>
-                  <div><span style={{fontWeight:700,color:C.text,fontSize:14}}>{p.name}</span><span style={{fontSize:11,color:C.dim,marginLeft:8}}>{p.pos} · {p.club}</span></div>
-                  <RC v={p.ss} sz={34}/>
-                </div>
-                <div style={{display:"flex",gap:6,marginBottom:3}}>
-                  <Badge color={C.blue}>{p.caps} caps</Badge>
-                  {p.goals>0 && <Badge color={C.gold}>{p.goals} goals</Badge>}
-                </div>
-                <div style={{fontSize:11,color:C.dim,fontStyle:"italic"}}>{p.note}</div>
-              </div>
-            ))}
-          </Card>
-          <Card>
-            <div style={{padding:14}}>
-              <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>2026 Analysis</div>
-              <p style={{fontSize:13,color:C.mid,lineHeight:1.7}}>{d.note}</p>
+            <div style={{padding:13}}>
+              <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:7}}>2026 Analysis</div>
+              <p style={{fontSize:13,color:C.mid,lineHeight:1.7,margin:0}}>{d.note}</p>
             </div>
           </Card>
+
+          {/* Live squad from API-Football */}
+          <Card style={{marginBottom:12}}>
+            <div style={{padding:"10px 14px",borderBottom:`1px solid ${C.b1}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <span style={{fontWeight:700,color:C.green,fontSize:13}}>SQUAD · API-FOOTBALL</span>
+              {squad && <span style={{fontSize:11,color:C.dim}}>{squad.length} players</span>}
+            </div>
+
+            {loading && (
+              <div style={{padding:"32px 0",textAlign:"center"}}>
+                <div style={{width:28,height:28,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto 10px"}}/>
+                <div style={{fontSize:12,color:C.mid}}>Fetching squad data...</div>
+              </div>
+            )}
+
+            {apiErr && (
+              <div style={{padding:14}}>
+                <div style={{fontSize:12,color:C.dim,marginBottom:10}}>API squad unavailable — showing curated key players</div>
+                {d.players.map((p,i)=>(
+                  <div key={p.name} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 0",borderBottom:i<d.players.length-1?`1px solid ${C.b1}`:"none"}}>
+                    <Badge color={p.pos==="GK"?C.blue:p.pos==="DF"?C.green:p.pos==="MF"?C.gold:C.red}>{p.pos}</Badge>
+                    <span style={{fontWeight:600,color:C.text,flex:1,fontSize:13}}>{p.name}</span>
+                    <span style={{fontSize:11,color:C.dim}}>{p.club}</span>
+                    <RC v={p.ss} sz={28}/>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {squad && !loading && (
+              <div>
+                {/* Position filter pills */}
+                <div style={{display:"flex",gap:6,padding:"10px 12px",borderBottom:`1px solid ${C.b1}`,overflowX:"auto",scrollbarWidth:"none"}}>
+                  {["All","GK","DEF","MID","FWD"].map(pos=>(
+                    <Pill key={pos} active={posFilter===pos} onClick={()=>setPosFilter(pos)} color={pos==="GK"?C.blue:pos==="DEF"?C.green:pos==="MID"?C.gold:pos==="FWD"?C.red:C.green}>
+                      {pos} {posCounts[pos]!==undefined?`(${posCounts[pos]})`:""}
+                    </Pill>
+                  ))}
+                </div>
+                {/* Player rows */}
+                {filtered.map((p,i)=>{
+                  const posColor = p.pos?.includes("G")?C.blue:p.pos?.includes("D")?C.green:p.pos?.includes("M")?C.gold:C.red;
+                  return (
+                    <div key={p.id||i} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 14px",borderBottom:i<filtered.length-1?`1px solid ${C.b1}`:"none"}}>
+                      <PlayerPhoto src={p.photo} name={p.name} size={34}/>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontWeight:600,color:C.text,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</div>
+                        <div style={{fontSize:10,color:C.dim,marginTop:1}}>{p.age ? `Age ${p.age}` : ""}</div>
+                      </div>
+                      <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
+                        {p.number && <span style={{fontSize:12,color:C.dim,minWidth:20,textAlign:"center"}}>#{p.number}</span>}
+                        <span style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:8,background:`${posColor}22`,color:posColor}}>{posLabel(p.pos)}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+                <div style={{padding:"8px 14px",borderTop:`1px solid ${C.b1}`}}>
+                  <span style={{fontSize:10,color:C.dim}}>Data via API-Football · 100 req/day free tier</span>
+                </div>
+              </div>
+            )}
+          </Card>
+
+          {/* Recent form */}
           {RECENT4[sel] && (
-            <Card style={{marginTop:12}}>
-              <div style={{padding:"11px 14px",borderBottom:`1px solid ${C.b1}`}}><span style={{fontWeight:700,color:C.green,fontSize:13}}>LAST 4 MATCHES</span></div>
+            <Card>
+              <div style={{padding:"10px 14px",borderBottom:`1px solid ${C.b1}`}}><span style={{fontWeight:700,color:C.green,fontSize:13}}>LAST 4 MATCHES</span></div>
               {RECENT4[sel].map((g,i)=>{
                 const rc=g.res==="W"?C.green:g.res==="D"?C.gold:C.red;
                 return (
-                  <div key={i} style={{padding:"11px 14px",borderBottom:i<3?`1px solid ${C.b1}`:"none"}}>
+                  <div key={i} style={{padding:"10px 14px",borderBottom:i<3?`1px solid ${C.b1}`:"none"}}>
                     <div style={{display:"flex",alignItems:"center",gap:8}}>
                       <div style={{width:26,height:26,borderRadius:"50%",background:`${rc}22`,border:`2px solid ${rc}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,color:rc,flexShrink:0}}>{g.res}</div>
                       <div style={{flex:1}}>
@@ -749,7 +840,6 @@ function StatsTab({ initial="" }) {
 
 // ── PREDICTIONS TAB ────────────────────────────────────────────────────────
 function PredTab() {
-
   const top = PREDS.filter(p=>p.team!=="Others");
   const others = PREDS.find(p=>p.team==="Others");
   const max = top[0].poly;
@@ -897,9 +987,7 @@ function MyBracketTab() {
           <div style={{fontSize:12,color:C.mid,marginBottom:14,lineHeight:1.6}}>Use ↑↓ arrows to reorder teams within each group. Top 2 auto-qualify.</div>
           {Object.entries(groups).map(([g,teams])=>(
             <Card key={g} style={{marginBottom:10}}>
-              <div style={{padding:"8px 12px",borderBottom:`1px solid ${C.b1}`,background:"#0a1810",display:"flex",justifyContent:"space-between"}}>
-                <span style={{fontWeight:700,color:C.green,fontSize:14}}>GROUP {g}</span>
-              </div>
+              <div style={{padding:"8px 12px",borderBottom:`1px solid ${C.b1}`,background:"#0a1810"}}><span style={{fontWeight:700,color:C.green,fontSize:14}}>GROUP {g}</span></div>
               <div style={{padding:"8px 10px"}}>
                 {teams.map((team,idx)=>{
                   const col=idx===0?C.green:idx===1?C.gold:idx===2?"#94a3b8":C.dim;
@@ -967,7 +1055,6 @@ function MyBracketTab() {
             </div>
             <div style={{fontSize:13,color:C.mid}}>Runner-up: {getFlag(result.runnerUp)} {result.runnerUp}</div>
           </div>
-          {/* Visual bracket */}
           <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10}}>Full Bracket</div>
           <div style={{overflowX:"auto",paddingBottom:8}}>
             <div style={{display:"flex",gap:10,minWidth:620}}>
@@ -1066,9 +1153,8 @@ export default function App() {
   const [tab, setTab] = useState("live");
   const [statsTeam, setStatsTeam] = useState("");
   const [modal, setModal] = useState({open:false,match:null});
-  const [saved, setSaved] = useState(() => { try{ const s=localStorage.getItem("wc2026_saved"); return s?JSON.parse(s):[]; }catch{ return []; } });
+  const [saved, setSaved] = useState([]);
   const [toast, setToast] = useState("");
-  useEffect(()=>{ try{localStorage.setItem("wc2026_saved",JSON.stringify(saved));}catch{} },[saved]);
   const onTeam = (t) => { setStatsTeam(t); setTab("stats"); };
   const onAction = (m) => setModal({open:true,match:m});
   const onCal = (m,avail) => { const id=`c${m.id}`; setSaved(s=>[...s.filter(x=>x.id!==id),{id,type:"cal",match:m,avail}]); setToast("Added to calendar"); };
@@ -1078,11 +1164,10 @@ export default function App() {
     <LiveScoresProvider>
       <div style={{minHeight:"100vh",background:C.bg,maxWidth:700,margin:"0 auto",fontFamily:"system-ui,sans-serif"}}>
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}*{box-sizing:border-box;margin:0;padding:0}select option{background:#0c1a12}::-webkit-scrollbar{width:3px;height:3px}::-webkit-scrollbar-thumb{background:#1a3828;border-radius:2px}`}</style>
-        {/* HEADER */}
         <div style={{background:`linear-gradient(180deg,#091510,${C.bg})`,padding:"14px 14px 0",borderBottom:`1px solid ${C.b1}`,position:"sticky",top:0,zIndex:100,backdropFilter:"blur(10px)"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
             <div style={{display:"flex",alignItems:"center",gap:10}}>
-              <WCLogo height={52}/>              <div>
+            <div>
                 <div style={{fontSize:9,color:C.dim,letterSpacing:"0.2em",fontWeight:700}}>FIFA</div>
                 <div style={{fontSize:20,fontWeight:900,color:C.text,lineHeight:1}}>WORLD CUP</div>
                 <div style={{fontSize:20,fontWeight:900,color:C.green,lineHeight:1}}>2026™</div>
@@ -1103,7 +1188,6 @@ export default function App() {
             ))}
           </div>
         </div>
-        {/* CONTENT */}
         <div style={{padding:"14px 13px 100px"}}>
           {tab==="live"    && <LiveTab onAction={onAction}/>}
           {tab==="schedule"&& <SchedTab onAction={onAction}/>}
