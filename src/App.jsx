@@ -307,8 +307,107 @@ function LiveScoresProvider({ children }) {
   return <LiveScoresCtx.Provider value={{scores,getScore,isLive,isFinished,lastFetch}}>{children}</LiveScoresCtx.Provider>;
 }
 
-// ── VENUE MAP ─────────────────────────────────────────────────────────────
+// ── VENUE DATA ────────────────────────────────────────────────────────────
 const VENUE_COORDS = {"Mexico City Stadium, Mexico City":"19.3029,-99.1505","Estadio Guadalajara, Zapopan":"20.6867,-103.4079","Toronto Stadium, Toronto":"43.6333,-79.3891","SoFi Stadium, Los Angeles":"33.9535,-118.3392","San Francisco Bay Area Stadium, San Francisco":"37.4031,-121.9694","New York New Jersey Stadium, East Rutherford":"40.8135,-74.0745","Boston Stadium, Boston":"42.3467,-71.0972","BC Place, Vancouver":"49.2767,-123.1115","Houston Stadium, Houston":"29.6847,-95.4107","Dallas Stadium, Dallas":"32.7474,-97.0945","Philadelphia Stadium, Philadelphia":"39.9012,-75.1675","Estadio Monterrey, Guadalupe":"25.6694,-100.2436","Atlanta Stadium, Atlanta":"33.7553,-84.4006","Miami Stadium, Miami":"25.9580,-80.2389","Kansas City Stadium, Kansas City":"39.0489,-94.4839","Seattle Stadium, Seattle":"47.5952,-122.3316"};
+
+// IANA timezone for each venue
+const VENUE_TZ = {
+  "Mexico City Stadium, Mexico City":           "America/Mexico_City",
+  "Estadio Guadalajara, Zapopan":               "America/Mexico_City",
+  "Estadio Monterrey, Guadalupe":               "America/Monterrey",
+  "Toronto Stadium, Toronto":                   "America/Toronto",
+  "BC Place, Vancouver":                        "America/Vancouver",
+  "SoFi Stadium, Los Angeles":                  "America/Los_Angeles",
+  "San Francisco Bay Area Stadium, San Francisco":"America/Los_Angeles",
+  "Seattle Stadium, Seattle":                   "America/Los_Angeles",
+  "Dallas Stadium, Dallas":                     "America/Chicago",
+  "Houston Stadium, Houston":                   "America/Chicago",
+  "Kansas City Stadium, Kansas City":           "America/Chicago",
+  "New York New Jersey Stadium, East Rutherford":"America/New_York",
+  "Boston Stadium, Boston":                     "America/New_York",
+  "Philadelphia Stadium, Philadelphia":         "America/New_York",
+  "Atlanta Stadium, Atlanta":                   "America/New_York",
+  "Miami Stadium, Miami":                       "America/New_York",
+};
+
+// UTC kickoff times for each match id
+const MATCH_UTC = {
+  1:"2026-06-11T19:00:00Z",  2:"2026-06-12T02:00:00Z",
+  3:"2026-06-12T19:00:00Z",  4:"2026-06-13T01:00:00Z",
+  5:"2026-06-13T19:00:00Z",  6:"2026-06-13T22:00:00Z",
+  7:"2026-06-14T01:00:00Z",  8:"2026-06-14T03:59:00Z",
+  9:"2026-06-14T17:00:00Z",  10:"2026-06-14T20:00:00Z",
+  11:"2026-06-14T23:00:00Z", 12:"2026-06-15T02:00:00Z",
+  13:"2026-06-15T16:00:00Z", 14:"2026-06-15T19:00:00Z",
+  15:"2026-06-15T22:00:00Z", 16:"2026-06-16T01:00:00Z",
+  17:"2026-06-16T19:00:00Z", 18:"2026-06-16T22:00:00Z",
+  19:"2026-06-17T01:00:00Z", 20:"2026-06-17T03:59:00Z",
+  21:"2026-06-17T17:00:00Z", 22:"2026-06-17T20:00:00Z",
+  23:"2026-06-17T23:00:00Z", 24:"2026-06-18T02:00:00Z",
+  25:"2026-06-18T16:00:00Z", 26:"2026-06-18T19:00:00Z",
+  27:"2026-06-18T22:00:00Z", 28:"2026-06-19T01:00:00Z",
+  29:"2026-06-19T19:00:00Z", 30:"2026-06-19T22:00:00Z",
+  31:"2026-06-20T00:30:00Z", 32:"2026-06-20T03:00:00Z",
+  33:"2026-06-20T17:00:00Z", 34:"2026-06-20T20:00:00Z",
+  35:"2026-06-21T01:00:00Z", 36:"2026-06-21T03:59:00Z",
+  37:"2026-06-21T16:00:00Z", 38:"2026-06-21T19:00:00Z",
+  39:"2026-06-21T22:00:00Z", 40:"2026-06-22T01:00:00Z",
+  41:"2026-06-22T17:00:00Z", 42:"2026-06-22T21:00:00Z",
+  43:"2026-06-23T00:00:00Z", 44:"2026-06-23T03:00:00Z",
+  45:"2026-06-23T17:00:00Z", 46:"2026-06-23T20:00:00Z",
+  47:"2026-06-23T23:00:00Z", 48:"2026-06-24T02:00:00Z",
+  49:"2026-06-24T19:00:00Z", 50:"2026-06-24T19:00:00Z",
+  51:"2026-06-24T22:00:00Z", 52:"2026-06-24T22:00:00Z",
+  53:"2026-06-25T01:00:00Z", 54:"2026-06-25T01:00:00Z",
+  55:"2026-06-25T20:00:00Z", 56:"2026-06-25T20:00:00Z",
+  57:"2026-06-25T23:00:00Z", 58:"2026-06-25T23:00:00Z",
+  59:"2026-06-26T02:00:00Z", 60:"2026-06-26T02:00:00Z",
+  61:"2026-06-26T19:00:00Z", 62:"2026-06-26T19:00:00Z",
+  63:"2026-06-27T00:00:00Z", 64:"2026-06-27T00:00:00Z",
+  65:"2026-06-27T03:00:00Z", 66:"2026-06-27T03:00:00Z",
+  67:"2026-06-27T21:00:00Z", 68:"2026-06-27T21:00:00Z",
+  69:"2026-06-27T23:30:00Z", 70:"2026-06-27T23:30:00Z",
+  71:"2026-06-28T02:00:00Z", 72:"2026-06-28T02:00:00Z",
+};
+
+// User's IANA timezone
+const USER_TZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
+const isEastern = USER_TZ === "America/New_York" || USER_TZ === "America/Detroit" ||
+                  USER_TZ === "America/Indiana/Indianapolis" || USER_TZ === "America/Kentucky/Louisville";
+
+// Format a UTC ISO string into a time string in a given IANA tz
+function fmtTime(isoStr, tz) {
+  return new Intl.DateTimeFormat("en-US", {
+    hour: "numeric", minute: "2-digit", hour12: true, timeZone: tz,
+  }).format(new Date(isoStr));
+}
+
+// Format date label in user's tz (e.g. "Jun 11")
+function fmtDate(isoStr, tz) {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short", day: "numeric", timeZone: tz,
+  }).format(new Date(isoStr));
+}
+
+// For a match, return { localTime, venueTime, dateLabel }
+function matchTimes(m) {
+  const iso = MATCH_UTC[m.id];
+  if(!iso) return { localTime: m.time, venueTime: null, dateLabel: m.date };
+
+  const venueTz = VENUE_TZ[m.venue] || "America/New_York";
+
+  // For Eastern users: midnight games (originally "11:59PM ET") keep their
+  // original ET date label so they group with the right match day
+  const isOriginalMidnight = m.time && m.time.includes("11:59");
+  const dateLabel = isEastern && isOriginalMidnight
+    ? m.date  // keep the original "previous day" grouping
+    : fmtDate(iso, USER_TZ);
+
+  const localTime = fmtTime(iso, USER_TZ);
+  const venueTime = (venueTz === USER_TZ) ? null : fmtTime(iso, venueTz);
+
+  return { localTime, venueTime, dateLabel };
+}
 const openMaps = (venue) => { const coords=VENUE_COORDS[venue]; const q=encodeURIComponent(venue); const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream; if(isIOS||/Macintosh/.test(navigator.userAgent)) window.open(`maps://maps.apple.com/?q=${q}${coords?`&ll=${coords}`:""}`, "_blank"); else window.open(`https://www.google.com/maps/search/?api=1&query=${q}${coords?`+${coords}`:""}`, "_blank"); };
 
 // ── CRESTS ────────────────────────────────────────────────────────────────
@@ -405,7 +504,7 @@ function AddModal({ match, open, onClose, onCal, onRem }) {
 }
 
 // ── MATCH CARD ─────────────────────────────────────────────────────────────
-function MatchCard({ m, onAction }) {
+function MatchCard({ m, onAction, timeMode="local" }) {
   const { getScore } = useContext(LiveScoresCtx);
   const sc = getScore(m.home, m.away);
   const live = sc ? statusIsLive(sc.status) : false;
@@ -415,12 +514,21 @@ function MatchCard({ m, onAction }) {
   let winner = null;
   if(isKO && finished && hasScore) { if(sc.hg>sc.ag) winner=m.home; else if(sc.ag>sc.hg) winner=m.away; }
   const cardBg = finished ? `linear-gradient(135deg,#080f0a,#0a1410)` : live ? `linear-gradient(135deg,#0a1f10,#0d2815)` : `linear-gradient(135deg,${C.s1},${C.s2})`;
+  const { localTime, venueTime } = matchTimes(m);
+  const venueTz = VENUE_TZ[m.venue];
+  const venueTzShort = venueTz ? new Intl.DateTimeFormat("en-US",{timeZoneName:"short",timeZone:venueTz}).formatToParts(new Date()).find(p=>p.type==="timeZoneName")?.value : "";
+  const userTzShort = new Intl.DateTimeFormat("en-US",{timeZoneName:"short"}).formatToParts(new Date()).find(p=>p.type==="timeZoneName")?.value || "";
+  const displayTime = timeMode === "venue" ? (venueTime || localTime) : localTime;
+  const tzLabel = timeMode === "venue" ? venueTzShort : userTzShort;
   return (
     <Card style={{marginBottom:8,border:`1px solid ${live?C.greenS:C.b1}`,background:cardBg,opacity:finished?0.75:1}}>
       <div style={{padding:"11px 13px"}}>
         <div style={{display:"flex",justifyContent:"space-between",marginBottom:7}}>
           {m.group ? <Badge>Group {m.group}</Badge> : <Badge color={C.gold}>{m.stage||"Knockout"}</Badge>}
-          <span style={{fontSize:11,color:C.dim}}>{m.time}</span>
+          <div style={{textAlign:"right"}}>
+            <span style={{fontSize:11,color:timeMode==="venue"?C.gold:C.dim}}>{displayTime}</span>
+            <span style={{fontSize:10,color:C.dim,marginLeft:3}}>{tzLabel}</span>
+          </div>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:7}}>
           <Crest team={m.home} size={24}/>
@@ -478,6 +586,7 @@ function LiveTab({ onAction }) {
 // ── SCHEDULE TAB ──────────────────────────────────────────────────────────
 function SchedTab({ onAction }) {
   const [filterMode, setFilterMode] = useState("group");
+  const [timeMode, setTimeMode] = useState("local"); // "local" | "venue"
   const [groupF, setGroupF] = useState("All");
   const [teamF, setTeamF] = useState("");
   const [venueF, setVenueF] = useState("");
@@ -489,14 +598,27 @@ function SchedTab({ onAction }) {
     if(filterMode==="venue") return !venueF||m.venue===venueF;
     return true;
   });
-  const byDate = shown.reduce((a,m)=>{(a[m.date]=a[m.date]||[]).push(m);return a;},{});
+  const byDate = shown.reduce((a,m)=>{
+    const { dateLabel } = matchTimes(m);
+    const key = dateLabel || m.date;
+    (a[key]=a[key]||[]).push(m);
+    return a;
+  },{});
   const ss = (active) => ({padding:"5px 12px",borderRadius:20,border:`1px solid ${active?C.green:C.b1}`,background:active?`${C.green}18`:"transparent",color:active?C.green:C.mid,fontSize:12,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap"});
   return (
     <div>
-      <div style={{display:"flex",gap:8,marginBottom:12}}>
-        <button style={ss(filterMode==="group")} onClick={()=>setFilterMode("group")}>🗂 Group</button>
-        <button style={ss(filterMode==="team")} onClick={()=>setFilterMode("team")}>👥 Team</button>
-        <button style={ss(filterMode==="venue")} onClick={()=>setFilterMode("venue")}>📍 Venue</button>
+      {/* Filter mode + time toggle row */}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+        <div style={{display:"flex",gap:8}}>
+          <button style={ss(filterMode==="group")} onClick={()=>setFilterMode("group")}>🗂 Group</button>
+          <button style={ss(filterMode==="team")} onClick={()=>setFilterMode("team")}>👥 Team</button>
+          <button style={ss(filterMode==="venue")} onClick={()=>setFilterMode("venue")}>📍 Venue</button>
+        </div>
+        {/* Time toggle */}
+        <div style={{display:"flex",background:C.s2,borderRadius:20,border:`1px solid ${C.b2}`,padding:2,gap:2,flexShrink:0}}>
+          <button onClick={()=>setTimeMode("local")} style={{padding:"4px 10px",borderRadius:18,border:"none",cursor:"pointer",fontSize:10,fontWeight:700,background:timeMode==="local"?C.green:"transparent",color:timeMode==="local"?"#030a05":C.dim,transition:"all .15s"}}>My Time</button>
+          <button onClick={()=>setTimeMode("venue")} style={{padding:"4px 10px",borderRadius:18,border:"none",cursor:"pointer",fontSize:10,fontWeight:700,background:timeMode==="venue"?C.gold:"transparent",color:timeMode==="venue"?"#030a05":C.dim,transition:"all .15s"}}>Venue</button>
+        </div>
       </div>
       {filterMode==="group" && (
         <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:8,marginBottom:14,scrollbarWidth:"none"}}>
@@ -522,7 +644,7 @@ function SchedTab({ onAction }) {
       {shown.length===0 ? <div style={{textAlign:"center",padding:"32px",color:C.dim}}>No matches found</div> : Object.entries(byDate).map(([date,ms])=>(
         <div key={date} style={{marginBottom:18}}>
           <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>{date}</div>
-          {ms.map(m=><MatchCard key={m.id} m={m} onAction={onAction}/>)}
+          {ms.map(m=><MatchCard key={m.id} m={m} onAction={onAction} timeMode={timeMode}/>)}
         </div>
       ))}
     </div>
@@ -564,7 +686,7 @@ function GrpTab({ onTeam }) {
             {standings.map((row,i)=>(
               <div key={row.team} onClick={()=>onTeam(row.team)} style={{display:"grid",gridTemplateColumns:"20px 1fr 24px 24px 24px 24px 28px 28px",padding:"8px 10px",borderBottom:i<3?`1px solid ${C.b1}`:"none",cursor:"pointer",borderLeft:`3px solid ${qc(row.pos)}`,background:row.pos<=2?`${C.green}08`:row.pos===3?`${C.gold}08`:"transparent"}} onMouseEnter={e=>e.currentTarget.style.background=`${C.green}12`} onMouseLeave={e=>e.currentTarget.style.background=row.pos<=2?`${C.green}08`:row.pos===3?`${C.gold}08`:"transparent"}>
                 <div style={{fontSize:11,color:C.dim,display:"flex",alignItems:"center"}}>{row.pos}</div>
-                <div style={{display:"flex",alignItems:"center",gap:6}}><Crest team={row.team} size={18}/><span style={{fontSize:12,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{row.team}</span></div>
+                <div style={{display:"flex",alignItems:"center",gap:6}}><Crest team={row.team} size={30}/><span style={{fontSize:12,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{row.team}</span></div>
                 {[row.p,row.w,row.d,row.l].map((v,j)=><div key={j} style={{fontSize:12,color:C.mid,textAlign:"center",display:"flex",alignItems:"center",justifyContent:"center"}}>{v}</div>)}
                 <div style={{fontSize:12,color:row.gd>0?C.green:row.gd<0?C.red:C.mid,textAlign:"center",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:600}}>{row.gd>0?"+":""}{row.gd}</div>
                 <div style={{fontSize:15,fontWeight:700,color:C.text,textAlign:"center",display:"flex",alignItems:"center",justifyContent:"center"}}>{row.pts}</div>
@@ -578,13 +700,13 @@ function GrpTab({ onTeam }) {
           <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>ENTER SCORES</div>
           {results.map(r=>(
             <div key={r.id} style={{display:"flex",alignItems:"center",gap:6,marginBottom:6,background:C.s1,border:`1px solid ${C.b1}`,borderRadius:10,padding:"7px 11px"}}>
-              <Crest team={r.home} size={18}/>
+              <Crest team={r.home} size={30}/>
               <span style={{fontSize:11,color:C.text,flex:1,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.home}</span>
               <input value={r.hg} onChange={e=>upd(r.id,"hg",e.target.value)} placeholder="-" maxLength={2} style={{width:28,textAlign:"center",background:C.s2,border:`1px solid ${C.b2}`,borderRadius:6,color:C.text,fontSize:14,fontWeight:700,padding:"3px 0",outline:"none"}}/>
               <span style={{color:C.dim,fontWeight:700}}>:</span>
               <input value={r.ag} onChange={e=>upd(r.id,"ag",e.target.value)} placeholder="-" maxLength={2} style={{width:28,textAlign:"center",background:C.s2,border:`1px solid ${C.b2}`,borderRadius:6,color:C.text,fontSize:14,fontWeight:700,padding:"3px 0",outline:"none"}}/>
               <span style={{fontSize:11,color:C.text,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.away}</span>
-              <Crest team={r.away} size={18}/>
+              <Crest team={r.away} size={30}/>
             </div>
           ))}
         </div>
