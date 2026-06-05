@@ -9,7 +9,14 @@ export default async function handler(req, res) {
 
     const data = await response.json();
 
-    const source = data.response || [];
+    const source =
+  Array.isArray(data?.response)
+    ? data.response
+    : Array.isArray(data?.response?.matches)
+    ? data.response.matches
+    : Array.isArray(data?.response?.fixtures)
+    ? data.response.fixtures
+    : [];
 
     const matches = source.map((m) => ({
       fixture: {
@@ -54,4 +61,5 @@ export default async function handler(req, res) {
     console.error('API ERROR:', error);
     res.status(500).json({ error: error.message });
   }
+  console.log("API RAW:", JSON.stringify(data, null, 2));
 }
