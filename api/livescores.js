@@ -1,7 +1,7 @@
 export default async function handler(req, res) {
   try {
     const response = await fetch(
-      'https://free-api-live-football-data.p.rapidapi.com/football-players-search?search=m',
+      'YOUR_FIXTURES_ENDPOINT',
       {
         headers: {
           'X-RapidAPI-Key': process.env.RAPIDAPI_KEY,
@@ -12,10 +12,31 @@ export default async function handler(req, res) {
 
     const data = await response.json();
 
-    res.status(200).json(data);
+    const matches = (data.response?.matches || []).map(m => ({
+      fixture: {
+        id: m.id,
+        status: {
+          short: m.status?.finished
+            ? 'FT'
+            : m.status?.started
+            ? 'LIVE'
+            : 'NS',
+          elapsed: m.status?.elapsed || null,
+        }
+      },
+      teams: {
+        home: { name: m.home?.name },
+        away: { name: m.away?.name }
+      },
+      goals: {
+        home: m.home?.score ?? 0,
+        away: m.away?.score ?? 0
+      }
+    }));
+
+    res.status(200).json({ response: matches });
+
   } catch (error) {
-    res.status(500).json({
-      error: error.message,
-    });
+    res.status(500).json({ error: error.message });
   }
 }
