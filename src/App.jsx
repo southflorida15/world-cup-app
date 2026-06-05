@@ -249,11 +249,12 @@ function LiveScoresProvider({ children }) {
   const fetchAll = useCallback(async () => {
     try {
       const today = new Date().toISOString().split("T")[0];
-      const [lR,tR] = await Promise.all([
-        fetch('/api/livescores'),
-             ]);
-      const [lD,tD] = await Promise.all([lR.json(),tR.json()]);
-      const all = [...(lD.response||[]),...(tD.response||[])];
+      const lR = await fetch('/api/livescores');
+const lD = await lR.json();
+
+console.log("Live data:", lD);
+
+const all = lD.response || [];
       const deduped = Object.values(Object.fromEntries(all.map(f=>[f.fixture.id,f])));
       const map = {};
       deduped.forEach(f => { const h=normTeam(f.teams.home.name),a=normTeam(f.teams.away.name); map[`${h}|${a}`]={hg:f.goals.home,ag:f.goals.away,status:f.fixture.status.short,elapsed:f.fixture.status.elapsed}; });
