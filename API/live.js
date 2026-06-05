@@ -1,7 +1,7 @@
 export default async function handler(req, res) {
   try {
     const response = await fetch(
-      'https://api-football-v1.p.rapidapi.com/v3/fixtures?live=all',
+      'https://free-api-live-football-data.p.rapidapi.com',
       {
         headers: {
           'X-RapidAPI-Key': process.env.RAPIDAPI_KEY,
