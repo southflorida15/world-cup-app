@@ -250,10 +250,9 @@ function LiveScoresProvider({ children }) {
     try {
       const today = new Date().toISOString().split("T")[0];
       const lR = await fetch('/api/livescores');
-const lD = await lR.json();
-
-console.log("Live data:", lD);
-
+      const lD = await lR.json();
+console.log("Response keys:", Object.keys(lD));
+console.log("Response:", lD.response);
 const all = lD.response || [];
       const deduped = Object.values(Object.fromEntries(all.map(f=>[f.fixture.id,f])));
       const map = {};
