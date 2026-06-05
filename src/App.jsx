@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useContext, createContext, useCallback } from "react";
+import { Analytics } from "@vercel/analytics/react";
 
 // ── THEME ─────────────────────────────────────────────────────────────────
 const C = {
@@ -1118,6 +1119,7 @@ export default function App() {
         </div>
         <AddModal match={modal.match} open={modal.open} onClose={()=>setModal({open:false,match:null})} onCal={onCal} onRem={onRem}/>
         <Toast msg={toast} onDone={()=>setToast("")}/>
+        <Analytics />
       </div>
     </LiveScoresProvider>
   );
