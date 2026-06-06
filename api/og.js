@@ -33,10 +33,10 @@ export default async function handler(req, res) {
   const venueShort = venue ? venue.split(",")[0] : "";
 
   const scoreBlock = hasScore
-    ? `<text x="600" y="310" text-anchor="middle" font-size="110" font-weight="900" fill="#4ade80" font-family="monospace">${hg} – ${ag}</text>
-       <text x="600" y="360" text-anchor="middle" font-size="24" font-weight="700" fill="#3d6a4d" letter-spacing="4">FULL TIME</text>`
-    : `<text x="600" y="320" text-anchor="middle" font-size="72" font-weight="900" fill="#1a3828" letter-spacing="8">VS</text>
-       <text x="600" y="362" text-anchor="middle" font-size="24" font-weight="700" fill="#3d6a4d" letter-spacing="4">UPCOMING</text>`;
+    ? `<text x="600" y="290" text-anchor="middle" font-size="110" font-weight="900" fill="#4ade80" font-family="monospace">${hg} – ${ag}</text>
+       <text x="600" y="335" text-anchor="middle" font-size="28" font-weight="700" fill="#3d6a4d" letter-spacing="6">FULL TIME</text>`
+    : `<text x="600" y="295" text-anchor="middle" font-size="96" font-weight="900" fill="#234833" letter-spacing="8">VS</text>
+       <text x="600" y="340" text-anchor="middle" font-size="28" font-weight="700" fill="#3d6a4d" letter-spacing="6">UPCOMING</text>`;
 
   const stageLabelWidth = stageLabel.length * 10 + 32;
 
@@ -52,8 +52,8 @@ export default async function handler(req, res) {
       <stop offset="50%" style="stop-color:#4ade80"/>
       <stop offset="100%" style="stop-color:#060e0a;stop-opacity:0"/>
     </linearGradient>
-    <clipPath id="hfc" clipPathUnits="userSpaceOnUse"><rect x="148" y="215" width="160" height="107" rx="8"/></clipPath>
-    <clipPath id="afc" clipPathUnits="userSpaceOnUse"><rect x="892" y="215" width="160" height="107" rx="8"/></clipPath>
+    <clipPath id="hfc" clipPathUnits="userSpaceOnUse"><rect x="148" y="195" width="160" height="107" rx="8"/></clipPath>
+    <clipPath id="afc" clipPathUnits="userSpaceOnUse"><rect x="892" y="195" width="160" height="107" rx="8"/></clipPath>
   </defs>
 
   <rect width="1200" height="630" fill="url(#bg)"/>
@@ -71,19 +71,19 @@ export default async function handler(req, res) {
   ${date ? `<text x="${1200-48}" y="96" text-anchor="end" font-size="18" fill="#3d6a4d" font-family="system-ui">${date}</text>` : ""}
 
   <!-- Home flag -->
-  ${homeFlagUrl ? `<image href="${homeFlagUrl}" x="148" y="215" width="160" height="107" clip-path="url(#hfc)" preserveAspectRatio="xMidYMid slice"/>` : ""}
-  <text x="228" y="368" text-anchor="middle" font-size="38" font-weight="800" fill="#d4ead9" font-family="system-ui">${home}</text>
+  ${homeFlagUrl ? `<image href="${homeFlagUrl}" x="148" y="195" width="160" height="107" clip-path="url(#hfc)" preserveAspectRatio="xMidYMid slice"/>` : ""}
+  <text x="228" y="345" text-anchor="middle" font-size="38" font-weight="800" fill="#d4ead9" font-family="system-ui">${home}</text>
 
   <!-- Score -->
   ${scoreBlock}
 
   <!-- Away flag -->
-  ${awayFlagUrl ? `<image href="${awayFlagUrl}" x="892" y="215" width="160" height="107" clip-path="url(#afc)" preserveAspectRatio="xMidYMid slice"/>` : ""}
-  <text x="972" y="368" text-anchor="middle" font-size="38" font-weight="800" fill="#d4ead9" font-family="system-ui">${away}</text>
+  ${awayFlagUrl ? `<image href="${awayFlagUrl}" x="892" y="195" width="160" height="107" clip-path="url(#afc)" preserveAspectRatio="xMidYMid slice"/>` : ""}
+  <text x="972" y="345" text-anchor="middle" font-size="38" font-weight="800" fill="#d4ead9" font-family="system-ui">${away}</text>
 
   <!-- Bottom -->
-  ${venueShort ? `<text x="48" y="598" font-size="18" fill="#3d6a4d" font-family="system-ui">📍 ${venueShort}</text>` : ""}
-  <text x="1152" y="598" text-anchor="end" font-size="16" fill="#3d6a4d" font-family="system-ui">world-cup-app-iota.vercel.app</text>
+  ${venueShort ? `<text x="48" y="598" font-size="22" fill="#4ade80" font-family="system-ui">📍 ${venueShort}</text>` : ""}
+  <text x="1152" y="598" text-anchor="end" font-size="20" fill="#3d6a4d" font-family="system-ui">world-cup-app-iota.vercel.app</text>
 
   <!-- Accent line -->
   <rect x="0" y="627" width="1200" height="3" fill="url(#accent)"/>
