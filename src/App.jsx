@@ -2995,7 +2995,7 @@ export default function App() {
             </div>
             <div style={{display:"flex",alignItems:"center",gap:8}}>
               {/* Dark/light toggle */}
-              <button onClick={toggleDark} title={dark?"Switch to light mode":"Switch to dark mode"} style={{width:34,height:34,borderRadius:"50%",border:`1px solid ${C.b2}`,background:C.s2,cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+              <button onClick={toggleDark} title={dark?"Switch to light mode":"Switch to dark mode"} style={{width:28,height:28,borderRadius:"50%",border:`1px solid ${C.b2}`,background:C.s2,cursor:"pointer",fontSize:13,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
                 {dark ? "☀️" : "🌙"}
               </button>
               {/* Favorite teams button */}
