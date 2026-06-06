@@ -712,10 +712,16 @@ function SchedTab({ onAction }) {
   const ss=(active)=>({padding:"5px 12px",borderRadius:20,border:`1px solid ${active?C.green:C.b1}`,background:active?`${C.green}18`:"transparent",color:active?C.green:C.mid,fontSize:12,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap"});
   return (
     <div>
-      <div style={{display:"flex",gap:8,marginBottom:12}}>
-        <button style={ss(filterMode==="group")} onClick={()=>setFilterMode("group")}>🗂 Group</button>
-        <button style={ss(filterMode==="team")} onClick={()=>setFilterMode("team")}>👥 Team</button>
-        <button style={ss(filterMode==="venue")} onClick={()=>setFilterMode("venue")}>📍 Venue</button>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,gap:8}}>
+        <div style={{display:"flex",gap:8}}>
+          <button style={ss(filterMode==="group")} onClick={()=>setFilterMode("group")}>🗂 Group</button>
+          <button style={ss(filterMode==="team")} onClick={()=>setFilterMode("team")}>👥 Team</button>
+          <button style={ss(filterMode==="venue")} onClick={()=>setFilterMode("venue")}>📍 Venue</button>
+        </div>
+        <div style={{display:"flex",background:C.s2,borderRadius:20,border:`1px solid ${C.b2}`,padding:2,gap:2,flexShrink:0}}>
+          <button onClick={()=>setTimeMode("local")} style={{padding:"5px 12px",borderRadius:18,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:timeMode==="local"?C.green:"transparent",color:timeMode==="local"?"#030a05":C.dim,transition:"all .15s"}}>My Time</button>
+          <button onClick={()=>setTimeMode("venue")} style={{padding:"5px 12px",borderRadius:18,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:timeMode==="venue"?C.gold:"transparent",color:timeMode==="venue"?"#030a05":C.dim,transition:"all .15s"}}>Venue</button>
+        </div>
       </div>
       {filterMode==="group" && (
         <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:8,marginBottom:14,scrollbarWidth:"none"}}>
@@ -744,13 +750,6 @@ function SchedTab({ onAction }) {
           {ms.map(m=><MatchCard key={m.id} m={m} onAction={onAction} timeMode={timeMode}/>)}
         </div>
       ))}
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",margin:"4px 0 16px",padding:"10px 14px",background:C.s1,border:`1px solid ${C.b1}`,borderRadius:12}}>
-        <span style={{fontSize:12,color:C.mid,fontWeight:600}}>⏰ Times shown in</span>
-        <div style={{display:"flex",background:C.s2,borderRadius:20,border:`1px solid ${C.b2}`,padding:2,gap:2}}>
-          <button onClick={()=>setTimeMode("local")} style={{padding:"5px 14px",borderRadius:18,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:timeMode==="local"?C.green:"transparent",color:timeMode==="local"?"#030a05":C.dim,transition:"all .15s"}}>My Time</button>
-          <button onClick={()=>setTimeMode("venue")} style={{padding:"5px 14px",borderRadius:18,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:timeMode==="venue"?C.gold:"transparent",color:timeMode==="venue"?"#030a05":C.dim,transition:"all .15s"}}>Venue</button>
-        </div>
-      </div>
     </div>
   );
 }
