@@ -34,9 +34,9 @@ export default async function handler(req, res) {
 
   const scoreBlock = hasScore
     ? `<text x="600" y="310" text-anchor="middle" font-size="110" font-weight="900" fill="#4ade80" font-family="monospace">${hg} – ${ag}</text>
-       <text x="600" y="360" text-anchor="middle" font-size="18" font-weight="700" fill="#3d6a4d" letter-spacing="4">FULL TIME</text>`
+       <text x="600" y="360" text-anchor="middle" font-size="24" font-weight="700" fill="#3d6a4d" letter-spacing="4">FULL TIME</text>`
     : `<text x="600" y="320" text-anchor="middle" font-size="72" font-weight="900" fill="#1a3828" letter-spacing="8">VS</text>
-       <text x="600" y="362" text-anchor="middle" font-size="18" font-weight="700" fill="#3d6a4d" letter-spacing="4">UPCOMING</text>`;
+       <text x="600" y="362" text-anchor="middle" font-size="24" font-weight="700" fill="#3d6a4d" letter-spacing="4">UPCOMING</text>`;
 
   const stageLabelWidth = stageLabel.length * 10 + 32;
 
@@ -61,29 +61,29 @@ export default async function handler(req, res) {
   <circle cx="100" cy="550" r="320" fill="rgba(74,222,128,0.025)"/>
 
   <!-- FIFA branding -->
-  <text x="48" y="58" font-size="12" font-weight="700" fill="#3d6a4d" font-family="system-ui" letter-spacing="3">FIFA</text>
-  <text x="48" y="86" font-size="22" font-weight="900" fill="#d4ead9" font-family="system-ui">WORLD CUP</text>
-  <text x="48" y="114" font-size="22" font-weight="900" fill="#4ade80" font-family="system-ui">2026™</text>
+  <text x="48" y="58" font-size="16" font-weight="700" fill="#3d6a4d" font-family="system-ui" letter-spacing="3">FIFA</text>
+  <text x="48" y="86" font-size="28" font-weight="900" fill="#d4ead9" font-family="system-ui">WORLD CUP</text>
+  <text x="48" y="114" font-size="28" font-weight="900" fill="#4ade80" font-family="system-ui">2026™</text>
 
   <!-- Stage badge -->
   <rect x="${1200 - 48 - stageLabelWidth}" y="44" width="${stageLabelWidth}" height="34" rx="17" fill="rgba(74,222,128,0.12)" stroke="rgba(74,222,128,0.3)" stroke-width="1"/>
-  <text x="${1200 - 48 - stageLabelWidth/2}" y="67" text-anchor="middle" font-size="15" font-weight="700" fill="#4ade80" font-family="system-ui">${stageLabel}</text>
-  ${date ? `<text x="${1200-48}" y="96" text-anchor="end" font-size="14" fill="#3d6a4d" font-family="system-ui">${date}</text>` : ""}
+  <text x="${1200 - 48 - stageLabelWidth/2}" y="67" text-anchor="middle" font-size="20" font-weight="700" fill="#4ade80" font-family="system-ui">${stageLabel}</text>
+  ${date ? `<text x="${1200-48}" y="96" text-anchor="end" font-size="18" fill="#3d6a4d" font-family="system-ui">${date}</text>` : ""}
 
   <!-- Home flag -->
   ${homeFlagUrl ? `<image href="${homeFlagUrl}" x="148" y="215" width="160" height="107" clip-path="url(#hfc)" preserveAspectRatio="xMidYMid slice"/>` : ""}
-  <text x="228" y="368" text-anchor="middle" font-size="30" font-weight="800" fill="#d4ead9" font-family="system-ui">${home}</text>
+  <text x="228" y="368" text-anchor="middle" font-size="38" font-weight="800" fill="#d4ead9" font-family="system-ui">${home}</text>
 
   <!-- Score -->
   ${scoreBlock}
 
   <!-- Away flag -->
   ${awayFlagUrl ? `<image href="${awayFlagUrl}" x="892" y="215" width="160" height="107" clip-path="url(#afc)" preserveAspectRatio="xMidYMid slice"/>` : ""}
-  <text x="972" y="368" text-anchor="middle" font-size="30" font-weight="800" fill="#d4ead9" font-family="system-ui">${away}</text>
+  <text x="972" y="368" text-anchor="middle" font-size="38" font-weight="800" fill="#d4ead9" font-family="system-ui">${away}</text>
 
   <!-- Bottom -->
-  ${venueShort ? `<text x="48" y="598" font-size="13" fill="#3d6a4d" font-family="system-ui">📍 ${venueShort}</text>` : ""}
-  <text x="1152" y="598" text-anchor="end" font-size="13" fill="#3d6a4d" font-family="system-ui">world-cup-app-iota.vercel.app</text>
+  ${venueShort ? `<text x="48" y="598" font-size="18" fill="#3d6a4d" font-family="system-ui">📍 ${venueShort}</text>` : ""}
+  <text x="1152" y="598" text-anchor="end" font-size="16" fill="#3d6a4d" font-family="system-ui">world-cup-app-iota.vercel.app</text>
 
   <!-- Accent line -->
   <rect x="0" y="627" width="1200" height="3" fill="url(#accent)"/>
