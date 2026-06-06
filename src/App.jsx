@@ -2667,7 +2667,7 @@ function PredictorTab() {
   );
 
   if (!user) return (
-    <div>
+    <div style={{paddingTop:12}}>
       <div style={{background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b2}`,borderRadius:12,padding:14,marginBottom:14,textAlign:"center"}}>
         <div style={{fontSize:"1.6rem",marginBottom:4}}>🔮</div>
         <div style={{fontWeight:700,fontSize:17,color:C.green,marginBottom:4}}>Match Predictor</div>
@@ -2697,7 +2697,7 @@ function PredictorTab() {
 
   // ── Main predictor UI ───────────────────────────────────────────────────
   return (
-    <div>
+    <div style={{paddingTop:12}}>
       <div style={{background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b2}`,borderRadius:12,padding:14,marginBottom:14}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
           <div>
