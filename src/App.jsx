@@ -1249,13 +1249,13 @@ function StatsTab({ initial="", tabTop=116 }) {
 
   return (
     <div>
-      <div ref={_shRef} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"8px 13px",maxWidth:700,margin:"0 auto"}}>
+      <div ref={_shRef} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"10px 13px",maxWidth:700,margin:"0 auto"}}>
         <select value={sel} onChange={e=>setSel(e.target.value)} style={{width:"100%",padding:"10px 14px",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:10,color:C.text,fontSize:14,outline:"none"}}>
           <option value="">Select a team</option>
           {Object.keys(GROUPS).map(g=><optgroup key={g} label={`Group ${g}`}>{GROUPS[g].teams.map(t=><option key={t} value={t}>{getFlag(t)} {t}</option>)}</optgroup>)}
         </select>
       </div>
-      <div style={{height:_shH||58}}/>
+      <div style={{height:_shH||70}}/>
       {!sel && <div style={{textAlign:"center",padding:"44px 20px",color:C.dim,fontSize:13}}>Select any of the 48 teams to view their squad</div>}
       {sel && d && (
         <div>
@@ -2667,7 +2667,7 @@ function PredictorTab() {
   );
 
   if (!user) return (
-    <div style={{padding:"8px 0"}}>
+    <div>
       <div style={{background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b2}`,borderRadius:12,padding:14,marginBottom:14,textAlign:"center"}}>
         <div style={{fontSize:"1.6rem",marginBottom:4}}>🔮</div>
         <div style={{fontWeight:700,fontSize:17,color:C.green,marginBottom:4}}>Match Predictor</div>
@@ -3467,7 +3467,7 @@ export default function App() {
           {tab==="stats"     && <StatsTab initial={statsTeam} tabTop={tabBarBottom}/>}
           {tab==="h2h"       && <H2HTab tabTop={tabBarBottom}/>}
           {tab==="predict"   && <PredTab tabTop={tabBarBottom}/>}
-          {tab==="predictor" && <div style={{paddingTop:14}}><PredictorTab/></div>}
+          {tab==="predictor" && <PredictorTab/>}
           {tab==="sim"       && <SimTab tabTop={tabBarBottom}/>}
           {tab==="bracket"   && <MyBracketTab tabTop={tabBarBottom}/>}
           {tab==="saved"     && <div style={{paddingTop:14}}><SavedTab saved={saved} onRemove={onRemove}/></div>}
