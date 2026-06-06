@@ -4,7 +4,7 @@
 // Returns raw SVG for OG image crawlers (WhatsApp, Twitter etc.)
 
 export default async function handler(req, res) {
-  const { home="Team A", away="Team B", hg, ag, group="", date="", venue="", stage="" } = req.query;
+  const { home="Team A", away="Team B", hg, ag, group="", date="", venue="", stage="", p1, p2, events } = req.query;
   const hasScore = hg !== undefined && ag !== undefined;
   const stageLabel = stage || (group ? `Group ${group}` : "World Cup 2026");
 
@@ -66,9 +66,9 @@ export default async function handler(req, res) {
   <text x="48" y="114" font-size="28" font-weight="900" fill="#4ade80" font-family="system-ui">2026™</text>
 
   <!-- Stage badge -->
-  <rect x="${1200 - 48 - stageLabelWidth}" y="44" width="${stageLabelWidth}" height="34" rx="17" fill="rgba(74,222,128,0.12)" stroke="rgba(74,222,128,0.3)" stroke-width="1"/>
-  <text x="${1200 - 48 - stageLabelWidth/2}" y="67" text-anchor="middle" font-size="20" font-weight="700" fill="#4ade80" font-family="system-ui">${stageLabel}</text>
-  ${date ? `<text x="${1200-48}" y="96" text-anchor="end" font-size="18" fill="#3d6a4d" font-family="system-ui">${date}</text>` : ""}
+  <rect x="${1200 - 48 - stageLabelWidth}" y="40" width="${stageLabelWidth}" height="42" rx="21" fill="rgba(74,222,128,0.12)" stroke="rgba(74,222,128,0.3)" stroke-width="1"/>
+  <text x="${1200 - 48 - stageLabelWidth/2}" y="69" text-anchor="middle" font-size="28" font-weight="700" fill="#4ade80" font-family="system-ui">${stageLabel}</text>
+  ${date ? `<text x="${1200-48}" y="100" text-anchor="end" font-size="22" fill="#7aaa8a" font-family="system-ui">${date}</text>` : ""}
 
   <!-- Home flag -->
   ${homeFlagUrl ? `<image href="${homeFlagUrl}" x="148" y="195" width="160" height="107" clip-path="url(#hfc)" preserveAspectRatio="xMidYMid slice"/>` : ""}
@@ -81,8 +81,32 @@ export default async function handler(req, res) {
   ${awayFlagUrl ? `<image href="${awayFlagUrl}" x="892" y="195" width="160" height="107" clip-path="url(#afc)" preserveAspectRatio="xMidYMid slice"/>` : ""}
   <text x="972" y="345" text-anchor="middle" font-size="38" font-weight="800" fill="#d4ead9" font-family="system-ui">${away}</text>
 
+  <!-- Polymarket odds (upcoming only) -->
+  \${!hasScore && p1 && p2 ? `
+    <rect x="300" y="410" width="600" height="70" rx="10" fill="rgba(74,222,128,0.08)" stroke="rgba(74,222,128,0.2)" stroke-width="1"/>
+    <text x="600" y="432" text-anchor="middle" font-size="16" fill="#3d6a4d" font-family="system-ui" letter-spacing="2">POLYMARKET WIN PROBABILITY</text>
+    <text x="360" y="462" text-anchor="middle" font-size="28" font-weight="900" fill="#4ade80" font-family="system-ui">\${p1}%</text>
+    <text x="600" y="462" text-anchor="middle" font-size="18" fill="#3d6a4d" font-family="system-ui">–</text>
+    <text x="840" y="462" text-anchor="middle" font-size="28" font-weight="900" fill="#38bdf8" font-family="system-ui">\${p2}%</text>
+  ` : ""}
+
+  <!-- Match events (finished only) -->
+  \${hasScore && events ? (() => {
+    try {
+      const evList = JSON.parse(decodeURIComponent(events)).slice(0,5);
+      return evList.map((ev, i) => {
+        const y = 410 + i * 36;
+        const isHome = ev.side === "home";
+        const icon = ev.type === "goal" ? "⚽" : ev.type === "yellow" ? "🟨" : "🟥";
+        const name = ev.name || "";
+        const min = ev.min ? ev.min + "'" : "";
+        return `<text x="\${isHome ? 250 : 950}" y="\${y}" text-anchor="\${isHome ? "start" : "end"}" font-size="22" fill="#d4ead9" font-family="system-ui">\${isHome ? icon + " " + min + " " + name : name + " " + min + " " + icon}</text>`;
+      }).join("");
+    } catch(e) { return ""; }
+  })() : ""}
+
   <!-- Bottom -->
-  ${venueShort ? `<text x="48" y="598" font-size="22" fill="#4ade80" font-family="system-ui">📍 ${venueShort}</text>` : ""}
+  ${venueShort ? `<text x="48" y="598" font-size="26" fill="#4ade80" font-family="system-ui">📍 ${venueShort}</text>` : ""}
   <text x="1152" y="598" text-anchor="end" font-size="20" fill="#3d6a4d" font-family="system-ui">world-cup-app-iota.vercel.app</text>
 
   <!-- Accent line -->
