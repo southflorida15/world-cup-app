@@ -27,78 +27,78 @@ const getFlag = (t) => { for (const g of Object.values(GROUPS)) { const i = g.te
 
 // ── MATCHES ───────────────────────────────────────────────────────────────
 const MATCHES = [
-  {id:1,  date:"Jun 11",time:"3PM ET",   home:"Mexico",        away:"South Africa",   venue:"Mexico City Stadium, Mexico City",              group:"A",tv:"FOX · Telemundo · Tubi"},
-  {id:2,  date:"Jun 11",time:"10PM ET",  home:"South Korea",   away:"Czechia",        venue:"Estadio Guadalajara, Zapopan",                  group:"A",tv:"FS1 · Telemundo"},
-  {id:3,  date:"Jun 12",time:"3PM ET",   home:"Canada",        away:"Bosnia & Herz.", venue:"Toronto Stadium, Toronto",                      group:"B",tv:"FS1 · Telemundo"},
-  {id:4,  date:"Jun 12",time:"9PM ET",   home:"United States", away:"Paraguay",       venue:"SoFi Stadium, Los Angeles",                    group:"D",tv:"FOX · Telemundo · Tubi"},
-  {id:5,  date:"Jun 13",time:"3PM ET",   home:"Qatar",         away:"Switzerland",    venue:"San Francisco Bay Area Stadium, San Francisco", group:"B",tv:"FS1 · Telemundo"},
-  {id:6,  date:"Jun 13",time:"6PM ET",   home:"Brazil",        away:"Morocco",        venue:"New York New Jersey Stadium, East Rutherford",  group:"C",tv:"FOX · Telemundo"},
-  {id:7,  date:"Jun 13",time:"9PM ET",   home:"Haiti",         away:"Scotland",       venue:"Boston Stadium, Boston",                        group:"C",tv:"FS1 · Telemundo"},
-  {id:8,  date:"Jun 13",time:"11:59PM ET",home:"Australia",    away:"Turkiye",        venue:"BC Place, Vancouver",                          group:"D",tv:"FS1 · Telemundo"},
-  {id:9,  date:"Jun 14",time:"1PM ET",   home:"Germany",       away:"Curacao",        venue:"Houston Stadium, Houston",                     group:"E",tv:"FS1 · Telemundo"},
-  {id:10, date:"Jun 14",time:"4PM ET",   home:"Netherlands",   away:"Japan",          venue:"Dallas Stadium, Dallas",                       group:"F",tv:"FS1 · Telemundo"},
-  {id:11, date:"Jun 14",time:"7PM ET",   home:"Ivory Coast",   away:"Ecuador",        venue:"Philadelphia Stadium, Philadelphia",            group:"E",tv:"FS1 · Telemundo"},
-  {id:12, date:"Jun 14",time:"10PM ET",  home:"Sweden",        away:"Tunisia",        venue:"Estadio Monterrey, Guadalupe",                 group:"F",tv:"FS1 · Telemundo"},
-  {id:13, date:"Jun 15",time:"12PM ET",  home:"Spain",         away:"Cape Verde",     venue:"Atlanta Stadium, Atlanta",                     group:"H",tv:"FOX · Telemundo"},
-  {id:14, date:"Jun 15",time:"3PM ET",   home:"Belgium",       away:"Egypt",          venue:"BC Place, Vancouver",                          group:"G",tv:"FS1 · Telemundo"},
-  {id:15, date:"Jun 15",time:"6PM ET",   home:"Saudi Arabia",  away:"Uruguay",        venue:"Miami Stadium, Miami",                         group:"H",tv:"FOX · Telemundo"},
-  {id:16, date:"Jun 15",time:"9PM ET",   home:"Iran",          away:"New Zealand",    venue:"SoFi Stadium, Los Angeles",                    group:"G",tv:"FS1 · Telemundo"},
-  {id:17, date:"Jun 16",time:"3PM ET",   home:"France",        away:"Senegal",        venue:"New York New Jersey Stadium, East Rutherford",  group:"I",tv:"FOX · Telemundo"},
-  {id:18, date:"Jun 16",time:"6PM ET",   home:"Iraq",          away:"Norway",         venue:"Boston Stadium, Boston",                        group:"I",tv:"FS1 · Telemundo"},
-  {id:19, date:"Jun 16",time:"9PM ET",   home:"Argentina",     away:"Algeria",        venue:"Kansas City Stadium, Kansas City",              group:"J",tv:"FOX · Telemundo"},
-  {id:20, date:"Jun 16",time:"11:59PM ET",home:"Austria",      away:"Jordan",         venue:"San Francisco Bay Area Stadium, San Francisco", group:"J",tv:"FS1 · Telemundo"},
-  {id:21, date:"Jun 17",time:"1PM ET",   home:"Portugal",      away:"DR Congo",       venue:"Houston Stadium, Houston",                     group:"K",tv:"FS1 · Telemundo"},
-  {id:22, date:"Jun 17",time:"4PM ET",   home:"England",       away:"Croatia",        venue:"Dallas Stadium, Dallas",                       group:"L",tv:"FOX · Telemundo"},
-  {id:23, date:"Jun 17",time:"7PM ET",   home:"Ghana",         away:"Panama",         venue:"Toronto Stadium, Toronto",                     group:"L",tv:"FS1 · Telemundo"},
-  {id:24, date:"Jun 17",time:"10PM ET",  home:"Uzbekistan",    away:"Colombia",       venue:"Mexico City Stadium, Mexico City",              group:"K",tv:"FS1 · Telemundo"},
-  {id:25, date:"Jun 18",time:"12PM ET",  home:"Czechia",       away:"South Africa",   venue:"Atlanta Stadium, Atlanta",                     group:"A",tv:"FS1 · Telemundo"},
-  {id:26, date:"Jun 18",time:"3PM ET",   home:"Switzerland",   away:"Bosnia & Herz.", venue:"SoFi Stadium, Los Angeles",                    group:"B",tv:"FS1 · Telemundo"},
-  {id:27, date:"Jun 18",time:"6PM ET",   home:"Canada",        away:"Qatar",          venue:"BC Place, Vancouver",                          group:"B",tv:"FS1 · Telemundo"},
-  {id:28, date:"Jun 18",time:"9PM ET",   home:"Mexico",        away:"South Korea",    venue:"Estadio Guadalajara, Zapopan",                  group:"A",tv:"FS1 · Telemundo"},
-  {id:29, date:"Jun 19",time:"3PM ET",   home:"United States", away:"Australia",      venue:"Seattle Stadium, Seattle",                     group:"D",tv:"FOX · Telemundo"},
-  {id:30, date:"Jun 19",time:"6PM ET",   home:"Scotland",      away:"Morocco",        venue:"Boston Stadium, Boston",                        group:"C",tv:"FS1 · Telemundo"},
-  {id:31, date:"Jun 19",time:"8:30PM ET",home:"Brazil",        away:"Haiti",          venue:"Philadelphia Stadium, Philadelphia",            group:"C",tv:"FS1 · Telemundo"},
-  {id:32, date:"Jun 19",time:"11PM ET",  home:"Turkiye",       away:"Paraguay",       venue:"San Francisco Bay Area Stadium, San Francisco", group:"D",tv:"FS1 · Telemundo"},
-  {id:33, date:"Jun 20",time:"1PM ET",   home:"Netherlands",   away:"Sweden",         venue:"Houston Stadium, Houston",                     group:"F",tv:"FOX · Telemundo"},
-  {id:34, date:"Jun 20",time:"4PM ET",   home:"Germany",       away:"Ivory Coast",    venue:"Toronto Stadium, Toronto",                     group:"E",tv:"FS1 · Telemundo"},
-  {id:35, date:"Jun 20",time:"8PM ET",   home:"Ecuador",       away:"Curacao",        venue:"Kansas City Stadium, Kansas City",              group:"E",tv:"FS1 · Telemundo"},
-  {id:36, date:"Jun 20",time:"11:59PM ET",home:"Tunisia",      away:"Japan",          venue:"Estadio Monterrey, Guadalupe",                 group:"F",tv:"FS1 · Telemundo"},
-  {id:37, date:"Jun 21",time:"12PM ET",  home:"Spain",         away:"Saudi Arabia",   venue:"Atlanta Stadium, Atlanta",                     group:"H",tv:"FOX · Telemundo"},
-  {id:38, date:"Jun 21",time:"3PM ET",   home:"Belgium",       away:"Iran",           venue:"SoFi Stadium, Los Angeles",                    group:"G",tv:"FS1 · Telemundo"},
-  {id:39, date:"Jun 21",time:"6PM ET",   home:"Uruguay",       away:"Cape Verde",     venue:"Miami Stadium, Miami",                         group:"H",tv:"FS1 · Telemundo"},
-  {id:40, date:"Jun 21",time:"9PM ET",   home:"New Zealand",   away:"Egypt",          venue:"BC Place, Vancouver",                          group:"G",tv:"FS1 · Telemundo"},
-  {id:41, date:"Jun 22",time:"1PM ET",   home:"Argentina",     away:"Austria",        venue:"Dallas Stadium, Dallas",                       group:"J",tv:"FOX · Telemundo"},
-  {id:42, date:"Jun 22",time:"5PM ET",   home:"France",        away:"Iraq",           venue:"Philadelphia Stadium, Philadelphia",            group:"I",tv:"FS1 · Telemundo"},
-  {id:43, date:"Jun 22",time:"8PM ET",   home:"Norway",        away:"Senegal",        venue:"New York New Jersey Stadium, East Rutherford",  group:"I",tv:"FOX · Telemundo"},
-  {id:44, date:"Jun 22",time:"11PM ET",  home:"Jordan",        away:"Algeria",        venue:"San Francisco Bay Area Stadium, San Francisco", group:"J",tv:"FS1 · Telemundo"},
-  {id:45, date:"Jun 23",time:"1PM ET",   home:"Portugal",      away:"Uzbekistan",     venue:"Houston Stadium, Houston",                     group:"K",tv:"FS1 · Telemundo"},
-  {id:46, date:"Jun 23",time:"4PM ET",   home:"England",       away:"Ghana",          venue:"Boston Stadium, Boston",                        group:"L",tv:"FS1 · Telemundo"},
-  {id:47, date:"Jun 23",time:"7PM ET",   home:"Panama",        away:"Croatia",        venue:"Toronto Stadium, Toronto",                     group:"L",tv:"FOX · Telemundo"},
-  {id:48, date:"Jun 23",time:"10PM ET",  home:"Colombia",      away:"DR Congo",       venue:"Estadio Guadalajara, Zapopan",                  group:"K",tv:"FS1 · Telemundo"},
-  {id:49, date:"Jun 24",time:"3PM ET",   home:"Switzerland",   away:"Canada",         venue:"BC Place, Vancouver",                          group:"B",tv:"FS1 · Universo"},
-  {id:50, date:"Jun 24",time:"3PM ET",   home:"Bosnia & Herz.",away:"Qatar",          venue:"Seattle Stadium, Seattle",                     group:"B",tv:"FS1 · Universo"},
-  {id:51, date:"Jun 24",time:"6PM ET",   home:"Scotland",      away:"Brazil",         venue:"Miami Stadium, Miami",                         group:"C",tv:"FOX · Universo"},
-  {id:52, date:"Jun 24",time:"6PM ET",   home:"Morocco",       away:"Haiti",          venue:"Atlanta Stadium, Atlanta",                     group:"C",tv:"FS1 · Universo"},
-  {id:53, date:"Jun 24",time:"9PM ET",   home:"Czechia",       away:"Mexico",         venue:"Mexico City Stadium, Mexico City",              group:"A",tv:"FS1 · Universo"},
-  {id:54, date:"Jun 24",time:"9PM ET",   home:"South Africa",  away:"South Korea",    venue:"Estadio Monterrey, Guadalupe",                 group:"A",tv:"FS1 · Universo"},
-  {id:55, date:"Jun 25",time:"4PM ET",   home:"Curacao",       away:"Ivory Coast",    venue:"Philadelphia Stadium, Philadelphia",            group:"E",tv:"FS1 · Universo"},
-  {id:56, date:"Jun 25",time:"4PM ET",   home:"Ecuador",       away:"Germany",        venue:"New York New Jersey Stadium, East Rutherford",  group:"E",tv:"FOX · Universo"},
-  {id:57, date:"Jun 25",time:"7PM ET",   home:"Japan",         away:"Sweden",         venue:"Dallas Stadium, Dallas",                       group:"F",tv:"FS1 · Universo"},
-  {id:58, date:"Jun 25",time:"7PM ET",   home:"Tunisia",       away:"Netherlands",    venue:"Kansas City Stadium, Kansas City",              group:"F",tv:"FS1 · Universo"},
-  {id:59, date:"Jun 25",time:"10PM ET",  home:"Turkiye",       away:"United States",  venue:"SoFi Stadium, Los Angeles",                    group:"D",tv:"FS1 · Universo"},
-  {id:60, date:"Jun 25",time:"10PM ET",  home:"Paraguay",      away:"Australia",      venue:"San Francisco Bay Area Stadium, San Francisco", group:"D",tv:"FS1 · Universo"},
-  {id:61, date:"Jun 26",time:"3PM ET",   home:"Norway",        away:"France",         venue:"Boston Stadium, Boston",                        group:"I",tv:"FS1 · Universo"},
-  {id:62, date:"Jun 26",time:"3PM ET",   home:"Senegal",       away:"Iraq",           venue:"Toronto Stadium, Toronto",                     group:"I",tv:"FS1 · Universo"},
-  {id:63, date:"Jun 26",time:"8PM ET",   home:"Cape Verde",    away:"Saudi Arabia",   venue:"Houston Stadium, Houston",                     group:"H",tv:"FS1 · Universo"},
-  {id:64, date:"Jun 26",time:"8PM ET",   home:"Uruguay",       away:"Spain",          venue:"Estadio Guadalajara, Zapopan",                  group:"H",tv:"FOX · Universo"},
-  {id:65, date:"Jun 26",time:"11PM ET",  home:"Egypt",         away:"Iran",           venue:"Seattle Stadium, Seattle",                     group:"G",tv:"FS1 · Universo"},
-  {id:66, date:"Jun 26",time:"11PM ET",  home:"New Zealand",   away:"Belgium",        venue:"BC Place, Vancouver",                          group:"G",tv:"FS1 · Universo"},
-  {id:67, date:"Jun 27",time:"5PM ET",   home:"Panama",        away:"England",        venue:"New York New Jersey Stadium, East Rutherford",  group:"L",tv:"FOX · Universo"},
-  {id:68, date:"Jun 27",time:"5PM ET",   home:"Croatia",       away:"Ghana",          venue:"Philadelphia Stadium, Philadelphia",            group:"L",tv:"FS1 · Universo"},
-  {id:69, date:"Jun 27",time:"7:30PM ET",home:"Colombia",      away:"Portugal",       venue:"Miami Stadium, Miami",                         group:"K",tv:"FOX · Universo"},
-  {id:70, date:"Jun 27",time:"7:30PM ET",home:"DR Congo",      away:"Uzbekistan",     venue:"Atlanta Stadium, Atlanta",                     group:"K",tv:"FS1 · Universo"},
-  {id:71, date:"Jun 27",time:"10PM ET",  home:"Algeria",       away:"Austria",        venue:"Kansas City Stadium, Kansas City",              group:"J",tv:"FS1 · Universo"},
-  {id:72, date:"Jun 27",time:"10PM ET",  home:"Jordan",        away:"Argentina",      venue:"Dallas Stadium, Dallas",                       group:"J",tv:"FOX · Universo"},
+  {id:1,  date:"Jun 11",time:"3PM ET",   home:"Mexico",        away:"South Africa",   venue:"Mexico City Stadium, Mexico City",              group:"A",tv:"FOX · Peacock · Telemundo"},
+  {id:2,  date:"Jun 11",time:"10PM ET",  home:"South Korea",   away:"Czechia",        venue:"Estadio Guadalajara, Zapopan",                  group:"A",tv:"FS1 · Peacock · Telemundo"},
+  {id:3,  date:"Jun 12",time:"3PM ET",   home:"Canada",        away:"Bosnia & Herz.", venue:"Toronto Stadium, Toronto",                      group:"B",tv:"FS1 · Peacock · Telemundo"},
+  {id:4,  date:"Jun 12",time:"9PM ET",   home:"United States", away:"Paraguay",       venue:"SoFi Stadium, Los Angeles",                    group:"D",tv:"FOX · Peacock · Telemundo"},
+  {id:5,  date:"Jun 13",time:"3PM ET",   home:"Qatar",         away:"Switzerland",    venue:"San Francisco Bay Area Stadium, San Francisco", group:"B",tv:"FS1 · Peacock · Telemundo"},
+  {id:6,  date:"Jun 13",time:"6PM ET",   home:"Brazil",        away:"Morocco",        venue:"New York New Jersey Stadium, East Rutherford",  group:"C",tv:"FOX · Peacock · Telemundo"},
+  {id:7,  date:"Jun 13",time:"9PM ET",   home:"Haiti",         away:"Scotland",       venue:"Boston Stadium, Boston",                        group:"C",tv:"FS1 · Peacock · Telemundo"},
+  {id:8,  date:"Jun 13",time:"11:59PM ET",home:"Australia",    away:"Turkiye",        venue:"BC Place, Vancouver",                          group:"D",tv:"FS1 · Peacock · Telemundo"},
+  {id:9,  date:"Jun 14",time:"1PM ET",   home:"Germany",       away:"Curacao",        venue:"Houston Stadium, Houston",                     group:"E",tv:"FS1 · Peacock · Telemundo"},
+  {id:10, date:"Jun 14",time:"4PM ET",   home:"Netherlands",   away:"Japan",          venue:"Dallas Stadium, Dallas",                       group:"F",tv:"FS1 · Peacock · Telemundo"},
+  {id:11, date:"Jun 14",time:"7PM ET",   home:"Ivory Coast",   away:"Ecuador",        venue:"Philadelphia Stadium, Philadelphia",            group:"E",tv:"FS1 · Peacock · Telemundo"},
+  {id:12, date:"Jun 14",time:"10PM ET",  home:"Sweden",        away:"Tunisia",        venue:"Estadio Monterrey, Guadalupe",                 group:"F",tv:"FS1 · Peacock · Telemundo"},
+  {id:13, date:"Jun 15",time:"12PM ET",  home:"Spain",         away:"Cape Verde",     venue:"Atlanta Stadium, Atlanta",                     group:"H",tv:"FOX · Peacock · Telemundo"},
+  {id:14, date:"Jun 15",time:"3PM ET",   home:"Belgium",       away:"Egypt",          venue:"BC Place, Vancouver",                          group:"G",tv:"FS1 · Peacock · Telemundo"},
+  {id:15, date:"Jun 15",time:"6PM ET",   home:"Saudi Arabia",  away:"Uruguay",        venue:"Miami Stadium, Miami",                         group:"H",tv:"FOX · Peacock · Telemundo"},
+  {id:16, date:"Jun 15",time:"9PM ET",   home:"Iran",          away:"New Zealand",    venue:"SoFi Stadium, Los Angeles",                    group:"G",tv:"FS1 · Peacock · Telemundo"},
+  {id:17, date:"Jun 16",time:"3PM ET",   home:"France",        away:"Senegal",        venue:"New York New Jersey Stadium, East Rutherford",  group:"I",tv:"FOX · Peacock · Telemundo"},
+  {id:18, date:"Jun 16",time:"6PM ET",   home:"Iraq",          away:"Norway",         venue:"Boston Stadium, Boston",                        group:"I",tv:"FS1 · Peacock · Telemundo"},
+  {id:19, date:"Jun 16",time:"9PM ET",   home:"Argentina",     away:"Algeria",        venue:"Kansas City Stadium, Kansas City",              group:"J",tv:"FOX · Peacock · Telemundo"},
+  {id:20, date:"Jun 16",time:"11:59PM ET",home:"Austria",      away:"Jordan",         venue:"San Francisco Bay Area Stadium, San Francisco", group:"J",tv:"FS1 · Peacock · Telemundo"},
+  {id:21, date:"Jun 17",time:"1PM ET",   home:"Portugal",      away:"DR Congo",       venue:"Houston Stadium, Houston",                     group:"K",tv:"FS1 · Peacock · Telemundo"},
+  {id:22, date:"Jun 17",time:"4PM ET",   home:"England",       away:"Croatia",        venue:"Dallas Stadium, Dallas",                       group:"L",tv:"FOX · Peacock · Telemundo"},
+  {id:23, date:"Jun 17",time:"7PM ET",   home:"Ghana",         away:"Panama",         venue:"Toronto Stadium, Toronto",                     group:"L",tv:"FS1 · Peacock · Telemundo"},
+  {id:24, date:"Jun 17",time:"10PM ET",  home:"Uzbekistan",    away:"Colombia",       venue:"Mexico City Stadium, Mexico City",              group:"K",tv:"FS1 · Peacock · Telemundo"},
+  {id:25, date:"Jun 18",time:"12PM ET",  home:"Czechia",       away:"South Africa",   venue:"Atlanta Stadium, Atlanta",                     group:"A",tv:"FS1 · Peacock · Telemundo"},
+  {id:26, date:"Jun 18",time:"3PM ET",   home:"Switzerland",   away:"Bosnia & Herz.", venue:"SoFi Stadium, Los Angeles",                    group:"B",tv:"FS1 · Peacock · Telemundo"},
+  {id:27, date:"Jun 18",time:"6PM ET",   home:"Canada",        away:"Qatar",          venue:"BC Place, Vancouver",                          group:"B",tv:"FS1 · Peacock · Telemundo"},
+  {id:28, date:"Jun 18",time:"9PM ET",   home:"Mexico",        away:"South Korea",    venue:"Estadio Guadalajara, Zapopan",                  group:"A",tv:"FS1 · Peacock · Telemundo"},
+  {id:29, date:"Jun 19",time:"3PM ET",   home:"United States", away:"Australia",      venue:"Seattle Stadium, Seattle",                     group:"D",tv:"FOX · Peacock · Telemundo"},
+  {id:30, date:"Jun 19",time:"6PM ET",   home:"Scotland",      away:"Morocco",        venue:"Boston Stadium, Boston",                        group:"C",tv:"FS1 · Peacock · Telemundo"},
+  {id:31, date:"Jun 19",time:"8:30PM ET",home:"Brazil",        away:"Haiti",          venue:"Philadelphia Stadium, Philadelphia",            group:"C",tv:"FS1 · Peacock · Telemundo"},
+  {id:32, date:"Jun 19",time:"11PM ET",  home:"Turkiye",       away:"Paraguay",       venue:"San Francisco Bay Area Stadium, San Francisco", group:"D",tv:"FS1 · Peacock · Telemundo"},
+  {id:33, date:"Jun 20",time:"1PM ET",   home:"Netherlands",   away:"Sweden",         venue:"Houston Stadium, Houston",                     group:"F",tv:"FOX · Peacock · Telemundo"},
+  {id:34, date:"Jun 20",time:"4PM ET",   home:"Germany",       away:"Ivory Coast",    venue:"Toronto Stadium, Toronto",                     group:"E",tv:"FS1 · Peacock · Telemundo"},
+  {id:35, date:"Jun 20",time:"8PM ET",   home:"Ecuador",       away:"Curacao",        venue:"Kansas City Stadium, Kansas City",              group:"E",tv:"FS1 · Peacock · Telemundo"},
+  {id:36, date:"Jun 20",time:"11:59PM ET",home:"Tunisia",      away:"Japan",          venue:"Estadio Monterrey, Guadalupe",                 group:"F",tv:"FS1 · Peacock · Telemundo"},
+  {id:37, date:"Jun 21",time:"12PM ET",  home:"Spain",         away:"Saudi Arabia",   venue:"Atlanta Stadium, Atlanta",                     group:"H",tv:"FOX · Peacock · Telemundo"},
+  {id:38, date:"Jun 21",time:"3PM ET",   home:"Belgium",       away:"Iran",           venue:"SoFi Stadium, Los Angeles",                    group:"G",tv:"FS1 · Peacock · Telemundo"},
+  {id:39, date:"Jun 21",time:"6PM ET",   home:"Uruguay",       away:"Cape Verde",     venue:"Miami Stadium, Miami",                         group:"H",tv:"FS1 · Peacock · Telemundo"},
+  {id:40, date:"Jun 21",time:"9PM ET",   home:"New Zealand",   away:"Egypt",          venue:"BC Place, Vancouver",                          group:"G",tv:"FS1 · Peacock · Telemundo"},
+  {id:41, date:"Jun 22",time:"1PM ET",   home:"Argentina",     away:"Austria",        venue:"Dallas Stadium, Dallas",                       group:"J",tv:"FOX · Peacock · Telemundo"},
+  {id:42, date:"Jun 22",time:"5PM ET",   home:"France",        away:"Iraq",           venue:"Philadelphia Stadium, Philadelphia",            group:"I",tv:"FS1 · Peacock · Telemundo"},
+  {id:43, date:"Jun 22",time:"8PM ET",   home:"Norway",        away:"Senegal",        venue:"New York New Jersey Stadium, East Rutherford",  group:"I",tv:"FOX · Peacock · Telemundo"},
+  {id:44, date:"Jun 22",time:"11PM ET",  home:"Jordan",        away:"Algeria",        venue:"San Francisco Bay Area Stadium, San Francisco", group:"J",tv:"FS1 · Peacock · Telemundo"},
+  {id:45, date:"Jun 23",time:"1PM ET",   home:"Portugal",      away:"Uzbekistan",     venue:"Houston Stadium, Houston",                     group:"K",tv:"FS1 · Peacock · Telemundo"},
+  {id:46, date:"Jun 23",time:"4PM ET",   home:"England",       away:"Ghana",          venue:"Boston Stadium, Boston",                        group:"L",tv:"FS1 · Peacock · Telemundo"},
+  {id:47, date:"Jun 23",time:"7PM ET",   home:"Panama",        away:"Croatia",        venue:"Toronto Stadium, Toronto",                     group:"L",tv:"FOX · Peacock · Telemundo"},
+  {id:48, date:"Jun 23",time:"10PM ET",  home:"Colombia",      away:"DR Congo",       venue:"Estadio Guadalajara, Zapopan",                  group:"K",tv:"FS1 · Peacock · Telemundo"},
+  {id:49, date:"Jun 24",time:"3PM ET",   home:"Switzerland",   away:"Canada",         venue:"BC Place, Vancouver",                          group:"B",tv:"FS1 · Peacock · Universo"},
+  {id:50, date:"Jun 24",time:"3PM ET",   home:"Bosnia & Herz.",away:"Qatar",          venue:"Seattle Stadium, Seattle",                     group:"B",tv:"FS1 · Peacock · Universo"},
+  {id:51, date:"Jun 24",time:"6PM ET",   home:"Scotland",      away:"Brazil",         venue:"Miami Stadium, Miami",                         group:"C",tv:"FOX · Peacock · Universo"},
+  {id:52, date:"Jun 24",time:"6PM ET",   home:"Morocco",       away:"Haiti",          venue:"Atlanta Stadium, Atlanta",                     group:"C",tv:"FS1 · Peacock · Universo"},
+  {id:53, date:"Jun 24",time:"9PM ET",   home:"Czechia",       away:"Mexico",         venue:"Mexico City Stadium, Mexico City",              group:"A",tv:"FS1 · Peacock · Universo"},
+  {id:54, date:"Jun 24",time:"9PM ET",   home:"South Africa",  away:"South Korea",    venue:"Estadio Monterrey, Guadalupe",                 group:"A",tv:"FS1 · Peacock · Universo"},
+  {id:55, date:"Jun 25",time:"4PM ET",   home:"Curacao",       away:"Ivory Coast",    venue:"Philadelphia Stadium, Philadelphia",            group:"E",tv:"FS1 · Peacock · Universo"},
+  {id:56, date:"Jun 25",time:"4PM ET",   home:"Ecuador",       away:"Germany",        venue:"New York New Jersey Stadium, East Rutherford",  group:"E",tv:"FOX · Peacock · Universo"},
+  {id:57, date:"Jun 25",time:"7PM ET",   home:"Japan",         away:"Sweden",         venue:"Dallas Stadium, Dallas",                       group:"F",tv:"FS1 · Peacock · Universo"},
+  {id:58, date:"Jun 25",time:"7PM ET",   home:"Tunisia",       away:"Netherlands",    venue:"Kansas City Stadium, Kansas City",              group:"F",tv:"FS1 · Peacock · Universo"},
+  {id:59, date:"Jun 25",time:"10PM ET",  home:"Turkiye",       away:"United States",  venue:"SoFi Stadium, Los Angeles",                    group:"D",tv:"FS1 · Peacock · Universo"},
+  {id:60, date:"Jun 25",time:"10PM ET",  home:"Paraguay",      away:"Australia",      venue:"San Francisco Bay Area Stadium, San Francisco", group:"D",tv:"FS1 · Peacock · Universo"},
+  {id:61, date:"Jun 26",time:"3PM ET",   home:"Norway",        away:"France",         venue:"Boston Stadium, Boston",                        group:"I",tv:"FS1 · Peacock · Universo"},
+  {id:62, date:"Jun 26",time:"3PM ET",   home:"Senegal",       away:"Iraq",           venue:"Toronto Stadium, Toronto",                     group:"I",tv:"FS1 · Peacock · Universo"},
+  {id:63, date:"Jun 26",time:"8PM ET",   home:"Cape Verde",    away:"Saudi Arabia",   venue:"Houston Stadium, Houston",                     group:"H",tv:"FS1 · Peacock · Universo"},
+  {id:64, date:"Jun 26",time:"8PM ET",   home:"Uruguay",       away:"Spain",          venue:"Estadio Guadalajara, Zapopan",                  group:"H",tv:"FOX · Peacock · Universo"},
+  {id:65, date:"Jun 26",time:"11PM ET",  home:"Egypt",         away:"Iran",           venue:"Seattle Stadium, Seattle",                     group:"G",tv:"FS1 · Peacock · Universo"},
+  {id:66, date:"Jun 26",time:"11PM ET",  home:"New Zealand",   away:"Belgium",        venue:"BC Place, Vancouver",                          group:"G",tv:"FS1 · Peacock · Universo"},
+  {id:67, date:"Jun 27",time:"5PM ET",   home:"Panama",        away:"England",        venue:"New York New Jersey Stadium, East Rutherford",  group:"L",tv:"FOX · Peacock · Universo"},
+  {id:68, date:"Jun 27",time:"5PM ET",   home:"Croatia",       away:"Ghana",          venue:"Philadelphia Stadium, Philadelphia",            group:"L",tv:"FS1 · Peacock · Universo"},
+  {id:69, date:"Jun 27",time:"7:30PM ET",home:"Colombia",      away:"Portugal",       venue:"Miami Stadium, Miami",                         group:"K",tv:"FOX · Peacock · Universo"},
+  {id:70, date:"Jun 27",time:"7:30PM ET",home:"DR Congo",      away:"Uzbekistan",     venue:"Atlanta Stadium, Atlanta",                     group:"K",tv:"FS1 · Peacock · Universo"},
+  {id:71, date:"Jun 27",time:"10PM ET",  home:"Algeria",       away:"Austria",        venue:"Kansas City Stadium, Kansas City",              group:"J",tv:"FS1 · Peacock · Universo"},
+  {id:72, date:"Jun 27",time:"10PM ET",  home:"Jordan",        away:"Argentina",      venue:"Dallas Stadium, Dallas",                       group:"J",tv:"FOX · Peacock · Universo"},
   {id:73, date:"Jun 28",time:"3PM ET",   home:"R32 M1",  away:"TBD",venue:"SoFi Stadium, Los Angeles",             group:"",stage:"Round of 32",tv:"FS1"},
   {id:74, date:"Jun 29",time:"1PM ET",   home:"R32 M2",  away:"TBD",venue:"Houston Stadium, Houston",              group:"",stage:"Round of 32",tv:"FS1"},
   {id:75, date:"Jun 29",time:"4:30PM ET",home:"R32 M3",  away:"TBD",venue:"Boston Stadium, Boston",                group:"",stage:"Round of 32",tv:"FS1"},
@@ -451,7 +451,52 @@ function LiveScoresProvider({ children }) {
   return <LiveScoresCtx.Provider value={{scores,allFixtures,getScore,isLive,isFinished,lastFetch}}>{children}</LiveScoresCtx.Provider>;
 }
 
-// ── VENUE DATA ────────────────────────────────────────────────────────────
+// ── BROADCAST DATA BY COUNTRY ─────────────────────────────────────────────
+// Maps country code → broadcaster info
+// "fox" matches = FOX/FS1, "bbc" = BBC/ITV, etc.
+// Each entry: { primary, streaming, note }
+const BROADCAST = {
+  // North America
+  US: { primary:"FOX · FS1 · Telemundo",   streaming:"Peacock · Tubi (free) · fuboTV", note:"🇺🇸" },
+  CA: { primary:"CTV · TSN · RDS",          streaming:"CTV.ca (free) · TSN+",           note:"🇨🇦" },
+  MX: { primary:"Televisa · TV Azteca",     streaming:"ViX (free) · Claro Sports",      note:"🇲🇽" },
+  GB: { primary:"ITV · BBC",               streaming:"ITVX (free) · BBC iPlayer",       note:"🇬🇧" },
+  DE: { primary:"ARD · ZDF",               streaming:"ARD Mediathek (free)",            note:"🇩🇪" },
+  FR: { primary:"TF1 · beIN Sports",       streaming:"TF1+ (free) · Canal+",            note:"🇫🇷" },
+  ES: { primary:"RTVE · Mediaset",         streaming:"RTVE Play (free)",               note:"🇪🇸" },
+  IT: { primary:"RAI · Sky Sport",         streaming:"RAI Play (free)",                note:"🇮🇹" },
+  PT: { primary:"RTP · Sport TV",          streaming:"RTP Play (free)",                note:"🇵🇹" },
+  NL: { primary:"NOS",                    streaming:"NOS.nl (free)",                   note:"🇳🇱" },
+  BE: { primary:"RTBF · VRT",             streaming:"RTBF Auvio (free)",               note:"🇧🇪" },
+  NO: { primary:"TV 2",                  streaming:"TV 2 Play",                        note:"🇳🇴" },
+  AR: { primary:"TyC Sports · Telefe",    streaming:"TyC Sports Play",                 note:"🇦🇷" },
+  BR: { primary:"Globo · SBT · SporTV",   streaming:"Cazé TV (YouTube, free) · Globoplay", note:"🇧🇷" },
+  CO: { primary:"Caracol · RCN",          streaming:"Caracol Play (free)",              note:"🇨🇴" },
+  AU: { primary:"SBS",                   streaming:"SBS On Demand (free)",             note:"🇦🇺" },
+  JP: { primary:"NHK · ABEMA",           streaming:"ABEMA (free)",                    note:"🇯🇵" },
+  KR: { primary:"KBS · SBS",             streaming:"WAVVE",                           note:"🇰🇷" },
+  ZA: { primary:"SABC · SuperSport",     streaming:"SuperSport streaming",            note:"🇿🇦" },
+  DEFAULT: { primary:"FOX · FS1",        streaming:"Peacock · Tubi (free)",           note:"🌍" },
+};
+
+// Detect user country via IP geolocation (free, no key needed)
+function useCountry() {
+  const [country, setCountry] = useState("US"); // default US
+  useEffect(() => {
+    fetch("https://ipapi.co/json/")
+      .then(r => r.json())
+      .then(d => { if (d?.country_code) setCountry(d.country_code); })
+      .catch(() => {}); // silently fail — stays US
+  }, []);
+  return country;
+}
+
+function getBroadcast(countryCode) {
+  return BROADCAST[countryCode] || BROADCAST.DEFAULT;
+}
+
+
+const CountryCtx = createContext("US");
 const VENUE_COORDS = {"Mexico City Stadium, Mexico City":"19.3029,-99.1505","Estadio Guadalajara, Zapopan":"20.6867,-103.4079","Toronto Stadium, Toronto":"43.6333,-79.3891","SoFi Stadium, Los Angeles":"33.9535,-118.3392","San Francisco Bay Area Stadium, San Francisco":"37.4031,-121.9694","New York New Jersey Stadium, East Rutherford":"40.8135,-74.0745","Boston Stadium, Boston":"42.3467,-71.0972","BC Place, Vancouver":"49.2767,-123.1115","Houston Stadium, Houston":"29.6847,-95.4107","Dallas Stadium, Dallas":"32.7474,-97.0945","Philadelphia Stadium, Philadelphia":"39.9012,-75.1675","Estadio Monterrey, Guadalupe":"25.6694,-100.2436","Atlanta Stadium, Atlanta":"33.7553,-84.4006","Miami Stadium, Miami":"25.9580,-80.2389","Kansas City Stadium, Kansas City":"39.0489,-94.4839","Seattle Stadium, Seattle":"47.5952,-122.3316"};
 const VENUE_TZ = {"Mexico City Stadium, Mexico City":"America/Mexico_City","Estadio Guadalajara, Zapopan":"America/Mexico_City","Estadio Monterrey, Guadalupe":"America/Monterrey","Toronto Stadium, Toronto":"America/Toronto","BC Place, Vancouver":"America/Vancouver","SoFi Stadium, Los Angeles":"America/Los_Angeles","San Francisco Bay Area Stadium, San Francisco":"America/Los_Angeles","Seattle Stadium, Seattle":"America/Los_Angeles","Dallas Stadium, Dallas":"America/Chicago","Houston Stadium, Houston":"America/Chicago","Kansas City Stadium, Kansas City":"America/Chicago","New York New Jersey Stadium, East Rutherford":"America/New_York","Boston Stadium, Boston":"America/New_York","Philadelphia Stadium, Philadelphia":"America/New_York","Atlanta Stadium, Atlanta":"America/New_York","Miami Stadium, Miami":"America/New_York"};
 const MATCH_UTC = {1:"2026-06-11T19:00:00Z",2:"2026-06-12T02:00:00Z",3:"2026-06-12T19:00:00Z",4:"2026-06-13T01:00:00Z",5:"2026-06-13T19:00:00Z",6:"2026-06-13T22:00:00Z",7:"2026-06-14T01:00:00Z",8:"2026-06-14T03:59:00Z",9:"2026-06-14T17:00:00Z",10:"2026-06-14T20:00:00Z",11:"2026-06-14T23:00:00Z",12:"2026-06-15T02:00:00Z",13:"2026-06-15T16:00:00Z",14:"2026-06-15T19:00:00Z",15:"2026-06-15T22:00:00Z",16:"2026-06-16T01:00:00Z",17:"2026-06-16T19:00:00Z",18:"2026-06-16T22:00:00Z",19:"2026-06-17T01:00:00Z",20:"2026-06-17T03:59:00Z",21:"2026-06-17T17:00:00Z",22:"2026-06-17T20:00:00Z",23:"2026-06-17T23:00:00Z",24:"2026-06-18T02:00:00Z",25:"2026-06-18T16:00:00Z",26:"2026-06-18T19:00:00Z",27:"2026-06-18T22:00:00Z",28:"2026-06-19T01:00:00Z",29:"2026-06-19T19:00:00Z",30:"2026-06-19T22:00:00Z",31:"2026-06-20T00:30:00Z",32:"2026-06-20T03:00:00Z",33:"2026-06-20T17:00:00Z",34:"2026-06-20T20:00:00Z",35:"2026-06-21T01:00:00Z",36:"2026-06-21T03:59:00Z",37:"2026-06-21T16:00:00Z",38:"2026-06-21T19:00:00Z",39:"2026-06-21T22:00:00Z",40:"2026-06-22T01:00:00Z",41:"2026-06-22T17:00:00Z",42:"2026-06-22T21:00:00Z",43:"2026-06-23T00:00:00Z",44:"2026-06-23T03:00:00Z",45:"2026-06-23T17:00:00Z",46:"2026-06-23T20:00:00Z",47:"2026-06-23T23:00:00Z",48:"2026-06-24T02:00:00Z",49:"2026-06-24T19:00:00Z",50:"2026-06-24T19:00:00Z",51:"2026-06-24T22:00:00Z",52:"2026-06-24T22:00:00Z",53:"2026-06-25T01:00:00Z",54:"2026-06-25T01:00:00Z",55:"2026-06-25T20:00:00Z",56:"2026-06-25T20:00:00Z",57:"2026-06-25T23:00:00Z",58:"2026-06-25T23:00:00Z",59:"2026-06-26T02:00:00Z",60:"2026-06-26T02:00:00Z",61:"2026-06-26T19:00:00Z",62:"2026-06-26T19:00:00Z",63:"2026-06-27T00:00:00Z",64:"2026-06-27T00:00:00Z",65:"2026-06-27T03:00:00Z",66:"2026-06-27T03:00:00Z",67:"2026-06-27T21:00:00Z",68:"2026-06-27T21:00:00Z",69:"2026-06-27T23:30:00Z",70:"2026-06-27T23:30:00Z",71:"2026-06-28T02:00:00Z",72:"2026-06-28T02:00:00Z"};
@@ -616,6 +661,7 @@ function AddModal({ match, open, onClose, onCal, onRem }) {
 // ── MATCH CARD ─────────────────────────────────────────────────────────────
 function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="" }) {
   const { favTeams=[] } = useContext(FavCtx);
+  const country = useContext(CountryCtx);
   const { getScore } = useContext(LiveScoresCtx);
   const sc = getScore(m.home, m.away);
   const live = sc ? statusIsLive(sc.status) : false;
@@ -625,76 +671,106 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="" 
   let winner = null;
   if(isKO && finished && hasScore) { if(sc.hg>sc.ag) winner=m.home; else if(sc.ag>sc.hg) winner=m.away; }
   const isFav = favTeams?.length && (favTeams.includes(m.home) || favTeams.includes(m.away));
-  const cardBg = finished ? `linear-gradient(135deg,#080f0a,#0a1410)` : live ? `linear-gradient(135deg,#0a1f10,#0d2815)` : `linear-gradient(135deg,${C.s1},${C.s2})`;
+  const cardBg = live ? `linear-gradient(135deg,${C.s1},${C.s2})` : `linear-gradient(135deg,${C.s1},${C.s2})`;
   const { localTime, venueTime } = matchTimes(m);
   const venueTz = VENUE_TZ[m.venue];
   const venueTzShort = venueTz ? new Intl.DateTimeFormat("en-US",{timeZoneName:"short",timeZone:venueTz}).formatToParts(new Date()).find(p=>p.type==="timeZoneName")?.value : "";
   const userTzShort = new Intl.DateTimeFormat("en-US",{timeZoneName:"short"}).formatToParts(new Date()).find(p=>p.type==="timeZoneName")?.value || "";
   const displayTime = timeMode === "venue" ? (venueTime || localTime) : localTime;
   const tzLabel = timeMode === "venue" ? venueTzShort : userTzShort;
-  return (
-    <Card style={{marginBottom:8,border:`1px solid ${live?C.greenS:isFav?`${C.gold}66`:C.b1}`,background:cardBg,opacity:finished?0.75:1}}>
-      <div style={{padding:"11px 13px"}}>
-        <div style={{display:"flex",justifyContent:"space-between",marginBottom:7}}>
-          {m.group ? <Badge>Group {m.group}</Badge> : <Badge color={C.gold}>{m.stage||"Knockout"}</Badge>}
-          <div style={{textAlign:"right"}}>
-            <span style={{fontSize:11,color:timeMode==="venue"?C.gold:C.dim}}>{displayTime}</span>
-            <span style={{fontSize:10,color:C.dim,marginLeft:3}}>{tzLabel}</span>
-          </div>
-        </div>
-        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:7}}>
-          <Crest team={m.home} size={24}/>
-          <span style={{fontWeight:winner===m.home?800:700,color:finished?(winner===m.home?C.green:C.dim):favTeams?.includes(m.home)?C.gold:C.text,flex:1,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textShadow:winner===m.home?`0 0 12px ${C.green}66`:favTeams?.includes(m.home)?`0 0 8px ${C.gold}44`:"none"}}>{m.home}</span>
-          {hasScore ? (
-            <div style={{textAlign:"center",minWidth:64}}>
-              <div style={{fontWeight:900,fontSize:22,color:live?C.green:finished?C.text:C.gold,fontFamily:"monospace",lineHeight:1}}>{sc.hg} – {sc.ag}</div>
-              {statusLabel(sc.status,sc.elapsed) && <div style={{fontSize:10,fontWeight:700,marginTop:2,color:live?C.green:C.dim}}>{live?"🔴 ":""}{statusLabel(sc.status,sc.elapsed)}</div>}
-            </div>
-          ) : (
-            <span style={{fontSize:11,color:C.dim,fontWeight:700,minWidth:40,textAlign:"center"}}>VS</span>
-          )}
-          <span style={{fontWeight:winner===m.away?800:700,color:finished?(winner===m.away?C.green:C.dim):favTeams?.includes(m.away)?C.gold:C.text,flex:1,fontSize:14,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textShadow:winner===m.away?`0 0 12px ${C.green}66`:favTeams?.includes(m.away)?`0 0 8px ${C.gold}44`:"none"}}>{m.away}</span>
-          <Crest team={m.away} size={24}/>
-        </div>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:m.tv?5:0}}>
-          <span onClick={()=>openMaps(m.venue)} style={{fontSize:11,color:C.blue,cursor:"pointer"}}>📍 <span style={{textDecoration:"underline",textDecorationStyle:"dotted"}}>{m.venue}</span></span>
-          <div style={{display:"flex",gap:6,alignItems:"center",flexShrink:0}}>
-            {/* Share button */}
-            <button onClick={e=>{
-              e.stopPropagation();
-              const base = window.location.origin;
-              const params = new URLSearchParams({
-                home: m.home,
-                away: m.away,
-                ...(hasScore ? {hg: sc.hg, ag: sc.ag} : {}),
-                ...(m.group ? {group: m.group} : {stage: m.stage||"World Cup 2026"}),
-                date: m.date,
-                venue: m.venue.split(",")[0], // just the stadium name
-              });
-              const imageUrl = `${base}/api/og?${params}`;
-              const appUrl = base;
-              const txt = hasScore
-                ? `⚽ ${m.home} ${sc.hg}–${sc.ag} ${m.away} • ${m.group?"Group "+m.group:m.stage||"World Cup 2026"} • ${m.date}\n${appUrl}`
-                : `⚽ ${m.home} vs ${m.away} • ${m.group?"Group "+m.group:m.stage||"World Cup 2026"} • ${m.date} ${m.time}\n${appUrl}`;
-              if(navigator.share) {
-                navigator.share({
-                  title: `${m.home} vs ${m.away} — World Cup 2026`,
-                  text: txt,
-                  url: imageUrl,
-                }).catch(()=>{});
-              } else {
-                navigator.clipboard?.writeText(txt);
-              }
-            }} style={{background:"none",border:"none",color:C.dim,fontSize:14,cursor:"pointer",padding:"2px 4px"}} title="Share">📤</button>
-            {/* Events/details button */}
-            {onMatchTap && m.group && <button onClick={()=>onMatchTap(m)} style={{background:`${C.blue}18`,border:`1px solid ${C.blue}33`,color:C.blue,padding:"3px 9px",borderRadius:20,fontSize:11,fontWeight:600,cursor:"pointer"}}>Match Events</button>}
-            {!finished && <button onClick={()=>onAction(m)} style={{background:`${C.green}22`,border:`1px solid ${C.greenS}`,color:C.green,padding:"3px 11px",borderRadius:20,fontSize:11,fontWeight:600,cursor:"pointer"}}>+ Add</button>}
-            {finished && <span style={{fontSize:10,color:C.dim,fontStyle:"italic"}}>Final</span>}
-          </div>
-        </div>
-        {m.tv && <div style={{fontSize:11,color:finished?C.dim:C.gold}}>📺 {m.tv}</div>}
+  const bc = getBroadcast(country);
+  const isUS = country === "US" || !BROADCAST[country];
+
+  const teamRow = (team, isHome) => {
+    const isWinner = winner === team;
+    const isFavTeam = favTeams?.includes(team);
+    const homeScore = isHome ? sc?.hg : sc?.ag;
+    const awayScore = isHome ? sc?.ag : sc?.hg;
+    return (
+      <div style={{display:"flex",alignItems:"center",gap:10,padding:"9px 14px",borderBottom:isHome?`1px solid ${C.b1}`:"none"}}>
+        <Crest team={team} size={28}/>
+        <span style={{
+          flex:1, fontSize:15, fontWeight: isWinner?800:600,
+          color: finished ? (isWinner?C.text:C.dim) : isFavTeam?C.gold:C.text,
+          overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
+        }}>{team}</span>
+        {hasScore && (
+          <span style={{
+            fontSize:22,fontWeight:900,fontFamily:"monospace",
+            color: live?C.green : isWinner?C.text : finished?C.dim:C.text,
+            minWidth:24,textAlign:"right"
+          }}>{isHome ? sc.hg : sc.ag}</span>
+        )}
       </div>
-    </Card>
+    );
+  };
+
+  return (
+    <div style={{
+      marginBottom:8,
+      background:C.s1,
+      border:`1px solid ${live?C.green:isFav?`${C.gold}55`:C.b1}`,
+      borderRadius:12,
+      overflow:"hidden",
+      opacity:finished?0.8:1,
+    }}>
+      {/* Header: venue + group/stage + time */}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 14px",borderBottom:`1px solid ${C.b1}`,background:C.s2}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,minWidth:0}}>
+          {m.group
+            ? <span style={{fontSize:11,fontWeight:700,color:C.green,background:`${C.green}18`,padding:"2px 8px",borderRadius:10,flexShrink:0}}>Group {m.group}</span>
+            : <span style={{fontSize:11,fontWeight:700,color:C.gold,background:`${C.gold}18`,padding:"2px 8px",borderRadius:10,flexShrink:0}}>{m.stage||"Knockout"}</span>
+          }
+          <span onClick={()=>openMaps(m.venue)} style={{fontSize:11,color:C.dim,cursor:"pointer",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+            {m.venue.split(",")[0]}
+          </span>
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
+          {live && <span style={{fontSize:10,fontWeight:700,color:C.green,animation:"pulse 1s infinite"}}>🔴</span>}
+          {live && statusLabel(sc.status,sc.elapsed) && <span style={{fontSize:11,fontWeight:700,color:C.green}}>{statusLabel(sc.status,sc.elapsed)}</span>}
+          {!live && <span style={{fontSize:12,fontWeight:600,color:timeMode==="venue"?C.gold:C.text}}>{displayTime}</span>}
+          {!live && <span style={{fontSize:10,color:C.dim}}>{tzLabel}</span>}
+          {finished && <span style={{fontSize:10,color:C.dim,fontStyle:"italic",marginLeft:2}}>FT</span>}
+        </div>
+      </div>
+
+      {/* Teams */}
+      {teamRow(m.home, true)}
+      {teamRow(m.away, false)}
+
+      {/* Footer: TV + actions */}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"6px 14px",borderTop:`1px solid ${C.b1}`,background:C.s2}}>
+        <div style={{fontSize:11,color:finished?C.dim:C.gold,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1}}>
+          {m.tv && <>📺 {isUS ? m.tv : `${bc.primary}`}</>}
+        </div>
+        <div style={{display:"flex",gap:5,alignItems:"center",flexShrink:0}}>
+          {/* Share */}
+          <button onClick={e=>{
+            e.stopPropagation();
+            const base = window.location.origin;
+            const p1 = PREDS.find(x=>x.team===m.home);
+            const p2 = PREDS.find(x=>x.team===m.away);
+            const params = new URLSearchParams({
+              home:m.home, away:m.away,
+              ...(hasScore?{hg:sc.hg,ag:sc.ag}:{}),
+              ...(m.group?{group:m.group}:{stage:m.stage||"World Cup 2026"}),
+              date:m.date, venue:m.venue.split(",")[0],
+              ...(!hasScore&&p1?{p1:p1.poly}:{}),
+              ...(!hasScore&&p2?{p2:p2.poly}:{}),
+              v:Date.now(),
+            });
+            const imageUrl=`${base}/api/og?${params}`;
+            const txt=hasScore?`⚽ ${m.home} ${sc.hg}–${sc.ag} ${m.away} • ${m.group?"Group "+m.group:m.stage||"World Cup 2026"} • ${m.date}\n${base}`:`⚽ ${m.home} vs ${m.away} • ${m.group?"Group "+m.group:m.stage||"World Cup 2026"} • ${m.date} ${m.time}\n${base}`;
+            if(navigator.share) navigator.share({title:`${m.home} vs ${m.away} — World Cup 2026`,text:txt,url:imageUrl}).catch(()=>{});
+            else navigator.clipboard?.writeText(txt);
+          }} style={{background:"none",border:"none",color:C.dim,fontSize:14,cursor:"pointer",padding:"2px 4px"}}>📤</button>
+          {/* Match Events */}
+          {onMatchTap && m.group && <button onClick={()=>onMatchTap(m)} style={{background:`${C.blue}18`,border:`1px solid ${C.blue}33`,color:C.blue,padding:"3px 9px",borderRadius:20,fontSize:11,fontWeight:600,cursor:"pointer"}}>Events</button>}
+          {/* Add */}
+          {!finished && <button onClick={()=>onAction(m)} style={{background:`${C.green}22`,border:`1px solid ${C.greenS}`,color:C.green,padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:600,cursor:"pointer"}}>+ Add</button>}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -2702,16 +2778,15 @@ async function fetchMatchEvents(fixtureId) {
 }
 
 // ── MATCH EVENTS MODAL ────────────────────────────────────────────────────
-function MatchEventsModal({ match, open, onClose }) {
+function MatchEventsModal({ match, open, onClose, onAction }) {
   const [events, setEvents] = useState(null);
   const [loading, setLoading] = useState(false);
   const { getScore } = useContext(LiveScoresCtx);
+  const { favTeams=[] } = useContext(FavCtx);
 
   useEffect(() => {
     if (!open || !match) return;
     setEvents(null); setLoading(true);
-    // Find the fixture ID from the live scores feed by matching team names
-    // We pass the match object and let the API find the right fixture
     fetchMatchEvents(`${match.home}|${match.away}`)
       .then(d => { setEvents(d); setLoading(false); })
       .catch(() => setLoading(false));
@@ -2719,84 +2794,179 @@ function MatchEventsModal({ match, open, onClose }) {
 
   const sc = match ? getScore(match.home, match.away) : null;
   const hasScore = sc && sc.hg !== null && sc.ag !== null;
+  const live = sc ? statusIsLive(sc.status) : false;
+  const finished = sc ? statusIsFinished(sc.status) : false;
+  const { localTime } = match ? matchTimes(match) : {};
+
+  // Polymarket odds
+  const p1 = match ? PREDS.find(x=>x.team===match.home) : null;
+  const p2 = match ? PREDS.find(x=>x.team===match.away) : null;
+
+  // Simulated odds for draw probability
+  const simOdds = useMemo(() => {
+    if (!match) return null;
+    const N = 5000; let w1=0, w2=0, d=0;
+    for(let i=0;i<N;i++){const r=simMatch(match.home,match.away);if(r.res==="home")w1++;else if(r.res==="away")w2++;else d++;}
+    return {
+      win1: ((w1/N)*100).toFixed(0),
+      draw: ((d/N)*100).toFixed(0),
+      win2: ((w2/N)*100).toFixed(0),
+    };
+  }, [match?.home, match?.away]);
 
   if (!match) return null;
+
+  const shareMatch = () => {
+    const base = window.location.origin;
+    const keyEvents = events && events.length > 0
+      ? events.filter(ev=>ev.type==="Goal"||ev.type==="Card").slice(0,5)
+          .map(ev=>({type:ev.type==="Goal"?"goal":ev.detail?.includes("Yellow")?"yellow":"red",name:ev.player?.name?.split(" ").pop()||"",min:ev.time?.elapsed||"",side:normTeam(ev.team?.name||"")===match.home?"home":"away"}))
+      : [];
+    const params = new URLSearchParams({
+      home:match.home, away:match.away,
+      ...(hasScore?{hg:sc.hg,ag:sc.ag}:{}),
+      ...(match.group?{group:match.group}:{stage:match.stage||"World Cup 2026"}),
+      date:match.date, venue:(match.venue||"").split(",")[0],
+      ...(!hasScore&&p1?{p1:p1.poly}:{}),
+      ...(!hasScore&&p2?{p2:p2.poly}:{}),
+      ...(keyEvents.length>0?{events:encodeURIComponent(JSON.stringify(keyEvents))}:{}),
+      v:Date.now(),
+    });
+    const imageUrl=`${base}/api/og?${params}`;
+    if(navigator.share) navigator.share({title:`${match.home} vs ${match.away} — World Cup 2026`,url:imageUrl}).catch(()=>{});
+    else navigator.clipboard?.writeText(imageUrl);
+  };
+
   return (
-    <Modal open={open} onClose={onClose} title={`${match.home} vs ${match.away}`}>
-      {/* Score header */}
-      {hasScore && (
-        <div style={{textAlign:"center",padding:"12px 0 16px",borderBottom:`1px solid ${C.b1}`,marginBottom:16}}>
-          <div style={{display:"flex",justifyContent:"center",alignItems:"center",gap:16,marginBottom:6}}>
-            <div style={{display:"flex",alignItems:"center",gap:8}}><Crest team={match.home} size={32}/><span style={{fontWeight:700,fontSize:16,color:C.text}}>{match.home}</span></div>
-            <div style={{fontWeight:900,fontSize:32,color:C.green,fontFamily:"monospace"}}>{sc.hg}–{sc.ag}</div>
-            <div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontWeight:700,fontSize:16,color:C.text}}>{match.away}</span><Crest team={match.away} size={32}/></div>
+    <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",zIndex:1000,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:C.bg,border:`1px solid ${C.b2}`,borderRadius:"18px 18px 0 0",width:"100%",maxWidth:620,maxHeight:"92vh",overflowY:"auto",paddingBottom:20}}>
+
+        {/* ── HERO HEADER ── */}
+        <div style={{background:`linear-gradient(135deg,${C.s1},${C.s2})`,padding:"16px 18px 20px",position:"relative"}}>
+          <button onClick={onClose} style={{position:"absolute",top:14,right:14,background:"none",border:"none",color:C.mid,fontSize:22,cursor:"pointer"}}>×</button>
+
+          {/* Stage + match info */}
+          <div style={{textAlign:"center",marginBottom:16}}>
+            <div style={{fontSize:12,color:C.dim,fontWeight:700,letterSpacing:"0.1em"}}>{match.group?`GROUP ${match.group}`:(match.stage||"WORLD CUP 2026").toUpperCase()}</div>
+            {match.date && <div style={{fontSize:13,color:C.mid,marginTop:2}}>{match.date} · {localTime}</div>}
           </div>
-          <Badge color={statusIsFinished(sc.status)?C.dim:C.green}>
-            {statusLabel(sc.status, sc.elapsed) || "Upcoming"}
-          </Badge>
-        </div>
-      )}
 
-      {loading && (
-        <div style={{textAlign:"center",padding:"32px 0"}}>
-          <div style={{width:24,height:24,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto 10px"}}/>
-          <div style={{fontSize:12,color:C.mid}}>Loading match events…</div>
+          {/* Teams hero */}
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
+            {/* Home */}
+            <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:8}}>
+              <Crest team={match.home} size={64}/>
+              <span style={{fontWeight:700,fontSize:16,color:favTeams.includes(match.home)?C.gold:C.text,textAlign:"center"}}>{match.home}</span>
+            </div>
+            {/* Score / vs */}
+            <div style={{textAlign:"center",minWidth:80}}>
+              {hasScore ? (
+                <>
+                  <div style={{fontWeight:900,fontSize:44,color:live?C.green:C.text,fontFamily:"monospace",lineHeight:1}}>{sc.hg}–{sc.ag}</div>
+                  <div style={{fontSize:11,fontWeight:700,color:live?C.green:C.dim,marginTop:4}}>
+                    {live?"🔴 ":""}{statusLabel(sc.status,sc.elapsed)||"FT"}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div style={{fontSize:13,fontWeight:700,color:C.dim}}>VS</div>
+                  <div style={{fontSize:11,color:C.dim,marginTop:4}}>Upcoming</div>
+                </>
+              )}
+            </div>
+            {/* Away */}
+            <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:8}}>
+              <Crest team={match.away} size={64}/>
+              <span style={{fontWeight:700,fontSize:16,color:favTeams.includes(match.away)?C.gold:C.text,textAlign:"center"}}>{match.away}</span>
+            </div>
+          </div>
         </div>
-      )}
 
-      {!loading && events && events.length > 0 && (
-        <div>
-          <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",marginBottom:10}}>MATCH TIMELINE</div>
-          {events.map((ev, i) => {
-            const isHome = normTeam(ev.team?.name||"") === match.home;
-            const icon = ev.type==="Goal"?(ev.detail==="Own Goal"?"⚽🔴":ev.detail==="Penalty"?"⚽🎯":"⚽"):ev.type==="Card"?(ev.detail==="Yellow Card"?"🟨":"🟥"):ev.type==="subst"?"🔄":"•";
-            return (
-              <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:`1px solid ${C.b1}`}}>
-                {/* Home side */}
-                <div style={{flex:1,textAlign:"right"}}>
-                  {isHome && <span style={{fontSize:13,color:C.text,fontWeight:ev.type==="Goal"?700:400}}>{ev.player?.name||""}{ev.type==="subst"?` ↑`:""}</span>}
-                  {isHome && ev.type==="subst" && <div style={{fontSize:10,color:C.dim}}>{ev.assist?.name||""} ↓</div>}
-                </div>
-                {/* Minute + icon */}
-                <div style={{display:"flex",flexDirection:"column",alignItems:"center",minWidth:52,flexShrink:0}}>
-                  <div style={{fontSize:12,fontWeight:700,color:C.gold}}>{ev.time?.elapsed}{ev.time?.extra?`+${ev.time.extra}`:""}'</div>
-                  <div style={{fontSize:16,lineHeight:1}}>{icon}</div>
-                </div>
-                {/* Away side */}
-                <div style={{flex:1}}>
-                  {!isHome && <span style={{fontSize:13,color:C.text,fontWeight:ev.type==="Goal"?700:400}}>{ev.player?.name||""}{ev.type==="subst"?` ↑`:""}</span>}
-                  {!isHome && ev.type==="subst" && <div style={{fontSize:10,color:C.dim}}>{ev.assist?.name||""} ↓</div>}
-                </div>
+        <div style={{padding:"14px 18px"}}>
+
+          {/* ── VENUE ── */}
+          <div onClick={()=>openMaps(match.venue)} style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",background:C.s1,border:`1px solid ${C.b1}`,borderRadius:10,marginBottom:12,cursor:"pointer"}}>
+            <span style={{fontSize:20}}>📍</span>
+            <div style={{flex:1}}>
+              <div style={{fontSize:13,fontWeight:600,color:C.blue,textDecoration:"underline",textDecorationStyle:"dotted"}}>{match.venue.split(",")[0]}</div>
+              <div style={{fontSize:11,color:C.dim,marginTop:2}}>{match.venue.split(",").slice(1).join(",").trim()} · Tap for directions</div>
+            </div>
+          </div>
+
+          {/* ── TV ── */}
+          {match.tv && (
+            <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:C.s1,border:`1px solid ${C.b1}`,borderRadius:10,marginBottom:12}}>
+              <span style={{fontSize:18}}>📺</span>
+              <div style={{fontSize:13,color:C.gold,fontWeight:600}}>{match.tv}</div>
+            </div>
+          )}
+
+          {/* ── ODDS ── */}
+          {!finished && (
+            <div style={{marginBottom:12}}>
+              <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",marginBottom:8}}>WIN PROBABILITY</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+                {[
+                  {label:match.home, val:simOdds?.win1, poly:p1?.poly, color:C.green},
+                  {label:"Draw",     val:simOdds?.draw,  poly:null,      color:C.gold},
+                  {label:match.away, val:simOdds?.win2, poly:p2?.poly, color:C.rival},
+                ].map(({label,val,poly,color})=>(
+                  <div key={label} style={{background:C.s1,border:`1px solid ${color}33`,borderRadius:10,padding:"10px 6px",textAlign:"center"}}>
+                    <div style={{fontSize:22,fontWeight:900,color,lineHeight:1}}>{val}%</div>
+                    <div style={{fontSize:9,color:C.dim,marginTop:3,marginBottom:poly?4:0}}>Simulator</div>
+                    {poly && <div style={{fontSize:12,fontWeight:700,color,borderTop:`1px solid ${color}22`,paddingTop:4}}>{poly}% <span style={{fontSize:9,color:C.dim}}>Polymarket</span></div>}
+                    <div style={{fontSize:10,color:C.mid,marginTop:3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{label}</div>
+                  </div>
+                ))}
               </div>
-            );
-          })}
-        </div>
-      )}
+            </div>
+          )}
 
-      {!loading && events && events.length === 0 && (
-        <div style={{textAlign:"center",padding:"24px 0",color:C.dim,fontSize:13}}>
-          No events yet — check back once the match starts.
-        </div>
-      )}
+          {/* ── MATCH EVENTS ── */}
+          {(live || finished) && (
+            <div style={{marginBottom:12}}>
+              <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",marginBottom:8}}>MATCH TIMELINE</div>
+              {loading && (
+                <div style={{textAlign:"center",padding:"20px 0"}}>
+                  <div style={{width:22,height:22,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto 8px"}}/>
+                  <div style={{fontSize:12,color:C.mid}}>Loading events…</div>
+                </div>
+              )}
+              {!loading && events && events.length > 0 && events.map((ev,i)=>{
+                const isHome = normTeam(ev.team?.name||"")=== match.home;
+                const icon = ev.type==="Goal"?(ev.detail==="Own Goal"?"⚽🔴":ev.detail==="Penalty"?"⚽🎯":"⚽"):ev.type==="Card"?(ev.detail==="Yellow Card"?"🟨":"🟥"):ev.type==="subst"?"🔄":"•";
+                return (
+                  <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 0",borderBottom:`1px solid ${C.b1}`}}>
+                    <div style={{flex:1,textAlign:"right"}}>
+                      {isHome && <span style={{fontSize:13,color:C.text,fontWeight:ev.type==="Goal"?700:400}}>{ev.player?.name||""}</span>}
+                      {isHome && ev.type==="subst" && <div style={{fontSize:10,color:C.dim}}>↑ {ev.assist?.name||""}</div>}
+                    </div>
+                    <div style={{display:"flex",flexDirection:"column",alignItems:"center",minWidth:52,flexShrink:0}}>
+                      <div style={{fontSize:11,fontWeight:700,color:C.gold}}>{ev.time?.elapsed}{ev.time?.extra?`+${ev.time.extra}`:""}'</div>
+                      <div style={{fontSize:16}}>{icon}</div>
+                    </div>
+                    <div style={{flex:1}}>
+                      {!isHome && <span style={{fontSize:13,color:C.text,fontWeight:ev.type==="Goal"?700:400}}>{ev.player?.name||""}</span>}
+                      {!isHome && ev.type==="subst" && <div style={{fontSize:10,color:C.dim}}>↑ {ev.assist?.name||""}</div>}
+                    </div>
+                  </div>
+                );
+              })}
+              {!loading && events && events.length === 0 && <div style={{fontSize:12,color:C.dim,textAlign:"center",padding:"16px 0"}}>No events yet.</div>}
+            </div>
+          )}
 
-      {!loading && !events && (
-        <div style={{textAlign:"center",padding:"24px 0",color:C.dim,fontSize:12}}>
-          Match events available once the tournament begins on Jun 11.
-        </div>
-      )}
+          {/* ── ACTIONS ── */}
+          <div style={{display:"flex",gap:8,marginTop:8}}>
+            {!finished && <button onClick={()=>{onAction(match);onClose();}} style={{flex:1,padding:"11px 0",borderRadius:12,background:`linear-gradient(135deg,${C.green},#22c55e)`,border:"none",color:"#030a05",fontWeight:700,fontSize:14,cursor:"pointer"}}>📅 Add to Calendar</button>}
+            <button onClick={shareMatch} style={{flex:1,padding:"11px 0",borderRadius:12,background:`${C.blue}22`,border:`1px solid ${C.blue}44`,color:C.blue,fontWeight:700,fontSize:14,cursor:"pointer"}}>📤 Share</button>
+          </div>
 
-      {/* Share */}
-      <div style={{marginTop:16,paddingTop:14,borderTop:`1px solid ${C.b1}`}}>
-        <button onClick={()=>{
-          const txt = hasScore
-            ? `⚽ ${match.home} ${sc.hg}–${sc.ag} ${match.away} • ${match.group?"Group "+match.group:match.stage||"World Cup 2026"} • ${match.date}`
-            : `⚽ ${match.home} vs ${match.away} • ${match.group?"Group "+match.group:match.stage||"World Cup 2026"} • ${match.date} ${match.time}`;
-          if(navigator.share) navigator.share({title:"World Cup 2026", text:txt}).catch(()=>{});
-          else { navigator.clipboard?.writeText(txt); }
-        }} style={{width:"100%",padding:"10px 0",borderRadius:10,background:`${C.blue}22`,border:`1px solid ${C.blue}44`,color:C.blue,fontWeight:700,fontSize:13,cursor:"pointer"}}>
-          📤 Share this match
-        </button>
+        </div>
       </div>
+    </div>
+  );
+}
     </Modal>
   );
 }
@@ -3044,6 +3214,8 @@ function InstallBanner() {
 export default function App() {
   const [tab, setTab] = useState("live");
 
+  const country = useCountry();
+
   // Register service worker for PWA
   useEffect(() => {
     if ("serviceWorker" in navigator) {
@@ -3094,6 +3266,7 @@ export default function App() {
 
   return (
     <LiveScoresProvider>
+      <CountryCtx.Provider value={country}>
       <ThemeCtx.Provider value={{dark, toggle:toggleDark, headerDark, cardDark}}>
       <FavCtx.Provider value={{favTeam, favTeams, setFavTeam: toggleFav}}>
       <div style={{minHeight:"100vh",background:C.bg,maxWidth:700,margin:"0 auto",fontFamily:"system-ui,sans-serif",transition:"background .2s"}}>
@@ -3174,12 +3347,13 @@ export default function App() {
           {tab==="saved"     && <SavedTab saved={saved} onRemove={onRemove}/>}
         </div>
         <AddModal match={modal.match} open={modal.open} onClose={()=>setModal({open:false,match:null})} onCal={onCal} onRem={onRem}/>
-        <MatchEventsModal match={eventsModal.match} open={eventsModal.open} onClose={()=>setEventsModal({open:false,match:null})}/>
+        <MatchEventsModal match={eventsModal.match} open={eventsModal.open} onClose={()=>setEventsModal({open:false,match:null})} onAction={onAction}/>
         <Toast msg={toast} onDone={()=>setToast("")}/>
         <InstallBanner/>
       </div>
       </FavCtx.Provider>
       </ThemeCtx.Provider>
+      </CountryCtx.Provider>
     </LiveScoresProvider>
   );
 }
