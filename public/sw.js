@@ -2,7 +2,7 @@
 // Caches the app shell for offline use.
 // Live API data (scores, predictions) always fetches fresh from network.
 
-const CACHE_NAME = "wc2026-v1";
+const CACHE_NAME = "wc2026-v2";
 const APP_SHELL = [
   "/",
   "/index.html",
