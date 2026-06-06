@@ -658,6 +658,20 @@ function AddModal({ match, open, onClose, onCal, onRem }) {
   );
 }
 
+
+// Helper hook: measures a ref element's height
+function useElemHeight(ref) {
+  const [h, setH] = useState(0);
+  useEffect(() => {
+    if (!ref.current) return;
+    const obs = new ResizeObserver(() => setH(ref.current?.offsetHeight || 0));
+    obs.observe(ref.current);
+    setH(ref.current.offsetHeight);
+    return () => obs.disconnect();
+  }, []);
+  return h;
+}
+
 // ── MATCH CARD ─────────────────────────────────────────────────────────────
 function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="" }) {
   const { favTeams=[] } = useContext(FavCtx);
@@ -745,6 +759,7 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="" 
 function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116 }) {
   const { favTeams=[] } = useContext(FavCtx);
   const { scores, getScore, lastFetch } = useContext(LiveScoresCtx);
+  const _lhRef = useRef(null); const _lhH = useElemHeight(_lhRef);
   const lastUpdate = lastFetch ? lastFetch.toLocaleTimeString() : null;
   const liveMatches = MATCHES.filter(m => { const s=getScore(m.home,m.away); return s&&statusIsLive(s.status); });
   const finishedToday = MATCHES.filter(m => { const s=getScore(m.home,m.away); return s&&statusIsFinished(s.status); });
@@ -762,7 +777,7 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116 }) {
 
   return (
     <div>
-      <div style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"8px 13px",maxWidth:700,margin:"0 auto"}}>
+      <div ref={_lhRef} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"8px 13px",maxWidth:700,margin:"0 auto"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <div style={{fontWeight:700,fontSize:15,color:C.green}}>🔴 LIVE SCORES</div>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
@@ -770,7 +785,7 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116 }) {
           </div>
         </div>
       </div>
-      <div style={{height:50}}/>
+      <div style={{height:_lhH||50}}/>
       {Object.keys(upcomingByDate).length > 0 && (
         <div style={{marginBottom:16}}>
           <div style={{fontSize:11,color:C.gold,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>
@@ -1010,10 +1025,11 @@ function GrpTab({ onTeam, onMatchTap, tabTop=116 }) {
   const upd = (id, f, v) => setManualR(p => ({...p, [sel]: p[sel].map(r => r.id===id ? {...r, [f]: v.replace(/\D/g,"")} : r)}));
   const qc = (pos) => pos<=2 ? C.green : pos===3 ? C.gold : "transparent";
   const liveCount = results.filter(r => r.fromLive).length;
+  const _ghRef = useRef(null); const _ghH = useElemHeight(_ghRef);
   return (
     <div>
       {/* Fixed header */}
-      <div style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"8px 13px",maxWidth:700,margin:"0 auto"}}>
+      <div ref={_ghRef} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"8px 13px",maxWidth:700,margin:"0 auto"}}>
         <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:6,scrollbarWidth:"none"}}>
           {Object.keys(GROUPS).map(g=><Pill key={g} active={sel===g} onClick={()=>setSel(g)}>{g}</Pill>)}
         </div>
@@ -1023,7 +1039,7 @@ function GrpTab({ onTeam, onMatchTap, tabTop=116 }) {
         </div>
       </div>
       {/* Spacer */}
-      <div style={{height:90}}/>
+      <div style={{height:_ghH||90}}/>
       {view==="standings" && (
         <div>
           <Card style={{marginBottom:12}}>
@@ -1229,16 +1245,17 @@ function StatsTab({ initial="", tabTop=116 }) {
 
   const posCounts = squad?{All:squad.length,GK:squad.filter(p=>posLabel(p.pos)==="GK").length,DEF:squad.filter(p=>posLabel(p.pos)==="DEF").length,MID:squad.filter(p=>posLabel(p.pos)==="MID").length,FWD:squad.filter(p=>posLabel(p.pos)==="FWD").length}:{};
   const filtered = squad?(posFilter==="All"?squad:squad.filter(p=>posLabel(p.pos)===posFilter)):[];
+  const _shRef = useRef(null); const _shH = useElemHeight(_shRef);
 
   return (
     <div>
-      <div style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"8px 13px",maxWidth:700,margin:"0 auto"}}>
+      <div ref={_shRef} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"8px 13px",maxWidth:700,margin:"0 auto"}}>
         <select value={sel} onChange={e=>setSel(e.target.value)} style={{width:"100%",padding:"10px 14px",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:10,color:C.text,fontSize:14,outline:"none"}}>
           <option value="">Select a team</option>
           {Object.keys(GROUPS).map(g=><optgroup key={g} label={`Group ${g}`}>{GROUPS[g].teams.map(t=><option key={t} value={t}>{getFlag(t)} {t}</option>)}</optgroup>)}
         </select>
       </div>
-      <div style={{height:58}}/>
+      <div style={{height:_shH||58}}/>
       {!sel && <div style={{textAlign:"center",padding:"44px 20px",color:C.dim,fontSize:13}}>Select any of the 48 teams to view their squad</div>}
       {sel && d && (
         <div>
@@ -1463,9 +1480,10 @@ function PredTab({ tabTop=140 }) {
   const top = PREDS.filter(p=>p.team!=="Others");
   const others = PREDS.find(p=>p.team==="Others");
   const max = top[0].poly;
+  const _phRef = useRef(null); const _phH = useElemHeight(_phRef);
   return (
     <div>
-      <div style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"8px 13px",maxWidth:700,margin:"0 auto"}}>
+      <div ref={_phRef} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"8px 13px",maxWidth:700,margin:"0 auto"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <div>
             <span style={{fontWeight:700,fontSize:15,color:C.green}}>🎯 POLYMARKET ODDS</span>
@@ -1474,7 +1492,7 @@ function PredTab({ tabTop=140 }) {
           <a href="https://polymarket.com" target="_blank" rel="noopener noreferrer" style={{fontSize:11,color:C.green,textDecoration:"none",border:`1px solid ${C.greenS}`,padding:"3px 9px",borderRadius:20}}>Live →</a>
         </div>
       </div>
-      <div style={{height:50}}/>
+      <div style={{height:_phH||50}}/>
 
       {/* Line chart */}
       <Card style={{marginBottom:14}}>
@@ -1577,10 +1595,11 @@ function SimTab({ tabTop=116 }) {
   useEffect(() => { runMC(5000); }, []);
 
   const [view, setView] = useState("odds"); // "odds" | "bracket"
+  const _simhRef = useRef(null); const _simhH = useElemHeight(_simhRef);
 
   return (
     <div>
-      <div style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"8px 13px",maxWidth:700,margin:"0 auto"}}>
+      <div ref={_simhRef} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"8px 13px",maxWidth:700,margin:"0 auto"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
           <div>
             <div style={{fontWeight:700,fontSize:15,color:C.green}}>🎲 WORLD CUP SIMULATOR</div>
@@ -1600,7 +1619,7 @@ function SimTab({ tabTop=116 }) {
           <Pill active={view==="bracket"} onClick={()=>setView("bracket")} color={C.gold}>🏆 Most Likely Bracket</Pill>
         </div>
       </div>
-      <div style={{height:118}}/>
+      <div style={{height:_simhH||118}}/>
 
       {running && (
         <div style={{textAlign:"center",padding:"48px 0"}}>
@@ -1700,7 +1719,13 @@ const toZName = t =>
   t==="Bosnia & Herz."?"Bosnia and Herzegovina":
   t==="Ivory Coast"?"Côte d'Ivoire":
   t==="Turkiye"?"Turkey":
-  t==="Curacao"?"Curaçao":t;
+  t==="Curacao"?"Curaçao":
+  t==="DR Congo"?"Congo DR":
+  t==="United States"?"USA":
+  t==="South Korea"?"Korea Republic":
+  t==="Iran"?"IR Iran":
+  t==="Cape Verde"?"Cabo Verde":
+  t;
 
 // Derive career stats from appearances array
 function wcStats(appearances=[]) {
@@ -1807,9 +1832,9 @@ function TeamHistoryCard({ team, data, color }) {
   const d = unwrapTeam(data);
   if (!d) return (
     <div style={{padding:"20px 10px",textAlign:"center"}}>
-      <div style={{fontSize:"2rem",marginBottom:8}}>🏆</div>
-      <div style={{fontSize:13,fontWeight:700,color,marginBottom:4}}>2026 Debut</div>
-      <div style={{fontSize:11,color:C.dim,lineHeight:1.6}}>{team} has no previous World Cup appearances — this will be their first tournament!</div>
+      <div style={{fontSize:"1.6rem",marginBottom:6}}>📭</div>
+      <div style={{fontSize:13,fontWeight:700,color,marginBottom:4}}>No data available</div>
+      <div style={{fontSize:11,color:C.dim,lineHeight:1.6}}>{team}'s World Cup history isn't in our database yet.</div>
     </div>
   );
   const apps = d.appearances || [];
@@ -1925,9 +1950,9 @@ function H2HTab({ tabTop=116 }) {
         zafronixGet("team", { name: toZName(team2) }),
       ]);
       setD1(r1); setD2(r2);
-      if (!r1 && !r2) setFetchErr("No World Cup history found for either team. They may be making their debut in 2026!");
-      else if (!r1) setFetchErr(`No previous World Cup history for ${team1} — they may be making their debut in 2026!`);
-      else if (!r2) setFetchErr(`No previous World Cup history for ${team2} — they may be making their debut in 2026!`);
+      if (!r1 && !r2) setFetchErr("Could not load World Cup history — the data service may be temporarily unavailable. Try again in a moment.");
+      else if (!r1) setFetchErr(`Could not load history for ${team1} — try again in a moment.`);
+      else if (!r2) setFetchErr(`Could not load history for ${team2} — try again in a moment.`);
     } catch(e) {
       setFetchErr(e.message);
     }
@@ -1942,6 +1967,7 @@ function H2HTab({ tabTop=116 }) {
   }, [team1, team2]);
 
   const poly1 = PREDS.find(p=>p.team===team1);
+  const _h2hRef = useRef(null); const _h2hH = useElemHeight(_h2hRef);
   const poly2 = PREDS.find(p=>p.team===team2);
   const t1app = TEAMS[team1]; const t2app = TEAMS[team2];
   const st1 = wcStats(unwrapTeam(d1)?.appearances||[]);
@@ -1950,7 +1976,7 @@ function H2HTab({ tabTop=116 }) {
   return (
     <div>
       {/* Fixed team selector */}
-      <div style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"8px 13px",maxWidth:700,margin:"0 auto"}}>
+      <div ref={_h2hRef} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"8px 13px",maxWidth:700,margin:"0 auto"}}>
         <div style={{fontWeight:700,color:C.green,fontSize:14,marginBottom:8}}>⚔️ COMPARE TEAMS</div>
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:team1&&team2&&team1!==team2?8:0}}>
           <div style={{flex:1}}>
@@ -1973,7 +1999,7 @@ function H2HTab({ tabTop=116 }) {
           </button>
         )}
       </div>
-      <div style={{height: team1&&team2&&team1!==team2 ? 128 : 90}}/>
+      <div style={{height:_h2hH||90}}/>
 
       {/* Simulated match odds — always shown */}
       {team1!==team2 && simOdds && (
@@ -2199,17 +2225,19 @@ function MyBracketTab({ tabTop=116 }) {
   const [running,setRunning]=useState(false);
   const allThirds=Object.entries(groups).map(([g,teams])=>({group:g,team:teams[2]}));
   const toggleThird=(t)=>{setThirds(p=>p.includes(t)?p.filter(x=>x!==t):[...p,t].slice(0,8));};
+  const runBracket=()=>{
+  const _mbhRef = useRef(null); const _mbhH = useElemHeight(_mbhRef);
   const runBracket=()=>{setRunning(true);setTimeout(()=>{const qualifiers=[];Object.entries(groups).forEach(([,teams])=>{qualifiers.push(teams[0],teams[1]);});const r32=[...qualifiers,...thirds.slice(0,8)];const ko=(arr)=>{const n=[];for(let i=0;i<arr.length;i+=2)n.push(simKO(arr[i],arr[i+1]));return n;};const r16=ko(r32),qf=ko(r16),sf=ko(qf),champ=simKO(sf[0],sf[1]);setResult({r32,r16,qf,sf,champion:champ,runnerUp:sf.find(x=>x!==champ)});setStage("bracket");setRunning(false);},80);};
   return (
     <div>
-      <div style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"10px 13px",maxWidth:700,margin:"0 auto"}}>
+      <div ref={_mbhRef} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"10px 13px",maxWidth:700,margin:"0 auto"}}>
         <div style={{display:"flex",gap:8}}>
           <Pill active={stage==="groups"} onClick={()=>setStage("groups")} color={C.green}>1 · Set Groups</Pill>
           <Pill active={stage==="thirds"} onClick={()=>setStage("thirds")} color={C.gold}>2 · Pick 3rds</Pill>
           <Pill active={stage==="bracket"} onClick={()=>setStage("bracket")} color={C.blue}>3 · Bracket</Pill>
         </div>
       </div>
-      <div style={{height:52}}/>
+      <div style={{height:_mbhH||52}}/>
       {stage==="groups" && (
         <div>
           <div style={{fontSize:12,color:C.mid,marginBottom:14,lineHeight:1.6}}>
@@ -2640,11 +2668,11 @@ function PredictorTab() {
   );
 
   if (!user) return (
-    <div style={{padding:"24px 0"}}>
-      <div style={{background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b2}`,borderRadius:12,padding:20,marginBottom:20,textAlign:"center"}}>
-        <div style={{fontSize:"2rem",marginBottom:8}}>🔮</div>
-        <div style={{fontWeight:700,fontSize:20,color:C.green,marginBottom:6}}>Match Predictor</div>
-        <div style={{fontSize:13,color:C.mid,lineHeight:1.6}}>Pick scores for every group match. Compete with friends on the leaderboard.</div>
+    <div style={{padding:"8px 0"}}>
+      <div style={{background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b2}`,borderRadius:12,padding:14,marginBottom:14,textAlign:"center"}}>
+        <div style={{fontSize:"1.6rem",marginBottom:4}}>🔮</div>
+        <div style={{fontWeight:700,fontSize:17,color:C.green,marginBottom:4}}>Match Predictor</div>
+        <div style={{fontSize:12,color:C.mid,lineHeight:1.5}}>Pick scores for every group match. Compete with friends on the leaderboard.</div>
       </div>
       <Card style={{padding:18}}>
         <div style={{fontWeight:700,color:C.text,fontSize:15,marginBottom:4}}>Choose your display name</div>
@@ -3116,11 +3144,11 @@ function TopScorersTab({ tabTop=116 }) {
   }, [allFixtures]);
 
   const hasLive = liveScorers.length > 0;
+  const _tshRef = useRef(null); const _tshH = useElemHeight(_tshRef);
 
   return (
     <div>
-      <div style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"8px 13px",maxWidth:700,margin:"0 auto"}}>
-        <div style={{fontWeight:700,fontSize:16,color:C.green,marginBottom:4}}>⚽ TOP SCORERS <span style={{fontSize:11,color:C.dim,fontWeight:400}}>{hasLive?"· Live data":"· Pre-tournament"}</span></div>
+      <div ref={_tshRef} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"8px 13px",maxWidth:700,margin:"0 auto"}}> <span style={{fontSize:11,color:C.dim,fontWeight:400}}>{hasLive?"· Live data":"· Pre-tournament"}</span></div>
         {!hasLive && (
           <div style={{display:"flex",gap:6}}>
             <Pill active={filter==="all"}  onClick={()=>setFilter("all")}  color={C.green}>All</Pill>
@@ -3130,7 +3158,7 @@ function TopScorersTab({ tabTop=116 }) {
           </div>
         )}
       </div>
-      <div style={{height: hasLive ? 50 : 82}}/>
+      <div style={{height:_tshH||50}}/>
       {!hasLive && (
           <div>
           {ONES_TO_WATCH.filter(p=>filter==="all"||p.pos===filter).map((p,i) => (
