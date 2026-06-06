@@ -1459,18 +1459,22 @@ function OddsLineChart() {
   );
 }
 
-function PredTab() {
+function PredTab({ tabTop=140 }) {
   const top = PREDS.filter(p=>p.team!=="Others");
   const others = PREDS.find(p=>p.team==="Others");
   const max = top[0].poly;
   return (
     <div>
-      <div style={{background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b2}`,borderRadius:12,padding:14,marginBottom:14}}>
-        <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
-          <div><div style={{fontWeight:700,fontSize:18,color:C.green}}>POLYMARKET ODDS</div><div style={{fontSize:11,color:C.dim}}>Updated Jun 5, 2026</div></div>
+      <div style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"8px 13px",maxWidth:700,margin:"0 auto"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <div>
+            <span style={{fontWeight:700,fontSize:15,color:C.green}}>🎯 POLYMARKET ODDS</span>
+            <span style={{fontSize:11,color:C.dim,marginLeft:8}}>Updated Jun 5, 2026</span>
+          </div>
           <a href="https://polymarket.com" target="_blank" rel="noopener noreferrer" style={{fontSize:11,color:C.green,textDecoration:"none",border:`1px solid ${C.greenS}`,padding:"3px 9px",borderRadius:20}}>Live →</a>
         </div>
       </div>
+      <div style={{height:50}}/>
 
       {/* Line chart */}
       <Card style={{marginBottom:14}}>
@@ -3298,14 +3302,16 @@ export default function App() {
   const country = useCountry();
 
   const tabBarRef = useRef(null);
-  const [tabBarBottom, setTabBarBottom] = useState(116);
+  const [tabBarBottom, setTabBarBottom] = useState(140);
   useEffect(() => {
-    if (!tabBarRef.current) return;
-    const obs = new ResizeObserver(() => {
-      setTabBarBottom(tabBarRef.current.getBoundingClientRect().bottom);
-    });
-    obs.observe(tabBarRef.current);
-    return () => obs.disconnect();
+    const measure = () => {
+      if (tabBarRef.current) setTabBarBottom(tabBarRef.current.getBoundingClientRect().bottom);
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    const obs = new ResizeObserver(measure);
+    if (tabBarRef.current) obs.observe(tabBarRef.current);
+    return () => { window.removeEventListener("resize", measure); obs.disconnect(); };
   }, []);
 
   // Register service worker for PWA
@@ -3432,7 +3438,7 @@ export default function App() {
           {tab==="groups"    && <GrpTab onTeam={onTeam} onMatchTap={onMatchTap} tabTop={tabBarBottom}/>}
           {tab==="stats"     && <StatsTab initial={statsTeam} tabTop={tabBarBottom}/>}
           {tab==="h2h"       && <H2HTab tabTop={tabBarBottom}/>}
-          {tab==="predict"   && <div style={{paddingTop:14}}><PredTab/></div>}
+          {tab==="predict"   && <PredTab tabTop={tabBarBottom}/>}
           {tab==="predictor" && <div style={{paddingTop:14}}><PredictorTab/></div>}
           {tab==="sim"       && <SimTab tabTop={tabBarBottom}/>}
           {tab==="bracket"   && <MyBracketTab tabTop={tabBarBottom}/>}
@@ -3449,4 +3455,3 @@ export default function App() {
     </LiveScoresProvider>
   );
 }
-
