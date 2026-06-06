@@ -3,10 +3,15 @@
 // regardless of how many users are hitting the app simultaneously.
 
 const BASE = "https://zafronix-fifa-world-cup-api.p.rapidapi.com";
+const BASE_DIRECT = "https://api.zafronix.com/fifa/worldcup/v1";
 const HEADERS = {
   "Content-Type": "application/json",
   "X-RapidAPI-Key": process.env.RAPIDAPI_KEY,
   "X-RapidAPI-Host": process.env.RAPIDAPI_HOST_ZAFRONIX,
+  "X-API-Key": process.env.ZAFRONIX_API_KEY,
+};
+const HEADERS_DIRECT = {
+  "Content-Type": "application/json",
   "X-API-Key": process.env.ZAFRONIX_API_KEY,
 };
 
@@ -40,6 +45,13 @@ async function zafronixFetch(path) {
   return res.json();
 }
 
+// Direct fetch against api.zafronix.com — for endpoints not on the RapidAPI mirror
+async function zafronixFetchDirect(path) {
+  const res = await fetch(`${BASE_DIRECT}${path}`, { headers: HEADERS_DIRECT });
+  if (!res.ok) throw new Error(`Zafronix direct ${path} → ${res.status} ${res.statusText}`);
+  return res.json();
+}
+
 export default async function handler(req, res) {
   const { endpoint } = req.query;
 
@@ -64,15 +76,19 @@ export default async function handler(req, res) {
         break;
       }
 
-      // Single team by name
+      // Single team by name — cross-tournament history
+      // Uses direct api.zafronix.com (not RapidAPI mirror which doesn't expose this endpoint)
       case "team": {
         const { name } = req.query;
         if (!name) return res.status(400).json({ error: "Missing name param" });
+        if (!process.env.ZAFRONIX_API_KEY) {
+          return res.status(500).json({ error: "ZAFRONIX_API_KEY env var not set — run: vercel env add ZAFRONIX_API_KEY" });
+        }
         const cKey = `team_${name}`;
         data = getCached(cKey);
         if (!data) {
-          data = await zafronixFetch(`/teams/${encodeURIComponent(name)}`);
-          setCached(cKey, data);
+          data = await zafronixFetchDirect(`/teams/${encodeURIComponent(name)}`);
+          if (data) setCached(cKey, data);
         }
         break;
       }
