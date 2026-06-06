@@ -52,8 +52,8 @@ export default async function handler(req, res) {
       <stop offset="50%" style="stop-color:#4ade80"/>
       <stop offset="100%" style="stop-color:#060e0a;stop-opacity:0"/>
     </linearGradient>
-    <clipPath id="hfc"><rect width="160" height="107" rx="8"/></clipPath>
-    <clipPath id="afc"><rect width="160" height="107" rx="8"/></clipPath>
+    <clipPath id="hfc" clipPathUnits="userSpaceOnUse"><rect x="148" y="215" width="160" height="107" rx="8"/></clipPath>
+    <clipPath id="afc" clipPathUnits="userSpaceOnUse"><rect x="892" y="215" width="160" height="107" rx="8"/></clipPath>
   </defs>
 
   <rect width="1200" height="630" fill="url(#bg)"/>
@@ -71,14 +71,14 @@ export default async function handler(req, res) {
   ${date ? `<text x="${1200-48}" y="96" text-anchor="end" font-size="14" fill="#3d6a4d" font-family="system-ui">${date}</text>` : ""}
 
   <!-- Home flag -->
-  ${homeFlagUrl ? `<g transform="translate(148,215)"><image href="${homeFlagUrl}" width="160" height="107" clip-path="url(#hfc)" preserveAspectRatio="xMidYMid slice"/></g>` : ""}
+  ${homeFlagUrl ? `<image href="${homeFlagUrl}" x="148" y="215" width="160" height="107" clip-path="url(#hfc)" preserveAspectRatio="xMidYMid slice"/>` : ""}
   <text x="228" y="368" text-anchor="middle" font-size="30" font-weight="800" fill="#d4ead9" font-family="system-ui">${home}</text>
 
   <!-- Score -->
   ${scoreBlock}
 
   <!-- Away flag -->
-  ${awayFlagUrl ? `<g transform="translate(892,215)"><image href="${awayFlagUrl}" width="160" height="107" clip-path="url(#afc)" preserveAspectRatio="xMidYMid slice"/></g>` : ""}
+  ${awayFlagUrl ? `<image href="${awayFlagUrl}" x="892" y="215" width="160" height="107" clip-path="url(#afc)" preserveAspectRatio="xMidYMid slice"/>` : ""}
   <text x="972" y="368" text-anchor="middle" font-size="30" font-weight="800" fill="#d4ead9" font-family="system-ui">${away}</text>
 
   <!-- Bottom -->
@@ -114,7 +114,7 @@ export default async function handler(req, res) {
   <meta property="og:image:height" content="630"/>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
-    body { background:#060e0a; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; font-family:system-ui,sans-serif; padding:16px; }
+    body { background:#060e0a; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; padding-top:0; font-family:system-ui,sans-serif; padding:16px; }
     .card { width:100%; max-width:600px; }
     svg { width:100%; height:auto; border-radius:12px; box-shadow:0 8px 32px rgba(0,0,0,0.5); }
     .actions { display:flex; gap:12px; margin-top:16px; width:100%; max-width:600px; }
