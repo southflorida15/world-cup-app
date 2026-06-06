@@ -1,16 +1,5 @@
 {
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" }
-  ],
-  "crons": [
-    {
-      "path": "/api/cron/score",
-      "schedule": "*/5 * * * *"
-    }
-  ],
-  "functions": {
-    "api/cron/score.js": {
-      "maxDuration": 30
-    }
-  }
+  ]
 }
