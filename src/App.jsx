@@ -615,6 +615,7 @@ function AddModal({ match, open, onClose, onCal, onRem }) {
 
 // ── MATCH CARD ─────────────────────────────────────────────────────────────
 function MatchCard({ m, onAction, timeMode="local", favTeam="" }) {
+  const { favTeams=[] } = useContext(FavCtx);
   const { getScore } = useContext(LiveScoresCtx);
   const sc = getScore(m.home, m.away);
   const live = sc ? statusIsLive(sc.status) : false;
@@ -623,7 +624,7 @@ function MatchCard({ m, onAction, timeMode="local", favTeam="" }) {
   const isKO = !m.group;
   let winner = null;
   if(isKO && finished && hasScore) { if(sc.hg>sc.ag) winner=m.home; else if(sc.ag>sc.hg) winner=m.away; }
-  const isFav = favTeam && (m.home === favTeam || m.away === favTeam);
+  const isFav = favTeams?.length && (favTeams.includes(m.home) || favTeams.includes(m.away));
   const cardBg = finished ? `linear-gradient(135deg,#080f0a,#0a1410)` : live ? `linear-gradient(135deg,#0a1f10,#0d2815)` : `linear-gradient(135deg,${C.s1},${C.s2})`;
   const { localTime, venueTime } = matchTimes(m);
   const venueTz = VENUE_TZ[m.venue];
@@ -643,7 +644,7 @@ function MatchCard({ m, onAction, timeMode="local", favTeam="" }) {
         </div>
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:7}}>
           <Crest team={m.home} size={24}/>
-          <span style={{fontWeight:winner===m.home?800:700,color:finished?(winner===m.home?C.green:C.dim):m.home===favTeam?C.gold:C.text,flex:1,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textShadow:winner===m.home?`0 0 12px ${C.green}66`:m.home===favTeam?`0 0 8px ${C.gold}44`:"none"}}>{m.home}</span>
+          <span style={{fontWeight:winner===m.home?800:700,color:finished?(winner===m.home?C.green:C.dim):favTeams?.includes(m.home)?C.gold:C.text,flex:1,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textShadow:winner===m.home?`0 0 12px ${C.green}66`:favTeams?.includes(m.home)?`0 0 8px ${C.gold}44`:"none"}}>{m.home}</span>
           {hasScore ? (
             <div style={{textAlign:"center",minWidth:64}}>
               <div style={{fontWeight:900,fontSize:22,color:live?C.green:finished?C.text:C.gold,fontFamily:"monospace",lineHeight:1}}>{sc.hg} – {sc.ag}</div>
@@ -652,7 +653,7 @@ function MatchCard({ m, onAction, timeMode="local", favTeam="" }) {
           ) : (
             <span style={{fontSize:11,color:C.dim,fontWeight:700,minWidth:40,textAlign:"center"}}>VS</span>
           )}
-          <span style={{fontWeight:winner===m.away?800:700,color:finished?(winner===m.away?C.green:C.dim):m.away===favTeam?C.gold:C.text,flex:1,fontSize:14,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textShadow:winner===m.away?`0 0 12px ${C.green}66`:m.away===favTeam?`0 0 8px ${C.gold}44`:"none"}}>{m.away}</span>
+          <span style={{fontWeight:winner===m.away?800:700,color:finished?(winner===m.away?C.green:C.dim):favTeams?.includes(m.away)?C.gold:C.text,flex:1,fontSize:14,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textShadow:winner===m.away?`0 0 12px ${C.green}66`:favTeams?.includes(m.away)?`0 0 8px ${C.gold}44`:"none"}}>{m.away}</span>
           <Crest team={m.away} size={24}/>
         </div>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:m.tv?5:0}}>
@@ -668,11 +669,12 @@ function MatchCard({ m, onAction, timeMode="local", favTeam="" }) {
 
 // ── LIVE TAB ──────────────────────────────────────────────────────────────
 function LiveTab({ onAction, favTeam="" }) {
+  const { favTeams=[] } = useContext(FavCtx);
   const { scores, getScore, lastFetch } = useContext(LiveScoresCtx);
   const lastUpdate = lastFetch ? lastFetch.toLocaleTimeString() : null;
   const liveMatches = MATCHES.filter(m => { const s=getScore(m.home,m.away); return s&&statusIsLive(s.status); });
   const finishedToday = MATCHES.filter(m => { const s=getScore(m.home,m.away); return s&&statusIsFinished(s.status); });
-  const favMatches = favTeam ? MATCHES.filter(m => (m.home===favTeam||m.away===favTeam) && !getScore(m.home,m.away)) : [];
+  const favMatches = favTeams?.length ? MATCHES.filter(m => (favTeams.includes(m.home)||favTeams.includes(m.away)) && !getScore(m.home,m.away)) : [];
   const nextFav = favMatches[0];
   return (
     <div>
@@ -684,7 +686,7 @@ function LiveTab({ onAction, favTeam="" }) {
       </div>
       {nextFav && (
         <div style={{marginBottom:14}}>
-          <div style={{fontSize:11,color:C.gold,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>⭐ NEXT {favTeam.toUpperCase()} MATCH</div>
+          <div style={{fontSize:11,color:C.gold,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>⭐ NEXT MATCH — YOUR TEAMS</div>
           <MatchCard m={nextFav} onAction={onAction} favTeam={favTeam}/>
         </div>
       )}
@@ -704,6 +706,7 @@ function LiveTab({ onAction, favTeam="" }) {
 
 // ── SCHEDULE TAB ──────────────────────────────────────────────────────────
 function SchedTab({ onAction, favTeam="" }) {
+  const { favTeams=[] } = useContext(FavCtx);
   const [filterMode, setFilterMode] = useState("group");
   const [timeMode, setTimeMode] = useState("local");
   const [groupF, setGroupF] = useState("All");
@@ -712,7 +715,7 @@ function SchedTab({ onAction, favTeam="" }) {
   const allTeams = [...new Set(MATCHES.flatMap(m=>[m.home,m.away]))].sort();
   const allVenues = [...new Set(MATCHES.map(m=>m.venue))].sort();
   const shown = MATCHES.filter(m => {
-    if(filterMode==="fav") return favTeam && (m.home===favTeam||m.away===favTeam);
+    if(filterMode==="fav") return favTeams?.length && (favTeams.includes(m.home)||favTeams.includes(m.away));
     if(filterMode==="group") { if(groupF==="All")return true; if(groupF==="Knockout")return!m.group; return m.group===groupF; }
     if(filterMode==="team") return !teamF||m.home===teamF||m.away===teamF;
     if(filterMode==="venue") return !venueF||m.venue===venueF;
@@ -724,7 +727,7 @@ function SchedTab({ onAction, favTeam="" }) {
     <div>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,gap:8}}>
         <div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none"}}>
-          {favTeam && <button style={ss(filterMode==="fav",C.gold)} onClick={()=>setFilterMode("fav")}>⭐ {favTeam}</button>}
+          {favTeams?.length > 0 && <button style={ss(filterMode==="fav",C.gold)} onClick={()=>setFilterMode("fav")}>⭐ My Teams</button>}
           <button style={ss(filterMode==="group")} onClick={()=>setFilterMode("group")}>🗂 Group</button>
           <button style={ss(filterMode==="team")} onClick={()=>setFilterMode("team")}>👥 Team</button>
           <button style={ss(filterMode==="venue")} onClick={()=>setFilterMode("venue")}>📍 Venue</button>
@@ -1145,7 +1148,7 @@ function StatsTab({ initial="" }) {
                   );
                 })}
                 <div style={{padding:"8px 14px",borderTop:`1px solid ${C.b1}`}}>
-                  <span style={{fontSize:10,color:C.dim}}>Squad data via Zafronix FIFA World Cup API</span>
+                  <span style={{fontSize:10,color:C.dim}}>Squad data sourced from official records</span>
                 </div>
               </div>
             )}
@@ -1318,57 +1321,180 @@ function PredTab() {
 }
 
 // ── SIMULATOR TAB ──────────────────────────────────────────────────────────
+// Runs Monte Carlo on mount. Shows win probabilities + most-likely bracket.
 function SimTab() {
-  const [res, setRes] = useState(null);
+  const [sims, setSims]       = useState(5000);
   const [running, setRunning] = useState(false);
-  const [sims, setSims] = useState(1000);
-  const [mc, setMc] = useState(null);
-  const doSingle=()=>{setRunning(true);setTimeout(()=>{setRes(runFullSim());setMc(null);setRunning(false);},80);};
-  const doMC=()=>{setRunning(true);setTimeout(()=>{const c={};for(let i=0;i<sims;i++){const r=runFullSim();c[r.champion]=(c[r.champion]||0)+1;}setMc(Object.entries(c).sort((a,b)=>b[1]-a[1]).map(([t,n])=>({team:t,pct:((n/sims)*100).toFixed(1)})));setRes(null);setRunning(false);},50);};
+  const [mc, setMc]           = useState(null);       // [{team, pct, wins}]
+  const [bracket, setBracket] = useState(null);       // most-likely bracket
+
+  const runMC = useCallback((n) => {
+    setRunning(true);
+    setTimeout(() => {
+      // Champion frequency
+      const champCount = {};
+      // Stage frequency — track how far each team goes
+      const r16Count  = {};
+      const qfCount   = {};
+      const sfCount   = {};
+      const finalCount = {};
+      const N = n || sims;
+
+      for (let i = 0; i < N; i++) {
+        const r = runFullSim();
+        champCount[r.champion] = (champCount[r.champion]||0) + 1;
+        r.r16.forEach(t  => { r16Count[t]   = (r16Count[t]  ||0)+1; });
+        r.qf.forEach(t   => { qfCount[t]    = (qfCount[t]   ||0)+1; });
+        r.sf.forEach(t   => { sfCount[t]    = (sfCount[t]   ||0)+1; });
+        [r.champion, r.runnerUp].forEach(t => { finalCount[t] = (finalCount[t]||0)+1; });
+      }
+
+      const sorted = Object.entries(champCount)
+        .sort((a,b)=>b[1]-a[1])
+        .map(([team, wins]) => ({
+          team,
+          pct: ((wins/N)*100).toFixed(1),
+          r16Pct:   (((r16Count[team]  ||0)/N)*100).toFixed(0),
+          qfPct:    (((qfCount[team]   ||0)/N)*100).toFixed(0),
+          sfPct:    (((sfCount[team]   ||0)/N)*100).toFixed(0),
+          finalPct: (((finalCount[team]||0)/N)*100).toFixed(0),
+        }));
+
+      // Most-likely bracket: pick winner of each KO matchup by highest champ%
+      const champPct = (t) => parseFloat(sorted.find(x=>x.team===t)?.pct||"0");
+      const likelyKO = (arr) => {
+        const out = [];
+        for(let i=0;i<arr.length;i+=2) {
+          out.push(champPct(arr[i]) >= champPct(arr[i+1]) ? arr[i] : arr[i+1]);
+        }
+        return out;
+      };
+      // Run one sim to get a realistic R32/R16 bracket structure, then override winners
+      const base = runFullSim();
+      const likelyR16 = likelyKO(base.r32);
+      const likelyQF  = likelyKO(likelyR16);
+      const likelySF  = likelyKO(likelyQF);
+      const likelyChamp = champPct(likelySF[0]) >= champPct(likelySF[1]) ? likelySF[0] : likelySF[1];
+      const likelyRunnerUp = likelySF.find(t=>t!==likelyChamp);
+
+      setMc(sorted);
+      setBracket({ r32:base.r32, r16:likelyR16, qf:likelyQF, sf:likelySF, champion:likelyChamp, runnerUp:likelyRunnerUp });
+      setRunning(false);
+    }, 50);
+  }, [sims]);
+
+  // Auto-run on mount
+  useEffect(() => { runMC(5000); }, []);
+
+  const [view, setView] = useState("odds"); // "odds" | "bracket"
+
   return (
     <div>
       <div style={{background:`linear-gradient(135deg,#0a1f10,#0c2815)`,border:`1px solid ${C.b2}`,borderRadius:12,padding:14,marginBottom:14}}>
-        <div style={{fontWeight:700,fontSize:18,color:C.green,marginBottom:6}}>WORLD CUP SIMULATOR</div>
-        <p style={{fontSize:13,color:C.mid,lineHeight:1.6,marginBottom:12}}>Poisson goal model using FIFA ratings, form & home advantage. For custom group picks, use My Bracket.</p>
-        <div style={{display:"flex",gap:8,marginBottom:10}}>
-          <button onClick={doSingle} disabled={running} style={{flex:1,padding:"11px 0",borderRadius:10,cursor:"pointer",background:`linear-gradient(135deg,${C.green},#22c55e)`,border:"none",color:"#030a05",fontWeight:700,fontSize:14,opacity:running?0.6:1}}>▶ Simulate Once</button>
-          <button onClick={doMC} disabled={running} style={{flex:1,padding:"11px 0",borderRadius:10,cursor:"pointer",background:`${C.gold}22`,border:`1px solid ${C.gold}55`,color:C.gold,fontWeight:700,fontSize:14,opacity:running?0.6:1}}>🎲 Monte Carlo ({sims}×)</button>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
+          <div>
+            <div style={{fontWeight:700,fontSize:18,color:C.green}}>🎲 WORLD CUP SIMULATOR</div>
+            <div style={{fontSize:11,color:C.dim,marginTop:2}}>Poisson model · FIFA ratings · form · home advantage</div>
+          </div>
+          <button onClick={()=>runMC(sims)} disabled={running} style={{padding:"7px 14px",borderRadius:10,background:`${C.green}22`,border:`1px solid ${C.greenS}`,color:C.green,fontWeight:700,fontSize:13,cursor:"pointer",opacity:running?0.5:1,flexShrink:0}}>
+            {running ? "Running…" : "↻ Re-run"}
+          </button>
         </div>
         <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-          {[100,500,1000,5000,10000,50000].map(n=><Pill key={n} active={sims===n} onClick={()=>setSims(n)} color={C.gold}>{n>=10000?n.toLocaleString():n}</Pill>)}
-        </div>
-      </div>
-      {running && <div style={{textAlign:"center",padding:"36px 0"}}><div style={{width:32,height:32,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto 10px"}}/><div style={{fontSize:13,color:C.mid}}>Running...</div></div>}
-      {!running && mc && (
-        <div>
-          <div style={{fontWeight:700,color:C.gold,marginBottom:12,fontSize:16}}>MONTE CARLO · {sims} SIMULATIONS</div>
-          {mc.slice(0,12).map((r,i)=>(
-            <Card key={r.team} style={{marginBottom:6}}>
-              <div style={{padding:"9px 13px",display:"flex",alignItems:"center",gap:8}}>
-                <div style={{fontWeight:700,color:C.dim,minWidth:22,fontSize:13}}>#{i+1}</div>
-                <Crest team={r.team} size={22}/>
-                <span style={{fontWeight:700,color:C.text,flex:1,fontSize:14}}>{r.team}</span>
-                <div style={{width:70,height:4,background:C.s2,borderRadius:2}}><div style={{height:4,borderRadius:2,width:`${r.pct}%`,background:i===0?C.green:i<3?C.gold:C.mid}}/></div>
-                <div style={{fontWeight:700,fontSize:17,color:i===0?C.green:i<3?C.gold:C.mid,minWidth:42,textAlign:"right"}}>{r.pct}%</div>
-                {i===0 && <span>🏆</span>}
-              </div>
-            </Card>
+          {[1000,5000,10000,50000].map(n=>(
+            <Pill key={n} active={sims===n} onClick={()=>{setSims(n);runMC(n);}} color={C.gold}>
+              {n.toLocaleString()}×
+            </Pill>
           ))}
         </div>
+      </div>
+
+      {/* View toggle */}
+      <div style={{display:"flex",gap:8,marginBottom:14}}>
+        <Pill active={view==="odds"}    onClick={()=>setView("odds")}    color={C.green}>📊 Win Odds</Pill>
+        <Pill active={view==="bracket"} onClick={()=>setView("bracket")} color={C.gold}>🏆 Most Likely Bracket</Pill>
+      </div>
+
+      {running && (
+        <div style={{textAlign:"center",padding:"48px 0"}}>
+          <div style={{width:36,height:36,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto 12px"}}/>
+          <div style={{fontSize:13,color:C.mid}}>Simulating {sims.toLocaleString()} tournaments…</div>
+        </div>
       )}
-      {!running && res && !mc && (
+
+      {/* ── WIN ODDS ── */}
+      {!running && mc && view==="odds" && (
         <div>
-          <div style={{marginBottom:14,padding:14,background:`${C.green}18`,border:`1px solid ${C.greenS}`,borderRadius:12,textAlign:"center"}}>
-            <div style={{fontSize:"2.2rem",marginBottom:8}}>🏆</div>
-            <div style={{fontSize:11,color:C.dim,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:6}}>Simulated Champion</div>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10}}><Crest team={res.champion} size={46}/><span style={{fontWeight:700,fontSize:26,color:C.green}}>{res.champion}</span></div>
-            <div style={{fontSize:13,color:C.mid,marginTop:6}}>Runner-up: {getFlag(res.runnerUp)} {res.runnerUp}</div>
+          <div style={{fontSize:11,color:C.dim,marginBottom:10,lineHeight:1.6}}>
+            Based on {sims.toLocaleString()} simulated tournaments. Each % = how often that team won.
           </div>
-          {[["SEMI-FINALS",res.sf],["QUARTER-FINALS",res.qf],["ROUND OF 16",res.r16]].map(([label,teams])=>(
-            <div key={label} style={{marginBottom:12}}>
+          {mc.slice(0,16).map((r,i)=>{
+            const maxPct = parseFloat(mc[0].pct);
+            const medal = i===0?"🥇":i===1?"🥈":i===2?"🥉":null;
+            return (
+              <Card key={r.team} style={{marginBottom:6}}>
+                <div style={{padding:"10px 13px"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+                    <div style={{fontWeight:700,color:C.dim,minWidth:26,fontSize:13,textAlign:"center"}}>{medal||`#${i+1}`}</div>
+                    <Crest team={r.team} size={22}/>
+                    <span style={{fontWeight:700,color:C.text,flex:1,fontSize:14}}>{r.team}</span>
+                    <div style={{fontWeight:900,fontSize:20,color:i===0?C.green:i<3?C.gold:C.mid,minWidth:48,textAlign:"right"}}>{r.pct}%</div>
+                  </div>
+                  {/* Win probability bar */}
+                  <div style={{height:4,background:C.s2,borderRadius:2,overflow:"hidden",marginBottom:6}}>
+                    <div style={{height:4,borderRadius:2,width:`${(parseFloat(r.pct)/maxPct)*100}%`,background:i===0?`linear-gradient(90deg,#1a4a2a,${C.green})`:i<3?`linear-gradient(90deg,#3a2800,${C.gold})`:`linear-gradient(90deg,#1a2a2a,${C.mid})`}}/>
+                  </div>
+                  {/* Stage reach % */}
+                  <div style={{display:"flex",gap:6}}>
+                    {[["R16",r.r16Pct],["QF",r.qfPct],["SF",r.sfPct],["Final",r.finalPct]].map(([lbl,pct])=>(
+                      <div key={lbl} style={{flex:1,textAlign:"center",background:C.s2,borderRadius:6,padding:"3px 0"}}>
+                        <div style={{fontSize:11,fontWeight:700,color:parseInt(pct)>50?C.green:parseInt(pct)>25?C.gold:C.dim}}>{pct}%</div>
+                        <div style={{fontSize:9,color:C.dim}}>{lbl}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── MOST LIKELY BRACKET ── */}
+      {!running && bracket && view==="bracket" && (
+        <div>
+          <div style={{fontSize:11,color:C.dim,marginBottom:12,lineHeight:1.6}}>
+            Each round shows the team more likely to advance based on {sims.toLocaleString()} simulations.
+          </div>
+          <div style={{background:`linear-gradient(135deg,${C.green}22,${C.gold}18)`,border:`1px solid ${C.greenS}`,borderRadius:14,padding:16,marginBottom:16,textAlign:"center"}}>
+            <div style={{fontSize:11,color:C.dim,letterSpacing:"0.15em",fontWeight:700,marginBottom:8}}>🏆 MOST LIKELY CHAMPION</div>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:12,marginBottom:6}}>
+              <Crest team={bracket.champion} size={52}/>
+              <div>
+                <div style={{fontWeight:900,fontSize:26,color:C.green}}>{bracket.champion}</div>
+                <div style={{fontSize:12,color:C.gold}}>Win probability: {mc?.find(x=>x.team===bracket.champion)?.pct}%</div>
+              </div>
+            </div>
+            <div style={{fontSize:13,color:C.mid}}>Most likely runner-up: {getFlag(bracket.runnerUp)} {bracket.runnerUp} ({mc?.find(x=>x.team===bracket.runnerUp)?.finalPct}% reach final)</div>
+          </div>
+          {[
+            ["MOST LIKELY SEMI-FINALS", bracket.sf],
+            ["MOST LIKELY QUARTER-FINALS", bracket.qf],
+            ["MOST LIKELY ROUND OF 16", bracket.r16],
+          ].map(([label,teams])=>(
+            <div key={label} style={{marginBottom:14}}>
               <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:7}}>{label}</div>
               <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
-                {teams.map(t=><div key={t} style={{display:"flex",alignItems:"center",gap:5,background:C.s2,border:`1px solid ${C.b1}`,borderRadius:8,padding:"4px 9px"}}><Crest team={t} size={16}/><span style={{fontSize:12,color:C.text}}>{t}</span></div>)}
+                {(teams||[]).map(t=>{
+                  const pct = mc?.find(x=>x.team===t);
+                  return (
+                    <div key={t} style={{display:"flex",alignItems:"center",gap:5,background:C.s2,border:`1px solid ${C.b1}`,borderRadius:8,padding:"5px 9px"}}>
+                      <Crest team={t} size={16}/>
+                      <span style={{fontSize:12,color:C.text}}>{t}</span>
+                      {pct && <span style={{fontSize:10,color:C.dim}}>·{pct.pct}%</span>}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ))}
@@ -1672,9 +1798,8 @@ function H2HTab() {
           {/* Career stat bars */}
           {(d1||d2) && (
             <Card style={{marginBottom:12}}>
-              <div style={{padding:"10px 14px",borderBottom:`1px solid ${C.b1}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div style={{padding:"10px 14px",borderBottom:`1px solid ${C.b1}`}}>
                 <span style={{fontWeight:700,color:C.green,fontSize:13}}>📊 WORLD CUP CAREER COMPARISON</span>
-                <span style={{fontSize:10,color:C.dim}}>via Zafronix</span>
               </div>
               {/* Team name header */}
               <div style={{display:"grid",gridTemplateColumns:"1fr 90px 1fr",padding:"10px 14px 6px",borderBottom:`1px solid ${C.b1}`}}>
@@ -2022,6 +2147,7 @@ function useWeather(lat, lon, enabled) {
 }
 
 function MatchdayCard({ m, onAction, favTeam }) {
+  const { favTeams=[] } = useContext(FavCtx);
   const { getScore } = useContext(LiveScoresCtx);
   const sc = getScore(m.home, m.away);
   const cityKey = VENUE_TO_CITY[m.venue];
@@ -2032,7 +2158,7 @@ function MatchdayCard({ m, onAction, favTeam }) {
   const msToKO = iso ? new Date(iso).getTime() - now : null;
   const hoursToKO = msToKO ? msToKO / 3600000 : null;
   const isMatchday = hoursToKO !== null && hoursToKO > 0 && hoursToKO < 24;
-  const isFav = favTeam && (m.home === favTeam || m.away === favTeam);
+  const isFav = favTeams?.length && (favTeams.includes(m.home) || favTeams.includes(m.away));
   const { localTime } = matchTimes(m);
   const live = sc ? statusIsLive(sc.status) : false;
   const finished = sc ? statusIsFinished(sc.status) : false;
@@ -2077,7 +2203,7 @@ function MatchdayCard({ m, onAction, favTeam }) {
         {/* Teams + score */}
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:7}}>
           <Crest team={m.home} size={24}/>
-          <span style={{fontWeight:700,color:m.home===favTeam?C.gold:C.text,flex:1,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.home}</span>
+          <span style={{fontWeight:700,color:favTeams?.includes(m.home)?C.gold:C.text,flex:1,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.home}</span>
           {hasScore ? (
             <div style={{textAlign:"center",minWidth:64}}>
               <div style={{fontWeight:900,fontSize:22,color:live?C.green:C.text,fontFamily:"monospace",lineHeight:1}}>{sc.hg} – {sc.ag}</div>
@@ -2086,7 +2212,7 @@ function MatchdayCard({ m, onAction, favTeam }) {
           ) : (
             <span style={{fontSize:11,color:C.dim,fontWeight:700,minWidth:40,textAlign:"center"}}>VS</span>
           )}
-          <span style={{fontWeight:700,color:m.away===favTeam?C.gold:C.text,flex:1,fontSize:14,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.away}</span>
+          <span style={{fontWeight:700,color:favTeams?.includes(m.away)?C.gold:C.text,flex:1,fontSize:14,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.away}</span>
           <Crest team={m.away} size={24}/>
         </div>
         {/* Venue */}
@@ -2111,7 +2237,7 @@ function MatchdayCard({ m, onAction, favTeam }) {
 }
 
 // ── FAVORITE TEAM CONTEXT ─────────────────────────────────────────────────
-const FavCtx = createContext({ favTeam:"", setFavTeam:()=>{} });
+const FavCtx = createContext({ favTeam:"", favTeams:[], setFavTeam:()=>{} });
 
 // ── PREDICTOR — KV-backed multi-user ─────────────────────────────────────
 
@@ -2156,7 +2282,7 @@ function useDebounce(fn, ms) {
 
 function PredictorTab() {
   const { getScore, isFinished } = useContext(LiveScoresCtx);
-  const { favTeam } = useContext(FavCtx);
+  const { favTeam, favTeams=[] } = useContext(FavCtx);
   const userId = useMemo(getUserId, []);
 
   // User registration state
@@ -2250,7 +2376,7 @@ function PredictorTab() {
   });
 
   const shownMatches = filter==="fav"
-    ? MATCHES.filter(m=>m.group&&(m.home===favTeam||m.away===favTeam))
+    ? MATCHES.filter(m=>m.group&&(favTeams?.includes(m.home)||favTeams?.includes(m.away)))
     : filter==="finished" ? finished : upcoming;
 
   // ── Registration gate ───────────────────────────────────────────────────
@@ -2330,7 +2456,7 @@ function PredictorTab() {
       <div style={{display:"flex",gap:6,marginBottom:14,overflowX:"auto",scrollbarWidth:"none"}}>
         <Pill active={filter==="upcoming"} onClick={()=>setFilter("upcoming")} color={C.green}>Upcoming ({upcoming.length})</Pill>
         <Pill active={filter==="finished"} onClick={()=>setFilter("finished")} color={C.gold}>Finished ({finished.length})</Pill>
-        {favTeam && <Pill active={filter==="fav"} onClick={()=>setFilter("fav")} color={C.gold}>⭐ {favTeam}</Pill>}
+        {favTeams?.length > 0 && <Pill active={filter==="fav"} onClick={()=>setFilter("fav")} color={C.gold}>⭐ My Teams</Pill>}
         <Pill active={filter==="board"} onClick={()=>setFilter("board")} color={C.rival}>🏅 Leaderboard</Pill>
       </div>
 
@@ -2455,10 +2581,19 @@ export default function App() {
   const [modal, setModal] = useState({open:false,match:null});
   const [saved, setSaved] = useState([]);
   const [toast, setToast] = useState("");
-  const [favTeam, setFavTeam] = useState(() => localStorage.getItem("wc2026_fav") || "");
+  const [favTeams, setFavTeams] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("wc2026_favs") || "[]"); } catch { return []; }
+  });
   const [showFavPicker, setShowFavPicker] = useState(false);
+  const favTeam = favTeams[0] || ""; // backward compat for components that use single favTeam
 
-  const persistFav = (t) => { setFavTeam(t); localStorage.setItem("wc2026_fav", t); setShowFavPicker(false); };
+  const toggleFav = (t) => {
+    setFavTeams(prev => {
+      const next = prev.includes(t) ? prev.filter(x=>x!==t) : prev.length < 4 ? [...prev, t] : prev;
+      try { localStorage.setItem("wc2026_favs", JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
 
   const onTeam=(t)=>{setStatsTeam(t);setTab("stats");};
   const onAction=(m)=>setModal({open:true,match:m});
@@ -2468,7 +2603,7 @@ export default function App() {
 
   return (
     <LiveScoresProvider>
-      <FavCtx.Provider value={{favTeam, setFavTeam: persistFav}}>
+      <FavCtx.Provider value={{favTeam, favTeams, setFavTeam: toggleFav}}>
       <div style={{minHeight:"100vh",background:C.bg,maxWidth:700,margin:"0 auto",fontFamily:"system-ui,sans-serif"}}>
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}*{box-sizing:border-box;margin:0;padding:0}select option{background:#0c1a12}::-webkit-scrollbar{width:3px;height:3px}::-webkit-scrollbar-thumb{background:#1a3828;border-radius:2px}`}</style>
         <div style={{background:`linear-gradient(180deg,#091510,${C.bg})`,padding:"14px 14px 0",borderBottom:`1px solid ${C.b1}`,position:"sticky",top:0,zIndex:100,backdropFilter:"blur(10px)"}}>
@@ -2481,27 +2616,39 @@ export default function App() {
               </div>
             </div>
             <div style={{display:"flex",alignItems:"center",gap:10}}>
-              {/* Favorite team button */}
-              <button onClick={()=>setShowFavPicker(v=>!v)} style={{display:"flex",alignItems:"center",gap:5,background:favTeam?`${C.gold}22`:`${C.b1}`,border:`1px solid ${favTeam?C.gold:C.b2}`,borderRadius:20,padding:"5px 10px",cursor:"pointer"}}>
-                {favTeam ? <><Crest team={favTeam} size={16}/><span style={{fontSize:11,color:C.gold,fontWeight:700}}>{favTeam}</span></> : <span style={{fontSize:11,color:C.dim}}>⭐ My Team</span>}
+              {/* Favorite teams button */}
+              <button onClick={()=>setShowFavPicker(v=>!v)} style={{display:"flex",alignItems:"center",gap:5,background:favTeams.length?`${C.gold}22`:`${C.b1}`,border:`1px solid ${favTeams.length?C.gold:C.b2}`,borderRadius:20,padding:"5px 10px",cursor:"pointer"}}>
+                {favTeams.length > 0
+                  ? <>{favTeams.map(t=><Crest key={t} team={t} size={16}/>)}<span style={{fontSize:11,color:C.gold,fontWeight:700,marginLeft:2}}>{favTeams.length===1?favTeams[0]:`${favTeams.length} teams`}</span></>
+                  : <span style={{fontSize:11,color:C.dim}}>⭐ My Teams</span>
+                }
               </button>
             </div>
           </div>
 
-          {/* Favorite team picker dropdown */}
+          {/* Favorite teams picker dropdown */}
           {showFavPicker && (
-            <div style={{position:"absolute",top:"100%",right:14,background:C.s1,border:`1px solid ${C.b2}`,borderRadius:12,padding:10,zIndex:200,maxHeight:280,overflowY:"auto",width:220,boxShadow:"0 8px 32px rgba(0,0,0,0.6)"}}>
-              <div style={{fontSize:11,color:C.dim,fontWeight:700,marginBottom:8,padding:"0 4px"}}>SELECT YOUR TEAM</div>
-              {favTeam && <button onClick={()=>persistFav("")} style={{width:"100%",padding:"6px 8px",borderRadius:8,background:`${C.red}22`,border:`1px solid ${C.red}33`,color:C.red,fontSize:12,cursor:"pointer",marginBottom:6}}>✕ Remove favourite</button>}
+            <div style={{position:"absolute",top:"100%",right:14,background:C.s1,border:`1px solid ${C.b2}`,borderRadius:12,padding:10,zIndex:200,maxHeight:320,overflowY:"auto",width:240,boxShadow:"0 8px 32px rgba(0,0,0,0.6)"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"0 4px",marginBottom:8}}>
+                <span style={{fontSize:11,color:C.dim,fontWeight:700}}>MY TEAMS <span style={{color:favTeams.length===4?C.red:C.gold}}>({favTeams.length}/4)</span></span>
+                {favTeams.length>0 && <button onClick={()=>{setFavTeams([]);try{localStorage.setItem("wc2026_favs","[]")}catch{};}} style={{fontSize:10,padding:"2px 8px",borderRadius:10,background:`${C.red}22`,border:`1px solid ${C.red}33`,color:C.red,cursor:"pointer"}}>Clear all</button>}
+              </div>
               {Object.keys(GROUPS).map(g => (
                 <div key={g} style={{marginBottom:6}}>
                   <div style={{fontSize:9,color:C.dim,fontWeight:700,padding:"2px 4px",letterSpacing:"0.1em"}}>GROUP {g}</div>
-                  {GROUPS[g].teams.map(t => (
-                    <button key={t} onClick={()=>persistFav(t)} style={{width:"100%",display:"flex",alignItems:"center",gap:7,padding:"5px 8px",borderRadius:8,background:favTeam===t?`${C.gold}22`:"transparent",border:"none",cursor:"pointer",marginBottom:1}}>
-                      <Crest team={t} size={18}/>
-                      <span style={{fontSize:12,color:favTeam===t?C.gold:C.text,fontWeight:favTeam===t?700:400}}>{t}</span>
-                    </button>
-                  ))}
+                  {GROUPS[g].teams.map(t => {
+                    const sel = favTeams.includes(t);
+                    const maxed = !sel && favTeams.length >= 4;
+                    return (
+                      <button key={t} onClick={()=>!maxed&&toggleFav(t)} style={{width:"100%",display:"flex",alignItems:"center",gap:7,padding:"5px 8px",borderRadius:8,background:sel?`${C.gold}22`:"transparent",border:"none",cursor:maxed?"not-allowed":"pointer",marginBottom:1,opacity:maxed?0.4:1}}>
+                        <div style={{width:16,height:16,borderRadius:4,border:`2px solid ${sel?C.gold:C.dim}`,background:sel?C.gold:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                          {sel && <span style={{color:"#030a05",fontSize:10,fontWeight:900,lineHeight:1}}>✓</span>}
+                        </div>
+                        <Crest team={t} size={18}/>
+                        <span style={{fontSize:12,color:sel?C.gold:C.text,fontWeight:sel?700:400}}>{t}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               ))}
             </div>
