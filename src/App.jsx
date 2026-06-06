@@ -668,7 +668,7 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="" 
               else navigator.clipboard?.writeText(txt);
             }} style={{background:"none",border:"none",color:C.dim,fontSize:14,cursor:"pointer",padding:"2px 4px"}} title="Share">📤</button>
             {/* Events/details button */}
-            {onMatchTap && (live||finished) && <button onClick={()=>onMatchTap(m)} style={{background:`${C.blue}18`,border:`1px solid ${C.blue}33`,color:C.blue,padding:"3px 9px",borderRadius:20,fontSize:11,fontWeight:600,cursor:"pointer"}}>Events</button>}
+            {onMatchTap && m.group && <button onClick={()=>onMatchTap(m)} style={{background:`${C.blue}18`,border:`1px solid ${C.blue}33`,color:C.blue,padding:"3px 9px",borderRadius:20,fontSize:11,fontWeight:600,cursor:"pointer"}}>Events</button>}
             {!finished && <button onClick={()=>onAction(m)} style={{background:`${C.green}22`,border:`1px solid ${C.greenS}`,color:C.green,padding:"3px 11px",borderRadius:20,fontSize:11,fontWeight:600,cursor:"pointer"}}>+ Add</button>}
             {finished && <span style={{fontSize:10,color:C.dim,fontStyle:"italic"}}>Final</span>}
           </div>
@@ -757,16 +757,17 @@ function SchedTab({ onAction, onMatchTap=null, favTeam="" }) {
   const ss=(active,color=C.green)=>({padding:"5px 12px",borderRadius:20,border:`1px solid ${active?color:C.b1}`,background:active?`${color}18`:"transparent",color:active?color:C.mid,fontSize:12,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap"});
   return (
     <div>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,gap:8}}>
-        <div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none"}}>
-          {favTeams?.length > 0 && <button style={ss(filterMode==="fav",C.gold)} onClick={()=>setFilterMode("fav")}>⭐ My Teams</button>}
-          <button style={ss(filterMode==="group")} onClick={()=>setFilterMode("group")}>🗂 Group</button>
-          <button style={ss(filterMode==="team")} onClick={()=>setFilterMode("team")}>👥 Team</button>
-          <button style={ss(filterMode==="venue")} onClick={()=>setFilterMode("venue")}>📍 Venue</button>
-        </div>
-        <div style={{display:"flex",background:C.s2,borderRadius:20,border:`1px solid ${C.b2}`,padding:2,gap:2,flexShrink:0}}>
-          <button onClick={()=>setTimeMode("local")} style={{padding:"5px 12px",borderRadius:18,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:timeMode==="local"?C.green:"transparent",color:timeMode==="local"?"#030a05":C.dim,transition:"all .15s"}}>My Time</button>
-          <button onClick={()=>setTimeMode("venue")} style={{padding:"5px 12px",borderRadius:18,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:timeMode==="venue"?C.gold:"transparent",color:timeMode==="venue"?"#030a05":C.dim,transition:"all .15s"}}>Venue</button>
+      <div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none",marginBottom:10}}>
+        {favTeams?.length > 0 && <button style={ss(filterMode==="fav",C.gold)} onClick={()=>setFilterMode("fav")}>⭐ My Teams</button>}
+        <button style={ss(filterMode==="group")} onClick={()=>setFilterMode("group")}>🗂 Group</button>
+        <button style={ss(filterMode==="team")} onClick={()=>setFilterMode("team")}>👥 Team</button>
+        <button style={ss(filterMode==="venue")} onClick={()=>setFilterMode("venue")}>📍 Venue</button>
+      </div>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+        <span style={{fontSize:11,color:C.dim,fontWeight:600}}>⏰ Match times</span>
+        <div style={{display:"flex",background:C.s2,borderRadius:20,border:`1px solid ${C.b2}`,padding:2,gap:2}}>
+          <button onClick={()=>setTimeMode("local")} style={{padding:"5px 14px",borderRadius:18,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:timeMode==="local"?C.green:"transparent",color:timeMode==="local"?"#030a05":C.dim,transition:"all .15s"}}>My Time</button>
+          <button onClick={()=>setTimeMode("venue")} style={{padding:"5px 14px",borderRadius:18,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:timeMode==="venue"?C.gold:"transparent",color:timeMode==="venue"?"#030a05":C.dim,transition:"all .15s"}}>Venue</button>
         </div>
       </div>
       {filterMode==="group" && (
