@@ -865,7 +865,7 @@ function SchedTab({ onAction, onMatchTap=null, favTeam="" }) {
   return (
     <div>
       {/* Fixed filter header */}
-      <div ref={filterRef} style={{position:"fixed",top:120,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"6px 13px 8px",maxWidth:700,margin:"0 auto"}}>
+      <div ref={filterRef} style={{position:"fixed",top:120,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"10px 13px 8px",maxWidth:700,margin:"0 auto"}}>
 
         {/* Date strip */}
         <div ref={stripRef} style={{display:"flex",overflowX:"auto",scrollbarWidth:"none",marginBottom:8,gap:4}}>
