@@ -742,7 +742,7 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="" 
 }
 
 // ── LIVE TAB ──────────────────────────────────────────────────────────────
-function LiveTab({ onAction, onMatchTap=null, favTeam="" }) {
+function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116 }) {
   const { favTeams=[] } = useContext(FavCtx);
   const { scores, getScore, lastFetch } = useContext(LiveScoresCtx);
   const lastUpdate = lastFetch ? lastFetch.toLocaleTimeString() : null;
@@ -762,12 +762,15 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="" }) {
 
   return (
     <div>
-      <div style={{background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b2}`,borderRadius:12,padding:14,marginBottom:14}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-          <div><div style={{fontWeight:700,fontSize:18,color:C.green}}>LIVE SCORES</div><div style={{fontSize:11,color:C.dim}}>Auto-refreshes every 60s · Tournament starts Jun 11</div></div>
-          {lastUpdate && <span style={{fontSize:11,color:C.dim,flexShrink:0}}>Updated {lastUpdate}</span>}
+      <div style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"8px 13px",maxWidth:700,margin:"0 auto"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <div style={{fontWeight:700,fontSize:15,color:C.green}}>🔴 LIVE SCORES</div>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            {lastUpdate && <span style={{fontSize:11,color:C.dim}}>Updated {lastUpdate}</span>}
+          </div>
         </div>
       </div>
+      <div style={{height:44}}/>
       {Object.keys(upcomingByDate).length > 0 && (
         <div style={{marginBottom:16}}>
           <div style={{fontSize:11,color:C.gold,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>
@@ -811,7 +814,7 @@ const MATCH_DATES = (() => {
     .filter(Boolean);
 })();
 
-function SchedTab({ onAction, onMatchTap=null, favTeam="" }) {
+function SchedTab({ onAction, onMatchTap=null, favTeam="", tabTop=116 }) {
   const { favTeams=[] } = useContext(FavCtx);
   const [filterMode, setFilterMode] = useState("group");
   const [timeMode, setTimeMode] = useState("local");
@@ -865,7 +868,7 @@ function SchedTab({ onAction, onMatchTap=null, favTeam="" }) {
   return (
     <div>
       {/* Fixed filter header */}
-      <div ref={filterRef} style={{position:"fixed",top:120,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"10px 13px 8px",maxWidth:700,margin:"0 auto"}}>
+      <div ref={filterRef} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"10px 13px 8px",maxWidth:700,margin:"0 auto"}}>
 
         {/* Date strip */}
         <div ref={stripRef} style={{display:"flex",overflowX:"auto",scrollbarWidth:"none",marginBottom:8,gap:4}}>
@@ -967,7 +970,7 @@ function scheduleNotification(match, minsBeforeKO) {
 }
 
 // ── GROUPS TAB ─────────────────────────────────────────────────────────────
-function GrpTab({ onTeam, onMatchTap }) {
+function GrpTab({ onTeam, onMatchTap, tabTop=116 }) {
   const [sel, setSel] = useState("A");
   const [view, setView] = useState("standings");
   const { allFixtures } = useContext(LiveScoresCtx);
@@ -1010,7 +1013,7 @@ function GrpTab({ onTeam, onMatchTap }) {
   return (
     <div>
       {/* Fixed header */}
-      <div style={{position:"fixed",top:120,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"8px 13px",maxWidth:700,margin:"0 auto"}}>
+      <div style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"8px 13px",maxWidth:700,margin:"0 auto"}}>
         <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:6,scrollbarWidth:"none"}}>
           {Object.keys(GROUPS).map(g=><Pill key={g} active={sel===g} onClick={()=>setSel(g)}>{g}</Pill>)}
         </div>
@@ -1202,7 +1205,7 @@ function RecentForm({ team, staticData }) {
 }
 
 // ── STATS TAB ──────────────────────────────────────────────────────────────
-function StatsTab({ initial="" }) {
+function StatsTab({ initial="", tabTop=116 }) {
   const [sel, setSel] = useState(initial);
   const [squad, setSquad] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -1229,7 +1232,7 @@ function StatsTab({ initial="" }) {
 
   return (
     <div>
-      <div style={{position:"fixed",top:120,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"8px 13px",maxWidth:700,margin:"0 auto"}}>
+      <div style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"8px 13px",maxWidth:700,margin:"0 auto"}}>
         <select value={sel} onChange={e=>setSel(e.target.value)} style={{width:"100%",padding:"10px 14px",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:10,color:C.text,fontSize:14,outline:"none"}}>
           <option value="">Select a team</option>
           {Object.keys(GROUPS).map(g=><optgroup key={g} label={`Group ${g}`}>{GROUPS[g].teams.map(t=><option key={t} value={t}>{getFlag(t)} {t}</option>)}</optgroup>)}
@@ -1505,7 +1508,7 @@ function PredTab() {
 
 // ── SIMULATOR TAB ──────────────────────────────────────────────────────────
 // Runs Monte Carlo on mount. Shows win probabilities + most-likely bracket.
-function SimTab() {
+function SimTab({ tabTop=116 }) {
   const [sims, setSims]       = useState(5000);
   const [running, setRunning] = useState(false);
   const [mc, setMc]           = useState(null);       // [{team, pct, wins}]
@@ -1573,7 +1576,7 @@ function SimTab() {
 
   return (
     <div>
-      <div style={{position:"fixed",top:120,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"8px 13px",maxWidth:700,margin:"0 auto"}}>
+      <div style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"8px 13px",maxWidth:700,margin:"0 auto"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
           <div>
             <div style={{fontWeight:700,fontSize:15,color:C.green}}>🎲 WORLD CUP SIMULATOR</div>
@@ -1898,7 +1901,7 @@ function TeamHistoryCard({ team, data, color }) {
 
 
 
-function H2HTab() {
+function H2HTab({ tabTop=116 }) {
   const [team1, setTeam1] = useState("");
   const [team2, setTeam2] = useState("");
   const [d1, setD1] = useState(null);
@@ -1943,7 +1946,7 @@ function H2HTab() {
   return (
     <div>
       {/* Fixed team selector */}
-      <div style={{position:"fixed",top:120,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"8px 13px",maxWidth:700,margin:"0 auto"}}>
+      <div style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"8px 13px",maxWidth:700,margin:"0 auto"}}>
         <div style={{fontWeight:700,color:C.green,fontSize:14,marginBottom:8}}>⚔️ COMPARE TEAMS</div>
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:team1&&team2&&team1!==team2?8:0}}>
           <div style={{flex:1}}>
@@ -2184,7 +2187,7 @@ function BracketMatchup({ t1, t2, winner }) {
     </div>
   );
 }
-function MyBracketTab() {
+function MyBracketTab({ tabTop=116 }) {
   const [stage,setStage]=useState("groups");
   const [groups,setGroups]=useState(defaultBracketGroups);
   const [thirds,setThirds]=useState([]);
@@ -2195,7 +2198,7 @@ function MyBracketTab() {
   const runBracket=()=>{setRunning(true);setTimeout(()=>{const qualifiers=[];Object.entries(groups).forEach(([,teams])=>{qualifiers.push(teams[0],teams[1]);});const r32=[...qualifiers,...thirds.slice(0,8)];const ko=(arr)=>{const n=[];for(let i=0;i<arr.length;i+=2)n.push(simKO(arr[i],arr[i+1]));return n;};const r16=ko(r32),qf=ko(r16),sf=ko(qf),champ=simKO(sf[0],sf[1]);setResult({r32,r16,qf,sf,champion:champ,runnerUp:sf.find(x=>x!==champ)});setStage("bracket");setRunning(false);},80);};
   return (
     <div>
-      <div style={{position:"fixed",top:120,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"10px 13px",maxWidth:700,margin:"0 auto"}}>
+      <div style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"10px 13px",maxWidth:700,margin:"0 auto"}}>
         <div style={{display:"flex",gap:8}}>
           <Pill active={stage==="groups"} onClick={()=>setStage("groups")} color={C.green}>1 · Set Groups</Pill>
           <Pill active={stage==="thirds"} onClick={()=>setStage("thirds")} color={C.gold}>2 · Pick 3rds</Pill>
@@ -3076,7 +3079,7 @@ const ONES_TO_WATCH = [
   {name:"Achraf Hakimi",    team:"Morocco",       flag:"🇲🇦", pos:"DF", club:"PSG",           note:"World's best RB"},
 ];
 
-function TopScorersTab() {
+function TopScorersTab({ tabTop=116 }) {
   const { allFixtures } = useContext(LiveScoresCtx);
   const [filter, setFilter] = useState("all");
 
@@ -3112,7 +3115,7 @@ function TopScorersTab() {
 
   return (
     <div>
-      <div style={{position:"fixed",top:120,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"8px 13px",maxWidth:700,margin:"0 auto"}}>
+      <div style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"8px 13px",maxWidth:700,margin:"0 auto"}}>
         <div style={{fontWeight:700,fontSize:16,color:C.green,marginBottom:4}}>⚽ TOP SCORERS <span style={{fontSize:11,color:C.dim,fontWeight:400}}>{hasLive?"· Live data":"· Pre-tournament"}</span></div>
         {!hasLive && (
           <div style={{display:"flex",gap:6}}>
@@ -3292,8 +3295,18 @@ function InstallBanner() {
 
 export default function App() {
   const [tab, setTab] = useState("live");
-
   const country = useCountry();
+
+  const tabBarRef = useRef(null);
+  const [tabBarBottom, setTabBarBottom] = useState(116);
+  useEffect(() => {
+    if (!tabBarRef.current) return;
+    const obs = new ResizeObserver(() => {
+      setTabBarBottom(tabBarRef.current.getBoundingClientRect().bottom);
+    });
+    obs.observe(tabBarRef.current);
+    return () => obs.disconnect();
+  }, []);
 
   // Register service worker for PWA
   useEffect(() => {
@@ -3350,7 +3363,7 @@ export default function App() {
       <FavCtx.Provider value={{favTeam, favTeams, setFavTeam: toggleFav}}>
       <div style={{minHeight:"100vh",background:C.bg,maxWidth:700,margin:"0 auto",fontFamily:"system-ui,sans-serif",transition:"background .2s"}}>
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}*{box-sizing:border-box;margin:0;padding:0}select option{background:${C.s1}}::-webkit-scrollbar{width:3px;height:3px}::-webkit-scrollbar-thumb{background:${C.b1};border-radius:2px}`}</style>
-        <div style={{background:`linear-gradient(180deg,${headerDark},${C.bg})`,padding:"14px 14px 0",borderBottom:`1px solid ${C.b1}`,position:"sticky",top:0,zIndex:100,backdropFilter:"blur(10px)"}}>
+        <div ref={tabBarRef} style={{background:`linear-gradient(180deg,${headerDark},${C.bg})`,padding:"14px 14px 0",borderBottom:`1px solid ${C.b1}`,position:"sticky",top:0,zIndex:100,backdropFilter:"blur(10px)"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
             <div style={{display:"flex",alignItems:"center",gap:10}}>
               <div>
@@ -3413,16 +3426,16 @@ export default function App() {
           </div>
         </div>
         <div style={{padding:"14px 13px 100px"}}>
-          {tab==="live"      && <LiveTab onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam}/>}
-          {tab==="scorers"   && <TopScorersTab/>}
-          {tab==="schedule"  && <SchedTab onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam}/>}
-          {tab==="groups"    && <GrpTab onTeam={onTeam} onMatchTap={onMatchTap}/>}
-          {tab==="stats"     && <StatsTab initial={statsTeam}/>}
-          {tab==="h2h"       && <H2HTab/>}
+          {tab==="live"      && <LiveTab onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} tabTop={tabBarBottom}/>}
+          {tab==="scorers"   && <TopScorersTab tabTop={tabBarBottom}/>}
+          {tab==="schedule"  && <SchedTab onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} tabTop={tabBarBottom}/>}
+          {tab==="groups"    && <GrpTab onTeam={onTeam} onMatchTap={onMatchTap} tabTop={tabBarBottom}/>}
+          {tab==="stats"     && <StatsTab initial={statsTeam} tabTop={tabBarBottom}/>}
+          {tab==="h2h"       && <H2HTab tabTop={tabBarBottom}/>}
           {tab==="predict"   && <PredTab/>}
           {tab==="predictor" && <PredictorTab/>}
-          {tab==="sim"       && <SimTab/>}
-          {tab==="bracket"   && <MyBracketTab/>}
+          {tab==="sim"       && <SimTab tabTop={tabBarBottom}/>}
+          {tab==="bracket"   && <MyBracketTab tabTop={tabBarBottom}/>}
           {tab==="saved"     && <SavedTab saved={saved} onRemove={onRemove}/>}
         </div>
         <AddModal match={modal.match} open={modal.open} onClose={()=>setModal({open:false,match:null})} onCal={onCal} onRem={onRem}/>
