@@ -706,14 +706,16 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="" }) {
   const liveMatches = MATCHES.filter(m => { const s=getScore(m.home,m.away); return s&&statusIsLive(s.status); });
   const finishedToday = MATCHES.filter(m => { const s=getScore(m.home,m.away); return s&&statusIsFinished(s.status); });
 
-  // Per-team upcoming matches — 2 each if 1-2 teams selected, 1 each if 3-4
-  const matchesPerTeam = favTeams.length <= 2 ? 2 : 1;
-  const upcomingByTeam = favTeams.map(team => ({
-    team,
-    matches: MATCHES
-      .filter(m => (m.home===team||m.away===team) && !getScore(m.home,m.away))
-      .slice(0, matchesPerTeam),
-  })).filter(x => x.matches.length > 0);
+  // Upcoming fav matches — grouped by date, sorted chronologically
+  const upcomingFavMatches = favTeams.length > 0
+    ? MATCHES.filter(m => (favTeams.includes(m.home)||favTeams.includes(m.away)) && !getScore(m.home,m.away))
+    : [];
+  const upcomingByDate = upcomingFavMatches.reduce((acc, m) => {
+    const { dateLabel } = matchTimes(m);
+    const key = dateLabel || m.date;
+    (acc[key] = acc[key] || []).push(m);
+    return acc;
+  }, {});
 
   return (
     <div>
@@ -723,20 +725,15 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="" }) {
           {lastUpdate && <span style={{fontSize:11,color:C.dim,flexShrink:0}}>Updated {lastUpdate}</span>}
         </div>
       </div>
-      {upcomingByTeam.length > 0 && (
+      {Object.keys(upcomingByDate).length > 0 && (
         <div style={{marginBottom:16}}>
           <div style={{fontSize:11,color:C.gold,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>
             ⭐ UPCOMING — YOUR TEAMS
           </div>
-          {upcomingByTeam.map(({team, matches}) => (
-            <div key={team} style={{marginBottom:10}}>
-              {favTeams.length > 1 && (
-                <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:5}}>
-                  <Crest team={team} size={16}/>
-                  <span style={{fontSize:11,color:C.gold,fontWeight:700}}>{team}</span>
-                </div>
-              )}
-              {matches.map(m => <MatchCard key={m.id} m={m} onAction={onAction}/>)}
+          {Object.entries(upcomingByDate).map(([date, matches]) => (
+            <div key={date} style={{marginBottom:10}}>
+              <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:5}}>{date}</div>
+              {matches.map(m => <MatchCard key={m.id} m={m} onAction={onAction} onMatchTap={onMatchTap}/>)}
             </div>
           ))}
         </div>
