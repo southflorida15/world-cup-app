@@ -1397,9 +1397,9 @@ function wcStats(appearances=[]) {
   const finals = past.filter(a => a.finalPosition<=2).length;
   const sf     = past.filter(a => a.finalPosition<=4).length;
   const goals  = past.reduce((s,a) => s+(a.goalsScored||0), 0);
-  const gs_w   = past.reduce((s,a) => s+((a.groupStage?.won)||(a.groupStage?.w)||0), 0);
-  const gs_d   = past.reduce((s,a) => s+((a.groupStage?.drawn)||(a.groupStage?.d)||0), 0);
-  const gs_l   = past.reduce((s,a) => s+((a.groupStage?.lost)||(a.groupStage?.l)||0), 0);
+  const gs_w   = past.reduce((s,a) => s+(a.groupStage?.won ?? a.groupStage?.w ?? 0), 0);
+  const gs_d   = past.reduce((s,a) => s+(a.groupStage?.drawn ?? a.groupStage?.d ?? 0), 0);
+  const gs_l   = past.reduce((s,a) => s+(a.groupStage?.lost ?? a.groupStage?.l ?? 0), 0);
   const gs_p   = gs_w+gs_d+gs_l;
   const best   = past.length ? Math.min(...past.map(a=>a.finalPosition||99)) : null;
   return { total, titles, finals, sf, goals, gs_w, gs_d, gs_l, gs_p, best };
@@ -1463,14 +1463,7 @@ function TeamHistoryCard({ team, data, color }) {
   if (!d) return <div style={{fontSize:12,color:C.dim,textAlign:"center",padding:"16px 0"}}>No data available</div>;
   const apps = d.appearances || [];
   if (apps.length === 0) return (
-    <div style={{padding:"12px 0"}}>
-      <div style={{fontSize:12,color:C.dim,textAlign:"center",marginBottom:8}}>No World Cup history found</div>
-      <div style={{fontSize:10,color:C.gold,background:C.s2,borderRadius:6,padding:"6px 8px",wordBreak:"break-all",lineHeight:1.6}}>
-        <div><strong>Top keys:</strong> {Object.keys(data).join(", ")}</div>
-        {data.team && <div><strong>.team keys:</strong> {Object.keys(data.team).join(", ")}</div>}
-        {data.data && <div><strong>.data keys:</strong> {Object.keys(data.data).join(", ")}</div>}
-      </div>
-    </div>
+    <div style={{fontSize:12,color:C.dim,textAlign:"center",padding:"16px 0"}}>No World Cup history found</div>
   );
   const past = [...apps].filter(a=>a.year<2026).reverse(); // newest first
   const st = wcStats(apps);
@@ -1509,12 +1502,11 @@ function TeamHistoryCard({ team, data, color }) {
       <div style={{maxHeight:260,overflowY:"auto",scrollbarWidth:"none"}}>
         {past.map(a=>{
           const gs = a.groupStage;
-          const gp = gs?(gs.played||0):0;
-          const gw = gs?(gs.won||gs.w||0):0;
-          const gd = gs?(gs.drawn||gs.d||0):0;
-          const gl = gs?(gs.lost||gs.l||0):0;
-          const gf = gs?(gs.goalsFor||gs.gf||0):0;
-          const ga = gs?(gs.goalsAgainst||gs.ga||0):0;
+          const gw = gs ? (gs.won  ?? gs.w ?? 0) : 0;
+          const gd = gs ? (gs.drawn ?? gs.d ?? 0) : 0;
+          const gl = gs ? (gs.lost  ?? gs.l ?? 0) : 0;
+          const gf = gs ? (gs.gf ?? gs.goalsFor ?? 0) : 0;
+          const ga = gs ? (gs.ga ?? gs.goalsAgainst ?? 0) : 0;
           const pc = posColor2(a.finalPosition);
           return (
             <div key={a.year} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:`1px solid ${C.b1}`}}>
