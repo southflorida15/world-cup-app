@@ -1462,10 +1462,12 @@ function TeamHistoryCard({ team, data, color }) {
   if (!d) return <div style={{fontSize:12,color:C.dim,textAlign:"center",padding:"16px 0"}}>No data available</div>;
   const apps = d.appearances || [];
   if (apps.length === 0) return (
-    <div style={{fontSize:12,color:C.dim,textAlign:"center",padding:"16px 0"}}>
-      No World Cup history found
-      <div style={{fontSize:10,marginTop:4,color:C.dim,wordBreak:"break-all"}}>
-        Keys: {Object.keys(data).join(", ")}
+    <div style={{padding:"12px 0"}}>
+      <div style={{fontSize:12,color:C.dim,textAlign:"center",marginBottom:8}}>No World Cup history found</div>
+      <div style={{fontSize:10,color:C.gold,background:C.s2,borderRadius:6,padding:"6px 8px",wordBreak:"break-all",lineHeight:1.6}}>
+        <div><strong>Top keys:</strong> {Object.keys(data).join(", ")}</div>
+        {data.team && <div><strong>.team keys:</strong> {Object.keys(data.team).join(", ")}</div>}
+        {data.data && <div><strong>.data keys:</strong> {Object.keys(data.data).join(", ")}</div>}
       </div>
     </div>
   );
