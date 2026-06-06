@@ -856,14 +856,19 @@ function SchedTab({ onAction, onMatchTap=null, favTeam="" }) {
   const byDate = shown.reduce((a,m)=>{ const {dateLabel}=matchTimes(m); const key=dateLabel||m.date; (a[key]=a[key]||[]).push(m); return a; },{});
   const ss=(active,color=C.green)=>({padding:"5px 12px",borderRadius:20,border:`1px solid ${active?color:C.b1}`,background:active?`${color}18`:"transparent",color:active?color:C.mid,fontSize:12,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap"});
 
+  const [filterHeight, setFilterHeight] = useState(0);
+  const filterRef = useRef(null);
+  useEffect(() => {
+    if (filterRef.current) setFilterHeight(filterRef.current.offsetHeight);
+  }, [filterMode, selDate]);
+
   return (
     <div>
-      {/* Sticky filter header */}
-      <div style={{position:"sticky",top:0,zIndex:50,background:C.bg,paddingBottom:8,marginBottom:4,borderBottom:`1px solid ${C.b1}`}}>
+      {/* Fixed filter header */}
+      <div ref={filterRef} style={{position:"fixed",top:120,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"6px 13px 8px",maxWidth:700,margin:"0 auto"}}>
 
         {/* Date strip */}
-        <div ref={stripRef} style={{display:"flex",overflowX:"auto",scrollbarWidth:"none",marginBottom:8,paddingTop:6,gap:4}}>
-          {/* "All" button */}
+        <div ref={stripRef} style={{display:"flex",overflowX:"auto",scrollbarWidth:"none",marginBottom:8,gap:4}}>
           <div onClick={()=>setSelDate(null)} style={{display:"flex",flexDirection:"column",alignItems:"center",minWidth:36,cursor:"pointer",padding:"4px 2px",borderRadius:8,background:selDate===null?`${C.green}22`:"transparent",border:`1px solid ${selDate===null?C.green:"transparent"}`}}>
             <span style={{fontSize:9,color:selDate===null?C.green:C.dim,fontWeight:700}}>ALL</span>
             <span style={{fontSize:14,fontWeight:900,color:selDate===null?C.green:C.dim}}>⚽</span>
@@ -874,14 +879,11 @@ function SchedTab({ onAction, onMatchTap=null, favTeam="" }) {
             return (
               <div key={d.key} data-active={isSel} onClick={()=>setSelDate(isSel?null:d.key)}
                 style={{display:"flex",flexDirection:"column",alignItems:"center",minWidth:36,cursor:"pointer",padding:"4px 6px",borderRadius:8,
-                  background: isSel ? `${C.green}22` : isToday ? `${C.green}0a` : "transparent",
-                  border: `1px solid ${isSel?C.green:isToday?`${C.green}44`:"transparent"}`,
+                  background: isSel?`${C.green}22`:isToday?`${C.green}0a`:"transparent",
+                  border:`1px solid ${isSel?C.green:isToday?`${C.green}44`:"transparent"}`,
                 }}>
                 <span style={{fontSize:9,color:isSel?C.green:C.dim,fontWeight:600,textTransform:"uppercase"}}>{d.dow}</span>
-                <div style={{width:28,height:28,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",
-                  background: isSel?C.green:"transparent",
-                  marginTop:1,
-                }}>
+                <div style={{width:28,height:28,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",background:isSel?C.green:"transparent",marginTop:1}}>
                   <span style={{fontSize:14,fontWeight:900,color:isSel?"#030a05":isToday?C.green:C.text}}>{d.day}</span>
                 </div>
               </div>
@@ -890,30 +892,33 @@ function SchedTab({ onAction, onMatchTap=null, favTeam="" }) {
         </div>
 
         {/* Filter mode buttons */}
-        <div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none",marginBottom: filterMode==="group"?8:0}}>
+        <div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none",marginBottom:filterMode==="group"?8:0}}>
           {favTeams?.length > 0 && <button style={ss(filterMode==="fav",C.gold)} onClick={()=>setFilterMode("fav")}>⭐ My Teams</button>}
           <button style={ss(filterMode==="group")} onClick={()=>setFilterMode("group")}>🗂 Group</button>
           <button style={ss(filterMode==="team")} onClick={()=>setFilterMode("team")}>👥 Team</button>
           <button style={ss(filterMode==="venue")} onClick={()=>setFilterMode("venue")}>📍 Venue</button>
         </div>
         {filterMode==="group" && (
-          <div style={{display:"flex",gap:6,overflowX:"auto",paddingTop:6,scrollbarWidth:"none"}}>
+          <div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none"}}>
             {["All","A","B","C","D","E","F","G","H","I","J","K","L","Knockout"].map(g=><Pill key={g} active={groupF===g} onClick={()=>setGroupF(g)} color={g==="Knockout"?C.gold:C.green}>{g==="All"?"All":g==="Knockout"?"🏆 KO":g}</Pill>)}
           </div>
         )}
         {filterMode==="team" && (
-          <select value={teamF} onChange={e=>setTeamF(e.target.value)} style={{width:"100%",padding:"8px 14px",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:10,color:C.text,fontSize:14,outline:"none",marginTop:6}}>
+          <select value={teamF} onChange={e=>setTeamF(e.target.value)} style={{width:"100%",padding:"8px 14px",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:10,color:C.text,fontSize:14,outline:"none"}}>
             <option value="">All teams</option>
             {allTeams.map(t=><option key={t} value={t}>{getFlag(t)} {t}</option>)}
           </select>
         )}
         {filterMode==="venue" && (
-          <select value={venueF} onChange={e=>setVenueF(e.target.value)} style={{width:"100%",padding:"8px 14px",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:10,color:C.text,fontSize:14,outline:"none",marginTop:6}}>
+          <select value={venueF} onChange={e=>setVenueF(e.target.value)} style={{width:"100%",padding:"8px 14px",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:10,color:C.text,fontSize:14,outline:"none"}}>
             <option value="">All venues</option>
             {allVenues.map(v=><option key={v} value={v}>{v}</option>)}
           </select>
         )}
       </div>
+
+      {/* Spacer to push content below fixed header */}
+      <div style={{height: filterHeight || 120}}/>
 
       {/* Match list */}
       {shown.length===0 ? <div style={{textAlign:"center",padding:"32px",color:C.dim}}>No matches found</div> : Object.entries(byDate).map(([date,ms],idx)=>(
