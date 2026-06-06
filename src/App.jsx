@@ -668,7 +668,7 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="" 
               else navigator.clipboard?.writeText(txt);
             }} style={{background:"none",border:"none",color:C.dim,fontSize:14,cursor:"pointer",padding:"2px 4px"}} title="Share">📤</button>
             {/* Events/details button */}
-            {onMatchTap && m.group && <button onClick={()=>onMatchTap(m)} style={{background:`${C.blue}18`,border:`1px solid ${C.blue}33`,color:C.blue,padding:"3px 9px",borderRadius:20,fontSize:11,fontWeight:600,cursor:"pointer"}}>Events</button>}
+            {onMatchTap && m.group && <button onClick={()=>onMatchTap(m)} style={{background:`${C.blue}18`,border:`1px solid ${C.blue}33`,color:C.blue,padding:"3px 9px",borderRadius:20,fontSize:11,fontWeight:600,cursor:"pointer"}}>Match Events</button>}
             {!finished && <button onClick={()=>onAction(m)} style={{background:`${C.green}22`,border:`1px solid ${C.greenS}`,color:C.green,padding:"3px 11px",borderRadius:20,fontSize:11,fontWeight:600,cursor:"pointer"}}>+ Add</button>}
             {finished && <span style={{fontSize:10,color:C.dim,fontStyle:"italic"}}>Final</span>}
           </div>
@@ -763,15 +763,8 @@ function SchedTab({ onAction, onMatchTap=null, favTeam="" }) {
         <button style={ss(filterMode==="team")} onClick={()=>setFilterMode("team")}>👥 Team</button>
         <button style={ss(filterMode==="venue")} onClick={()=>setFilterMode("venue")}>📍 Venue</button>
       </div>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
-        <span style={{fontSize:11,color:C.dim,fontWeight:600}}>⏰ Match times</span>
-        <div style={{display:"flex",background:C.s2,borderRadius:20,border:`1px solid ${C.b2}`,padding:2,gap:2}}>
-          <button onClick={()=>setTimeMode("local")} style={{padding:"5px 14px",borderRadius:18,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:timeMode==="local"?C.green:"transparent",color:timeMode==="local"?"#030a05":C.dim,transition:"all .15s"}}>My Time</button>
-          <button onClick={()=>setTimeMode("venue")} style={{padding:"5px 14px",borderRadius:18,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,background:timeMode==="venue"?C.gold:"transparent",color:timeMode==="venue"?"#030a05":C.dim,transition:"all .15s"}}>Venue</button>
-        </div>
-      </div>
       {filterMode==="group" && (
-        <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:8,marginBottom:14,scrollbarWidth:"none"}}>
+        <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:6,marginBottom:6,scrollbarWidth:"none"}}>
           {["All","A","B","C","D","E","F","G","H","I","J","K","L","Knockout"].map(g=><Pill key={g} active={groupF===g} onClick={()=>setGroupF(g)} color={g==="Knockout"?C.gold:C.green}>{g==="All"?"All":g==="Knockout"?"🏆 KO":g}</Pill>)}
         </div>
       )}
@@ -791,9 +784,17 @@ function SchedTab({ onAction, onMatchTap=null, favTeam="" }) {
           </select>
         </div>
       )}
-      {shown.length===0 ? <div style={{textAlign:"center",padding:"32px",color:C.dim}}>No matches found</div> : Object.entries(byDate).map(([date,ms])=>(
-        <div key={date} style={{marginBottom:18}}>
-          <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>{date}</div>
+      {shown.length===0 ? <div style={{textAlign:"center",padding:"32px",color:C.dim}}>No matches found</div> : Object.entries(byDate).map(([date,ms],idx)=>(
+        <div key={date} style={{marginBottom:14}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:5,marginTop:6}}>
+            <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>{date}</div>
+            {idx===0 && (
+              <div style={{display:"flex",background:C.s2,borderRadius:20,border:`1px solid ${C.b2}`,padding:2,gap:2}}>
+                <button onClick={()=>setTimeMode("local")} style={{padding:"3px 10px",borderRadius:18,border:"none",cursor:"pointer",fontSize:10,fontWeight:700,background:timeMode==="local"?C.green:"transparent",color:timeMode==="local"?"#030a05":C.dim,transition:"all .15s"}}>My Time</button>
+                <button onClick={()=>setTimeMode("venue")} style={{padding:"3px 10px",borderRadius:18,border:"none",cursor:"pointer",fontSize:10,fontWeight:700,background:timeMode==="venue"?C.gold:"transparent",color:timeMode==="venue"?"#030a05":C.dim,transition:"all .15s"}}>Venue</button>
+              </div>
+            )}
+          </div>
           {ms.map(m=><MatchCard key={m.id} m={m} onAction={onAction} onMatchTap={onMatchTap} timeMode={timeMode} favTeam={favTeam}/>)}
         </div>
       ))}
