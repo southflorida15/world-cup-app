@@ -770,7 +770,7 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116 }) {
           </div>
         </div>
       </div>
-      <div style={{height:44}}/>
+      <div style={{height:50}}/>
       {Object.keys(upcomingByDate).length > 0 && (
         <div style={{marginBottom:16}}>
           <div style={{fontSize:11,color:C.gold,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>
@@ -1023,7 +1023,7 @@ function GrpTab({ onTeam, onMatchTap, tabTop=116 }) {
         </div>
       </div>
       {/* Spacer */}
-      <div style={{height:96}}/>
+      <div style={{height:90}}/>
       {view==="standings" && (
         <div>
           <Card style={{marginBottom:12}}>
@@ -1969,7 +1969,7 @@ function H2HTab({ tabTop=116 }) {
           </button>
         )}
       </div>
-      <div style={{height: team1&&team2&&team1!==team2 ? 130 : 96}}/>
+      <div style={{height: team1&&team2&&team1!==team2 ? 128 : 90}}/>
 
       {/* Simulated match odds — always shown */}
       {team1!==team2 && simOdds && (
@@ -3126,7 +3126,7 @@ function TopScorersTab({ tabTop=116 }) {
           </div>
         )}
       </div>
-      <div style={{height: hasLive ? 44 : 76}}/>
+      <div style={{height: hasLive ? 50 : 82}}/>
       {!hasLive && (
           <div>
           {ONES_TO_WATCH.filter(p=>filter==="all"||p.pos===filter).map((p,i) => (
@@ -3425,18 +3425,18 @@ export default function App() {
             ))}
           </div>
         </div>
-        <div style={{padding:"14px 13px 100px"}}>
+        <div style={{padding:"0 13px 100px"}}>
           {tab==="live"      && <LiveTab onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} tabTop={tabBarBottom}/>}
           {tab==="scorers"   && <TopScorersTab tabTop={tabBarBottom}/>}
           {tab==="schedule"  && <SchedTab onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} tabTop={tabBarBottom}/>}
           {tab==="groups"    && <GrpTab onTeam={onTeam} onMatchTap={onMatchTap} tabTop={tabBarBottom}/>}
           {tab==="stats"     && <StatsTab initial={statsTeam} tabTop={tabBarBottom}/>}
           {tab==="h2h"       && <H2HTab tabTop={tabBarBottom}/>}
-          {tab==="predict"   && <PredTab/>}
-          {tab==="predictor" && <PredictorTab/>}
+          {tab==="predict"   && <div style={{paddingTop:14}}><PredTab/></div>}
+          {tab==="predictor" && <div style={{paddingTop:14}}><PredictorTab/></div>}
           {tab==="sim"       && <SimTab tabTop={tabBarBottom}/>}
           {tab==="bracket"   && <MyBracketTab tabTop={tabBarBottom}/>}
-          {tab==="saved"     && <SavedTab saved={saved} onRemove={onRemove}/>}
+          {tab==="saved"     && <div style={{paddingTop:14}}><SavedTab saved={saved} onRemove={onRemove}/></div>}
         </div>
         <AddModal match={modal.match} open={modal.open} onClose={()=>setModal({open:false,match:null})} onCal={onCal} onRem={onRem}/>
         <MatchEventsModal match={eventsModal.match} open={eventsModal.open} onClose={()=>setEventsModal({open:false,match:null})} onAction={onAction}/>
