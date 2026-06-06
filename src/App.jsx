@@ -674,8 +674,16 @@ function LiveTab({ onAction, favTeam="" }) {
   const lastUpdate = lastFetch ? lastFetch.toLocaleTimeString() : null;
   const liveMatches = MATCHES.filter(m => { const s=getScore(m.home,m.away); return s&&statusIsLive(s.status); });
   const finishedToday = MATCHES.filter(m => { const s=getScore(m.home,m.away); return s&&statusIsFinished(s.status); });
-  const favMatches = favTeams?.length ? MATCHES.filter(m => (favTeams.includes(m.home)||favTeams.includes(m.away)) && !getScore(m.home,m.away)) : [];
-  const nextFav = favMatches[0];
+
+  // Per-team upcoming matches — 2 each if 1-2 teams selected, 1 each if 3-4
+  const matchesPerTeam = favTeams.length <= 2 ? 2 : 1;
+  const upcomingByTeam = favTeams.map(team => ({
+    team,
+    matches: MATCHES
+      .filter(m => (m.home===team||m.away===team) && !getScore(m.home,m.away))
+      .slice(0, matchesPerTeam),
+  })).filter(x => x.matches.length > 0);
+
   return (
     <div>
       <div style={{background:`linear-gradient(135deg,#0a1f10,#0c2815)`,border:`1px solid ${C.b2}`,borderRadius:12,padding:14,marginBottom:14}}>
@@ -684,10 +692,22 @@ function LiveTab({ onAction, favTeam="" }) {
           {lastUpdate && <span style={{fontSize:11,color:C.dim,flexShrink:0}}>Updated {lastUpdate}</span>}
         </div>
       </div>
-      {nextFav && (
-        <div style={{marginBottom:14}}>
-          <div style={{fontSize:11,color:C.gold,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>⭐ NEXT MATCH — YOUR TEAMS</div>
-          <MatchCard m={nextFav} onAction={onAction} favTeam={favTeam}/>
+      {upcomingByTeam.length > 0 && (
+        <div style={{marginBottom:16}}>
+          <div style={{fontSize:11,color:C.gold,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>
+            ⭐ UPCOMING — YOUR TEAMS
+          </div>
+          {upcomingByTeam.map(({team, matches}) => (
+            <div key={team} style={{marginBottom:10}}>
+              {favTeams.length > 1 && (
+                <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:5}}>
+                  <Crest team={team} size={16}/>
+                  <span style={{fontSize:11,color:C.gold,fontWeight:700}}>{team}</span>
+                </div>
+              )}
+              {matches.map(m => <MatchCard key={m.id} m={m} onAction={onAction}/>)}
+            </div>
+          ))}
         </div>
       )}
       {liveMatches.length>0 && <div><div style={{fontSize:11,color:C.green,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>🔴 Live Now</div>{liveMatches.map(m=><MatchCard key={m.id} m={m} onAction={onAction} favTeam={favTeam}/>)}</div>}
