@@ -114,7 +114,7 @@ export default async function handler(req, res) {
   <meta property="og:image:height" content="630"/>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
-    body { background:#060e0a; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; padding-top:0; font-family:system-ui,sans-serif; padding:16px; }
+    body { background:#060e0a; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; min-height:100vh; padding-top:0; padding:16px; }
     .card { width:100%; max-width:600px; }
     svg { width:100%; height:auto; border-radius:12px; box-shadow:0 8px 32px rgba(0,0,0,0.5); }
     .actions { display:flex; gap:12px; margin-top:16px; width:100%; max-width:600px; }
