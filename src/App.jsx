@@ -2967,9 +2967,6 @@ function MatchEventsModal({ match, open, onClose, onAction }) {
     </div>
   );
 }
-    </Modal>
-  );
-}
 
 // ── TOP SCORERS TAB ───────────────────────────────────────────────────────
 // Pre-tournament "ones to watch" — will be replaced by live data after Jun 11
