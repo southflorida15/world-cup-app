@@ -1009,13 +1009,18 @@ function GrpTab({ onTeam, onMatchTap }) {
   const liveCount = results.filter(r => r.fromLive).length;
   return (
     <div>
-      <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:6,marginBottom:12,scrollbarWidth:"none"}}>
-        {Object.keys(GROUPS).map(g=><Pill key={g} active={sel===g} onClick={()=>setSel(g)}>{g}</Pill>)}
+      {/* Fixed header */}
+      <div style={{position:"fixed",top:120,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"8px 13px",maxWidth:700,margin:"0 auto"}}>
+        <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:6,scrollbarWidth:"none"}}>
+          {Object.keys(GROUPS).map(g=><Pill key={g} active={sel===g} onClick={()=>setSel(g)}>{g}</Pill>)}
+        </div>
+        <div style={{display:"flex",gap:8}}>
+          <Pill active={view==="standings"} onClick={()=>setView("standings")} color={C.gold}>📊 Standings</Pill>
+          <Pill active={view==="matches"} onClick={()=>setView("matches")} color={C.gold}>📋 Matches</Pill>
+        </div>
       </div>
-      <div style={{display:"flex",gap:8,marginBottom:14}}>
-        <Pill active={view==="standings"} onClick={()=>setView("standings")} color={C.gold}>📊 Standings</Pill>
-        <Pill active={view==="matches"} onClick={()=>setView("matches")} color={C.gold}>📋 Matches</Pill>
-      </div>
+      {/* Spacer */}
+      <div style={{height:96}}/>
       {view==="standings" && (
         <div>
           <Card style={{marginBottom:12}}>
@@ -1224,10 +1229,13 @@ function StatsTab({ initial="" }) {
 
   return (
     <div>
-      <select value={sel} onChange={e=>setSel(e.target.value)} style={{width:"100%",padding:"10px 14px",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:10,color:C.text,fontSize:14,outline:"none",marginBottom:14}}>
-        <option value="">Select a team</option>
-        {Object.keys(GROUPS).map(g=><optgroup key={g} label={`Group ${g}`}>{GROUPS[g].teams.map(t=><option key={t} value={t}>{getFlag(t)} {t}</option>)}</optgroup>)}
-      </select>
+      <div style={{position:"fixed",top:120,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"8px 13px",maxWidth:700,margin:"0 auto"}}>
+        <select value={sel} onChange={e=>setSel(e.target.value)} style={{width:"100%",padding:"10px 14px",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:10,color:C.text,fontSize:14,outline:"none"}}>
+          <option value="">Select a team</option>
+          {Object.keys(GROUPS).map(g=><optgroup key={g} label={`Group ${g}`}>{GROUPS[g].teams.map(t=><option key={t} value={t}>{getFlag(t)} {t}</option>)}</optgroup>)}
+        </select>
+      </div>
+      <div style={{height:58}}/>
       {!sel && <div style={{textAlign:"center",padding:"44px 20px",color:C.dim,fontSize:13}}>Select any of the 48 teams to view their squad</div>}
       {sel && d && (
         <div>
@@ -1565,30 +1573,27 @@ function SimTab() {
 
   return (
     <div>
-      <div style={{background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b2}`,borderRadius:12,padding:14,marginBottom:14}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
+      <div style={{position:"fixed",top:120,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"8px 13px",maxWidth:700,margin:"0 auto"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
           <div>
-            <div style={{fontWeight:700,fontSize:18,color:C.green}}>🎲 WORLD CUP SIMULATOR</div>
-            <div style={{fontSize:11,color:C.dim,marginTop:2}}>Poisson model · FIFA ratings · form · home advantage</div>
+            <div style={{fontWeight:700,fontSize:15,color:C.green}}>🎲 WORLD CUP SIMULATOR</div>
+            <div style={{fontSize:10,color:C.dim}}>Poisson model · FIFA ratings · form · home advantage</div>
           </div>
-          <button onClick={()=>runMC(sims)} disabled={running} style={{padding:"7px 14px",borderRadius:10,background:`${C.green}22`,border:`1px solid ${C.greenS}`,color:C.green,fontWeight:700,fontSize:13,cursor:"pointer",opacity:running?0.5:1,flexShrink:0}}>
+          <button onClick={()=>runMC(sims)} disabled={running} style={{padding:"6px 12px",borderRadius:10,background:`${C.green}22`,border:`1px solid ${C.greenS}`,color:C.green,fontWeight:700,fontSize:12,cursor:"pointer",opacity:running?0.5:1,flexShrink:0}}>
             {running ? "Running…" : "↻ Re-run"}
           </button>
         </div>
-        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+        <div style={{display:"flex",gap:6,marginBottom:6}}>
           {[1000,5000,10000,50000].map(n=>(
-            <Pill key={n} active={sims===n} onClick={()=>{setSims(n);runMC(n);}} color={C.gold}>
-              {n.toLocaleString()}×
-            </Pill>
+            <Pill key={n} active={sims===n} onClick={()=>{setSims(n);runMC(n);}} color={C.gold}>{n.toLocaleString()}×</Pill>
           ))}
         </div>
+        <div style={{display:"flex",gap:6}}>
+          <Pill active={view==="odds"}    onClick={()=>setView("odds")}    color={C.green}>📊 Win Odds</Pill>
+          <Pill active={view==="bracket"} onClick={()=>setView("bracket")} color={C.gold}>🏆 Most Likely Bracket</Pill>
+        </div>
       </div>
-
-      {/* View toggle */}
-      <div style={{display:"flex",gap:8,marginBottom:14}}>
-        <Pill active={view==="odds"}    onClick={()=>setView("odds")}    color={C.green}>📊 Win Odds</Pill>
-        <Pill active={view==="bracket"} onClick={()=>setView("bracket")} color={C.gold}>🏆 Most Likely Bracket</Pill>
-      </div>
+      <div style={{height:118}}/>
 
       {running && (
         <div style={{textAlign:"center",padding:"48px 0"}}>
@@ -1793,7 +1798,13 @@ function unwrapTeam(data) {
 
 function TeamHistoryCard({ team, data, color }) {
   const d = unwrapTeam(data);
-  if (!d) return <div style={{fontSize:12,color:C.dim,textAlign:"center",padding:"16px 0"}}>No data available</div>;
+  if (!d) return (
+    <div style={{padding:"20px 10px",textAlign:"center"}}>
+      <div style={{fontSize:"2rem",marginBottom:8}}>🏆</div>
+      <div style={{fontSize:13,fontWeight:700,color,marginBottom:4}}>2026 Debut</div>
+      <div style={{fontSize:11,color:C.dim,lineHeight:1.6}}>{team} has no previous World Cup appearances — this will be their first tournament!</div>
+    </div>
+  );
   const apps = d.appearances || [];
   if (apps.length === 0) return (
     <div style={{fontSize:12,color:C.dim,textAlign:"center",padding:"16px 0"}}>No World Cup history found</div>
@@ -1907,9 +1918,9 @@ function H2HTab() {
         zafronixGet("team", { name: toZName(team2) }),
       ]);
       setD1(r1); setD2(r2);
-      if (!r1 && !r2) setFetchErr("API returned no data — check /api/zafronix?endpoint=team&name=Brazil in your browser to debug.");
-      else if (!r1) setFetchErr(`No data for ${team1}`);
-      else if (!r2) setFetchErr(`No data for ${team2}`);
+      if (!r1 && !r2) setFetchErr("No World Cup history found for either team. They may be making their debut in 2026!");
+      else if (!r1) setFetchErr(`No previous World Cup history for ${team1} — they may be making their debut in 2026!`);
+      else if (!r2) setFetchErr(`No previous World Cup history for ${team2} — they may be making their debut in 2026!`);
     } catch(e) {
       setFetchErr(e.message);
     }
@@ -1931,34 +1942,31 @@ function H2HTab() {
 
   return (
     <div>
-      {/* Team selector */}
-      <Card style={{marginBottom:14}}>
-        <div style={{padding:14}}>
-          <div style={{fontWeight:700,color:C.green,fontSize:16,marginBottom:12}}>⚔️ COMPARE TEAMS</div>
-          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
-            <div style={{flex:1}}>
-              <div style={{fontSize:10,color:C.dim,marginBottom:4,fontWeight:600}}>TEAM 1</div>
-              <select value={team1} onChange={e=>{setTeam1(e.target.value);setD1(null);setFetched(false);}} style={{width:"100%",padding:"8px 10px",background:C.s2,border:`1px solid ${C.b2}`,borderRadius:8,color:C.text,fontSize:13,outline:"none"}}>
-                <option value="">Select team…</option>
-                {ALL_TEAMS.map(t=><option key={t} value={t}>{getFlag(t)} {t}</option>)}
-              </select>
-            </div>
-            <button onClick={swap} style={{padding:"8px 10px",background:C.b1,border:`1px solid ${C.b2}`,borderRadius:8,color:C.mid,fontSize:16,cursor:"pointer",flexShrink:0,marginTop:18}}>⇄</button>
-            <div style={{flex:1}}>
-              <div style={{fontSize:10,color:C.dim,marginBottom:4,fontWeight:600}}>TEAM 2</div>
-              <select value={team2} onChange={e=>{setTeam2(e.target.value);setD2(null);setFetched(false);}} style={{width:"100%",padding:"8px 10px",background:C.s2,border:`1px solid ${C.b2}`,borderRadius:8,color:C.text,fontSize:13,outline:"none"}}>
-                <option value="">Select team…</option>
-                {ALL_TEAMS.map(t=><option key={t} value={t}>{getFlag(t)} {t}</option>)}
-              </select>
-            </div>
+      {/* Fixed team selector */}
+      <div style={{position:"fixed",top:120,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"8px 13px",maxWidth:700,margin:"0 auto"}}>
+        <div style={{fontWeight:700,color:C.green,fontSize:14,marginBottom:8}}>⚔️ COMPARE TEAMS</div>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:team1&&team2&&team1!==team2?8:0}}>
+          <div style={{flex:1}}>
+            <select value={team1} onChange={e=>{setTeam1(e.target.value);setD1(null);setFetched(false);}} style={{width:"100%",padding:"7px 10px",background:C.s2,border:`1px solid ${C.b2}`,borderRadius:8,color:C.text,fontSize:13,outline:"none"}}>
+              <option value="">Team 1…</option>
+              {ALL_TEAMS.map(t=><option key={t} value={t}>{getFlag(t)} {t}</option>)}
+            </select>
           </div>
-          {team1!==team2 && (
-            <button onClick={fetchBoth} disabled={loading} style={{width:"100%",padding:"11px 0",borderRadius:10,background:`linear-gradient(135deg,${C.green},#22c55e)`,border:"none",color:"#030a05",fontWeight:700,fontSize:14,cursor:"pointer",opacity:loading?0.6:1}}>
-              {loading ? "Loading…" : "📜 Load World Cup History"}
-            </button>
-          )}
+          <button onClick={swap} style={{padding:"7px 10px",background:C.b1,border:`1px solid ${C.b2}`,borderRadius:8,color:C.mid,fontSize:16,cursor:"pointer",flexShrink:0}}>⇄</button>
+          <div style={{flex:1}}>
+            <select value={team2} onChange={e=>{setTeam2(e.target.value);setD2(null);setFetched(false);}} style={{width:"100%",padding:"7px 10px",background:C.s2,border:`1px solid ${C.b2}`,borderRadius:8,color:C.text,fontSize:13,outline:"none"}}>
+              <option value="">Team 2…</option>
+              {ALL_TEAMS.map(t=><option key={t} value={t}>{getFlag(t)} {t}</option>)}
+            </select>
+          </div>
         </div>
-      </Card>
+        {team1&&team2&&team1!==team2 && (
+          <button onClick={fetchBoth} disabled={loading} style={{width:"100%",padding:"9px 0",borderRadius:10,background:`linear-gradient(135deg,${C.green},#22c55e)`,border:"none",color:"#030a05",fontWeight:700,fontSize:13,cursor:"pointer",opacity:loading?0.6:1}}>
+            {loading ? "Loading…" : "📜 Load World Cup History"}
+          </button>
+        )}
+      </div>
+      <div style={{height: team1&&team2&&team1!==team2 ? 130 : 96}}/>
 
       {/* Simulated match odds — always shown */}
       {team1!==team2 && simOdds && (
@@ -2019,20 +2027,18 @@ function H2HTab() {
         </div>
       )}
 
-      {/* Fetch error */}
+      {/* Fetch error — shown as info, not crash */}
       {fetched && fetchErr && (
-        <div style={{background:`${C.red}18`,border:`1px solid ${C.red}44`,borderRadius:10,padding:14,marginBottom:12}}>
-          <div style={{fontWeight:700,color:C.red,marginBottom:6}}>⚠️ Could not load history</div>
-          <div style={{fontSize:12,color:C.mid,wordBreak:"break-all"}}>{fetchErr}</div>
-          <div style={{fontSize:11,color:C.dim,marginTop:8}}>Try opening <span style={{color:C.gold}}>/api/zafronix?endpoint=team&name=Brazil</span> in your browser to see the raw API response.</div>
+        <div style={{background:`${C.gold}12`,border:`1px solid ${C.gold}33`,borderRadius:10,padding:12,marginBottom:12}}>
+          <div style={{fontSize:13,color:C.gold}}>ℹ️ {fetchErr}</div>
         </div>
       )}
 
       {/* Side-by-side World Cup history */}
       {fetched && !loading && (
         <div>
-          {/* Career stat bars */}
-          {(d1||d2) && (
+          {/* Career stat bars — only when BOTH teams have data */}
+          {(d1 && d2) && (
             <Card style={{marginBottom:12}}>
               <div style={{padding:"10px 14px",borderBottom:`1px solid ${C.b1}`}}>
                 <span style={{fontWeight:700,color:C.green,fontSize:13}}>📊 WORLD CUP CAREER COMPARISON</span>
@@ -2189,11 +2195,14 @@ function MyBracketTab() {
   const runBracket=()=>{setRunning(true);setTimeout(()=>{const qualifiers=[];Object.entries(groups).forEach(([,teams])=>{qualifiers.push(teams[0],teams[1]);});const r32=[...qualifiers,...thirds.slice(0,8)];const ko=(arr)=>{const n=[];for(let i=0;i<arr.length;i+=2)n.push(simKO(arr[i],arr[i+1]));return n;};const r16=ko(r32),qf=ko(r16),sf=ko(qf),champ=simKO(sf[0],sf[1]);setResult({r32,r16,qf,sf,champion:champ,runnerUp:sf.find(x=>x!==champ)});setStage("bracket");setRunning(false);},80);};
   return (
     <div>
-      <div style={{display:"flex",gap:8,marginBottom:14}}>
-        <Pill active={stage==="groups"} onClick={()=>setStage("groups")} color={C.green}>1 · Set Groups</Pill>
-        <Pill active={stage==="thirds"} onClick={()=>setStage("thirds")} color={C.gold}>2 · Pick 3rds</Pill>
-        <Pill active={stage==="bracket"} onClick={()=>setStage("bracket")} color={C.blue}>3 · Bracket</Pill>
+      <div style={{position:"fixed",top:120,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"10px 13px",maxWidth:700,margin:"0 auto"}}>
+        <div style={{display:"flex",gap:8}}>
+          <Pill active={stage==="groups"} onClick={()=>setStage("groups")} color={C.green}>1 · Set Groups</Pill>
+          <Pill active={stage==="thirds"} onClick={()=>setStage("thirds")} color={C.gold}>2 · Pick 3rds</Pill>
+          <Pill active={stage==="bracket"} onClick={()=>setStage("bracket")} color={C.blue}>3 · Bracket</Pill>
+        </div>
       </div>
+      <div style={{height:52}}/>
       {stage==="groups" && (
         <div>
           <div style={{fontSize:12,color:C.mid,marginBottom:14,lineHeight:1.6}}>
@@ -3103,21 +3112,20 @@ function TopScorersTab() {
 
   return (
     <div>
-      <div style={{background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b2}`,borderRadius:12,padding:14,marginBottom:14}}>
-        <div style={{fontWeight:700,fontSize:18,color:C.green}}>⚽ TOP SCORERS</div>
-        <div style={{fontSize:11,color:C.dim,marginTop:2}}>
-          {hasLive ? "Live tournament data · updates every 60s" : "Pre-tournament ones to watch · updates live from Jun 11"}
-        </div>
-      </div>
-
-      {!hasLive && (
-        <div style={{marginBottom:14}}>
-          <div style={{display:"flex",gap:8,marginBottom:12}}>
+      <div style={{position:"fixed",top:120,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"8px 13px",maxWidth:700,margin:"0 auto"}}>
+        <div style={{fontWeight:700,fontSize:16,color:C.green,marginBottom:4}}>⚽ TOP SCORERS <span style={{fontSize:11,color:C.dim,fontWeight:400}}>{hasLive?"· Live data":"· Pre-tournament"}</span></div>
+        {!hasLive && (
+          <div style={{display:"flex",gap:6}}>
             <Pill active={filter==="all"}  onClick={()=>setFilter("all")}  color={C.green}>All</Pill>
             <Pill active={filter==="FW"}   onClick={()=>setFilter("FW")}   color={C.red}>Strikers</Pill>
             <Pill active={filter==="MF"}   onClick={()=>setFilter("MF")}   color={C.gold}>Midfielders</Pill>
             <Pill active={filter==="DF"}   onClick={()=>setFilter("DF")}   color={C.blue}>Defenders</Pill>
           </div>
+        )}
+      </div>
+      <div style={{height: hasLive ? 44 : 76}}/>
+      {!hasLive && (
+          <div>
           {ONES_TO_WATCH.filter(p=>filter==="all"||p.pos===filter).map((p,i) => (
             <Card key={p.name} style={{marginBottom:7}}>
               <div style={{padding:"10px 13px",display:"flex",alignItems:"center",gap:10}}>
