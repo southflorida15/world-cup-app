@@ -2077,43 +2077,134 @@ function MatchdayCard({ m, onAction, favTeam }) {
 // ── FAVORITE TEAM CONTEXT ─────────────────────────────────────────────────
 const FavCtx = createContext({ favTeam:"", setFavTeam:()=>{} });
 
-// ── PREDICTOR TAB ─────────────────────────────────────────────────────────
-const PRED_STORAGE_KEY = "wc2026_predictor_v1";
-function loadPreds() {
-  try { return JSON.parse(localStorage.getItem(PRED_STORAGE_KEY) || "{}"); } catch { return {}; }
+// ── PREDICTOR — KV-backed multi-user ─────────────────────────────────────
+
+// Stable userId — just a device key, not sensitive data
+function getUserId() {
+  try {
+    let id = localStorage.getItem("wc2026_uid");
+    if (!id) { id = crypto.randomUUID(); localStorage.setItem("wc2026_uid", id); }
+    return id;
+  } catch { return "anon"; }
 }
-function savePreds(obj) {
-  try { localStorage.setItem(PRED_STORAGE_KEY, JSON.stringify(obj)); } catch {}
-}
+
 function scoreOnePred(pred, actual) {
   if (!pred || actual.hg === null || actual.ag === null) return null;
   const ph = parseInt(pred.hg), pa = parseInt(pred.ag);
   const ah = parseInt(actual.hg), aa = parseInt(actual.ag);
   if (isNaN(ph)||isNaN(pa)) return null;
-  if (ph===ah && pa===aa) return 3; // exact
-  const predRes = ph>pa?"H":ph<pa?"A":"D";
-  const actRes  = ah>aa?"H":ah<aa?"A":"D";
-  if (predRes===actRes) return 1; // correct result
-  return 0;
+  if (ph===ah && pa===aa) return 3;
+  const pr = ph>pa?"H":ph<pa?"A":"D";
+  const ar = ah>aa?"H":ah<aa?"A":"D";
+  return pr===ar ? 1 : 0;
+}
+
+async function apiPred(action, params={}, body=null) {
+  const qs = new URLSearchParams({ action, ...params }).toString();
+  const opts = body
+    ? { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body) }
+    : { method:"GET" };
+  const res = await fetch(`/api/predictor?${qs}`, opts);
+  if (!res.ok) { const e = await res.json().catch(()=>({error:res.statusText})); throw new Error(e.error||res.statusText); }
+  return res.json();
+}
+
+// Debounce helper — saves prediction 800ms after last keystroke
+function useDebounce(fn, ms) {
+  const t = useRef(null);
+  return useCallback((...args) => {
+    clearTimeout(t.current);
+    t.current = setTimeout(() => fn(...args), ms);
+  }, [fn, ms]);
 }
 
 function PredictorTab() {
   const { getScore, isFinished } = useContext(LiveScoresCtx);
   const { favTeam } = useContext(FavCtx);
-  const [preds, setPreds] = useState(loadPreds);
-  const [filter, setFilter] = useState("upcoming");
+  const userId = useMemo(getUserId, []);
+
+  // User registration state
+  const [user, setUser]         = useState(null);   // { userId, name } or null
+  const [userLoading, setUL]    = useState(true);
+  const [nameInput, setNameInput] = useState("");
+  const [nameErr, setNameErr]   = useState("");
+  const [nameSaving, setNS]     = useState(false);
+
+  // Predictions: { [matchId]: { hg, ag } }
+  const [preds, setPreds]       = useState({});
+  const [predSaving, setPSaving]= useState({});  // { [matchId]: bool }
+
+  // Leaderboard
+  const [board, setBoard]       = useState(null);
+  const [boardLoading, setBL]   = useState(false);
+  const [filter, setFilter]     = useState("upcoming");
   const [showInfo, setShowInfo] = useState(false);
 
-  const upd = (id, field, val) => {
-    const next = { ...preds, [id]: { ...(preds[id]||{}), [field]: val.replace(/\D/,"") }};
-    setPreds(next);
-    savePreds(next);
+  // ── Load user + their predictions on mount ──────────────────────────────
+  useEffect(() => {
+    (async () => {
+      setUL(true);
+      try {
+        const u = await apiPred("getUser", { userId });
+        setUser(u);
+        if (u) {
+          const p = await apiPred("getPreds", { userId });
+          // Normalise keys to numbers
+          const normalised = {};
+          Object.entries(p||{}).forEach(([k,v]) => { normalised[Number(k)] = v; });
+          setPreds(normalised);
+        }
+      } catch(e) { console.error("predictor init", e); }
+      finally { setUL(false); }
+    })();
+  }, [userId]);
+
+  // ── Load leaderboard when that tab is active ────────────────────────────
+  useEffect(() => {
+    if (filter !== "board") return;
+    setBL(true);
+    apiPred("leaderboard")
+      .then(b => setBoard(b))
+      .catch(() => setBoard([]))
+      .finally(() => setBL(false));
+  }, [filter]);
+
+  // ── Register ────────────────────────────────────────────────────────────
+  const handleRegister = async () => {
+    if (!nameInput.trim()) return;
+    setNS(true); setNameErr("");
+    try {
+      const u = await apiPred("register", {}, { userId, name: nameInput.trim() });
+      setUser(u);
+    } catch(e) { setNameErr(e.message || "Could not save name"); }
+    finally { setNS(false); }
   };
 
-  const upcoming = MATCHES.filter(m => m.group && !isFinished(m.home, m.away));
-  const finished  = MATCHES.filter(m => m.group && isFinished(m.home, m.away));
+  // ── Save a single prediction to KV (debounced) ──────────────────────────
+  const savePredToKV = useCallback(async (matchId, hg, ag) => {
+    if (!user) return;
+    setPSaving(p => ({...p, [matchId]: true}));
+    try {
+      await apiPred("savePred", {}, { userId, matchId, hg, ag });
+    } catch(e) { console.error("savePred", e); }
+    finally { setPSaving(p => ({...p, [matchId]: false})); }
+  }, [userId, user]);
 
-  // Score all predictions
+  const debouncedSave = useDebounce(savePredToKV, 800);
+
+  const upd = (id, field, val) => {
+    const clean = val.replace(/\D/,"");
+    const next = { ...preds, [id]: { ...(preds[id]||{}), [field]: clean }};
+    setPreds(next);
+    const updated = next[id];
+    if (updated?.hg !== undefined && updated?.ag !== undefined && updated.hg !== "" && updated.ag !== "") {
+      debouncedSave(id, parseInt(updated.hg), parseInt(updated.ag));
+    }
+  };
+
+  // ── Score totals ────────────────────────────────────────────────────────
+  const upcoming  = MATCHES.filter(m => m.group && !isFinished(m.home, m.away));
+  const finished  = MATCHES.filter(m => m.group &&  isFinished(m.home, m.away));
   let totalPts = 0, totalPossible = 0, exact = 0, correct = 0;
   finished.forEach(m => {
     const sc = getScore(m.home, m.away);
@@ -2122,107 +2213,187 @@ function PredictorTab() {
     if (pts !== null) { totalPts += pts; totalPossible += 3; if(pts===3)exact++; if(pts>=1)correct++; }
   });
 
-  const shown = filter === "upcoming" ? upcoming : finished;
+  const shownMatches = filter==="fav"
+    ? MATCHES.filter(m=>m.group&&(m.home===favTeam||m.away===favTeam))
+    : filter==="finished" ? finished : upcoming;
 
+  // ── Registration gate ───────────────────────────────────────────────────
+  if (userLoading) return (
+    <div style={{textAlign:"center",padding:"48px 20px"}}>
+      <div style={{width:28,height:28,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto 12px"}}/>
+      <div style={{fontSize:13,color:C.mid}}>Loading predictor...</div>
+    </div>
+  );
+
+  if (!user) return (
+    <div style={{padding:"24px 0"}}>
+      <div style={{background:`linear-gradient(135deg,#0a1f10,#0c2815)`,border:`1px solid ${C.b2}`,borderRadius:12,padding:20,marginBottom:20,textAlign:"center"}}>
+        <div style={{fontSize:"2rem",marginBottom:8}}>🔮</div>
+        <div style={{fontWeight:700,fontSize:20,color:C.green,marginBottom:6}}>Match Predictor</div>
+        <div style={{fontSize:13,color:C.mid,lineHeight:1.6}}>Pick scores for every group match. Compete with friends on the leaderboard.</div>
+      </div>
+      <Card style={{padding:18}}>
+        <div style={{fontWeight:700,color:C.text,fontSize:15,marginBottom:4}}>Choose your display name</div>
+        <div style={{fontSize:12,color:C.dim,marginBottom:14}}>This is how you'll appear on the leaderboard — pick something your friends will recognise.</div>
+        <input
+          value={nameInput}
+          onChange={e=>{setNameInput(e.target.value.slice(0,20));setNameErr("");}}
+          onKeyDown={e=>e.key==="Enter"&&handleRegister()}
+          placeholder="e.g. Pablo, FootballFan99..."
+          maxLength={20}
+          style={{width:"100%",padding:"12px 14px",background:C.s2,border:`1px solid ${nameErr?C.red:C.b2}`,borderRadius:10,color:C.text,fontSize:15,outline:"none",marginBottom:8}}
+        />
+        {nameErr && <div style={{fontSize:12,color:C.red,marginBottom:8}}>{nameErr}</div>}
+        <div style={{fontSize:11,color:C.dim,marginBottom:14}}>{20-nameInput.length} characters remaining</div>
+        <button
+          onClick={handleRegister}
+          disabled={nameSaving||!nameInput.trim()}
+          style={{width:"100%",padding:"12px 0",borderRadius:12,background:nameInput.trim()?`linear-gradient(135deg,${C.green},#22c55e)`:C.b2,border:"none",color:nameInput.trim()?"#030a05":C.dim,fontWeight:700,fontSize:15,cursor:nameInput.trim()?"pointer":"default",opacity:nameSaving?0.6:1}}
+        >{nameSaving?"Saving...":"Join the Predictor →"}</button>
+      </Card>
+    </div>
+  );
+
+  // ── Main predictor UI ───────────────────────────────────────────────────
   return (
     <div>
       <div style={{background:`linear-gradient(135deg,#0a1f10,#0c2815)`,border:`1px solid ${C.b2}`,borderRadius:12,padding:14,marginBottom:14}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
           <div>
             <div style={{fontWeight:700,fontSize:18,color:C.green}}>🔮 MATCH PREDICTOR</div>
-            <div style={{fontSize:11,color:C.dim,marginTop:2}}>Predict scores for every group match</div>
+            <div style={{fontSize:11,color:C.mid,marginTop:2}}>Playing as <strong style={{color:C.gold}}>{user.name}</strong></div>
           </div>
-          <button onClick={()=>setShowInfo(v=>!v)} style={{background:"none",border:`1px solid ${C.b2}`,borderRadius:20,color:C.dim,fontSize:11,padding:"3px 10px",cursor:"pointer"}}>How to score?</button>
+          <button onClick={()=>setShowInfo(v=>!v)} style={{background:"none",border:`1px solid ${C.b2}`,borderRadius:20,color:C.dim,fontSize:11,padding:"3px 10px",cursor:"pointer"}}>Scoring?</button>
         </div>
         {showInfo && (
-          <div style={{marginTop:10,padding:10,background:C.bg,borderRadius:8,fontSize:12,color:C.mid,lineHeight:1.7}}>
+          <div style={{marginTop:10,padding:10,background:C.bg,borderRadius:8,fontSize:12,color:C.mid,lineHeight:1.8}}>
             <div>⚽⚽⚽ <strong style={{color:C.green}}>3 pts</strong> — Exact score</div>
-            <div>⚽ <strong style={{color:C.gold}}>1 pt</strong> — Correct result (Win/Draw/Loss)</div>
-            <div>❌ <strong style={{color:C.dim}}>0 pts</strong> — Wrong result</div>
+            <div>⚽ <strong style={{color:C.gold}}>1 pt</strong> — Correct result (Win / Draw / Loss)</div>
+            <div>❌ <strong style={{color:C.red}}>0 pts</strong> — Wrong result</div>
+            <div style={{marginTop:6,fontSize:11,color:C.dim}}>Predictions auto-save as you type. Lock-in before kick-off — no changes after!</div>
           </div>
         )}
         {totalPossible > 0 && (
           <div style={{display:"flex",gap:8,marginTop:12}}>
-            <div style={{flex:1,textAlign:"center",background:`${C.green}18`,border:`1px solid ${C.green}33`,borderRadius:10,padding:"8px 4px"}}>
-              <div style={{fontWeight:900,fontSize:22,color:C.green}}>{totalPts}</div>
-              <div style={{fontSize:9,color:C.dim}}>POINTS</div>
-            </div>
-            <div style={{flex:1,textAlign:"center",background:`${C.gold}18`,border:`1px solid ${C.gold}33`,borderRadius:10,padding:"8px 4px"}}>
-              <div style={{fontWeight:900,fontSize:22,color:C.gold}}>{exact}</div>
-              <div style={{fontSize:9,color:C.dim}}>EXACT</div>
-            </div>
-            <div style={{flex:1,textAlign:"center",background:`${C.blue}18`,border:`1px solid ${C.blue}33`,borderRadius:10,padding:"8px 4px"}}>
-              <div style={{fontWeight:900,fontSize:22,color:C.blue}}>{correct}</div>
-              <div style={{fontSize:9,color:C.dim}}>CORRECT</div>
-            </div>
-            <div style={{flex:1,textAlign:"center",background:C.s2,border:`1px solid ${C.b1}`,borderRadius:10,padding:"8px 4px"}}>
-              <div style={{fontWeight:900,fontSize:22,color:C.mid}}>{totalPossible>0?Math.round((totalPts/totalPossible)*100):0}%</div>
-              <div style={{fontSize:9,color:C.dim}}>ACCURACY</div>
-            </div>
+            {[
+              [totalPts,       "POINTS",   C.green],
+              [exact,          "EXACT",    C.gold],
+              [correct,        "CORRECT",  C.blue],
+              [totalPossible>0?Math.round((totalPts/totalPossible)*100):0, "ACCURACY %", C.mid],
+            ].map(([v,l,col])=>(
+              <div key={l} style={{flex:1,textAlign:"center",background:`${col}18`,border:`1px solid ${col}33`,borderRadius:10,padding:"8px 4px"}}>
+                <div style={{fontWeight:900,fontSize:22,color:col}}>{v}{l==="ACCURACY %"?"%":""}</div>
+                <div style={{fontSize:9,color:C.dim}}>{l}</div>
+              </div>
+            ))}
           </div>
         )}
       </div>
 
-      {/* Filter */}
-      <div style={{display:"flex",gap:8,marginBottom:14}}>
+      {/* Filter tabs */}
+      <div style={{display:"flex",gap:6,marginBottom:14,overflowX:"auto",scrollbarWidth:"none"}}>
         <Pill active={filter==="upcoming"} onClick={()=>setFilter("upcoming")} color={C.green}>Upcoming ({upcoming.length})</Pill>
         <Pill active={filter==="finished"} onClick={()=>setFilter("finished")} color={C.gold}>Finished ({finished.length})</Pill>
         {favTeam && <Pill active={filter==="fav"} onClick={()=>setFilter("fav")} color={C.gold}>⭐ {favTeam}</Pill>}
+        <Pill active={filter==="board"} onClick={()=>setFilter("board")} color={C.rival}>🏅 Leaderboard</Pill>
       </div>
 
-      {shown.length===0 && filter==="upcoming" && (
-        <div style={{textAlign:"center",padding:"32px 20px",color:C.dim}}>
-          <div style={{fontSize:"2rem",marginBottom:8}}>⏳</div>
-          <div style={{fontSize:13}}>No upcoming group matches yet. Check back on June 11!</div>
+      {/* ── LEADERBOARD ── */}
+      {filter==="board" && (
+        <div>
+          {boardLoading && <div style={{textAlign:"center",padding:"32px 0"}}><div style={{width:24,height:24,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto"}}/></div>}
+          {!boardLoading && board && board.length === 0 && (
+            <div style={{textAlign:"center",padding:"32px 20px",color:C.dim,fontSize:13}}>No predictions scored yet. Check back after June 11!</div>
+          )}
+          {!boardLoading && board && board.map((entry, i) => {
+            const isMe = entry.userId === userId;
+            const medal = i===0?"🥇":i===1?"🥈":i===2?"🥉":null;
+            return (
+              <Card key={entry.userId} style={{marginBottom:7,border:`1px solid ${isMe?C.gold:C.b1}`,background:isMe?`linear-gradient(135deg,${C.gold}0a,${C.s1})`:""}}>
+                <div style={{padding:"10px 13px",display:"flex",alignItems:"center",gap:10}}>
+                  <div style={{fontWeight:700,color:C.dim,minWidth:26,fontSize:14,textAlign:"center"}}>{medal||`#${i+1}`}</div>
+                  <div style={{flex:1}}>
+                    <div style={{fontWeight:700,color:isMe?C.gold:C.text,fontSize:14}}>{entry.name}{isMe&&<span style={{fontSize:10,color:C.gold,marginLeft:6}}>(you)</span>}</div>
+                    <div style={{fontSize:11,color:C.dim,marginTop:2}}>{entry.predCount} predictions · {entry.exact} exact · {entry.correct} correct</div>
+                  </div>
+                  <div style={{textAlign:"right"}}>
+                    <div style={{fontWeight:900,fontSize:22,color:i===0?C.gold:i<3?C.green:C.mid}}>{entry.pts}</div>
+                    <div style={{fontSize:9,color:C.dim}}>pts</div>
+                  </div>
+                </div>
+                {i===0&&entry.pts>0&&<div style={{height:2,background:`linear-gradient(90deg,${C.gold},transparent)`}}/>}
+              </Card>
+            );
+          })}
+          <div style={{textAlign:"center",marginTop:12}}>
+            <button onClick={()=>{setBL(true);apiPred("leaderboard").then(b=>setBoard(b)).finally(()=>setBL(false));}} style={{fontSize:12,color:C.dim,background:"none",border:`1px solid ${C.b2}`,borderRadius:20,padding:"5px 14px",cursor:"pointer"}}>↻ Refresh</button>
+          </div>
         </div>
       )}
 
-      {(filter==="fav" ? MATCHES.filter(m=>m.group&&(m.home===favTeam||m.away===favTeam)) : shown).map(m => {
-        const sc = getScore(m.home, m.away);
-        const done = isFinished(m.home, m.away);
-        const pred = preds[m.id] || {};
-        const pts = done && sc ? scoreOnePred(pred, sc) : null;
-        const ptColor = pts===3?C.green:pts===1?C.gold:pts===0?C.red:C.dim;
-        const hasPred = pred.hg !== undefined && pred.ag !== undefined && pred.hg !== "" && pred.ag !== "";
-        return (
-          <Card key={m.id} style={{marginBottom:8,border:`1px solid ${pts===3?C.green:pts===1?C.gold:pts===0?C.red:C.b1}`}}>
-            <div style={{padding:"10px 13px"}}>
-              <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
-                <Badge>Group {m.group} · {m.date}</Badge>
-                {pts !== null && <div style={{fontWeight:700,color:ptColor,fontSize:12}}>{pts===3?"⚽⚽⚽ +3pts":pts===1?"⚽ +1pt":"❌ 0pts"}</div>}
-              </div>
-              <div style={{display:"flex",alignItems:"center",gap:8}}>
-                <Crest team={m.home} size={22}/>
-                <span style={{fontWeight:700,color:C.text,flex:1,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.home}</span>
-                <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
-                  {done && sc ? (
-                    <div style={{textAlign:"center",minWidth:54}}>
-                      <div style={{fontSize:10,color:C.dim,marginBottom:2}}>Result</div>
-                      <div style={{fontWeight:800,fontSize:18,color:C.text,fontFamily:"monospace"}}>{sc.hg}–{sc.ag}</div>
-                    </div>
-                  ) : (
-                    <>
-                      <input value={pred.hg||""} onChange={e=>upd(m.id,"hg",e.target.value)} placeholder="?" maxLength={2}
-                        style={{width:34,textAlign:"center",background:C.s2,border:`1px solid ${hasPred?C.green:C.b2}`,borderRadius:8,color:C.green,fontSize:16,fontWeight:700,padding:"4px 0",outline:"none"}}/>
-                      <span style={{color:C.dim,fontWeight:700}}>–</span>
-                      <input value={pred.ag||""} onChange={e=>upd(m.id,"ag",e.target.value)} placeholder="?" maxLength={2}
-                        style={{width:34,textAlign:"center",background:C.s2,border:`1px solid ${hasPred?C.green:C.b2}`,borderRadius:8,color:C.green,fontSize:16,fontWeight:700,padding:"4px 0",outline:"none"}}/>
-                    </>
-                  )}
-                  {done && hasPred && (
-                    <div style={{textAlign:"center",minWidth:54}}>
-                      <div style={{fontSize:10,color:C.dim,marginBottom:2}}>Your pick</div>
-                      <div style={{fontWeight:800,fontSize:18,color:ptColor,fontFamily:"monospace"}}>{pred.hg}–{pred.ag}</div>
-                    </div>
-                  )}
-                </div>
-                <span style={{fontWeight:700,color:C.text,flex:1,fontSize:13,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.away}</span>
-                <Crest team={m.away} size={22}/>
-              </div>
+      {/* ── MATCH LIST ── */}
+      {filter !== "board" && (
+        <>
+          {shownMatches.length===0 && (
+            <div style={{textAlign:"center",padding:"32px 20px",color:C.dim}}>
+              <div style={{fontSize:"2rem",marginBottom:8}}>⏳</div>
+              <div style={{fontSize:13}}>{filter==="upcoming"?"No upcoming matches yet — check back June 11!":"No finished matches yet."}</div>
             </div>
-          </Card>
-        );
-      })}
+          )}
+          {shownMatches.map(m => {
+            const sc = getScore(m.home, m.away);
+            const done = isFinished(m.home, m.away);
+            const pred = preds[m.id] || {};
+            const pts = done && sc ? scoreOnePred(pred, sc) : null;
+            const ptColor = pts===3?C.green:pts===1?C.gold:pts===0?C.red:C.dim;
+            const hasPred = pred.hg!==undefined && pred.ag!==undefined && pred.hg!=="" && pred.ag!=="";
+            const saving = predSaving[m.id];
+            return (
+              <Card key={m.id} style={{marginBottom:8,border:`1px solid ${pts===3?C.green:pts===1?C.gold:pts===0?C.red:hasPred?`${C.green}44`:C.b1}`}}>
+                <div style={{padding:"10px 13px"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+                    <Badge>Group {m.group} · {m.date}</Badge>
+                    <div style={{display:"flex",alignItems:"center",gap:6}}>
+                      {saving && <span style={{fontSize:10,color:C.dim}}>saving...</span>}
+                      {!saving && hasPred && !done && <span style={{fontSize:10,color:C.green}}>✓ saved</span>}
+                      {pts !== null && <div style={{fontWeight:700,color:ptColor,fontSize:12}}>{pts===3?"⚽⚽⚽ +3":pts===1?"⚽ +1":"❌ 0"}pts</div>}
+                    </div>
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <Crest team={m.home} size={22}/>
+                    <span style={{fontWeight:700,color:C.text,flex:1,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.home}</span>
+                    <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
+                      {done && sc && (
+                        <div style={{textAlign:"center",minWidth:48}}>
+                          <div style={{fontSize:9,color:C.dim,marginBottom:1}}>Result</div>
+                          <div style={{fontWeight:800,fontSize:18,color:C.text,fontFamily:"monospace"}}>{sc.hg}–{sc.ag}</div>
+                        </div>
+                      )}
+                      {!done && (
+                        <>
+                          <input value={pred.hg||""} onChange={e=>upd(m.id,"hg",e.target.value)} placeholder="?" maxLength={2}
+                            style={{width:34,textAlign:"center",background:C.s2,border:`1px solid ${hasPred?C.green:C.b2}`,borderRadius:8,color:C.green,fontSize:16,fontWeight:700,padding:"4px 0",outline:"none"}}/>
+                          <span style={{color:C.dim,fontWeight:700}}>–</span>
+                          <input value={pred.ag||""} onChange={e=>upd(m.id,"ag",e.target.value)} placeholder="?" maxLength={2}
+                            style={{width:34,textAlign:"center",background:C.s2,border:`1px solid ${hasPred?C.green:C.b2}`,borderRadius:8,color:C.green,fontSize:16,fontWeight:700,padding:"4px 0",outline:"none"}}/>
+                        </>
+                      )}
+                      {done && hasPred && (
+                        <div style={{textAlign:"center",minWidth:48}}>
+                          <div style={{fontSize:9,color:C.dim,marginBottom:1}}>Your pick</div>
+                          <div style={{fontWeight:800,fontSize:18,color:ptColor,fontFamily:"monospace"}}>{pred.hg}–{pred.ag}</div>
+                        </div>
+                      )}
+                    </div>
+                    <span style={{fontWeight:700,color:C.text,flex:1,fontSize:13,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.away}</span>
+                    <Crest team={m.away} size={22}/>
+                  </div>
+                </div>
+              </Card>
+            );
+          })}
+        </>
+      )}
     </div>
   );
 }
