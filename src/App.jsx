@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, createContext, useCallback, useMemo, useRef } from "react"; // v4
+import React, { useState, useEffect, useContext, createContext, useCallback, useMemo, useRef } from "react";
 
 // ── THEME ─────────────────────────────────────────────────────────────────
 const C = {
@@ -662,10 +662,29 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="" 
             {/* Share button */}
             <button onClick={e=>{
               e.stopPropagation();
-              const sc2 = hasScore ? `${sc.hg}–${sc.ag}` : "vs";
-              const txt = `⚽ ${m.home} ${sc2} ${m.away} • ${m.group?"Group "+m.group:m.stage||"World Cup 2026"} • ${m.date}${!hasScore?" "+m.time:""}`;
-              if(navigator.share) navigator.share({title:"World Cup 2026",text:txt}).catch(()=>{});
-              else navigator.clipboard?.writeText(txt);
+              const base = window.location.origin;
+              const params = new URLSearchParams({
+                home: m.home,
+                away: m.away,
+                ...(hasScore ? {hg: sc.hg, ag: sc.ag} : {}),
+                ...(m.group ? {group: m.group} : {stage: m.stage||"World Cup 2026"}),
+                date: m.date,
+                venue: m.venue.split(",")[0], // just the stadium name
+              });
+              const imageUrl = `${base}/api/og?${params}`;
+              const appUrl = base;
+              const txt = hasScore
+                ? `⚽ ${m.home} ${sc.hg}–${sc.ag} ${m.away} • ${m.group?"Group "+m.group:m.stage||"World Cup 2026"} • ${m.date}\n${appUrl}`
+                : `⚽ ${m.home} vs ${m.away} • ${m.group?"Group "+m.group:m.stage||"World Cup 2026"} • ${m.date} ${m.time}\n${appUrl}`;
+              if(navigator.share) {
+                navigator.share({
+                  title: `${m.home} vs ${m.away} — World Cup 2026`,
+                  text: txt,
+                  url: imageUrl,
+                }).catch(()=>{});
+              } else {
+                navigator.clipboard?.writeText(txt);
+              }
             }} style={{background:"none",border:"none",color:C.dim,fontSize:14,cursor:"pointer",padding:"2px 4px"}} title="Share">📤</button>
             {/* Events/details button */}
             {onMatchTap && m.group && <button onClick={()=>onMatchTap(m)} style={{background:`${C.blue}18`,border:`1px solid ${C.blue}33`,color:C.blue,padding:"3px 9px",borderRadius:20,fontSize:11,fontWeight:600,cursor:"pointer"}}>Match Events</button>}
@@ -2927,6 +2946,104 @@ const TABS = [
   {id:"saved",     icon:"⭐", label:"Saved"},
 ];
 
+// ── PWA INSTALL BANNER ────────────────────────────────────────────────────
+function InstallBanner() {
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [showBanner, setShowBanner] = useState(false);
+  const [showIOSInstructions, setShowIOSInstructions] = useState(false);
+  const [dismissed, setDismissed] = useState(() => {
+    try { return localStorage.getItem("wc2026_install_dismissed") === "true"; } catch { return false; }
+  });
+
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  const isInStandaloneMode = window.matchMedia("(display-mode: standalone)").matches
+    || window.navigator.standalone === true;
+
+  useEffect(() => {
+    if (isInStandaloneMode || dismissed) return;
+
+    // Chrome/Android/Edge — capture the install prompt
+    const handler = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setShowBanner(true);
+    };
+    window.addEventListener("beforeinstallprompt", handler);
+
+    // iOS Safari — show manual instructions
+    if (isIOS && !isInStandaloneMode) {
+      setShowBanner(true);
+    }
+
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+
+  const handleInstall = async () => {
+    if (deferredPrompt) {
+      // Chrome/Android — trigger native prompt
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === "accepted") {
+        setShowBanner(false);
+        setDeferredPrompt(null);
+      }
+    } else if (isIOS) {
+      // iOS — show instructions modal
+      setShowIOSInstructions(true);
+    }
+  };
+
+  const dismiss = () => {
+    setShowBanner(false);
+    setDismissed(true);
+    try { localStorage.setItem("wc2026_install_dismissed", "true"); } catch {}
+  };
+
+  if (!showBanner || isInStandaloneMode || dismissed) return null;
+
+  return (
+    <>
+      {/* Install banner */}
+      <div style={{position:"fixed",bottom:0,left:0,right:0,zIndex:500,maxWidth:700,margin:"0 auto",padding:"12px 14px",background:`linear-gradient(135deg,${C.s1},${C.s2})`,borderTop:`1px solid ${C.green}44`,display:"flex",alignItems:"center",gap:10,boxShadow:"0 -4px 20px rgba(0,0,0,0.3)"}}>
+        <img src="/icons/icon-192.png" alt="icon" style={{width:36,height:36,borderRadius:8,flexShrink:0}}/>
+        <div style={{flex:1}}>
+          <div style={{fontWeight:700,color:C.text,fontSize:13}}>Install World Cup 2026</div>
+          <div style={{fontSize:11,color:C.dim}}>Add to your home screen for the best experience</div>
+        </div>
+        <button onClick={handleInstall} style={{padding:"8px 14px",borderRadius:20,background:`linear-gradient(135deg,${C.green},#22c55e)`,border:"none",color:"#030a05",fontWeight:700,fontSize:13,cursor:"pointer",flexShrink:0}}>
+          {isIOS ? "How to" : "Install"}
+        </button>
+        <button onClick={dismiss} style={{background:"none",border:"none",color:C.dim,fontSize:20,cursor:"pointer",padding:"0 4px",flexShrink:0}}>×</button>
+      </div>
+
+      {/* iOS instructions modal */}
+      {showIOSInstructions && (
+        <div onClick={()=>setShowIOSInstructions(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",zIndex:600,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
+          <div onClick={e=>e.stopPropagation()} style={{background:C.s1,border:`1px solid ${C.b2}`,borderRadius:"18px 18px 0 0",width:"100%",maxWidth:700,padding:24,paddingBottom:40}}>
+            <div style={{fontWeight:700,fontSize:18,color:C.green,marginBottom:4}}>Add to Home Screen</div>
+            <div style={{fontSize:13,color:C.dim,marginBottom:20}}>Follow these steps in Safari:</div>
+            {[
+              ["1", "📤", "Tap the Share button at the bottom of Safari"],
+              ["2", "📜", "Scroll down and tap \"Add to Home Screen\""],
+              ["3", "✅", "Tap \"Add\" in the top right corner"],
+            ].map(([num, icon, text]) => (
+              <div key={num} style={{display:"flex",alignItems:"center",gap:12,marginBottom:14}}>
+                <div style={{width:28,height:28,borderRadius:"50%",background:`${C.green}22`,border:`1px solid ${C.green}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,color:C.green,flexShrink:0}}>{num}</div>
+                <div style={{fontSize:16,flexShrink:0}}>{icon}</div>
+                <div style={{fontSize:13,color:C.text}}>{text}</div>
+              </div>
+            ))}
+            <div style={{marginTop:8,padding:12,background:`${C.gold}18`,border:`1px solid ${C.gold}33`,borderRadius:10,fontSize:12,color:C.mid}}>
+              💡 Must be using <strong style={{color:C.gold}}>Safari</strong> — Chrome on iOS doesn't support home screen install.
+            </div>
+            <button onClick={()=>setShowIOSInstructions(false)} style={{width:"100%",marginTop:16,padding:"12px 0",borderRadius:12,background:`linear-gradient(135deg,${C.green},#22c55e)`,border:"none",color:"#030a05",fontWeight:700,fontSize:15,cursor:"pointer"}}>Got it</button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 export default function App() {
   const [tab, setTab] = useState("live");
 
@@ -3062,6 +3179,7 @@ export default function App() {
         <AddModal match={modal.match} open={modal.open} onClose={()=>setModal({open:false,match:null})} onCal={onCal} onRem={onRem}/>
         <MatchEventsModal match={eventsModal.match} open={eventsModal.open} onClose={()=>setEventsModal({open:false,match:null})}/>
         <Toast msg={toast} onDone={()=>setToast("")}/>
+        <InstallBanner/>
       </div>
       </FavCtx.Provider>
       </ThemeCtx.Provider>
