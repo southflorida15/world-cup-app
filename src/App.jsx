@@ -3148,13 +3148,14 @@ function TopScorersTab({ tabTop=116 }) {
 
   return (
     <div>
-      <div ref={_tshRef} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"8px 13px",maxWidth:700,margin:"0 auto"}}> <span style={{fontSize:11,color:C.dim,fontWeight:400}}>{hasLive?"· Live data":"· Pre-tournament"}</span></div>
+      <div ref={_tshRef} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"8px 13px",maxWidth:700,margin:"0 auto"}}>
+        <div style={{fontWeight:700,fontSize:16,color:C.green,marginBottom:!hasLive?4:0}}>⚽ TOP SCORERS <span style={{fontSize:11,color:C.dim,fontWeight:400}}>{hasLive?"· Live data":"· Pre-tournament"}</span></div>
         {!hasLive && (
           <div style={{display:"flex",gap:6}}>
-            <Pill active={filter==="all"}  onClick={()=>setFilter("all")}  color={C.green}>All</Pill>
-            <Pill active={filter==="FW"}   onClick={()=>setFilter("FW")}   color={C.red}>Strikers</Pill>
-            <Pill active={filter==="MF"}   onClick={()=>setFilter("MF")}   color={C.gold}>Midfielders</Pill>
-            <Pill active={filter==="DF"}   onClick={()=>setFilter("DF")}   color={C.blue}>Defenders</Pill>
+            <Pill active={filter==="all"} onClick={()=>setFilter("all")}  color={C.green}>All</Pill>
+            <Pill active={filter==="FW"}  onClick={()=>setFilter("FW")}   color={C.red}>Strikers</Pill>
+            <Pill active={filter==="MF"}  onClick={()=>setFilter("MF")}   color={C.gold}>Midfielders</Pill>
+            <Pill active={filter==="DF"}  onClick={()=>setFilter("DF")}   color={C.blue}>Defenders</Pill>
           </div>
         )}
       </div>
