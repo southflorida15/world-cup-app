@@ -698,7 +698,7 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="" }) {
 
   return (
     <div>
-      <div style={{background:`linear-gradient(135deg,#0a1f10,#0c2815)`,border:`1px solid ${C.b2}`,borderRadius:12,padding:14,marginBottom:14}}>
+      <div style={{background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b2}`,borderRadius:12,padding:14,marginBottom:14}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
           <div><div style={{fontWeight:700,fontSize:18,color:C.green}}>LIVE SCORES</div><div style={{fontSize:11,color:C.dim}}>Auto-refreshes every 60s · Tournament starts Jun 11</div></div>
           {lastUpdate && <span style={{fontSize:11,color:C.dim,flexShrink:0}}>Updated {lastUpdate}</span>}
@@ -880,14 +880,14 @@ function GrpTab({ onTeam }) {
       {view==="standings" && (
         <div>
           <Card style={{marginBottom:12}}>
-            <div style={{padding:"8px 13px",borderBottom:`1px solid ${C.b1}`,background:"#0a1810",display:"flex",justifyContent:"space-between"}}>
+            <div style={{padding:"8px 13px",borderBottom:`1px solid ${C.b1}`,background:C.s1,display:"flex",justifyContent:"space-between"}}>
               <span style={{fontWeight:700,color:C.green,fontSize:16}}>GROUP {sel}</span>
               <div style={{display:"flex",alignItems:"center",gap:8}}>
                 {liveCount>0 && <Badge color={C.green}>🔴 Live</Badge>}
                 <span style={{fontSize:10,color:C.dim}}>Tap for stats</span>
               </div>
             </div>
-            <div style={{display:"grid",gridTemplateColumns:"22px 1fr 28px 28px 28px 28px 32px 32px",padding:"4px 10px",borderBottom:`1px solid ${C.b1}`,background:"#091510"}}>
+            <div style={{display:"grid",gridTemplateColumns:"22px 1fr 28px 28px 28px 28px 32px 32px",padding:"4px 10px",borderBottom:`1px solid ${C.b1}`,background:C.bg}}>
               {["#","Team","P","W","D","L","GD","Pts"].map((h,i)=><div key={i} style={{fontSize:11,color:C.dim,fontWeight:700,textAlign:i>=2?"center":"left"}}>{h}</div>)}
             </div>
             {standings.map((row,i)=>(
@@ -1311,7 +1311,7 @@ function PredTab() {
   const max = top[0].poly;
   return (
     <div>
-      <div style={{background:`linear-gradient(135deg,#0a1f10,#0c2815)`,border:`1px solid ${C.b2}`,borderRadius:12,padding:14,marginBottom:14}}>
+      <div style={{background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b2}`,borderRadius:12,padding:14,marginBottom:14}}>
         <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
           <div><div style={{fontWeight:700,fontSize:18,color:C.green}}>POLYMARKET ODDS</div><div style={{fontSize:11,color:C.dim}}>Updated Jun 5, 2026</div></div>
           <a href="https://polymarket.com" target="_blank" rel="noopener noreferrer" style={{fontSize:11,color:C.green,textDecoration:"none",border:`1px solid ${C.greenS}`,padding:"3px 9px",borderRadius:20}}>Live →</a>
@@ -1422,7 +1422,7 @@ function SimTab() {
 
   return (
     <div>
-      <div style={{background:`linear-gradient(135deg,#0a1f10,#0c2815)`,border:`1px solid ${C.b2}`,borderRadius:12,padding:14,marginBottom:14}}>
+      <div style={{background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b2}`,borderRadius:12,padding:14,marginBottom:14}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
           <div>
             <div style={{fontWeight:700,fontSize:18,color:C.green}}>🎲 WORLD CUP SIMULATOR</div>
@@ -1602,8 +1602,40 @@ function H2HBar({ label, v1, v2, color1=C.green, color2=C.red }) {
   );
 }
 
+// All-time top 3 World Cup scorers per team (historical data)
+const WC_TOP_SCORERS = {
+  "Brazil":       [{name:"Ronaldo",goals:15},{name:"Pelé",goals:12},{name:"Vavá",goals:9}],
+  "Germany":      [{name:"Miroslav Klose",goals:16},{name:"Gerd Müller",goals:14},{name:"Helmut Rahn",goals:8}],
+  "France":       [{name:"Just Fontaine",goals:13},{name:"Kylian Mbappé",goals:12},{name:"Thierry Henry",goals:6}],
+  "Argentina":    [{name:"Lionel Messi",goals:13},{name:"Gabriel Batistuta",goals:10},{name:"Guillermo Stábile",goals:8}],
+  "Spain":        [{name:"David Villa",goals:9},{name:"Fernando Morientes",goals:7},{name:"Fernando Torres",goals:5}],
+  "England":      [{name:"Gary Lineker",goals:10},{name:"Harry Kane",goals:8},{name:"Geoff Hurst",goals:5}],
+  "Netherlands":  [{name:"Rob Rensenbrink",goals:6},{name:"Johan Neeskens",goals:5},{name:"Dennis Bergkamp",goals:4}],
+  "Portugal":     [{name:"Eusébio",goals:9},{name:"Cristiano Ronaldo",goals:8},{name:"Pauleta",goals:6}],
+  "Uruguay":      [{name:"Héctor Scarone",goals:8},{name:"Pedro Petrone",goals:7},{name:"Óscar Míguez",goals:8}],
+  "Belgium":      [{name:"Romelu Lukaku",goals:6},{name:"Marc Wilmots",goals:6},{name:"Jan Ceulemans",goals:5}],
+  "Croatia":      [{name:"Davor Šuker",goals:6},{name:"Ivan Perišić",goals:6},{name:"Andrej Kramarić",goals:5}],
+  "Mexico":       [{name:"Javier Hernández",goals:10},{name:"Luis Hernández",goals:7},{name:"Jared Borgetti",goals:7}],
+  "United States":[{name:"Clint Dempsey",goals:5},{name:"Brian McBride",goals:5},{name:"Landon Donovan",goals:5}],
+  "Morocco":      [{name:"Youssef En-Nesyri",goals:4},{name:"Salaheddine Bassir",goals:2},{name:"Mbark Boussoufa",goals:1}],
+  "Japan":        [{name:"Kunishige Kamamoto",goals:9},{name:"Keisuke Honda",goals:4},{name:"Shinji Okazaki",goals:3}],
+  "South Korea":  [{name:"Son Heung-min",goals:4},{name:"Ahn Jung-hwan",goals:3},{name:"Park Ji-sung",goals:3}],
+  "Colombia":     [{name:"James Rodríguez",goals:6},{name:"Adolfo Valencia",goals:4},{name:"Radamel Falcao",goals:3}],
+  "Norway":       [{name:"Jørgen Juve",goals:7},{name:"Gunnar Nordahl",goals:4},{name:"Einar Gundersen",goals:4}],
+  "Switzerland":  [{name:"Josef Hügi",goals:6},{name:"André Abegglen",goals:6},{name:"Xherdan Shaqiri",goals:5}],
+  "Senegal":      [{name:"Sadio Mané",goals:3},{name:"Papa Bouba Diop",goals:3},{name:"Henri Camara",goals:3}],
+  "Ecuador":      [{name:"Enner Valencia",goals:4},{name:"Agustín Delgado",goals:3},{name:"Carlos Tenorio",goals:2}],
+  "Australia":    [{name:"Tim Cahill",goals:5},{name:"John Aloisi",goals:2},{name:"Brett Emerton",goals:2}],
+  "Iran":         [{name:"Ali Daei",goals:4},{name:"Mehdi Taremi",goals:3},{name:"Karim Bagheri",goals:3}],
+  "Algeria":      [{name:"Riyad Mahrez",goals:3},{name:"Lakhdar Belloumi",goals:2},{name:"Rabah Madjer",goals:2}],
+  "Ghana":        [{name:"Asamoah Gyan",goals:6},{name:"André Ayew",goals:3},{name:"Sulley Muntari",goals:2}],
+  "Ivory Coast":  [{name:"Didier Drogba",goals:2},{name:"Gervinho",goals:1},{name:"Wilfried Bony",goals:1}],
+  "Scotland":     [{name:"Kenny Dalglish",goals:6},{name:"Denis Law",goals:4},{name:"Scott McTominay",goals:3}],
+  "Canada":       [{name:"Alphonso Davies",goals:2},{name:"Jonathan David",goals:1},{name:"Cyle Larin",goals:1}],
+  "Turkiye":      [{name:"Hakan Şükür",goals:6},{name:"Tuncay Şanlı",goals:3},{name:"Hakan Çalhanoğlu",goals:2}],
+};
+
 // Single team WC history card
-// Zafronix may return the team object directly OR nested under .team/.data
 function unwrapTeam(data) {
   if (!data) return null;
   // Direct: { name, appearances, flag, ... }
@@ -1623,41 +1655,69 @@ function TeamHistoryCard({ team, data, color }) {
   if (apps.length === 0) return (
     <div style={{fontSize:12,color:C.dim,textAlign:"center",padding:"16px 0"}}>No World Cup history found</div>
   );
-  const past = [...apps].filter(a=>a.year<2026).reverse(); // newest first
+  const past = [...apps].filter(a=>a.year<2026).reverse();
   const st = wcStats(apps);
+  const topScorers = WC_TOP_SCORERS[team] || [];
+
   return (
     <div>
-      {/* Career summary stats */}
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginBottom:10}}>
+      {/* Row 1: Appearances, Titles, Goals */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:5,marginBottom:5}}>
         {[
-          ["Appearances", st.total],
-          ["🏆 Titles",    st.titles],
-          ["Finals",       st.finals],
-          ["Semi-finals",  st.sf],
-          ["Goals",        st.goals],
-          ["Best finish",  st.best ? posLabel2(st.best) : "—"],
-        ].map(([lbl,val])=>(
-          <div key={lbl} style={{background:C.s2,borderRadius:8,padding:"8px 6px",textAlign:"center",border:`1px solid ${C.b1}`}}>
-            <div style={{fontSize:15,fontWeight:800,color:color,lineHeight:1.1}}>{val}</div>
+          ["Appearances", st.total,  C.blue],
+          ["🏆 Titles",   st.titles, C.gold],
+          ["Goals",       st.goals,  C.green],
+        ].map(([lbl,val,col])=>(
+          <div key={lbl} style={{background:C.s2,borderRadius:8,padding:"8px 4px",textAlign:"center",border:`1px solid ${C.b1}`}}>
+            <div style={{fontSize:17,fontWeight:900,color:col,lineHeight:1.1}}>{val}</div>
             <div style={{fontSize:9,color:C.dim,marginTop:3,lineHeight:1.2}}>{lbl}</div>
           </div>
         ))}
       </div>
+      {/* Row 2: Best Finish, Finals, Semi-finals */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:5,marginBottom:10}}>
+        {[
+          ["Best Finish", st.best ? posLabel2(st.best) : "—", posColor2(st.best)],
+          ["Finals",      st.finals, C.mid],
+          ["Semi-finals", st.sf,     C.mid],
+        ].map(([lbl,val,col])=>(
+          <div key={lbl} style={{background:C.s2,borderRadius:8,padding:"8px 4px",textAlign:"center",border:`1px solid ${C.b1}`}}>
+            <div style={{fontSize:lbl==="Best Finish"?10:17,fontWeight:900,color:col,lineHeight:1.1}}>{val}</div>
+            <div style={{fontSize:9,color:C.dim,marginTop:3,lineHeight:1.2}}>{lbl}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Top 3 all-time scorers */}
+      {topScorers.length > 0 && (
+        <div style={{marginBottom:10}}>
+          <div style={{fontSize:9,color:C.dim,fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:5}}>ALL-TIME TOP SCORERS</div>
+          {topScorers.map((s,i) => (
+            <div key={s.name} style={{display:"flex",alignItems:"center",gap:6,padding:"4px 0",borderBottom:`1px solid ${C.b1}`}}>
+              <span style={{fontSize:12,minWidth:18}}>{i===0?"🥇":i===1?"🥈":"🥉"}</span>
+              <span style={{fontSize:12,color:C.text,flex:1}}>{s.name}</span>
+              <span style={{fontSize:13,fontWeight:700,color}}>{s.goals}⚽</span>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Group stage record */}
-      <div style={{background:C.s2,borderRadius:8,padding:"8px 12px",marginBottom:10,border:`1px solid ${C.b1}`}}>
-        <div style={{fontSize:10,color:C.dim,fontWeight:700,marginBottom:5}}>GROUP STAGE RECORD</div>
-        <div style={{display:"flex",gap:4,alignItems:"center"}}>
-          <span style={{fontWeight:700,color:C.green,fontSize:13}}>{st.gs_w}W</span>
-          <span style={{color:C.dim,fontSize:11}}>/</span>
-          <span style={{fontWeight:700,color:C.gold,fontSize:13}}>{st.gs_d}D</span>
-          <span style={{color:C.dim,fontSize:11}}>/</span>
-          <span style={{fontWeight:700,color:C.red,fontSize:13}}>{st.gs_l}L</span>
-          <span style={{fontSize:10,color:C.dim,marginLeft:4}}>({st.gs_p} played)</span>
+      <div style={{background:C.s2,borderRadius:8,padding:"7px 10px",marginBottom:10,border:`1px solid ${C.b1}`}}>
+        <div style={{fontSize:9,color:C.dim,fontWeight:700,marginBottom:4}}>GROUP STAGE RECORD</div>
+        <div style={{display:"flex",gap:6,alignItems:"center"}}>
+          <span style={{fontWeight:700,color:C.green,fontSize:12}}>{st.gs_w}W</span>
+          <span style={{color:C.dim,fontSize:10}}>/</span>
+          <span style={{fontWeight:700,color:C.gold,fontSize:12}}>{st.gs_d}D</span>
+          <span style={{color:C.dim,fontSize:10}}>/</span>
+          <span style={{fontWeight:700,color:C.red,fontSize:12}}>{st.gs_l}L</span>
+          <span style={{fontSize:9,color:C.dim,marginLeft:2}}>({st.gs_p} played)</span>
         </div>
       </div>
+
       {/* Year-by-year */}
-      <div style={{fontSize:10,color:C.dim,fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:6}}>TOURNAMENT HISTORY</div>
-      <div style={{maxHeight:260,overflowY:"auto",scrollbarWidth:"none"}}>
+      <div style={{fontSize:9,color:C.dim,fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:5}}>TOURNAMENT HISTORY</div>
+      <div style={{maxHeight:240,overflowY:"auto",scrollbarWidth:"none"}}>
         {past.map(a=>{
           const gs = a.groupStage;
           const gw = gs ? (gs.won  ?? gs.w ?? 0) : 0;
@@ -1667,21 +1727,22 @@ function TeamHistoryCard({ team, data, color }) {
           const ga = gs ? (gs.ga ?? gs.goalsAgainst ?? 0) : 0;
           const pc = posColor2(a.finalPosition);
           return (
-            <div key={a.year} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:`1px solid ${C.b1}`}}>
-              <span style={{fontSize:12,fontWeight:700,color:C.mid,minWidth:34}}>{a.year}</span>
+            <div key={a.year} style={{display:"flex",alignItems:"center",gap:6,padding:"5px 0",borderBottom:`1px solid ${C.b1}`}}>
+              <span style={{fontSize:11,fontWeight:700,color:C.mid,minWidth:32}}>{a.year}</span>
               <div style={{flex:1}}>
                 <div style={{fontSize:11,fontWeight:700,color:pc}}>{posLabel2(a.finalPosition)}</div>
-                {gs && <div style={{fontSize:10,color:C.dim}}>Grp {gs.group||"?"} · {gw}W {gd}D {gl}L · {gf}–{ga}</div>}
+                {gs && <div style={{fontSize:9,color:C.dim}}>Grp {gs.group||"?"} · {gw}W {gd}D {gl}L · {gf}–{ga}</div>}
               </div>
-              <div style={{fontSize:11,fontWeight:600,color:C.dim,textAlign:"right"}}>{a.goalsScored||0}⚽</div>
+              <div style={{fontSize:11,fontWeight:600,color:C.dim}}>{a.goalsScored||0}⚽</div>
             </div>
           );
         })}
-        {past.length===0 && <div style={{fontSize:12,color:C.dim,textAlign:"center",padding:"16px 0"}}>No previous WC appearances</div>}
       </div>
     </div>
   );
 }
+
+
 
 function H2HTab() {
   const [team1, setTeam1] = useState("");
@@ -1854,9 +1915,9 @@ function H2HTab() {
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
             {[{team:team1,data:d1,color:C.green},{team:team2,data:d2,color:C.rival}].map(({team,data,color})=>(
               <Card key={team}>
-                <div style={{padding:"8px 10px",borderBottom:`1px solid ${C.b1}`,display:"flex",alignItems:"center",gap:6,background:"#0a1810"}}>
-                  <Crest team={team} size={18}/>
-                  <span style={{fontWeight:700,color,fontSize:12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{team}</span>
+                <div style={{padding:"10px 12px",borderBottom:`1px solid ${C.b1}`,display:"flex",alignItems:"center",gap:8,background:C.s1}}>
+                  <Crest team={team} size={26}/>
+                  <span style={{fontWeight:700,color,fontSize:15,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",lineHeight:1}}>{team}</span>
                 </div>
                 <div style={{padding:"8px 10px"}}>
                   {data
@@ -1997,7 +2058,7 @@ function MyBracketTab() {
           </div>
           {Object.entries(groups).map(([g,teams])=>(
             <Card key={g} style={{marginBottom:10}}>
-              <div style={{padding:"8px 12px",borderBottom:`1px solid ${C.b1}`,background:"#0a1810"}}>
+              <div style={{padding:"8px 12px",borderBottom:`1px solid ${C.b1}`,background:C.s1}}>
                 <span style={{fontWeight:700,color:C.green,fontSize:14}}>GROUP {g}</span>
               </div>
               <div style={{padding:"6px 8px"}}>
@@ -2087,7 +2148,7 @@ function SavedTab({ saved, onRemove }) {
   );
   return (
     <div>
-      <div style={{background:`linear-gradient(135deg,#0a1f10,#0c2815)`,border:`1px solid ${C.b2}`,borderRadius:12,padding:14,marginBottom:16}}>
+      <div style={{background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b2}`,borderRadius:12,padding:14,marginBottom:16}}>
         <div style={{fontWeight:700,color:C.text,fontSize:14,marginBottom:4}}>📅 Sync to Calendar</div>
         <div style={{fontSize:12,color:C.mid,marginBottom:12,lineHeight:1.5}}>Download a <strong style={{color:C.green}}>.ics file</strong> to import into Google Calendar, Apple Calendar, or Outlook.</div>
         <button onClick={handleSync} style={{width:"100%",padding:"11px 0",borderRadius:10,cursor:"pointer",background:synced?`${C.green}33`:`linear-gradient(135deg,${C.green},#22c55e)`,border:synced?`1px solid ${C.green}`:"none",color:synced?C.green:"#030a05",fontWeight:700,fontSize:14}}>
@@ -2421,7 +2482,7 @@ function PredictorTab() {
 
   if (!user) return (
     <div style={{padding:"24px 0"}}>
-      <div style={{background:`linear-gradient(135deg,#0a1f10,#0c2815)`,border:`1px solid ${C.b2}`,borderRadius:12,padding:20,marginBottom:20,textAlign:"center"}}>
+      <div style={{background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b2}`,borderRadius:12,padding:20,marginBottom:20,textAlign:"center"}}>
         <div style={{fontSize:"2rem",marginBottom:8}}>🔮</div>
         <div style={{fontWeight:700,fontSize:20,color:C.green,marginBottom:6}}>Match Predictor</div>
         <div style={{fontSize:13,color:C.mid,lineHeight:1.6}}>Pick scores for every group match. Compete with friends on the leaderboard.</div>
@@ -2451,7 +2512,7 @@ function PredictorTab() {
   // ── Main predictor UI ───────────────────────────────────────────────────
   return (
     <div>
-      <div style={{background:`linear-gradient(135deg,#0a1f10,#0c2815)`,border:`1px solid ${C.b2}`,borderRadius:12,padding:14,marginBottom:14}}>
+      <div style={{background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b2}`,borderRadius:12,padding:14,marginBottom:14}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
           <div>
             <div style={{fontWeight:700,fontSize:18,color:C.green}}>🔮 MATCH PREDICTOR</div>
@@ -2783,7 +2844,7 @@ function TopScorersTab() {
 
   return (
     <div>
-      <div style={{background:`linear-gradient(135deg,#0a1f10,#0c2815)`,border:`1px solid ${C.b2}`,borderRadius:12,padding:14,marginBottom:14}}>
+      <div style={{background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b2}`,borderRadius:12,padding:14,marginBottom:14}}>
         <div style={{fontWeight:700,fontSize:18,color:C.green}}>⚽ TOP SCORERS</div>
         <div style={{fontSize:11,color:C.dim,marginTop:2}}>
           {hasLive ? "Live tournament data · updates every 60s" : "Pre-tournament ones to watch · updates live from Jun 11"}
@@ -2866,6 +2927,15 @@ const TABS = [
 
 export default function App() {
   const [tab, setTab] = useState("live");
+
+  // Register service worker for PWA
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js")
+        .then(() => console.log("[PWA] Service worker registered"))
+        .catch(e => console.warn("[PWA] SW registration failed:", e));
+    }
+  }, []);
   const [statsTeam, setStatsTeam] = useState("");
   const [modal, setModal] = useState({open:false,match:null});
   const [eventsModal, setEventsModal] = useState({open:false,match:null});
@@ -2878,9 +2948,13 @@ export default function App() {
   const [showFavPicker, setShowFavPicker] = useState(false);
   const favTeam = favTeams[0] || "";
 
-  // Apply theme
+  // Apply theme — mutates C so all components pick up new colors on re-render
   const theme = dark ? DARK : LIGHT;
   Object.assign(C, theme);
+  // Override hardcoded dark hex values that appear in inline styles
+  const headerDark = dark ? "#091510" : "#e8f5ec";
+  const cardDark   = dark ? "#0a1810" : "#f0fdf4";
+  const codeDark   = dark ? "#091510" : "#f8fffe";
 
   const toggleDark = () => setDark(d => { const next=!d; try{localStorage.setItem("wc2026_dark",String(next))}catch{}; return next; });
 
@@ -2904,11 +2978,11 @@ export default function App() {
 
   return (
     <LiveScoresProvider>
-      <ThemeCtx.Provider value={{dark, toggle:toggleDark}}>
+      <ThemeCtx.Provider value={{dark, toggle:toggleDark, headerDark, cardDark}}>
       <FavCtx.Provider value={{favTeam, favTeams, setFavTeam: toggleFav}}>
       <div style={{minHeight:"100vh",background:C.bg,maxWidth:700,margin:"0 auto",fontFamily:"system-ui,sans-serif",transition:"background .2s"}}>
-        <style>{`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}*{box-sizing:border-box;margin:0;padding:0}select option{background:${selectBg}}::-webkit-scrollbar{width:3px;height:3px}::-webkit-scrollbar-thumb{background:${C.b1};border-radius:2px}`}</style>
-        <div style={{background:headerBg,padding:"14px 14px 0",borderBottom:`1px solid ${C.b1}`,position:"sticky",top:0,zIndex:100,backdropFilter:"blur(10px)"}}>
+        <style>{`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}*{box-sizing:border-box;margin:0;padding:0}select option{background:${C.s1}}::-webkit-scrollbar{width:3px;height:3px}::-webkit-scrollbar-thumb{background:${C.b1};border-radius:2px}`}</style>
+        <div style={{background:`linear-gradient(180deg,${headerDark},${C.bg})`,padding:"14px 14px 0",borderBottom:`1px solid ${C.b1}`,position:"sticky",top:0,zIndex:100,backdropFilter:"blur(10px)"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
             <div style={{display:"flex",alignItems:"center",gap:10}}>
               <div>
@@ -2992,4 +3066,3 @@ export default function App() {
     </LiveScoresProvider>
   );
 }
-
