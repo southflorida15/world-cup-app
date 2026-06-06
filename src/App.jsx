@@ -656,7 +656,7 @@ function MatchCard({ m, onAction, timeMode="local", favTeam="" }) {
           <Crest team={m.away} size={24}/>
         </div>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:m.tv?5:0}}>
-          <span onClick={()=>openMaps(m.venue)} style={{fontSize:11,color:C.blue,cursor:"pointer",textDecoration:"underline",textDecorationStyle:"dotted"}}>📍 {m.venue}</span>
+          <span onClick={()=>openMaps(m.venue)} style={{fontSize:11,color:C.blue,cursor:"pointer"}}>📍 <span style={{textDecoration:"underline",textDecorationStyle:"dotted"}}>{m.venue}</span></span>
           {!finished && <button onClick={()=>onAction(m)} style={{background:`${C.green}22`,border:`1px solid ${C.greenS}`,color:C.green,padding:"3px 11px",borderRadius:20,fontSize:11,fontWeight:600,cursor:"pointer",flexShrink:0}}>+ Add</button>}
           {finished && <span style={{fontSize:10,color:C.dim,fontStyle:"italic"}}>Final</span>}
         </div>
@@ -909,7 +909,7 @@ function GrpTab({ onTeam }) {
 const zCache = {};
 async function zafronixGet(endpoint, params = {}) {
   const key = endpoint + JSON.stringify(params);
-  if (zCache[key]) return zCache[key];
+  if (zCache[key] !== undefined) return zCache[key]; // undefined = not cached; null = cached failure
   try {
     const q = new URLSearchParams({ endpoint, ...params }).toString();
     const res = await fetch(`/api/zafronix?${q}`);
@@ -919,6 +919,7 @@ async function zafronixGet(endpoint, params = {}) {
     return data;
   } catch(e) {
     console.error("[zafronix]", endpoint, e.message);
+    // Don't cache failures — allow retry
     return null;
   }
 }
@@ -1533,23 +1534,31 @@ function TeamHistoryCard({ team, data, color }) {
 }
 
 function H2HTab() {
-  const [team1, setTeam1] = useState("Brazil");
-  const [team2, setTeam2] = useState("France");
+  const [team1, setTeam1] = useState("");
+  const [team2, setTeam2] = useState("");
   const [d1, setD1] = useState(null);
   const [d2, setD2] = useState(null);
   const [loading, setLoading] = useState(false);
   const [fetched, setFetched] = useState(false);
+  const [fetchErr, setFetchErr] = useState("");
 
   const swap = () => { setTeam1(team2); setTeam2(team1); setD1(d2); setD2(d1); };
 
   const fetchBoth = useCallback(async () => {
     if(!team1||!team2||team1===team2) return;
-    setLoading(true); setFetched(false); setD1(null); setD2(null);
-    const [r1, r2] = await Promise.all([
-      zafronixGet("team", { name: toZName(team1) }),
-      zafronixGet("team", { name: toZName(team2) }),
-    ]);
-    setD1(r1); setD2(r2);
+    setLoading(true); setFetched(false); setD1(null); setD2(null); setFetchErr("");
+    try {
+      const [r1, r2] = await Promise.all([
+        zafronixGet("team", { name: toZName(team1) }),
+        zafronixGet("team", { name: toZName(team2) }),
+      ]);
+      setD1(r1); setD2(r2);
+      if (!r1 && !r2) setFetchErr("API returned no data — check /api/zafronix?endpoint=team&name=Brazil in your browser to debug.");
+      else if (!r1) setFetchErr(`No data for ${team1}`);
+      else if (!r2) setFetchErr(`No data for ${team2}`);
+    } catch(e) {
+      setFetchErr(e.message);
+    }
     setLoading(false); setFetched(true);
   }, [team1, team2]);
 
@@ -1576,6 +1585,7 @@ function H2HTab() {
             <div style={{flex:1}}>
               <div style={{fontSize:10,color:C.dim,marginBottom:4,fontWeight:600}}>TEAM 1</div>
               <select value={team1} onChange={e=>{setTeam1(e.target.value);setD1(null);setFetched(false);}} style={{width:"100%",padding:"8px 10px",background:C.s2,border:`1px solid ${C.b2}`,borderRadius:8,color:C.text,fontSize:13,outline:"none"}}>
+                <option value="">Select team…</option>
                 {ALL_TEAMS.map(t=><option key={t} value={t}>{getFlag(t)} {t}</option>)}
               </select>
             </div>
@@ -1583,6 +1593,7 @@ function H2HTab() {
             <div style={{flex:1}}>
               <div style={{fontSize:10,color:C.dim,marginBottom:4,fontWeight:600}}>TEAM 2</div>
               <select value={team2} onChange={e=>{setTeam2(e.target.value);setD2(null);setFetched(false);}} style={{width:"100%",padding:"8px 10px",background:C.s2,border:`1px solid ${C.b2}`,borderRadius:8,color:C.text,fontSize:13,outline:"none"}}>
+                <option value="">Select team…</option>
                 {ALL_TEAMS.map(t=><option key={t} value={t}>{getFlag(t)} {t}</option>)}
               </select>
             </div>
@@ -1650,7 +1661,16 @@ function H2HTab() {
       {loading && (
         <div style={{textAlign:"center",padding:"32px 0"}}>
           <div style={{width:28,height:28,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto 10px"}}/>
-          <div style={{fontSize:13,color:C.mid}}>Fetching WC histories…</div>
+          <div style={{fontSize:13,color:C.mid}}>Fetching World Cup histories…</div>
+        </div>
+      )}
+
+      {/* Fetch error */}
+      {fetched && fetchErr && (
+        <div style={{background:`${C.red}18`,border:`1px solid ${C.red}44`,borderRadius:10,padding:14,marginBottom:12}}>
+          <div style={{fontWeight:700,color:C.red,marginBottom:6}}>⚠️ Could not load history</div>
+          <div style={{fontSize:12,color:C.mid,wordBreak:"break-all"}}>{fetchErr}</div>
+          <div style={{fontSize:11,color:C.dim,marginTop:8}}>Try opening <span style={{color:C.gold}}>/api/zafronix?endpoint=team&name=Brazil</span> in your browser to see the raw API response.</div>
         </div>
       )}
 
@@ -2079,7 +2099,7 @@ function MatchdayCard({ m, onAction, favTeam }) {
         </div>
         {/* Venue */}
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:m.tv?4:0}}>
-          <span onClick={()=>openMaps(m.venue)} style={{fontSize:11,color:C.blue,cursor:"pointer",textDecoration:"underline",textDecorationStyle:"dotted"}}>📍 {m.venue}</span>
+          <span onClick={()=>openMaps(m.venue)} style={{fontSize:11,color:C.blue,cursor:"pointer"}}>📍 <span style={{textDecoration:"underline",textDecorationStyle:"dotted"}}>{m.venue}</span></span>
           {!finished && <button onClick={()=>onAction(m)} style={{background:`${C.green}22`,border:`1px solid ${C.greenS}`,color:C.green,padding:"3px 11px",borderRadius:20,fontSize:11,fontWeight:600,cursor:"pointer",flexShrink:0}}>+ Add</button>}
           {finished && <span style={{fontSize:10,color:C.dim,fontStyle:"italic"}}>Final</span>}
         </div>
