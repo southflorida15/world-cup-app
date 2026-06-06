@@ -671,7 +671,6 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="" 
   let winner = null;
   if(isKO && finished && hasScore) { if(sc.hg>sc.ag) winner=m.home; else if(sc.ag>sc.hg) winner=m.away; }
   const isFav = favTeams?.length && (favTeams.includes(m.home) || favTeams.includes(m.away));
-  const cardBg = live ? `linear-gradient(135deg,${C.s1},${C.s2})` : `linear-gradient(135deg,${C.s1},${C.s2})`;
   const { localTime, venueTime } = matchTimes(m);
   const venueTz = VENUE_TZ[m.venue];
   const venueTzShort = venueTz ? new Intl.DateTimeFormat("en-US",{timeZoneName:"short",timeZone:venueTz}).formatToParts(new Date()).find(p=>p.type==="timeZoneName")?.value : "";
@@ -681,93 +680,61 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="" 
   const bc = getBroadcast(country);
   const isUS = country === "US" || !BROADCAST[country];
 
-  const teamRow = (team, isHome) => {
-    const isWinner = winner === team;
-    const isFavTeam = favTeams?.includes(team);
-    const homeScore = isHome ? sc?.hg : sc?.ag;
-    const awayScore = isHome ? sc?.ag : sc?.hg;
-    return (
-      <div style={{display:"flex",alignItems:"center",gap:10,padding:"9px 14px",borderBottom:isHome?`1px solid ${C.b1}`:"none"}}>
-        <Crest team={team} size={28}/>
-        <span style={{
-          flex:1, fontSize:15, fontWeight: isWinner?800:600,
-          color: finished ? (isWinner?C.text:C.dim) : isFavTeam?C.gold:C.text,
-          overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
-        }}>{team}</span>
-        {hasScore && (
-          <span style={{
-            fontSize:22,fontWeight:900,fontFamily:"monospace",
-            color: live?C.green : isWinner?C.text : finished?C.dim:C.text,
-            minWidth:24,textAlign:"right"
-          }}>{isHome ? sc.hg : sc.ag}</span>
-        )}
-      </div>
-    );
-  };
-
   return (
-    <div style={{
-      marginBottom:8,
-      background:C.s1,
-      border:`1px solid ${live?C.green:isFav?`${C.gold}55`:C.b1}`,
-      borderRadius:12,
-      overflow:"hidden",
-      opacity:finished?0.8:1,
-    }}>
-      {/* Header: venue + group/stage + time */}
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 14px",borderBottom:`1px solid ${C.b1}`,background:C.s2}}>
-        <div style={{display:"flex",alignItems:"center",gap:8,minWidth:0}}>
+    <div style={{marginBottom:8,background:C.s1,border:`1px solid ${live?C.green:isFav?`${C.gold}55`:C.b1}`,borderRadius:12,overflow:"hidden",opacity:finished?0.8:1}}>
+      {/* Header: group/stage + venue + time */}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 13px",borderBottom:`1px solid ${C.b1}`,background:C.s2}}>
+        <div style={{display:"flex",alignItems:"center",gap:6,minWidth:0,flex:1}}>
           {m.group
-            ? <span style={{fontSize:11,fontWeight:700,color:C.green,background:`${C.green}18`,padding:"2px 8px",borderRadius:10,flexShrink:0}}>Group {m.group}</span>
-            : <span style={{fontSize:11,fontWeight:700,color:C.gold,background:`${C.gold}18`,padding:"2px 8px",borderRadius:10,flexShrink:0}}>{m.stage||"Knockout"}</span>
+            ? <span style={{fontSize:11,fontWeight:700,color:C.green,background:`${C.green}18`,padding:"2px 7px",borderRadius:10,flexShrink:0}}>Group {m.group}</span>
+            : <span style={{fontSize:11,fontWeight:700,color:C.gold,background:`${C.gold}18`,padding:"2px 7px",borderRadius:10,flexShrink:0}}>{m.stage||"Knockout"}</span>
           }
           <span onClick={()=>openMaps(m.venue)} style={{fontSize:11,color:C.dim,cursor:"pointer",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-            {m.venue.split(",")[0]}
+            📍 {m.venue.split(",")[0]}
           </span>
         </div>
-        <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
-          {live && <span style={{fontSize:10,fontWeight:700,color:C.green,animation:"pulse 1s infinite"}}>🔴</span>}
-          {live && statusLabel(sc.status,sc.elapsed) && <span style={{fontSize:11,fontWeight:700,color:C.green}}>{statusLabel(sc.status,sc.elapsed)}</span>}
+        <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
+          {live && <span style={{fontSize:10,fontWeight:700,color:C.green}}>🔴 {statusLabel(sc.status,sc.elapsed)}</span>}
           {!live && <span style={{fontSize:12,fontWeight:600,color:timeMode==="venue"?C.gold:C.text}}>{displayTime}</span>}
           {!live && <span style={{fontSize:10,color:C.dim}}>{tzLabel}</span>}
-          {finished && <span style={{fontSize:10,color:C.dim,fontStyle:"italic",marginLeft:2}}>FT</span>}
+          {finished && <span style={{fontSize:10,color:C.dim,marginLeft:2}}>· FT</span>}
         </div>
       </div>
 
-      {/* Teams */}
-      {teamRow(m.home, true)}
-      {teamRow(m.away, false)}
+      {/* Teams row — side by side */}
+      <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 13px"}}>
+        <Crest team={m.home} size={26}/>
+        <span style={{fontWeight:winner===m.home?800:700,color:finished?(winner===m.home?C.text:C.dim):favTeams?.includes(m.home)?C.gold:C.text,flex:1,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.home}</span>
+        {hasScore ? (
+          <div style={{textAlign:"center",minWidth:60,flexShrink:0}}>
+            <div style={{fontWeight:900,fontSize:22,color:live?C.green:C.text,fontFamily:"monospace",lineHeight:1}}>{sc.hg} – {sc.ag}</div>
+          </div>
+        ) : (
+          <span style={{fontSize:11,color:C.dim,fontWeight:700,minWidth:36,textAlign:"center",flexShrink:0}}>VS</span>
+        )}
+        <span style={{fontWeight:winner===m.away?800:700,color:finished?(winner===m.away?C.text:C.dim):favTeams?.includes(m.away)?C.gold:C.text,flex:1,fontSize:14,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.away}</span>
+        <Crest team={m.away} size={26}/>
+      </div>
 
       {/* Footer: TV + actions */}
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"6px 14px",borderTop:`1px solid ${C.b1}`,background:C.s2}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"5px 13px",borderTop:`1px solid ${C.b1}`,background:C.s2}}>
         <div style={{fontSize:11,color:finished?C.dim:C.gold,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1}}>
-          {m.tv && <>📺 {isUS ? m.tv : `${bc.primary}`}</>}
+          {m.tv && <>📺 {isUS ? m.tv : bc.primary}</>}
         </div>
         <div style={{display:"flex",gap:5,alignItems:"center",flexShrink:0}}>
-          {/* Share */}
           <button onClick={e=>{
             e.stopPropagation();
-            const base = window.location.origin;
-            const p1 = PREDS.find(x=>x.team===m.home);
-            const p2 = PREDS.find(x=>x.team===m.away);
-            const params = new URLSearchParams({
-              home:m.home, away:m.away,
-              ...(hasScore?{hg:sc.hg,ag:sc.ag}:{}),
-              ...(m.group?{group:m.group}:{stage:m.stage||"World Cup 2026"}),
-              date:m.date, venue:m.venue.split(",")[0],
-              ...(!hasScore&&p1?{p1:p1.poly}:{}),
-              ...(!hasScore&&p2?{p2:p2.poly}:{}),
-              v:Date.now(),
-            });
+            const base=window.location.origin;
+            const p1=PREDS.find(x=>x.team===m.home);
+            const p2=PREDS.find(x=>x.team===m.away);
+            const params=new URLSearchParams({home:m.home,away:m.away,...(hasScore?{hg:sc.hg,ag:sc.ag}:{}),...(m.group?{group:m.group}:{stage:m.stage||"World Cup 2026"}),date:m.date,venue:m.venue.split(",")[0],...(!hasScore&&p1?{p1:p1.poly}:{}),...(!hasScore&&p2?{p2:p2.poly}:{}),v:Date.now()});
             const imageUrl=`${base}/api/og?${params}`;
             const txt=hasScore?`⚽ ${m.home} ${sc.hg}–${sc.ag} ${m.away} • ${m.group?"Group "+m.group:m.stage||"World Cup 2026"} • ${m.date}\n${base}`:`⚽ ${m.home} vs ${m.away} • ${m.group?"Group "+m.group:m.stage||"World Cup 2026"} • ${m.date} ${m.time}\n${base}`;
             if(navigator.share) navigator.share({title:`${m.home} vs ${m.away} — World Cup 2026`,text:txt,url:imageUrl}).catch(()=>{});
             else navigator.clipboard?.writeText(txt);
           }} style={{background:"none",border:"none",color:C.dim,fontSize:14,cursor:"pointer",padding:"2px 4px"}}>📤</button>
-          {/* Match Events */}
-          {onMatchTap && m.group && <button onClick={()=>onMatchTap(m)} style={{background:`${C.blue}18`,border:`1px solid ${C.blue}33`,color:C.blue,padding:"3px 9px",borderRadius:20,fontSize:11,fontWeight:600,cursor:"pointer"}}>Events</button>}
-          {/* Add */}
-          {!finished && <button onClick={()=>onAction(m)} style={{background:`${C.green}22`,border:`1px solid ${C.greenS}`,color:C.green,padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:600,cursor:"pointer"}}>+ Add</button>}
+          {onMatchTap && m.group && <button onClick={()=>onMatchTap(m)} style={{background:`${C.blue}18`,border:`1px solid ${C.blue}33`,color:C.blue,padding:"3px 8px",borderRadius:20,fontSize:11,fontWeight:600,cursor:"pointer"}}>Details</button>}
+          {!finished && <button onClick={()=>onAction(m)} style={{background:`${C.green}22`,border:`1px solid ${C.greenS}`,color:C.green,padding:"3px 9px",borderRadius:20,fontSize:11,fontWeight:600,cursor:"pointer"}}>+ Add</button>}
         </div>
       </div>
     </div>
@@ -829,6 +796,21 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="" }) {
 }
 
 // ── SCHEDULE TAB ──────────────────────────────────────────────────────────
+// Build all unique match dates for the calendar strip
+const MATCH_DATES = (() => {
+  const seen = new Set();
+  return MATCHES
+    .filter(m => MATCH_UTC[m.id])
+    .map(m => {
+      const d = new Date(MATCH_UTC[m.id]);
+      const key = d.toLocaleDateString("en-US", { month:"short", day:"numeric" });
+      if (seen.has(key)) return null;
+      seen.add(key);
+      return { key, date: d, day: d.getDate(), dow: d.toLocaleDateString("en-US",{weekday:"short"}).slice(0,1) };
+    })
+    .filter(Boolean);
+})();
+
 function SchedTab({ onAction, onMatchTap=null, favTeam="" }) {
   const { favTeams=[] } = useContext(FavCtx);
   const [filterMode, setFilterMode] = useState("group");
@@ -836,9 +818,35 @@ function SchedTab({ onAction, onMatchTap=null, favTeam="" }) {
   const [groupF, setGroupF] = useState("All");
   const [teamF, setTeamF] = useState("");
   const [venueF, setVenueF] = useState("");
+  const [selDate, setSelDate] = useState(null); // null = all dates
+  const stripRef = useRef(null);
+
+  const today = new Date().toLocaleDateString("en-US", { month:"short", day:"numeric" });
+  const todayHasMatch = MATCH_DATES.some(d => d.key === today);
+
+  // Auto-select today if it has a match
+  useEffect(() => {
+    if (todayHasMatch && selDate === null) setSelDate(today);
+  }, []);
+
+  // Scroll strip to today/selected on mount
+  useEffect(() => {
+    if (!stripRef.current) return;
+    const active = stripRef.current.querySelector("[data-active='true']");
+    if (active) active.scrollIntoView({ behavior:"smooth", block:"nearest", inline:"center" });
+  }, [selDate]);
+
   const allTeams = [...new Set(MATCHES.flatMap(m=>[m.home,m.away]))].sort();
   const allVenues = [...new Set(MATCHES.map(m=>m.venue))].sort();
+
   const shown = MATCHES.filter(m => {
+    // Date filter first
+    if (selDate) {
+      const iso = MATCH_UTC[m.id];
+      if (!iso) return false;
+      const key = new Date(iso).toLocaleDateString("en-US",{month:"short",day:"numeric"});
+      if (key !== selDate) return false;
+    }
     if(filterMode==="fav") return favTeams?.length && (favTeams.includes(m.home)||favTeams.includes(m.away));
     if(filterMode==="group") { if(groupF==="All")return true; if(groupF==="Knockout")return!m.group; return m.group===groupF; }
     if(filterMode==="team") return !teamF||m.home===teamF||m.away===teamF;
@@ -847,35 +855,67 @@ function SchedTab({ onAction, onMatchTap=null, favTeam="" }) {
   });
   const byDate = shown.reduce((a,m)=>{ const {dateLabel}=matchTimes(m); const key=dateLabel||m.date; (a[key]=a[key]||[]).push(m); return a; },{});
   const ss=(active,color=C.green)=>({padding:"5px 12px",borderRadius:20,border:`1px solid ${active?color:C.b1}`,background:active?`${color}18`:"transparent",color:active?color:C.mid,fontSize:12,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap"});
+
   return (
     <div>
-      <div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none",marginBottom:10}}>
-        {favTeams?.length > 0 && <button style={ss(filterMode==="fav",C.gold)} onClick={()=>setFilterMode("fav")}>⭐ My Teams</button>}
-        <button style={ss(filterMode==="group")} onClick={()=>setFilterMode("group")}>🗂 Group</button>
-        <button style={ss(filterMode==="team")} onClick={()=>setFilterMode("team")}>👥 Team</button>
-        <button style={ss(filterMode==="venue")} onClick={()=>setFilterMode("venue")}>📍 Venue</button>
-      </div>
-      {filterMode==="group" && (
-        <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:6,marginBottom:6,scrollbarWidth:"none"}}>
-          {["All","A","B","C","D","E","F","G","H","I","J","K","L","Knockout"].map(g=><Pill key={g} active={groupF===g} onClick={()=>setGroupF(g)} color={g==="Knockout"?C.gold:C.green}>{g==="All"?"All":g==="Knockout"?"🏆 KO":g}</Pill>)}
+      {/* Sticky filter header */}
+      <div style={{position:"sticky",top:0,zIndex:50,background:C.bg,paddingBottom:8,marginBottom:4,borderBottom:`1px solid ${C.b1}`}}>
+
+        {/* Date strip */}
+        <div ref={stripRef} style={{display:"flex",overflowX:"auto",scrollbarWidth:"none",marginBottom:8,paddingTop:6,gap:4}}>
+          {/* "All" button */}
+          <div onClick={()=>setSelDate(null)} style={{display:"flex",flexDirection:"column",alignItems:"center",minWidth:36,cursor:"pointer",padding:"4px 2px",borderRadius:8,background:selDate===null?`${C.green}22`:"transparent",border:`1px solid ${selDate===null?C.green:"transparent"}`}}>
+            <span style={{fontSize:9,color:selDate===null?C.green:C.dim,fontWeight:700}}>ALL</span>
+            <span style={{fontSize:14,fontWeight:900,color:selDate===null?C.green:C.dim}}>⚽</span>
+          </div>
+          {MATCH_DATES.map(d => {
+            const isToday = d.key === today;
+            const isSel = selDate === d.key;
+            return (
+              <div key={d.key} data-active={isSel} onClick={()=>setSelDate(isSel?null:d.key)}
+                style={{display:"flex",flexDirection:"column",alignItems:"center",minWidth:36,cursor:"pointer",padding:"4px 6px",borderRadius:8,
+                  background: isSel ? `${C.green}22` : isToday ? `${C.green}0a` : "transparent",
+                  border: `1px solid ${isSel?C.green:isToday?`${C.green}44`:"transparent"}`,
+                }}>
+                <span style={{fontSize:9,color:isSel?C.green:C.dim,fontWeight:600,textTransform:"uppercase"}}>{d.dow}</span>
+                <div style={{width:28,height:28,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",
+                  background: isSel?C.green:"transparent",
+                  marginTop:1,
+                }}>
+                  <span style={{fontSize:14,fontWeight:900,color:isSel?"#030a05":isToday?C.green:C.text}}>{d.day}</span>
+                </div>
+              </div>
+            );
+          })}
         </div>
-      )}
-      {filterMode==="team" && (
-        <div style={{marginBottom:14}}>
-          <select value={teamF} onChange={e=>setTeamF(e.target.value)} style={{width:"100%",padding:"10px 14px",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:10,color:C.text,fontSize:14,outline:"none"}}>
+
+        {/* Filter mode buttons */}
+        <div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none",marginBottom: filterMode==="group"?8:0}}>
+          {favTeams?.length > 0 && <button style={ss(filterMode==="fav",C.gold)} onClick={()=>setFilterMode("fav")}>⭐ My Teams</button>}
+          <button style={ss(filterMode==="group")} onClick={()=>setFilterMode("group")}>🗂 Group</button>
+          <button style={ss(filterMode==="team")} onClick={()=>setFilterMode("team")}>👥 Team</button>
+          <button style={ss(filterMode==="venue")} onClick={()=>setFilterMode("venue")}>📍 Venue</button>
+        </div>
+        {filterMode==="group" && (
+          <div style={{display:"flex",gap:6,overflowX:"auto",paddingTop:6,scrollbarWidth:"none"}}>
+            {["All","A","B","C","D","E","F","G","H","I","J","K","L","Knockout"].map(g=><Pill key={g} active={groupF===g} onClick={()=>setGroupF(g)} color={g==="Knockout"?C.gold:C.green}>{g==="All"?"All":g==="Knockout"?"🏆 KO":g}</Pill>)}
+          </div>
+        )}
+        {filterMode==="team" && (
+          <select value={teamF} onChange={e=>setTeamF(e.target.value)} style={{width:"100%",padding:"8px 14px",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:10,color:C.text,fontSize:14,outline:"none",marginTop:6}}>
             <option value="">All teams</option>
             {allTeams.map(t=><option key={t} value={t}>{getFlag(t)} {t}</option>)}
           </select>
-        </div>
-      )}
-      {filterMode==="venue" && (
-        <div style={{marginBottom:14}}>
-          <select value={venueF} onChange={e=>setVenueF(e.target.value)} style={{width:"100%",padding:"10px 14px",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:10,color:C.text,fontSize:14,outline:"none"}}>
+        )}
+        {filterMode==="venue" && (
+          <select value={venueF} onChange={e=>setVenueF(e.target.value)} style={{width:"100%",padding:"8px 14px",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:10,color:C.text,fontSize:14,outline:"none",marginTop:6}}>
             <option value="">All venues</option>
             {allVenues.map(v=><option key={v} value={v}>{v}</option>)}
           </select>
-        </div>
-      )}
+        )}
+      </div>
+
+      {/* Match list */}
       {shown.length===0 ? <div style={{textAlign:"center",padding:"32px",color:C.dim}}>No matches found</div> : Object.entries(byDate).map(([date,ms],idx)=>(
         <div key={date} style={{marginBottom:14}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:5,marginTop:6}}>
@@ -922,7 +962,7 @@ function scheduleNotification(match, minsBeforeKO) {
 }
 
 // ── GROUPS TAB ─────────────────────────────────────────────────────────────
-function GrpTab({ onTeam }) {
+function GrpTab({ onTeam, onMatchTap }) {
   const [sel, setSel] = useState("A");
   const [view, setView] = useState("standings");
   const { allFixtures } = useContext(LiveScoresCtx);
@@ -999,27 +1039,31 @@ function GrpTab({ onTeam }) {
             </div>
           </Card>
           <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>ENTER SCORES</div>
-          {results.map(r=>(
+          {results.map(r=>{
+            const fullMatch = MATCHES.find(m=>m.id===r.id);
+            return (
             <div key={r.id} style={{display:"flex",alignItems:"center",gap:6,marginBottom:6,background:C.s1,border:`1px solid ${C.b1}`,borderRadius:10,padding:"7px 11px"}}>
               <Crest team={r.home} size={30}/>
-              <span style={{fontSize:13,color:C.text,flex:1,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.home}</span>
+              <span onClick={()=>fullMatch&&onMatchTap&&onMatchTap(fullMatch)} style={{fontSize:13,color:C.text,flex:1,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",cursor:onMatchTap?"pointer":"default"}}>{r.home}</span>
               <input value={r.hg} onChange={e=>upd(r.id,"hg",e.target.value)} placeholder="-" maxLength={2} style={{width:28,textAlign:"center",background:C.s2,border:`1px solid ${C.b2}`,borderRadius:6,color:C.text,fontSize:14,fontWeight:700,padding:"3px 0",outline:"none"}}/>
               <span style={{color:C.dim,fontWeight:700}}>:</span>
               <input value={r.ag} onChange={e=>upd(r.id,"ag",e.target.value)} placeholder="-" maxLength={2} style={{width:28,textAlign:"center",background:C.s2,border:`1px solid ${C.b2}`,borderRadius:6,color:C.text,fontSize:14,fontWeight:700,padding:"3px 0",outline:"none"}}/>
-              <span style={{fontSize:13,color:C.text,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.away}</span>
+              <span onClick={()=>fullMatch&&onMatchTap&&onMatchTap(fullMatch)} style={{fontSize:13,color:C.text,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",cursor:onMatchTap?"pointer":"default"}}>{r.away}</span>
               <Crest team={r.away} size={30}/>
             </div>
-          ))}
+          );})}
         </div>
       )}
-      {view==="matches" && results.map(r=>(
-        <Card key={r.id} style={{marginBottom:8}}>
+      {view==="matches" && results.map(r=>{
+        const fullMatch = MATCHES.find(m=>m.id===r.id);
+        return (
+        <Card key={r.id} style={{marginBottom:8,cursor:"pointer"}} onClick={()=>fullMatch&&onMatchTap&&onMatchTap(fullMatch)}>
           <div style={{padding:"11px 13px"}}>
             <div style={{fontSize:10,color:C.dim,marginBottom:6}}>{r.date}</div>
             <div style={{display:"flex",alignItems:"center",gap:8}}>
               <Crest team={r.home} size={26}/>
               <span style={{fontWeight:700,color:C.text,flex:1,fontSize:14}}>{r.home}</span>
-              <div style={{display:"flex",alignItems:"center",gap:4}}>
+              <div style={{display:"flex",alignItems:"center",gap:4}} onClick={e=>e.stopPropagation()}>
                 <input value={r.hg} onChange={e=>upd(r.id,"hg",e.target.value)} placeholder="-" maxLength={2} style={{width:32,textAlign:"center",background:C.s2,border:`1px solid ${C.b2}`,borderRadius:8,color:C.text,fontSize:16,fontWeight:700,padding:"4px 0",outline:"none"}}/>
                 <span style={{color:C.dim}}>:</span>
                 <input value={r.ag} onChange={e=>upd(r.id,"ag",e.target.value)} placeholder="-" maxLength={2} style={{width:32,textAlign:"center",background:C.s2,border:`1px solid ${C.b2}`,borderRadius:8,color:C.text,fontSize:16,fontWeight:700,padding:"4px 0",outline:"none"}}/>
@@ -1029,7 +1073,7 @@ function GrpTab({ onTeam }) {
             </div>
           </div>
         </Card>
-      ))}
+      );})}
     </div>
   );
 }
@@ -2778,11 +2822,27 @@ async function fetchMatchEvents(fixtureId) {
 }
 
 // ── MATCH EVENTS MODAL ────────────────────────────────────────────────────
+// ── WEATHER BADGE ─────────────────────────────────────────────────────────
+function WeatherBadge({ lat, lon }) {
+  const wx = useWeather(lat, lon, true);
+  if (!wx) return null;
+  return (
+    <div style={{textAlign:"center",flexShrink:0}}>
+      <div style={{fontSize:18,lineHeight:1}}>{wx.icon}</div>
+      <div style={{fontSize:11,fontWeight:700,color:C.text}}>{wx.temp}°F</div>
+      <div style={{fontSize:9,color:C.dim}}>at venue</div>
+    </div>
+  );
+}
+
 function MatchEventsModal({ match, open, onClose, onAction }) {
   const [events, setEvents] = useState(null);
   const [loading, setLoading] = useState(false);
   const { getScore } = useContext(LiveScoresCtx);
   const { favTeams=[] } = useContext(FavCtx);
+  const country = useContext(CountryCtx);
+  const bc = getBroadcast(country);
+  const isUS = country === "US" || !BROADCAST[country];
 
   useEffect(() => {
     if (!open || !match) return;
@@ -2891,13 +2951,22 @@ function MatchEventsModal({ match, open, onClose, onAction }) {
               <div style={{fontSize:13,fontWeight:600,color:C.blue,textDecoration:"underline",textDecorationStyle:"dotted"}}>{match.venue.split(",")[0]}</div>
               <div style={{fontSize:11,color:C.dim,marginTop:2}}>{match.venue.split(",").slice(1).join(",").trim()} · Tap for directions</div>
             </div>
+            {(() => { const city = VENUE_TO_CITY[match.venue]; const cityData = city ? HOST_CITIES[city] : null; return cityData ? <WeatherBadge lat={cityData.lat} lon={cityData.lon}/> : null; })()}
           </div>
 
           {/* ── TV ── */}
           {match.tv && (
-            <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:C.s1,border:`1px solid ${C.b1}`,borderRadius:10,marginBottom:12}}>
-              <span style={{fontSize:18}}>📺</span>
-              <div style={{fontSize:13,color:C.gold,fontWeight:600}}>{match.tv}</div>
+            <div style={{padding:"10px 14px",background:C.s1,border:`1px solid ${C.b1}`,borderRadius:10,marginBottom:12}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:bc.streaming?6:0}}>
+                <span style={{fontSize:16}}>📺</span>
+                <div style={{fontSize:13,color:C.gold,fontWeight:600}}>{isUS ? match.tv : `${bc.note} ${bc.primary}`}</div>
+              </div>
+              {bc.streaming && (
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <span style={{fontSize:16}}>💻</span>
+                  <div style={{fontSize:12,color:C.mid}}>{bc.streaming}</div>
+                </div>
+              )}
             </div>
           )}
 
@@ -3334,7 +3403,7 @@ export default function App() {
           {tab==="live"      && <LiveTab onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam}/>}
           {tab==="scorers"   && <TopScorersTab/>}
           {tab==="schedule"  && <SchedTab onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam}/>}
-          {tab==="groups"    && <GrpTab onTeam={onTeam}/>}
+          {tab==="groups"    && <GrpTab onTeam={onTeam} onMatchTap={onMatchTap}/>}
           {tab==="stats"     && <StatsTab initial={statsTeam}/>}
           {tab==="h2h"       && <H2HTab/>}
           {tab==="predict"   && <PredTab/>}
