@@ -1444,9 +1444,31 @@ function H2HBar({ label, v1, v2, color1=C.green, color2=C.red }) {
 }
 
 // Single team WC history card
+// Zafronix may return the team object directly OR nested under .team/.data
+function unwrapTeam(data) {
+  if (!data) return null;
+  // Direct: { name, appearances, flag, ... }
+  if (Array.isArray(data.appearances)) return data;
+  // Nested under .team
+  if (data.team && Array.isArray(data.team.appearances)) return data.team;
+  // Nested under .data
+  if (data.data && Array.isArray(data.data.appearances)) return data.data;
+  // appearances exists but is not array (shouldn't happen)
+  return data;
+}
+
 function TeamHistoryCard({ team, data, color }) {
-  if(!data) return null;
-  const apps = data.appearances || [];
+  const d = unwrapTeam(data);
+  if (!d) return <div style={{fontSize:12,color:C.dim,textAlign:"center",padding:"16px 0"}}>No data available</div>;
+  const apps = d.appearances || [];
+  if (apps.length === 0) return (
+    <div style={{fontSize:12,color:C.dim,textAlign:"center",padding:"16px 0"}}>
+      No World Cup history found
+      <div style={{fontSize:10,marginTop:4,color:C.dim,wordBreak:"break-all"}}>
+        Keys: {Object.keys(data).join(", ")}
+      </div>
+    </div>
+  );
   const past = [...apps].filter(a=>a.year<2026).reverse(); // newest first
   const st = wcStats(apps);
   return (
@@ -1539,8 +1561,8 @@ function H2HTab() {
   const poly1 = PREDS.find(p=>p.team===team1);
   const poly2 = PREDS.find(p=>p.team===team2);
   const t1app = TEAMS[team1]; const t2app = TEAMS[team2];
-  const st1 = wcStats(d1?.appearances||[]);
-  const st2 = wcStats(d2?.appearances||[]);
+  const st1 = wcStats(unwrapTeam(d1)?.appearances||[]);
+  const st2 = wcStats(unwrapTeam(d2)?.appearances||[]);
 
   return (
     <div>
@@ -2398,120 +2420,6 @@ function PredictorTab() {
   );
 }
 
-// ── FAN PLANNER TAB ───────────────────────────────────────────────────────
-function FanPlannerTab({ saved, onAction, onRemove }) {
-  const { favTeam } = useContext(FavCtx);
-  const [selCities, setSelCities] = useState([]);
-  const [view, setView] = useState("pick"); // "pick" | "trip"
-
-  const toggleCity = (c) => setSelCities(p => p.includes(c) ? p.filter(x=>x!==c) : [...p, c]);
-
-  const cityMatches = useMemo(() => {
-    if (!selCities.length) return {};
-    const result = {};
-    selCities.forEach(city => {
-      const cityData = HOST_CITIES[city];
-      result[city] = MATCHES.filter(m => VENUE_TO_CITY[m.venue] === city)
-        .map(m => ({ ...m, ...matchTimes(m) }));
-    });
-    return result;
-  }, [selCities]);
-
-  const totalMatches = Object.values(cityMatches).flat().length;
-  const savedIds = new Set(saved.map(s => s.match?.id));
-
-  const handleExportTrip = () => {
-    const tripSaved = Object.values(cityMatches).flat().map(m => ({
-      id: `trip_${m.id}`, type:"cal", match:m, avail:"busy"
-    }));
-    downloadICS(tripSaved);
-  };
-
-  return (
-    <div>
-      <div style={{background:`linear-gradient(135deg,#0a1f10,#0c2815)`,border:`1px solid ${C.b2}`,borderRadius:12,padding:14,marginBottom:14}}>
-        <div style={{fontWeight:700,fontSize:18,color:C.green}}>🗺️ FAN PLANNER</div>
-        <div style={{fontSize:11,color:C.dim,marginTop:2}}>Pick the cities you're visiting — see all matches and export your trip.</div>
-      </div>
-
-      {/* City picker */}
-      <div style={{marginBottom:14}}>
-        <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>SELECT YOUR CITIES</div>
-        {["🇺🇸 United States","🇨🇦 Canada","🇲🇽 Mexico"].map(label => {
-          const countryFlag = label.slice(0,2);
-          const cityList = Object.entries(HOST_CITIES).filter(([,v]) => v.country === countryFlag);
-          return (
-            <div key={label} style={{marginBottom:10}}>
-              <div style={{fontSize:11,color:C.mid,fontWeight:700,marginBottom:6}}>{label}</div>
-              <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
-                {cityList.map(([city, data]) => {
-                  const sel = selCities.includes(city);
-                  const matchCount = MATCHES.filter(m=>VENUE_TO_CITY[m.venue]===city).length;
-                  return (
-                    <button key={city} onClick={()=>toggleCity(city)} style={{padding:"6px 12px",borderRadius:20,border:`1px solid ${sel?C.green:C.b2}`,background:sel?`${C.green}22`:C.s1,color:sel?C.green:C.mid,fontSize:12,fontWeight:600,cursor:"pointer"}}>
-                      {city} <span style={{fontSize:10,opacity:0.7}}>({matchCount})</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {selCities.length > 0 && (
-        <div>
-          {/* Trip summary */}
-          <Card style={{marginBottom:14}}>
-            <div style={{padding:12,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-              <div>
-                <div style={{fontWeight:700,color:C.text,fontSize:14}}>Your Trip</div>
-                <div style={{fontSize:11,color:C.dim,marginTop:2}}>{selCities.length} {selCities.length===1?"city":"cities"} · {totalMatches} matches</div>
-              </div>
-              <button onClick={handleExportTrip} style={{padding:"8px 14px",borderRadius:10,background:`linear-gradient(135deg,${C.green},#22c55e)`,border:"none",color:"#030a05",fontWeight:700,fontSize:12,cursor:"pointer"}}>
-                📅 Export Trip
-              </button>
-            </div>
-          </Card>
-
-          {/* Matches by city */}
-          {selCities.map(city => {
-            const data = HOST_CITIES[city];
-            const matches = cityMatches[city] || [];
-            return (
-              <div key={city} style={{marginBottom:18}}>
-                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
-                  <span style={{fontSize:16}}>{data.country}</span>
-                  <div>
-                    <div style={{fontWeight:700,color:C.green,fontSize:15}}>{city}</div>
-                    <div style={{fontSize:11,color:C.dim}}>{data.stadium} · {matches.length} matches</div>
-                  </div>
-                </div>
-                {/* City info strip */}
-                <div style={{background:C.s1,border:`1px solid ${C.b1}`,borderRadius:10,padding:"9px 12px",marginBottom:8,fontSize:11,color:C.mid,lineHeight:1.8}}>
-                  <div>🚇 {data.transit}</div>
-                  <div>🎪 {data.fanzone}</div>
-                  <div style={{color:C.gold}}>💡 {data.tip}</div>
-                </div>
-                {matches.map(m => (
-                  <MatchdayCard key={m.id} m={m} onAction={onAction} favTeam={favTeam}/>
-                ))}
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {selCities.length === 0 && (
-        <div style={{textAlign:"center",padding:"32px 20px",color:C.dim}}>
-          <div style={{fontSize:"2.5rem",marginBottom:10}}>✈️</div>
-          <div style={{fontSize:14,color:C.mid,fontWeight:600,marginBottom:6}}>Where are you heading?</div>
-          <div style={{fontSize:12}}>Select cities above to build your trip itinerary.</div>
-        </div>
-      )}
-    </div>
-  );
-}
 
 // ── APP ────────────────────────────────────────────────────────────────────
 const TABS = [
@@ -2524,7 +2432,6 @@ const TABS = [
   {id:"predictor",icon:"🔮", label:"Predictor"},
   {id:"sim",      icon:"🎮", label:"Simulator"},
   {id:"bracket",  icon:"🏆", label:"My Bracket"},
-  {id:"planner",  icon:"✈️", label:"Fan Planner"},
   {id:"saved",    icon:"⭐", label:"Saved"},
 ];
 
@@ -2606,7 +2513,6 @@ export default function App() {
           {tab==="predictor" && <PredictorTab/>}
           {tab==="sim"       && <SimTab/>}
           {tab==="bracket"   && <MyBracketTab/>}
-          {tab==="planner"   && <FanPlannerTab saved={saved} onAction={onAction} onRemove={onRemove}/>}
           {tab==="saved"     && <SavedTab saved={saved} onRemove={onRemove}/>}
         </div>
         <AddModal match={modal.match} open={modal.open} onClose={()=>setModal({open:false,match:null})} onCal={onCal} onRem={onRem}/>
