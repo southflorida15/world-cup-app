@@ -2852,9 +2852,9 @@ function TopScorersTab() {
 // ── APP ────────────────────────────────────────────────────────────────────
 const TABS = [
   {id:"live",      icon:"🔴", label:"Live"},
-  {id:"scorers",   icon:"⚽", label:"Scorers"},
   {id:"schedule",  icon:"📋", label:"Schedule"},
   {id:"groups",    icon:"🗂️", label:"Groups"},
+  {id:"scorers",   icon:"⚽", label:"Scorers"},
   {id:"stats",     icon:"📊", label:"Stats"},
   {id:"h2h",       icon:"⚔️", label:"H2H"},
   {id:"predict",   icon:"🎯", label:"Odds"},
@@ -2925,7 +2925,7 @@ export default function App() {
               {/* Favorite teams button */}
               <button onClick={()=>setShowFavPicker(v=>!v)} style={{display:"flex",alignItems:"center",gap:5,background:favTeams.length?`${C.gold}22`:`${C.s2}`,border:`1px solid ${favTeams.length?C.gold:C.b2}`,borderRadius:20,padding:"5px 10px",cursor:"pointer"}}>
                 {favTeams.length > 0
-                  ? <>{favTeams.map(t=><Crest key={t} team={t} size={16}/>)}<span style={{fontSize:11,color:C.gold,fontWeight:700,marginLeft:2}}>{favTeams.length===1?favTeams[0]:`${favTeams.length} teams`}</span></>
+                  ? <>{favTeams.map(t=><Crest key={t} team={t} size={22}/>)}<span style={{fontSize:13,color:C.gold,fontWeight:700,marginLeft:4}}>{favTeams.length===1?favTeams[0]:`${favTeams.length} teams`}</span></>
                   : <span style={{fontSize:11,color:C.dim}}>⭐ My Teams</span>
                 }
               </button>
@@ -2992,3 +2992,4 @@ export default function App() {
     </LiveScoresProvider>
   );
 }
+
