@@ -614,7 +614,7 @@ function AddModal({ match, open, onClose, onCal, onRem }) {
 }
 
 // ── MATCH CARD ─────────────────────────────────────────────────────────────
-function MatchCard({ m, onAction, timeMode="local", favTeam="" }) {
+function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="" }) {
   const { favTeams=[] } = useContext(FavCtx);
   const { getScore } = useContext(LiveScoresCtx);
   const sc = getScore(m.home, m.away);
@@ -658,8 +658,20 @@ function MatchCard({ m, onAction, timeMode="local", favTeam="" }) {
         </div>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:m.tv?5:0}}>
           <span onClick={()=>openMaps(m.venue)} style={{fontSize:11,color:C.blue,cursor:"pointer"}}>📍 <span style={{textDecoration:"underline",textDecorationStyle:"dotted"}}>{m.venue}</span></span>
-          {!finished && <button onClick={()=>onAction(m)} style={{background:`${C.green}22`,border:`1px solid ${C.greenS}`,color:C.green,padding:"3px 11px",borderRadius:20,fontSize:11,fontWeight:600,cursor:"pointer",flexShrink:0}}>+ Add</button>}
-          {finished && <span style={{fontSize:10,color:C.dim,fontStyle:"italic"}}>Final</span>}
+          <div style={{display:"flex",gap:6,alignItems:"center",flexShrink:0}}>
+            {/* Share button */}
+            <button onClick={e=>{
+              e.stopPropagation();
+              const sc2 = hasScore ? `${sc.hg}–${sc.ag}` : "vs";
+              const txt = `⚽ ${m.home} ${sc2} ${m.away} • ${m.group?"Group "+m.group:m.stage||"World Cup 2026"} • ${m.date}${!hasScore?" "+m.time:""}`;
+              if(navigator.share) navigator.share({title:"World Cup 2026",text:txt}).catch(()=>{});
+              else navigator.clipboard?.writeText(txt);
+            }} style={{background:"none",border:"none",color:C.dim,fontSize:14,cursor:"pointer",padding:"2px 4px"}} title="Share">📤</button>
+            {/* Events/details button */}
+            {onMatchTap && (live||finished) && <button onClick={()=>onMatchTap(m)} style={{background:`${C.blue}18`,border:`1px solid ${C.blue}33`,color:C.blue,padding:"3px 9px",borderRadius:20,fontSize:11,fontWeight:600,cursor:"pointer"}}>Events</button>}
+            {!finished && <button onClick={()=>onAction(m)} style={{background:`${C.green}22`,border:`1px solid ${C.greenS}`,color:C.green,padding:"3px 11px",borderRadius:20,fontSize:11,fontWeight:600,cursor:"pointer"}}>+ Add</button>}
+            {finished && <span style={{fontSize:10,color:C.dim,fontStyle:"italic"}}>Final</span>}
+          </div>
         </div>
         {m.tv && <div style={{fontSize:11,color:finished?C.dim:C.gold}}>📺 {m.tv}</div>}
       </div>
@@ -668,7 +680,7 @@ function MatchCard({ m, onAction, timeMode="local", favTeam="" }) {
 }
 
 // ── LIVE TAB ──────────────────────────────────────────────────────────────
-function LiveTab({ onAction, favTeam="" }) {
+function LiveTab({ onAction, onMatchTap=null, favTeam="" }) {
   const { favTeams=[] } = useContext(FavCtx);
   const { scores, getScore, lastFetch } = useContext(LiveScoresCtx);
   const lastUpdate = lastFetch ? lastFetch.toLocaleTimeString() : null;
@@ -710,8 +722,8 @@ function LiveTab({ onAction, favTeam="" }) {
           ))}
         </div>
       )}
-      {liveMatches.length>0 && <div><div style={{fontSize:11,color:C.green,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>🔴 Live Now</div>{liveMatches.map(m=><MatchCard key={m.id} m={m} onAction={onAction} favTeam={favTeam}/>)}</div>}
-      {finishedToday.length>0 && <div style={{marginTop:liveMatches.length?16:0}}><div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>Today's Results</div>{finishedToday.map(m=><MatchCard key={m.id} m={m} onAction={onAction} favTeam={favTeam}/>)}</div>}
+      {liveMatches.length>0 && <div><div style={{fontSize:11,color:C.green,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>🔴 Live Now</div>{liveMatches.map(m=><MatchCard key={m.id} m={m} onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam}/> )}</div>}
+      {finishedToday.length>0 && <div style={{marginTop:liveMatches.length?16:0}}><div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>Today's Results</div>{finishedToday.map(m=><MatchCard key={m.id} m={m} onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam}/> )}</div>}
       {liveMatches.length===0 && finishedToday.length===0 && (
         <div style={{textAlign:"center",padding:"48px 20px"}}>
           <div style={{fontSize:"2.5rem",marginBottom:10}}>⚽</div>
@@ -725,7 +737,7 @@ function LiveTab({ onAction, favTeam="" }) {
 }
 
 // ── SCHEDULE TAB ──────────────────────────────────────────────────────────
-function SchedTab({ onAction, favTeam="" }) {
+function SchedTab({ onAction, onMatchTap=null, favTeam="" }) {
   const { favTeams=[] } = useContext(FavCtx);
   const [filterMode, setFilterMode] = useState("group");
   const [timeMode, setTimeMode] = useState("local");
@@ -781,7 +793,7 @@ function SchedTab({ onAction, favTeam="" }) {
       {shown.length===0 ? <div style={{textAlign:"center",padding:"32px",color:C.dim}}>No matches found</div> : Object.entries(byDate).map(([date,ms])=>(
         <div key={date} style={{marginBottom:18}}>
           <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>{date}</div>
-          {ms.map(m=><MatchCard key={m.id} m={m} onAction={onAction} timeMode={timeMode} favTeam={favTeam}/>)}
+          {ms.map(m=><MatchCard key={m.id} m={m} onAction={onAction} onMatchTap={onMatchTap} timeMode={timeMode} favTeam={favTeam}/>)}
         </div>
       ))}
     </div>
@@ -2581,31 +2593,296 @@ function PredictorTab() {
 }
 
 
+// ── THEME CONTEXT (dark/light) ────────────────────────────────────────────
+const ThemeCtx = createContext({ dark:true });
+const DARK = {
+  bg:"#060e0a", s1:"#0c1a12", s2:"#112618", b1:"#1a3828", b2:"#234833",
+  green:"#4ade80", greenS:"#4ade8055", gold:"#fbbf24", blue:"#60a5fa",
+  rival:"#38bdf8", red:"#f87171", text:"#d4ead9", mid:"#7aaa8a", dim:"#3d6a4d",
+};
+const LIGHT = {
+  bg:"#f0faf3", s1:"#ffffff", s2:"#e8f5ec", b1:"#c5e0cc", b2:"#a8d4b0",
+  green:"#16a34a", greenS:"#16a34a55", gold:"#d97706", blue:"#2563eb",
+  rival:"#0284c7", red:"#dc2626", text:"#0f2d1a", mid:"#2d6a3f", dim:"#6b9e79",
+};
+
+// ── MATCH EVENTS API ──────────────────────────────────────────────────────
+const eventsCache = {};
+async function fetchMatchEvents(fixtureId) {
+  if (eventsCache[fixtureId]) return eventsCache[fixtureId];
+  try {
+    const res = await fetch(`/api/matchevents?fixtureId=${fixtureId}`);
+    if (!res.ok) throw new Error(res.statusText);
+    const data = await res.json();
+    eventsCache[fixtureId] = data;
+    return data;
+  } catch(e) {
+    console.error("[matchevents]", e.message);
+    return null;
+  }
+}
+
+// ── MATCH EVENTS MODAL ────────────────────────────────────────────────────
+function MatchEventsModal({ match, open, onClose }) {
+  const [events, setEvents] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const { getScore } = useContext(LiveScoresCtx);
+
+  useEffect(() => {
+    if (!open || !match) return;
+    setEvents(null); setLoading(true);
+    // Find the fixture ID from the live scores feed by matching team names
+    // We pass the match object and let the API find the right fixture
+    fetchMatchEvents(`${match.home}|${match.away}`)
+      .then(d => { setEvents(d); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [open, match]);
+
+  const sc = match ? getScore(match.home, match.away) : null;
+  const hasScore = sc && sc.hg !== null && sc.ag !== null;
+
+  if (!match) return null;
+  return (
+    <Modal open={open} onClose={onClose} title={`${match.home} vs ${match.away}`}>
+      {/* Score header */}
+      {hasScore && (
+        <div style={{textAlign:"center",padding:"12px 0 16px",borderBottom:`1px solid ${C.b1}`,marginBottom:16}}>
+          <div style={{display:"flex",justifyContent:"center",alignItems:"center",gap:16,marginBottom:6}}>
+            <div style={{display:"flex",alignItems:"center",gap:8}}><Crest team={match.home} size={32}/><span style={{fontWeight:700,fontSize:16,color:C.text}}>{match.home}</span></div>
+            <div style={{fontWeight:900,fontSize:32,color:C.green,fontFamily:"monospace"}}>{sc.hg}–{sc.ag}</div>
+            <div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontWeight:700,fontSize:16,color:C.text}}>{match.away}</span><Crest team={match.away} size={32}/></div>
+          </div>
+          <Badge color={statusIsFinished(sc.status)?C.dim:C.green}>
+            {statusLabel(sc.status, sc.elapsed) || "Upcoming"}
+          </Badge>
+        </div>
+      )}
+
+      {loading && (
+        <div style={{textAlign:"center",padding:"32px 0"}}>
+          <div style={{width:24,height:24,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto 10px"}}/>
+          <div style={{fontSize:12,color:C.mid}}>Loading match events…</div>
+        </div>
+      )}
+
+      {!loading && events && events.length > 0 && (
+        <div>
+          <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",marginBottom:10}}>MATCH TIMELINE</div>
+          {events.map((ev, i) => {
+            const isHome = normTeam(ev.team?.name||"") === match.home;
+            const icon = ev.type==="Goal"?(ev.detail==="Own Goal"?"⚽🔴":ev.detail==="Penalty"?"⚽🎯":"⚽"):ev.type==="Card"?(ev.detail==="Yellow Card"?"🟨":"🟥"):ev.type==="subst"?"🔄":"•";
+            return (
+              <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:`1px solid ${C.b1}`}}>
+                {/* Home side */}
+                <div style={{flex:1,textAlign:"right"}}>
+                  {isHome && <span style={{fontSize:13,color:C.text,fontWeight:ev.type==="Goal"?700:400}}>{ev.player?.name||""}{ev.type==="subst"?` ↑`:""}</span>}
+                  {isHome && ev.type==="subst" && <div style={{fontSize:10,color:C.dim}}>{ev.assist?.name||""} ↓</div>}
+                </div>
+                {/* Minute + icon */}
+                <div style={{display:"flex",flexDirection:"column",alignItems:"center",minWidth:52,flexShrink:0}}>
+                  <div style={{fontSize:12,fontWeight:700,color:C.gold}}>{ev.time?.elapsed}{ev.time?.extra?`+${ev.time.extra}`:""}'</div>
+                  <div style={{fontSize:16,lineHeight:1}}>{icon}</div>
+                </div>
+                {/* Away side */}
+                <div style={{flex:1}}>
+                  {!isHome && <span style={{fontSize:13,color:C.text,fontWeight:ev.type==="Goal"?700:400}}>{ev.player?.name||""}{ev.type==="subst"?` ↑`:""}</span>}
+                  {!isHome && ev.type==="subst" && <div style={{fontSize:10,color:C.dim}}>{ev.assist?.name||""} ↓</div>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {!loading && events && events.length === 0 && (
+        <div style={{textAlign:"center",padding:"24px 0",color:C.dim,fontSize:13}}>
+          No events yet — check back once the match starts.
+        </div>
+      )}
+
+      {!loading && !events && (
+        <div style={{textAlign:"center",padding:"24px 0",color:C.dim,fontSize:12}}>
+          Match events available once the tournament begins on Jun 11.
+        </div>
+      )}
+
+      {/* Share */}
+      <div style={{marginTop:16,paddingTop:14,borderTop:`1px solid ${C.b1}`}}>
+        <button onClick={()=>{
+          const txt = hasScore
+            ? `⚽ ${match.home} ${sc.hg}–${sc.ag} ${match.away} • ${match.group?"Group "+match.group:match.stage||"World Cup 2026"} • ${match.date}`
+            : `⚽ ${match.home} vs ${match.away} • ${match.group?"Group "+match.group:match.stage||"World Cup 2026"} • ${match.date} ${match.time}`;
+          if(navigator.share) navigator.share({title:"World Cup 2026", text:txt}).catch(()=>{});
+          else { navigator.clipboard?.writeText(txt); }
+        }} style={{width:"100%",padding:"10px 0",borderRadius:10,background:`${C.blue}22`,border:`1px solid ${C.blue}44`,color:C.blue,fontWeight:700,fontSize:13,cursor:"pointer"}}>
+          📤 Share this match
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+// ── TOP SCORERS TAB ───────────────────────────────────────────────────────
+// Pre-tournament "ones to watch" — will be replaced by live data after Jun 11
+const ONES_TO_WATCH = [
+  {name:"Kylian Mbappé",    team:"France",       flag:"🇫🇷", pos:"FW", club:"Real Madrid",   note:"Golden Boot favourite"},
+  {name:"Erling Haaland",   team:"Norway",        flag:"🇳🇴", pos:"FW", club:"Man City",       note:"Most prolific striker alive"},
+  {name:"Vinicius Jr.",     team:"Brazil",        flag:"🇧🇷", pos:"FW", club:"Real Madrid",   note:"Ballon d'Or contender"},
+  {name:"Harry Kane",       team:"England",       flag:"🏴󠁧󠁢󠁥󠁮󠁧󠁿", pos:"FW", club:"Bayern Munich",  note:"England all-time top scorer"},
+  {name:"Lamine Yamal",     team:"Spain",         flag:"🇪🇸", pos:"FW", club:"Barcelona",     note:"Euro 2024 breakout star"},
+  {name:"Mohamed Salah",    team:"Egypt",         flag:"🇪🇬", pos:"FW", club:"Liverpool",     note:"World's best right now"},
+  {name:"Lionel Messi",     team:"Argentina",     flag:"🇦🇷", pos:"FW", club:"Inter Miami",   note:"The GOAT · last hurrah"},
+  {name:"Cristiano Ronaldo",team:"Portugal",      flag:"🇵🇹", pos:"FW", club:"Al Nassr",      note:"Final World Cup at 41"},
+  {name:"Jamal Musiala",    team:"Germany",       flag:"🇩🇪", pos:"MF", club:"Bayern Munich",  note:"Silky dribbler"},
+  {name:"Florian Wirtz",    team:"Germany",       flag:"🇩🇪", pos:"MF", club:"Bayer Leverkusen",note:"Bundesliga's best"},
+  {name:"Pedri",            team:"Spain",         flag:"🇪🇸", pos:"MF", club:"Barcelona",     note:"Generational talent"},
+  {name:"Martin Ødegaard",  team:"Norway",        flag:"🇳🇴", pos:"MF", club:"Arsenal",       note:"Arsenal captain"},
+  {name:"Jude Bellingham",  team:"England",       flag:"🏴󠁧󠁢󠁥󠁮󠁧󠁿", pos:"MF", club:"Real Madrid",   note:"World-class at 21"},
+  {name:"Kevin De Bruyne",  team:"Belgium",       flag:"🇧🇪", pos:"MF", club:"Napoli",        note:"World's best midfielder"},
+  {name:"Rodri",            team:"Spain",         flag:"🇪🇸", pos:"MF", club:"Man City",       note:"2024 Ballon d'Or"},
+  {name:"Darwin Núñez",     team:"Uruguay",       flag:"🇺🇾", pos:"FW", club:"Liverpool",     note:"Powerful & explosive"},
+  {name:"Luis Díaz",        team:"Colombia",      flag:"🇨🇴", pos:"FW", club:"Liverpool",     note:"PL class winger"},
+  {name:"Son Heung-min",    team:"South Korea",   flag:"🇰🇷", pos:"FW", club:"Tottenham",     note:"Carries entire nation"},
+  {name:"Takefusa Kubo",    team:"Japan",         flag:"🇯🇵", pos:"MF", club:"Real Sociedad",  note:"Japan's golden boy"},
+  {name:"Achraf Hakimi",    team:"Morocco",       flag:"🇲🇦", pos:"DF", club:"PSG",           note:"World's best RB"},
+];
+
+function TopScorersTab() {
+  const { allFixtures } = useContext(LiveScoresCtx);
+  const [filter, setFilter] = useState("all");
+
+  // Try to build live scorers from allFixtures events
+  const liveScorers = useMemo(() => {
+    if (!allFixtures?.length) return [];
+    const scorers = {};
+    allFixtures.forEach(f => {
+      const events = f.events || [];
+      events.forEach(ev => {
+        if (ev.type !== "Goal" || ev.detail === "Own Goal") return;
+        const player = ev.player?.name;
+        const teamName = normTeam(ev.team?.name || "");
+        if (!player) return;
+        const key = player;
+        if (!scorers[key]) scorers[key] = { name:player, team:teamName, goals:0, assists:0 };
+        scorers[key].goals++;
+      });
+      // Assists
+      events.forEach(ev => {
+        if (ev.type !== "Goal" || ev.detail === "Own Goal") return;
+        const player = ev.assist?.name;
+        const teamName = normTeam(ev.team?.name || "");
+        if (!player) return;
+        if (!scorers[player]) scorers[player] = { name:player, team:teamName, goals:0, assists:0 };
+        scorers[player].assists++;
+      });
+    });
+    return Object.values(scorers).sort((a,b)=>b.goals-a.goals||(b.goals+b.assists)-(a.goals+a.assists));
+  }, [allFixtures]);
+
+  const hasLive = liveScorers.length > 0;
+
+  return (
+    <div>
+      <div style={{background:`linear-gradient(135deg,#0a1f10,#0c2815)`,border:`1px solid ${C.b2}`,borderRadius:12,padding:14,marginBottom:14}}>
+        <div style={{fontWeight:700,fontSize:18,color:C.green}}>⚽ TOP SCORERS</div>
+        <div style={{fontSize:11,color:C.dim,marginTop:2}}>
+          {hasLive ? "Live tournament data · updates every 60s" : "Pre-tournament ones to watch · updates live from Jun 11"}
+        </div>
+      </div>
+
+      {!hasLive && (
+        <div style={{marginBottom:14}}>
+          <div style={{display:"flex",gap:8,marginBottom:12}}>
+            <Pill active={filter==="all"}  onClick={()=>setFilter("all")}  color={C.green}>All</Pill>
+            <Pill active={filter==="FW"}   onClick={()=>setFilter("FW")}   color={C.red}>Strikers</Pill>
+            <Pill active={filter==="MF"}   onClick={()=>setFilter("MF")}   color={C.gold}>Midfielders</Pill>
+            <Pill active={filter==="DF"}   onClick={()=>setFilter("DF")}   color={C.blue}>Defenders</Pill>
+          </div>
+          {ONES_TO_WATCH.filter(p=>filter==="all"||p.pos===filter).map((p,i) => (
+            <Card key={p.name} style={{marginBottom:7}}>
+              <div style={{padding:"10px 13px",display:"flex",alignItems:"center",gap:10}}>
+                <div style={{fontWeight:700,color:C.dim,minWidth:24,fontSize:13,textAlign:"center"}}>#{i+1}</div>
+                <div style={{flex:1}}>
+                  <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2}}>
+                    <span style={{fontWeight:700,color:C.text,fontSize:14}}>{p.name}</span>
+                    <span style={{fontSize:10,fontWeight:700,padding:"1px 6px",borderRadius:6,
+                      background:p.pos==="FW"?`${C.red}22`:p.pos==="MF"?`${C.gold}22`:`${C.blue}22`,
+                      color:p.pos==="FW"?C.red:p.pos==="MF"?C.gold:C.blue}}>{p.pos}</span>
+                  </div>
+                  <div style={{fontSize:11,color:C.dim}}>{p.flag} {p.team} · {p.club}</div>
+                  <div style={{fontSize:11,color:C.mid,marginTop:2,fontStyle:"italic"}}>{p.note}</div>
+                </div>
+                <Crest team={p.team} size={28}/>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {hasLive && (
+        <div>
+          {liveScorers.slice(0,20).map((p,i) => {
+            const medal = i===0?"🥇":i===1?"🥈":i===2?"🥉":null;
+            return (
+              <Card key={p.name} style={{marginBottom:7}}>
+                <div style={{padding:"10px 13px",display:"flex",alignItems:"center",gap:10}}>
+                  <div style={{fontWeight:700,color:C.dim,minWidth:26,fontSize:14,textAlign:"center"}}>{medal||`#${i+1}`}</div>
+                  <div style={{flex:1}}>
+                    <div style={{fontWeight:700,color:C.text,fontSize:14,marginBottom:2}}>{p.name}</div>
+                    <div style={{fontSize:11,color:C.dim}}>{getFlag(p.team)} {p.team}</div>
+                  </div>
+                  <div style={{textAlign:"center",minWidth:40}}>
+                    <div style={{fontWeight:900,fontSize:24,color:i===0?C.green:i<3?C.gold:C.mid,lineHeight:1}}>{p.goals}</div>
+                    <div style={{fontSize:9,color:C.dim}}>goals</div>
+                  </div>
+                  <div style={{textAlign:"center",minWidth:36}}>
+                    <div style={{fontWeight:700,fontSize:16,color:C.blue,lineHeight:1}}>{p.assists}</div>
+                    <div style={{fontSize:9,color:C.dim}}>assists</div>
+                  </div>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── APP ────────────────────────────────────────────────────────────────────
 const TABS = [
-  {id:"live",     icon:"🔴", label:"Live"},
-  {id:"schedule", icon:"📋", label:"Schedule"},
-  {id:"groups",   icon:"🗂️", label:"Groups"},
-  {id:"stats",    icon:"📊", label:"Stats"},
-  {id:"h2h",      icon:"⚔️", label:"H2H"},
-  {id:"predict",  icon:"🎯", label:"Odds"},
-  {id:"predictor",icon:"🔮", label:"Predictor"},
-  {id:"sim",      icon:"🎮", label:"Simulator"},
-  {id:"bracket",  icon:"🏆", label:"My Bracket"},
-  {id:"saved",    icon:"⭐", label:"Saved"},
+  {id:"live",      icon:"🔴", label:"Live"},
+  {id:"scorers",   icon:"⚽", label:"Scorers"},
+  {id:"schedule",  icon:"📋", label:"Schedule"},
+  {id:"groups",    icon:"🗂️", label:"Groups"},
+  {id:"stats",     icon:"📊", label:"Stats"},
+  {id:"h2h",       icon:"⚔️", label:"H2H"},
+  {id:"predict",   icon:"🎯", label:"Odds"},
+  {id:"predictor", icon:"🔮", label:"Predictor"},
+  {id:"sim",       icon:"🎮", label:"Simulator"},
+  {id:"bracket",   icon:"🏆", label:"My Bracket"},
+  {id:"saved",     icon:"⭐", label:"Saved"},
 ];
 
 export default function App() {
   const [tab, setTab] = useState("live");
   const [statsTeam, setStatsTeam] = useState("");
   const [modal, setModal] = useState({open:false,match:null});
+  const [eventsModal, setEventsModal] = useState({open:false,match:null});
   const [saved, setSaved] = useState([]);
   const [toast, setToast] = useState("");
+  const [dark, setDark] = useState(() => { try { return localStorage.getItem("wc2026_dark") !== "false"; } catch { return true; }});
   const [favTeams, setFavTeams] = useState(() => {
     try { return JSON.parse(localStorage.getItem("wc2026_favs") || "[]"); } catch { return []; }
   });
   const [showFavPicker, setShowFavPicker] = useState(false);
-  const favTeam = favTeams[0] || ""; // backward compat for components that use single favTeam
+  const favTeam = favTeams[0] || "";
+
+  // Apply theme
+  const theme = dark ? DARK : LIGHT;
+  Object.assign(C, theme);
+
+  const toggleDark = () => setDark(d => { const next=!d; try{localStorage.setItem("wc2026_dark",String(next))}catch{}; return next; });
 
   const toggleFav = (t) => {
     setFavTeams(prev => {
@@ -2617,16 +2894,21 @@ export default function App() {
 
   const onTeam=(t)=>{setStatsTeam(t);setTab("stats");};
   const onAction=(m)=>setModal({open:true,match:m});
+  const onMatchTap=(m)=>setEventsModal({open:true,match:m});
   const onCal=(m,avail)=>{const id=`c${m.id}`;setSaved(s=>[...s.filter(x=>x.id!==id),{id,type:"cal",match:m,avail}]);setToast("Added to calendar");};
   const onRem=(m,ch,mins,contact)=>{const id=`r${m.id}`;setSaved(s=>[...s.filter(x=>x.id!==id),{id,type:"rem",match:m,ch,mins,contact}]);setToast("Reminder set");};
   const onRemove=(id)=>setSaved(s=>s.filter(x=>x.id!==id));
 
+  const headerBg = dark ? `linear-gradient(180deg,#091510,${C.bg})` : `linear-gradient(180deg,#e8f5ec,${C.bg})`;
+  const selectBg = dark ? "#0c1a12" : "#ffffff";
+
   return (
     <LiveScoresProvider>
+      <ThemeCtx.Provider value={{dark, toggle:toggleDark}}>
       <FavCtx.Provider value={{favTeam, favTeams, setFavTeam: toggleFav}}>
-      <div style={{minHeight:"100vh",background:C.bg,maxWidth:700,margin:"0 auto",fontFamily:"system-ui,sans-serif"}}>
-        <style>{`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}*{box-sizing:border-box;margin:0;padding:0}select option{background:#0c1a12}::-webkit-scrollbar{width:3px;height:3px}::-webkit-scrollbar-thumb{background:#1a3828;border-radius:2px}`}</style>
-        <div style={{background:`linear-gradient(180deg,#091510,${C.bg})`,padding:"14px 14px 0",borderBottom:`1px solid ${C.b1}`,position:"sticky",top:0,zIndex:100,backdropFilter:"blur(10px)"}}>
+      <div style={{minHeight:"100vh",background:C.bg,maxWidth:700,margin:"0 auto",fontFamily:"system-ui,sans-serif",transition:"background .2s"}}>
+        <style>{`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}*{box-sizing:border-box;margin:0;padding:0}select option{background:${selectBg}}::-webkit-scrollbar{width:3px;height:3px}::-webkit-scrollbar-thumb{background:${C.b1};border-radius:2px}`}</style>
+        <div style={{background:headerBg,padding:"14px 14px 0",borderBottom:`1px solid ${C.b1}`,position:"sticky",top:0,zIndex:100,backdropFilter:"blur(10px)"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
             <div style={{display:"flex",alignItems:"center",gap:10}}>
               <div>
@@ -2635,9 +2917,13 @@ export default function App() {
                 <div style={{fontSize:20,fontWeight:900,color:C.green,lineHeight:1}}>2026™</div>
               </div>
             </div>
-            <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              {/* Dark/light toggle */}
+              <button onClick={toggleDark} title={dark?"Switch to light mode":"Switch to dark mode"} style={{width:34,height:34,borderRadius:"50%",border:`1px solid ${C.b2}`,background:C.s2,cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                {dark ? "☀️" : "🌙"}
+              </button>
               {/* Favorite teams button */}
-              <button onClick={()=>setShowFavPicker(v=>!v)} style={{display:"flex",alignItems:"center",gap:5,background:favTeams.length?`${C.gold}22`:`${C.b1}`,border:`1px solid ${favTeams.length?C.gold:C.b2}`,borderRadius:20,padding:"5px 10px",cursor:"pointer"}}>
+              <button onClick={()=>setShowFavPicker(v=>!v)} style={{display:"flex",alignItems:"center",gap:5,background:favTeams.length?`${C.gold}22`:`${C.s2}`,border:`1px solid ${favTeams.length?C.gold:C.b2}`,borderRadius:20,padding:"5px 10px",cursor:"pointer"}}>
                 {favTeams.length > 0
                   ? <>{favTeams.map(t=><Crest key={t} team={t} size={16}/>)}<span style={{fontSize:11,color:C.gold,fontWeight:700,marginLeft:2}}>{favTeams.length===1?favTeams[0]:`${favTeams.length} teams`}</span></>
                   : <span style={{fontSize:11,color:C.dim}}>⭐ My Teams</span>
@@ -2648,7 +2934,7 @@ export default function App() {
 
           {/* Favorite teams picker dropdown */}
           {showFavPicker && (
-            <div style={{position:"absolute",top:"100%",right:14,background:C.s1,border:`1px solid ${C.b2}`,borderRadius:12,padding:10,zIndex:200,maxHeight:320,overflowY:"auto",width:240,boxShadow:"0 8px 32px rgba(0,0,0,0.6)"}}>
+            <div style={{position:"absolute",top:"100%",right:14,background:C.s1,border:`1px solid ${C.b2}`,borderRadius:12,padding:10,zIndex:200,maxHeight:320,overflowY:"auto",width:240,boxShadow:"0 8px 32px rgba(0,0,0,0.4)"}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"0 4px",marginBottom:8}}>
                 <span style={{fontSize:11,color:C.dim,fontWeight:700}}>MY TEAMS <span style={{color:favTeams.length===4?C.red:C.gold}}>({favTeams.length}/4)</span></span>
                 {favTeams.length>0 && <button onClick={()=>{setFavTeams([]);try{localStorage.setItem("wc2026_favs","[]")}catch{};}} style={{fontSize:10,padding:"2px 8px",borderRadius:10,background:`${C.red}22`,border:`1px solid ${C.red}33`,color:C.red,cursor:"pointer"}}>Clear all</button>}
@@ -2685,8 +2971,9 @@ export default function App() {
           </div>
         </div>
         <div style={{padding:"14px 13px 100px"}}>
-          {tab==="live"      && <LiveTab onAction={onAction} favTeam={favTeam}/>}
-          {tab==="schedule"  && <SchedTab onAction={onAction} favTeam={favTeam}/>}
+          {tab==="live"      && <LiveTab onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam}/>}
+          {tab==="scorers"   && <TopScorersTab/>}
+          {tab==="schedule"  && <SchedTab onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam}/>}
           {tab==="groups"    && <GrpTab onTeam={onTeam}/>}
           {tab==="stats"     && <StatsTab initial={statsTeam}/>}
           {tab==="h2h"       && <H2HTab/>}
@@ -2697,9 +2984,11 @@ export default function App() {
           {tab==="saved"     && <SavedTab saved={saved} onRemove={onRemove}/>}
         </div>
         <AddModal match={modal.match} open={modal.open} onClose={()=>setModal({open:false,match:null})} onCal={onCal} onRem={onRem}/>
+        <MatchEventsModal match={eventsModal.match} open={eventsModal.open} onClose={()=>setEventsModal({open:false,match:null})}/>
         <Toast msg={toast} onDone={()=>setToast("")}/>
       </div>
       </FavCtx.Provider>
+      </ThemeCtx.Provider>
     </LiveScoresProvider>
   );
 }
