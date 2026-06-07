@@ -34,7 +34,7 @@ export default async function handler(req, res) {
   // ── PIN CREATE ────────────────────────────────────────────────────────────
   if (action === "pin-create" && req.method === "POST") {
     try {
-      const { uid, saved, favTeams, dark, locationOverride, avatar } = req.body;
+      const { uid, saved, favTeams, dark, locationOverride, avatar, displayName } = req.body;
       if (!uid) return res.status(400).json({ error: "uid required" });
 
       // Generate a unique PIN
@@ -157,7 +157,7 @@ export default async function handler(req, res) {
       if (!uid) return res.status(400).json({ error: "uid required" });
 
       const existing = await kv.get(`uid:${uid}`) || {};
-      const profile = { ...existing, uid, saved: saved || [], favTeams: favTeams || [], dark, locationOverride, avatar: avatar !== undefined ? avatar : (existing.avatar || null), updatedAt: Date.now() };
+      const profile = { ...existing, uid, saved: saved || [], favTeams: favTeams || [], dark, locationOverride, avatar: avatar !== undefined ? avatar : (existing.avatar || null), displayName: displayName !== undefined ? displayName : (existing.displayName || ""), updatedAt: Date.now() };
 
       await kv.set(`uid:${uid}`, profile, { ex: 60 * 60 * 24 * 180 });
       // If user has a PIN, keep that entry in sync too

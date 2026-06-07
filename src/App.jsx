@@ -3400,7 +3400,7 @@ function TopScorersTab({ tabTop=116 }) {
 
 
 // ── SYNC MODAL ─────────────────────────────────────────────────────────────
-function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved, favTeams, setToast, setSaved, setFavTeams, dark, setDark, geoData, locationOverride, setLocationOverride, onShowSaved, userAvatar, persistAvatar }) {
+function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved, favTeams, setToast, setSaved, setFavTeams, dark, setDark, geoData, locationOverride, setLocationOverride, onShowSaved, userAvatar, persistAvatar, displayName, persistDisplayName }) {
   const [screen, setScreen] = useState("home");
   const [pin, setPin] = useState("");
   const [pinInput, setPinInput] = useState("");
@@ -3409,6 +3409,8 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
   const [error, setError] = useState("");
   const [showLocPicker, setShowLocPicker] = useState(false);
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
+  const [nameInput, setNameInput] = useState(displayName || "");
+  const [nameFocused, setNameFocused] = useState(false);
   const [avatarTab, setAvatarTab] = useState("flags"); // flags | confs | upload
   const [avatarSearch, setAvatarSearch] = useState("");
   const [locSearch, setLocSearch] = useState("");
@@ -3467,6 +3469,7 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
       if (p.dark !== undefined) setDark(p.dark);
       if (p.locationOverride)   { setLocationOverride(p.locationOverride); try { localStorage.setItem("wc2026_location", JSON.stringify(p.locationOverride)); } catch {} }
       if (p.avatar) persistAvatar(p.avatar);
+      if (p.displayName) persistDisplayName(p.displayName);
       persistProfile({ uid: p.uid, pin: p.pin, email: p.email, method: "pin" });
       setToast("✅ Synced! Your progress has been restored.");
       onClose();
@@ -3676,15 +3679,36 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
                 </div>
                 <div style={{flex:1,minWidth:0}}>
                   {isSynced ? <>
-                    <div style={{fontWeight:700,color:C.text,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{syncProfile.email || "PIN User"}</div>
-                    {syncProfile.pin && <div style={{fontSize:12,color:C.mid,marginTop:1}}>PIN: <strong style={{color:C.gold,letterSpacing:"0.1em"}}>{syncProfile.pin}</strong></div>}
+                    {displayName && <div style={{fontWeight:800,color:C.text,fontSize:16,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{displayName}</div>}
+                    <div style={{fontWeight:displayName?400:700,color:displayName?C.dim:C.text,fontSize:displayName?11:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{syncProfile.email || "PIN User"}</div>
+                    {syncProfile.pin && <div style={{fontSize:11,color:C.mid,marginTop:1}}>PIN: <strong style={{color:C.gold,letterSpacing:"0.1em"}}>{syncProfile.pin}</strong></div>}
                     <div style={{fontSize:11,color:C.green,marginTop:3,fontWeight:600}}>✅ Syncing across devices</div>
                   </> : <>
-                    <div style={{fontWeight:700,color:C.text,fontSize:14}}>Not signed in</div>
-                    <div style={{fontSize:11,color:C.dim,marginTop:2,lineHeight:1.4}}>Sign in to keep your progress on every device</div>
+                    <div style={{fontWeight:700,color:C.text,fontSize:14}}>{displayName || "Not signed in"}</div>
+                    <div style={{fontSize:11,color:C.dim,marginTop:2,lineHeight:1.4}}>{displayName ? "Sign in to sync across devices" : "Sign in to keep your progress on every device"}</div>
                   </>}
                 </div>
                 {isSynced && <button onClick={()=>{persistProfile(null);setToast("Signed out.");onClose();}} style={{fontSize:11,color:C.dim,background:"none",border:`1px solid ${C.b2}`,borderRadius:8,padding:"4px 8px",cursor:"pointer",flexShrink:0}}>Sign out</button>}
+              </div>
+
+              {/* ── Display Name ── */}
+              <div style={{marginBottom:14}}>
+                <div style={{fontSize:11,color:C.mid,fontWeight:700,letterSpacing:"0.08em",marginBottom:6}}>👤 YOUR NAME</div>
+                <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                  <input
+                    value={nameInput}
+                    onChange={e=>setNameInput(e.target.value)}
+                    onFocus={()=>setNameFocused(true)}
+                    onBlur={()=>{setNameFocused(false);if(nameInput.trim()!==displayName){persistDisplayName(nameInput.trim());}}}
+                    placeholder="How should we call you?"
+                    maxLength={24}
+                    style={{flex:1,padding:"9px 12px",background:C.s2,border:`1px solid ${nameFocused?C.green:C.b2}`,borderRadius:10,color:C.text,fontSize:14,outline:"none",transition:"border-color .15s"}}
+                  />
+                  {nameInput.trim() && nameInput.trim()!==displayName && (
+                    <button onClick={()=>persistDisplayName(nameInput.trim())} style={{padding:"9px 12px",borderRadius:10,background:C.green,border:"none",color:"#030a05",fontWeight:700,fontSize:13,cursor:"pointer",flexShrink:0}}>Save</button>
+                  )}
+                </div>
+                {displayName && <div style={{fontSize:11,color:C.dim,marginTop:4}}>Shown on the leaderboard and across the app.</div>}
               </div>
 
               {/* ── My Teams ── */}
@@ -4156,6 +4180,13 @@ export default function App() {
     setUserAvatar(av);
     try { localStorage.setItem("wc2026_avatar", av || ""); } catch {}
   };
+  const [displayName, setDisplayName] = useState(() => {
+    try { return localStorage.getItem("wc2026_displayname") || ""; } catch { return ""; }
+  });
+  const persistDisplayName = (n) => {
+    setDisplayName(n);
+    try { localStorage.setItem("wc2026_displayname", n); } catch {}
+  };
   const [syncUid] = useState(() => {
     try {
       let id = localStorage.getItem("wc2026_uid");
@@ -4185,6 +4216,7 @@ export default function App() {
               if (p.dark !== undefined) setDark(p.dark);
               if (p.locationOverride) { setLocationOverride(p.locationOverride); try { localStorage.setItem("wc2026_location", JSON.stringify(p.locationOverride)); } catch {} }
               if (p.avatar) persistAvatar(p.avatar);
+              if (p.displayName) persistDisplayName(p.displayName);
               setSyncProfile({ uid: p.uid, email: p.email, pin: p.pin, method: "email" });
               try { localStorage.setItem("wc2026_syncprofile", JSON.stringify({ uid: p.uid, email: p.email, pin: p.pin, method: "email" })); } catch {}
               setToast("✅ Synced! Your progress has been restored.");
@@ -4207,11 +4239,11 @@ export default function App() {
       fetch("/api/sync?action=push", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ uid: syncProfile.uid, saved, favTeams, dark, locationOverride, avatar: userAvatar }),
+        body: JSON.stringify({ uid: syncProfile.uid, saved, favTeams, dark, locationOverride, avatar: userAvatar, displayName }),
       }).catch(() => {});
     }, 1500);
     return () => clearTimeout(t);
-  }, [saved, favTeams, dark, locationOverride, userAvatar, syncProfile]);
+  }, [saved, favTeams, dark, locationOverride, userAvatar, displayName, syncProfile]);
 
   // Apply theme — mutates C so all components pick up new colors on re-render
   const theme = dark ? DARK : LIGHT;
@@ -4270,11 +4302,11 @@ export default function App() {
             <div style={{display:"flex",alignItems:"center",gap:8}}>
               {/* Dark/light toggle — sun/moon pill */}
               <button onClick={toggleDark} title={dark?"Switch to light mode":"Switch to dark mode"} style={{position:"relative",width:56,height:28,borderRadius:14,border:"none",background:dark?"#4ade80":"#1a3828",cursor:"pointer",flexShrink:0,padding:0,transition:"background .25s"}}>
-                {/* Track icons */}
-                <span style={{position:"absolute",left:6,top:"50%",transform:"translateY(-50%)",fontSize:12,lineHeight:1,opacity:dark?1:0.4,transition:"opacity .2s"}}>☀️</span>
-                <span style={{position:"absolute",right:6,top:"50%",transform:"translateY(-50%)",fontSize:12,lineHeight:1,opacity:dark?0.4:1,transition:"opacity .2s"}}>🌙</span>
-                {/* Sliding knob */}
-                <span style={{position:"absolute",top:3,left:dark?29:3,width:20,height:20,borderRadius:"50%",background:"#ffffff",boxShadow:"0 1px 5px rgba(0,0,0,.4)",transition:"left .22s cubic-bezier(.4,0,.2,1)",display:"block"}}/>
+                {/* Sliding knob — rendered first so icons sit on top */}
+                <span style={{position:"absolute",top:3,left:dark?29:3,width:20,height:20,borderRadius:"50%",background:"#e5e5ea",boxShadow:"0 1px 4px rgba(0,0,0,.35)",transition:"left .22s cubic-bezier(.4,0,.2,1)",display:"block",zIndex:0}}/>
+                {/* Track icons — above knob */}
+                <span style={{position:"absolute",left:5,top:"50%",transform:"translateY(-50%)",fontSize:11,lineHeight:1,opacity:dark?1:0.35,transition:"opacity .2s",zIndex:1,pointerEvents:"none"}}>☀️</span>
+                <span style={{position:"absolute",right:5,top:"50%",transform:"translateY(-50%)",fontSize:11,lineHeight:1,opacity:dark?0.35:1,transition:"opacity .2s",zIndex:1,pointerEvents:"none"}}>🌙</span>
               </button>
               {/* Profile / sync avatar */}
               <button onClick={()=>setShowSyncModal(true)} title="My Account" style={{position:"relative",width:36,height:36,borderRadius:"50%",border:`2px solid ${syncProfile?C.green:dark?"#2a4f38":"#1a3828"}`,background:syncProfile?`${C.green}18`:dark?"#0c1a12":"#1a3828",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,flexShrink:0,transition:"border-color .2s,background .2s",overflow:"hidden",padding:0}}>
@@ -4350,6 +4382,8 @@ export default function App() {
           onShowSaved={()=>setShowSavedView(true)}
           userAvatar={userAvatar}
           persistAvatar={persistAvatar}
+          displayName={displayName}
+          persistDisplayName={persistDisplayName}
         />
         <MatchEventsModal match={eventsModal.match} open={eventsModal.open} onClose={()=>setEventsModal({open:false,match:null})} onAction={onAction}/>
         <Toast msg={toast} onDone={()=>setToast("")}/>
