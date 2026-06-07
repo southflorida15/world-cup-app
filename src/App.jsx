@@ -545,6 +545,14 @@ function downloadICS(saved) {
 }
 
 // ── ADD MODAL ─────────────────────────────────────────────────────────────
+// Star icon — outline when unsaved, gold filled when saved
+function StarIcon({ filled, size=16 }) {
+  return filled
+    ? <svg width={size} height={size} viewBox="0 0 24 24" fill={C.gold} stroke={C.gold} strokeWidth="1.5"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
+    : <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>;
+}
+
+// Dummy placeholder so references to AddModal don't break — replaced below
 function AddModal({ match, open, onClose, onCal, onRem }) {
   const [tab, setTab] = useState("cal");
   const [avail, setAvail] = useState("busy");
@@ -674,7 +682,7 @@ function useElemHeight(ref) {
 }
 
 // ── MATCH CARD ─────────────────────────────────────────────────────────────
-function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="" }) {
+function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="", savedIds=new Set() }) {
   const { favTeams=[] } = useContext(FavCtx);
   const country = useContext(CountryCtx);
   const { getScore } = useContext(LiveScoresCtx);
@@ -738,7 +746,11 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="" 
         </div>
         <div style={{display:"flex",gap:5,alignItems:"center",flexShrink:0}}>
           {onMatchTap && (live||finished) && <button onClick={()=>onMatchTap(m)} style={{background:`${C.blue}18`,border:`1px solid ${C.blue}33`,color:C.blue,padding:"3px 8px",borderRadius:20,fontSize:11,fontWeight:600,cursor:"pointer"}}>Match Events</button>}
-          {!finished && !live && <button onClick={()=>onAction(m)} style={{background:`${C.green}22`,border:`1px solid ${C.greenS}`,color:C.green,padding:"3px 9px",borderRadius:20,fontSize:11,fontWeight:600,cursor:"pointer"}}>+ Add</button>}
+          {!finished && !live && (() => { const isSaved = savedIds.has(m.id); return (
+            <button onClick={()=>onAction(m)} style={{background:isSaved?`${C.gold}22`:`${C.green}22`,border:`1px solid ${isSaved?C.gold:C.greenS}`,color:isSaved?C.gold:C.green,padding:"3px 9px",borderRadius:20,fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
+              <StarIcon filled={isSaved} size={12}/> {isSaved?"Saved":"Add"}
+            </button>
+          ); })()}
         </div>
       </div>
     </div>
@@ -746,7 +758,7 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="" 
 }
 
 // ── LIVE TAB ──────────────────────────────────────────────────────────────
-function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116 }) {
+function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=new Set() }) {
   const { favTeams=[] } = useContext(FavCtx);
   const { scores, getScore, lastFetch } = useContext(LiveScoresCtx);
   const _lhRef = useRef(null); const _lhH = useElemHeight(_lhRef);
@@ -784,13 +796,13 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116 }) {
           {Object.entries(upcomingByDate).map(([date, matches]) => (
             <div key={date} style={{marginBottom:10}}>
               <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:5}}>{date}</div>
-              {matches.map(m => <MatchCard key={m.id} m={m} onAction={onAction} onMatchTap={onMatchTap}/>)}
+              {matches.map(m => <MatchCard key={m.id} m={m} onAction={onAction} onMatchTap={onMatchTap} savedIds={savedIds}/>)}
             </div>
           ))}
         </div>
       )}
-      {liveMatches.length>0 && <div><div style={{fontSize:11,color:C.green,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>🔴 Live Now</div>{liveMatches.map(m=><MatchCard key={m.id} m={m} onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam}/> )}</div>}
-      {finishedToday.length>0 && <div style={{marginTop:liveMatches.length?16:0}}><div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>Today's Results</div>{finishedToday.map(m=><MatchCard key={m.id} m={m} onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam}/> )}</div>}
+      {liveMatches.length>0 && <div><div style={{fontSize:11,color:C.green,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>🔴 Live Now</div>{liveMatches.map(m=><MatchCard key={m.id} m={m} onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} savedIds={savedIds}/> )}</div>}
+      {finishedToday.length>0 && <div style={{marginTop:liveMatches.length?16:0}}><div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>Today's Results</div>{finishedToday.map(m=><MatchCard key={m.id} m={m} onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} savedIds={savedIds}/> )}</div>}
       {liveMatches.length===0 && finishedToday.length===0 && (
         <div style={{textAlign:"center",padding:"48px 20px"}}>
           <div style={{fontSize:"2.5rem",marginBottom:10}}>⚽</div>
@@ -819,7 +831,7 @@ const MATCH_DATES = (() => {
     .filter(Boolean);
 })();
 
-function SchedTab({ onAction, onMatchTap=null, favTeam="", tabTop=116 }) {
+function SchedTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=new Set() }) {
   const { favTeams=[] } = useContext(FavCtx);
   const [filterMode, setFilterMode] = useState("group");
   const [timeMode, setTimeMode] = useState("local");
@@ -940,7 +952,7 @@ function SchedTab({ onAction, onMatchTap=null, favTeam="", tabTop=116 }) {
               </div>
             )}
           </div>
-          {ms.map(m=><MatchCard key={m.id} m={m} onAction={onAction} onMatchTap={onMatchTap} timeMode={timeMode} favTeam={favTeam}/>)}
+          {ms.map(m=><MatchCard key={m.id} m={m} onAction={onAction} onMatchTap={onMatchTap} timeMode={timeMode} favTeam={favTeam} savedIds={savedIds}/>)}
         </div>
       ))}
     </div>
@@ -972,6 +984,13 @@ function scheduleNotification(match, minsBeforeKO) {
     }
   }, delay);
   return true;
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = "=".repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = window.atob(base64);
+  return new Uint8Array([...rawData].map(c => c.charCodeAt(0)));
 }
 
 // ── GROUPS TAB ─────────────────────────────────────────────────────────────
@@ -2312,45 +2331,151 @@ function MyBracketTab({ tabTop=116 }) {
 }
 
 // ── SAVED TAB ──────────────────────────────────────────────────────────────
-function SavedTab({ saved, onRemove }) {
-  const [synced, setSynced] = useState(false);
-  const handleSync=()=>{downloadICS(saved);setSynced(true);setTimeout(()=>setSynced(false),3000);};
-  if(saved.length===0) return (
-    <div style={{textAlign:"center",padding:"50px 20px"}}>
-      <div style={{fontSize:"2.8rem",marginBottom:10}}>📅</div>
-      <div style={{fontWeight:700,fontSize:18,color:C.mid,marginBottom:6}}>No matches saved yet</div>
-      <div style={{fontSize:13,color:C.dim}}>Tap + Add on any match in the Schedule tab.</div>
-    </div>
+function SavedMatchCard({ item, onRemove }) {
+  const [pushState, setPushState] = useState(() =>
+    "Notification" in window ? Notification.permission : "unsupported"
   );
+  const [notified, setNotified] = useState(false);
+  const m = item.match;
+  const finished = false; // saved matches are upcoming by definition
+
+  const notifyText = `⚽ ${m.home} vs ${m.away} · ${m.date} · ${m.time} · ${m.venue?.split(",")[0]||""}`;
+
+  const handleWhatsApp = () => window.open(`https://wa.me/?text=${encodeURIComponent(notifyText)}`, "_blank");
+  const handleSMS      = () => window.open(`sms:&body=${encodeURIComponent(notifyText)}`, "_blank");
+
+  const handlePush = async () => {
+    let state = pushState;
+    if (state !== "granted") {
+      state = await requestPushPermission();
+      setPushState(state);
+      if (state !== "granted") return;
+    }
+    scheduleNotification(m, 60);
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      let sub = await reg.pushManager.getSubscription();
+      if (!sub) {
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array("BHlG2j1aEN_PheVmM_kw6eG5ho26LSMdtxSVEjiz9HnYqKTWWlOrdFdX-U3qUqR-VLxDrvOBik17FS7NJ1kJdr8"),
+        });
+      }
+      await fetch("/api/push-subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subscription: sub.toJSON(), matches: [m], minsBefore: 60 }),
+      });
+    } catch(e) { console.warn("Push subscribe failed:", e); }
+    setNotified(true);
+  };
+
+  const handleCalendar = () => downloadICS([item]);
+
   return (
-    <div>
-      <div style={{background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b2}`,borderRadius:12,padding:14,marginBottom:16}}>
-        <div style={{fontWeight:700,color:C.text,fontSize:14,marginBottom:4}}>📅 Sync to Calendar</div>
-        <div style={{fontSize:12,color:C.mid,marginBottom:12,lineHeight:1.5}}>Download a <strong style={{color:C.green}}>.ics file</strong> to import into Google Calendar, Apple Calendar, or Outlook.</div>
-        <button onClick={handleSync} style={{width:"100%",padding:"11px 0",borderRadius:10,cursor:"pointer",background:synced?`${C.green}33`:`linear-gradient(135deg,${C.green},#22c55e)`,border:synced?`1px solid ${C.green}`:"none",color:synced?C.green:"#030a05",fontWeight:700,fontSize:14}}>
-          {synced?"✅ Opening...":`📅 Export (${saved.length} match${saved.length!==1?"es":""})`}
-        </button>
-      </div>
-      {saved.map(item=>(
-        <Card key={item.id} style={{marginBottom:8}}>
-          <div style={{padding:"11px 13px"}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
-              <div style={{display:"flex",alignItems:"center",gap:10}}>
-                <Crest team={item.match.home} size={24}/>
-                <div>
-                  <div style={{fontWeight:700,color:C.text,marginBottom:2,fontSize:14}}>{item.match.home} vs {item.match.away}</div>
-                  <div style={{fontSize:11,color:C.dim}}>{item.match.date} · {item.match.time}</div>
-                </div>
-              </div>
-              <button onClick={()=>onRemove(item.id)} style={{background:"none",border:"none",color:C.dim,fontSize:20,cursor:"pointer"}}>×</button>
-            </div>
-            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-              {item.type==="cal" && <Badge color={C.green}>📅 {item.avail}</Badge>}
-              {item.type==="rem" && <Badge color={C.gold}>{item.ch==="push"?"🔔 Push":item.ch==="email"?"✉️ Email":item.ch==="sms"?"📱 SMS":"💬 WhatsApp"} · {RO.find(o=>o.v===item.mins)?.l}</Badge>}
-              {item.match.group && <Badge color={C.dim}>Group {item.match.group}</Badge>}
+    <Card style={{marginBottom:8}}>
+      <div style={{padding:"11px 13px"}}>
+        {/* Match header */}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <Crest team={m.home} size={24}/>
+            <div>
+              <div style={{fontWeight:700,color:C.text,marginBottom:2,fontSize:14}}>{m.home} vs {m.away}</div>
+              <div style={{fontSize:11,color:C.dim}}>{m.date} · {m.time} · {m.venue?.split(",")[0]||""}</div>
             </div>
           </div>
-        </Card>
+          <button onClick={()=>onRemove(item.id)} style={{background:"none",border:"none",color:C.dim,fontSize:20,cursor:"pointer",lineHeight:1}}>×</button>
+        </div>
+        {/* Action buttons */}
+        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+          <button onClick={handleCalendar} style={{flex:"1 1 auto",padding:"7px 6px",borderRadius:9,cursor:"pointer",border:`1px solid ${C.green}44`,background:`${C.green}15`,color:C.green,fontSize:11,fontWeight:600}}>📅 Calendar</button>
+          <button onClick={handleWhatsApp} style={{flex:"1 1 auto",padding:"7px 6px",borderRadius:9,cursor:"pointer",border:`1px solid #25d36644`,background:"#25d36615",color:"#25d366",fontSize:11,fontWeight:600}}>💬 WhatsApp</button>
+          <button onClick={handleSMS}      style={{flex:"1 1 auto",padding:"7px 6px",borderRadius:9,cursor:"pointer",border:`1px solid ${C.blue}44`,background:`${C.blue}15`,color:C.blue,fontSize:11,fontWeight:600}}>📱 SMS</button>
+          <button onClick={handlePush} disabled={pushState==="denied"} style={{flex:"1 1 auto",padding:"7px 6px",borderRadius:9,cursor:pushState==="denied"?"not-allowed":"pointer",border:`1px solid ${notified?C.green:C.gold}44`,background:notified?`${C.green}15`:`${C.gold}15`,color:notified?C.green:C.gold,fontSize:11,fontWeight:600,opacity:pushState==="denied"?0.5:1}}>
+            {notified ? "🔔 Set!" : pushState==="denied" ? "🔔 Blocked" : "🔔 Push"}
+          </button>
+        </div>
+        {pushState==="denied" && <div style={{fontSize:10,color:C.dim,marginTop:4}}>Enable notifications in browser settings to use Push.</div>}
+      </div>
+    </Card>
+  );
+}
+
+function SavedTab({ saved, onRemove, tabTop=116 }) {
+  const _ref = useRef(null);
+  const _h   = useElemHeight(_ref);
+
+  // Master push state
+  const [masterPushDone, setMasterPushDone] = useState(false);
+
+  const handleMasterCalendar = () => { downloadICS(saved); };
+
+  const handleMasterWhatsApp = () => {
+    const lines = saved.map(it => `⚽ ${it.match.home} vs ${it.match.away} · ${it.match.date} · ${it.match.time} · ${it.match.venue?.split(",")[0]||""}`).join("\n");
+    window.open(`https://wa.me/?text=${encodeURIComponent(lines)}`, "_blank");
+  };
+
+  const handleMasterSMS = () => {
+    const lines = saved.map(it => `⚽ ${it.match.home} vs ${it.match.away} · ${it.match.date} · ${it.match.time} · ${it.match.venue?.split(",")[0]||""}`).join("\n");
+    window.open(`sms:&body=${encodeURIComponent(lines)}`, "_blank");
+  };
+
+  const handleMasterPush = async () => {
+    let state = "Notification" in window ? Notification.permission : "unsupported";
+    if (state !== "granted") {
+      state = await requestPushPermission();
+      if (state !== "granted") return;
+    }
+    saved.forEach(it => scheduleNotification(it.match, 60));
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      let sub = await reg.pushManager.getSubscription();
+      if (!sub) {
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array("BHlG2j1aEN_PheVmM_kw6eG5ho26LSMdtxSVEjiz9HnYqKTWWlOrdFdX-U3qUqR-VLxDrvOBik17FS7NJ1kJdr8"),
+        });
+      }
+      await fetch("/api/push-subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subscription: sub.toJSON(), matches: saved.map(x=>x.match), minsBefore: 60 }),
+      });
+      setMasterPushDone(true);
+    } catch(e) { console.warn("Master push failed:", e); }
+  };
+
+  if (saved.length === 0) return (
+    <div style={{textAlign:"center",padding:"50px 20px"}}>
+      <div style={{fontSize:"2.8rem",marginBottom:10}}>⭐</div>
+      <div style={{fontWeight:700,fontSize:18,color:C.mid,marginBottom:6}}>No matches saved yet</div>
+      <div style={{fontSize:13,color:C.dim}}>Tap the ☆ Add on any match to save it here.</div>
+    </div>
+  );
+
+  return (
+    <div>
+      {/* ── Sticky master control header ── */}
+      <div ref={_ref} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"8px 13px",maxWidth:700,margin:"0 auto"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
+          <span style={{fontSize:12,fontWeight:700,color:C.mid,letterSpacing:"0.06em"}}>ALL MATCHES ({saved.length})</span>
+          <button onClick={()=>saved.forEach(it=>onRemove(it.id))} style={{background:"none",border:"none",color:C.dim,fontSize:11,cursor:"pointer",padding:"2px 6px",borderRadius:6,border:`1px solid ${C.b2}`}}>Clear all</button>
+        </div>
+        <div style={{display:"flex",gap:6}}>
+          <button onClick={handleMasterCalendar} style={{flex:1,padding:"7px 4px",borderRadius:9,cursor:"pointer",border:`1px solid ${C.green}44`,background:`${C.green}15`,color:C.green,fontSize:11,fontWeight:600}}>📅 Calendar</button>
+          <button onClick={handleMasterWhatsApp} style={{flex:1,padding:"7px 4px",borderRadius:9,cursor:"pointer",border:"1px solid #25d36644",background:"#25d36615",color:"#25d366",fontSize:11,fontWeight:600}}>💬 WhatsApp</button>
+          <button onClick={handleMasterSMS}      style={{flex:1,padding:"7px 4px",borderRadius:9,cursor:"pointer",border:`1px solid ${C.blue}44`,background:`${C.blue}15`,color:C.blue,fontSize:11,fontWeight:600}}>📱 SMS</button>
+          <button onClick={handleMasterPush} style={{flex:1,padding:"7px 4px",borderRadius:9,cursor:"pointer",border:`1px solid ${masterPushDone?C.green:C.gold}44`,background:masterPushDone?`${C.green}15`:`${C.gold}15`,color:masterPushDone?C.green:C.gold,fontSize:11,fontWeight:600}}>
+            {masterPushDone?"🔔 Set!":"🔔 Push"}
+          </button>
+        </div>
+      </div>
+      {/* Spacer to prevent content hiding under sticky header */}
+      <div style={{height:_h||80}}/>
+
+      {/* Individual match cards */}
+      {saved.map(item=>(
+        <SavedMatchCard key={item.id} item={item} onRemove={onRemove}/>
       ))}
     </div>
   );
@@ -2487,7 +2612,11 @@ function MatchdayCard({ m, onAction, favTeam }) {
         {/* Venue */}
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:m.tv?4:0}}>
           <span onClick={()=>openMaps(m.venue)} style={{fontSize:11,color:C.blue,cursor:"pointer"}}>📍 <span style={{textDecoration:"underline",textDecorationStyle:"dotted"}}>{m.venue}</span></span>
-          {!finished && <button onClick={()=>onAction(m)} style={{background:`${C.green}22`,border:`1px solid ${C.greenS}`,color:C.green,padding:"3px 11px",borderRadius:20,fontSize:11,fontWeight:600,cursor:"pointer",flexShrink:0}}>+ Add</button>}
+          {!finished && (() => { const isSaved = savedIds.has(m.id); return (
+            <button onClick={()=>onAction(m)} style={{background:isSaved?`${C.gold}22`:`${C.green}22`,border:`1px solid ${isSaved?C.gold:C.greenS}`,color:isSaved?C.gold:C.green,padding:"3px 9px",borderRadius:20,fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
+              <StarIcon filled={isSaved} size={12}/> {isSaved?"Saved":"Add"}
+            </button>
+          ); })()}
           {finished && <span style={{fontSize:10,color:C.dim,fontStyle:"italic"}}>Final</span>}
         </div>
         {m.tv && <div style={{fontSize:11,color:finished?C.dim:C.gold,marginBottom: isMatchday&&city?4:0}}>📺 {m.tv}</div>}
@@ -3122,7 +3251,11 @@ function MatchEventsModal({ match, open, onClose, onAction }) {
 
           {/* ── ACTIONS ── */}
           <div style={{display:"flex",gap:8,marginTop:8}}>
-            {!finished && <button onClick={()=>{onAction(match);onClose();}} style={{flex:1,padding:"11px 0",borderRadius:12,background:`linear-gradient(135deg,${C.green},#22c55e)`,border:"none",color:"#030a05",fontWeight:700,fontSize:14,cursor:"pointer"}}>📅 Add to Calendar</button>}
+            {!finished && (() => { const isSaved = savedIds.has(match.id); return (
+              <button onClick={()=>{onAction(match);onClose();}} style={{flex:1,padding:"11px 0",borderRadius:12,background:isSaved?`${C.gold}22`:`linear-gradient(135deg,${C.green},#22c55e)`,border:isSaved?`1px solid ${C.gold}`:"none",color:isSaved?"#f59e0b":"#030a05",fontWeight:700,fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+                <StarIcon filled={isSaved} size={15}/> {isSaved?"Saved":"Save Match"}
+              </button>
+            ); })()}
             <button onClick={shareMatch} style={{flex:1,padding:"11px 0",borderRadius:12,background:`${C.blue}22`,border:`1px solid ${C.blue}44`,color:C.blue,fontWeight:700,fontSize:14,cursor:"pointer"}}>📤 Share</button>
           </div>
 
@@ -3428,7 +3561,17 @@ export default function App() {
   };
 
   const onTeam=(t)=>{setStatsTeam(t);setTab("stats");};
-  const onAction=(m)=>setModal({open:true,match:m});
+  const savedIds = new Set(saved.map(x=>x.match?.id));
+  const onAction=(m)=>{
+    const id=`s${m.id}`;
+    if(savedIds.has(m.id)){
+      setSaved(s=>s.filter(x=>x.match?.id!==m.id));
+      setToast("Removed from saved");
+    } else {
+      setSaved(s=>[...s,{id,type:"saved",match:m}]);
+      setToast("Match saved ⭐");
+    }
+  };
   const onMatchTap=(m)=>setEventsModal({open:true,match:m});
   const onCal=(m,avail)=>{const id=`c${m.id}`;setSaved(s=>[...s.filter(x=>x.id!==id),{id,type:"cal",match:m,avail}]);setToast("Added to calendar");};
   const onRem=(m,ch,mins,contact)=>{const id=`r${m.id}`;setSaved(s=>[...s.filter(x=>x.id!==id),{id,type:"rem",match:m,ch,mins,contact}]);setToast("Reminder set");};
@@ -3507,9 +3650,9 @@ export default function App() {
           </div>
         </div>
         <div style={{padding:"0 13px 100px"}}>
-          {tab==="live"      && <LiveTab onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} tabTop={tabBarBottom}/>}
+          {tab==="live"      && <LiveTab onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} tabTop={tabBarBottom} savedIds={savedIds}/>}
           {tab==="scorers"   && <TopScorersTab tabTop={tabBarBottom}/>}
-          {tab==="schedule"  && <SchedTab onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} tabTop={tabBarBottom}/>}
+          {tab==="schedule"  && <SchedTab onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} tabTop={tabBarBottom} savedIds={savedIds}/>}
           {tab==="groups"    && <GrpTab onTeam={onTeam} onMatchTap={onMatchTap} tabTop={tabBarBottom}/>}
           {tab==="stats"     && <StatsTab initial={statsTeam} tabTop={tabBarBottom}/>}
           {tab==="h2h"       && <H2HTab tabTop={tabBarBottom}/>}
@@ -3517,9 +3660,9 @@ export default function App() {
           {tab==="predictor" && <PredictorTab/>}
           {tab==="sim"       && <SimTab tabTop={tabBarBottom}/>}
           {tab==="bracket"   && <MyBracketTab tabTop={tabBarBottom}/>}
-          {tab==="saved"     && <div style={{paddingTop:14}}><SavedTab saved={saved} onRemove={onRemove}/></div>}
+          {tab==="saved"     && <SavedTab saved={saved} onRemove={onRemove} tabTop={tabBarBottom}/>}
         </div>
-        <AddModal match={modal.match} open={modal.open} onClose={()=>setModal({open:false,match:null})} onCal={onCal} onRem={onRem}/>
+        {/* AddModal removed — saving is now instant via star button */}
         <MatchEventsModal match={eventsModal.match} open={eventsModal.open} onClose={()=>setEventsModal({open:false,match:null})} onAction={onAction}/>
         <Toast msg={toast} onDone={()=>setToast("")}/>
         <InstallBanner/>
