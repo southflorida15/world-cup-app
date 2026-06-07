@@ -1,31 +1,16 @@
 // /api/cron/score.js
-// Runs every 5 minutes via Vercel Cron.
-// Finds any newly-finished World Cup matches and scores all predictions for them.
-// Safe to run repeatedly — skips matches already scored.
-//
-// Vercel Cron calls this with a special Authorization header.
-// No manual triggers needed after deployment.
-
-import { kv } from "@vercel/kv";
+// Auto-scores predictions for finished WC matches.
+// Called by cron-job.org every 15 minutes.
+// Uses the existing /api/predictor endpoint for KV operations
+// so no direct @vercel/kv import needed here.
 
 const RAPIDAPI_KEY  = process.env.RAPIDAPI_KEY;
 const RAPIDAPI_HOST = process.env.RAPIDAPI_HOST || "api-football-v1.p.rapidapi.com";
+const ADMIN_SECRET  = process.env.PREDICTOR_ADMIN_SECRET || process.env.CRON_SECRET;
 const WC_LEAGUE_ID  = 1;
 const WC_SEASON     = 2026;
 
-const API_NAME_MAP = {
-  "USA":"United States","United States of America":"United States",
-  "Turkey":"Turkiye","Türkiye":"Turkiye","Czech Republic":"Czechia",
-  "Bosnia":"Bosnia & Herz.","Bosnia and Herzegovina":"Bosnia & Herz.",
-  "Côte d'Ivoire":"Ivory Coast","Cote d'Ivoire":"Ivory Coast",
-  "DR Congo":"DR Congo","Congo DR":"DR Congo",
-  "Korea Republic":"South Korea","Republic of Korea":"South Korea",
-  "IR Iran":"Iran","Curaçao":"Curacao","Cabo Verde":"Cape Verde",
-};
-const norm = n => API_NAME_MAP[n] || n;
-
-// Match ID lookup — map "home|away" → our internal match ID
-// Built from the same MATCHES array the frontend uses
+// Map "home|away" team names to our internal match IDs
 const MATCH_ID_MAP = {
   "Mexico|South Africa":1,"South Korea|Czechia":2,"Canada|Bosnia & Herz.":3,
   "United States|Paraguay":4,"Qatar|Switzerland":5,"Brazil|Morocco":6,
@@ -54,89 +39,79 @@ const MATCH_ID_MAP = {
   "Jordan|Argentina":72,
 };
 
-function calcScore(pred, actual) {
-  const ph = parseInt(pred.hg), pa = parseInt(pred.ag);
-  const ah = parseInt(actual.hg), aa = parseInt(actual.ag);
-  if (isNaN(ph) || isNaN(pa)) return null;
-  if (ph === ah && pa === aa) return 3;
-  const pr = ph > pa ? "H" : ph < pa ? "A" : "D";
-  const ar = ah > aa ? "H" : ah < aa ? "A" : "D";
-  return pr === ar ? 1 : 0;
-}
+const API_NAME_MAP = {
+  "USA":"United States","United States of America":"United States",
+  "Turkey":"Turkiye","Türkiye":"Turkiye","Czech Republic":"Czechia",
+  "Bosnia":"Bosnia & Herz.","Bosnia and Herzegovina":"Bosnia & Herz.",
+  "Côte d'Ivoire":"Ivory Coast","Cote d'Ivoire":"Ivory Coast",
+  "DR Congo":"DR Congo","Congo DR":"DR Congo",
+  "Korea Republic":"South Korea","Republic of Korea":"South Korea",
+  "IR Iran":"Iran","Curaçao":"Curacao","Cabo Verde":"Cape Verde",
+};
+const norm = n => API_NAME_MAP[n] || n;
 
 export default async function handler(req, res) {
-  // Verify this is a legitimate Vercel Cron call
-  const authHeader = req.headers["authorization"];
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  // Verify auth
+  const auth = req.headers["authorization"];
+  if (auth !== `Bearer ${ADMIN_SECRET}`) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
   try {
-    // 1. Fetch current WC fixtures from API-Football
-    const fixturesRes = await fetch(
+    // 1. Fetch all WC fixtures
+    const r = await fetch(
       `https://${RAPIDAPI_HOST}/v3/fixtures?league=${WC_LEAGUE_ID}&season=${WC_SEASON}`,
       { headers: { "X-RapidAPI-Key": RAPIDAPI_KEY, "X-RapidAPI-Host": RAPIDAPI_HOST } }
     );
-    if (!fixturesRes.ok) throw new Error(`Fixtures API → ${fixturesRes.status}`);
-    const fixturesData = await fixturesRes.json();
+    if (!r.ok) throw new Error(`Fixtures API ${r.status}`);
+    const data = await r.json();
 
-    const finishedStatuses = ["FT", "AET", "PEN"];
-    const finished = (fixturesData.response || []).filter(f =>
-      finishedStatuses.includes(f.fixture?.status?.short)
+    const finished = (data.response || []).filter(f =>
+      ["FT","AET","PEN"].includes(f.fixture?.status?.short)
     );
 
-    let scored = 0, skipped = 0, newMatches = 0;
+    let newMatches = 0, scored = 0, skipped = 0;
+    const host = req.headers.host;
+    const proto = req.headers["x-forwarded-proto"] || "https";
+    const base = proto + "://" + host;
 
     for (const fixture of finished) {
-      const homeRaw = fixture.teams?.home?.name || "";
-      const awayRaw = fixture.teams?.away?.name || "";
-      const home = norm(homeRaw);
-      const away = norm(awayRaw);
-      const matchKey = `${home}|${away}`;
-      const matchId = MATCH_ID_MAP[matchKey];
-
-      if (!matchId) continue; // Not a group stage match we track
+      const home = norm(fixture.teams?.home?.name || "");
+      const away = norm(fixture.teams?.away?.name || "");
+      const matchId = MATCH_ID_MAP[home + "|" + away];
+      if (!matchId) { skipped++; continue; }
 
       const hg = fixture.goals?.home;
       const ag = fixture.goals?.away;
-      if (hg === null || hg === undefined || ag === null || ag === undefined) continue;
+      if (hg === null || hg === undefined || ag === null || ag === undefined) { skipped++; continue; }
 
-      // Check if already scored
-      const alreadyScored = await kv.get(`result:${matchId}`);
-      if (alreadyScored) { skipped++; continue; }
-
-      // Save the result
-      await kv.set(`result:${matchId}`, {
-        hg: parseInt(hg), ag: parseInt(ag),
-        home, away, scoredAt: Date.now()
+      // Call predictor API to score this match
+      const scoreRes = await fetch(base + "/api/predictor?action=score", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-secret": ADMIN_SECRET,
+        },
+        body: JSON.stringify({ matchId, hg: parseInt(hg), ag: parseInt(ag) }),
       });
-      newMatches++;
 
-      // Find all users and score their predictions
-      const userIds = [];
-      let cursor = 0;
-      do {
-        const [nextCursor, keys] = await kv.scan(cursor, { match: "user:*", count: 100 });
-        cursor = parseInt(nextCursor);
-        keys.forEach(k => userIds.push(k.replace("user:", "")));
-      } while (cursor !== 0);
+      if (scoreRes.status === 403) { skipped++; continue; } // already scored
+      if (!scoreRes.ok) {
+        const err = await scoreRes.json().catch(() => ({}));
+        console.warn(`[cron] match ${matchId} score failed:`, err.error);
+        skipped++;
+        continue;
+      }
 
-      for (const uid of userIds) {
-        const pred = await kv.get(`pred:${uid}:${matchId}`);
-        if (!pred) continue;
-        const pts = calcScore(pred, { hg: parseInt(hg), ag: parseInt(ag) });
-        if (pts === null) continue;
-        await kv.set(`score:${uid}:${matchId}`, {
-          pts, hg: parseInt(hg), ag: parseInt(ag),
-          predHg: pred.hg, predAg: pred.ag,
-          scoredAt: Date.now()
-        });
-        scored++;
+      const result = await scoreRes.json();
+      if (result.ok) {
+        newMatches++;
+        scored += result.scored || 0;
       }
     }
 
     console.log(`[cron/score] finished=${finished.length} new=${newMatches} scored=${scored} skipped=${skipped}`);
-    return res.status(200).json({ ok: true, newMatches, scored, skipped });
+    return res.status(200).json({ ok: true, finished: finished.length, newMatches, scored, skipped });
 
   } catch (err) {
     console.error("[cron/score] error:", err.message);
