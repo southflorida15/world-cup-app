@@ -2338,10 +2338,14 @@ function MyBracketTab({ tabTop=116 }) {
 
 // ── SAVED TAB ──────────────────────────────────────────────────────────────
 function SavedMatchCard({ item, onRemove }) {
-  const [pushState, setPushState] = useState(() =>
-    "Notification" in window ? Notification.permission : "unsupported"
-  );
+  const isPWA = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+  const [pushState, setPushState] = useState(() => {
+    if (!("Notification" in window)) return "unsupported";
+    if (!isPWA) return "needs-install";
+    return Notification.permission;
+  });
   const [notified, setNotified] = useState(false);
+  const [showInstallTip, setShowInstallTip] = useState(false);
   const m = item.match;
   const finished = false; // saved matches are upcoming by definition
 
@@ -2397,11 +2401,12 @@ function SavedMatchCard({ item, onRemove }) {
           <button onClick={handleCalendar} style={{flex:"1 1 auto",padding:"7px 6px",borderRadius:9,cursor:"pointer",border:`1px solid ${C.green}44`,background:`${C.green}15`,color:C.green,fontSize:11,fontWeight:600}}>📅 Calendar</button>
           <button onClick={handleWhatsApp} style={{flex:"1 1 auto",padding:"7px 6px",borderRadius:9,cursor:"pointer",border:`1px solid #25d36644`,background:"#25d36615",color:"#25d366",fontSize:11,fontWeight:600}}>💬 WhatsApp</button>
           <button onClick={handleSMS}      style={{flex:"1 1 auto",padding:"7px 6px",borderRadius:9,cursor:"pointer",border:`1px solid ${C.blue}44`,background:`${C.blue}15`,color:C.blue,fontSize:11,fontWeight:600}}>📱 SMS</button>
-          <button onClick={handlePush} disabled={pushState==="denied"} style={{flex:"1 1 auto",padding:"7px 6px",borderRadius:9,cursor:pushState==="denied"?"not-allowed":"pointer",border:`1px solid ${notified?C.green:C.gold}44`,background:notified?`${C.green}15`:`${C.gold}15`,color:notified?C.green:C.gold,fontSize:11,fontWeight:600,opacity:pushState==="denied"?0.5:1}}>
-            {notified ? "🔔 Set!" : pushState==="denied" ? "🔔 Blocked" : "🔔 Push"}
+          <button onClick={pushState==="needs-install"?()=>setShowInstallTip(v=>!v):handlePush} disabled={pushState==="denied"} style={{flex:"1 1 auto",padding:"7px 6px",borderRadius:9,cursor:pushState==="denied"?"not-allowed":"pointer",border:`1px solid ${notified?C.green:pushState==="needs-install"?C.blue:C.gold}44`,background:notified?`${C.green}15`:pushState==="needs-install"?`${C.blue}15`:`${C.gold}15`,color:notified?C.green:pushState==="needs-install"?C.blue:C.gold,fontSize:11,fontWeight:600,opacity:pushState==="denied"?0.5:1}}>
+            {notified ? "🔔 Set!" : pushState==="denied" ? "🔔 Blocked" : pushState==="needs-install" ? "🔔 Install" : "🔔 Push"}
           </button>
         </div>
         {pushState==="denied" && <div style={{fontSize:10,color:C.dim,marginTop:4}}>Enable notifications in browser settings to use Push.</div>}
+        {pushState==="needs-install" && showInstallTip && <div style={{fontSize:11,color:C.blue,marginTop:6,padding:"8px 10px",background:`${C.blue}12`,borderRadius:8,lineHeight:1.5}}>To get push notifications, install the app first: in your browser tap <strong>⋯ → Install app</strong> (Chrome) or <strong>Share → Add to Home Screen</strong> (Safari), then come back here.</div>}
       </div>
     </Card>
   );
@@ -2427,6 +2432,11 @@ function SavedTab({ saved, onRemove, tabTop=116 }) {
   };
 
   const handleMasterPush = async () => {
+    const isPWA = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+    if (!isPWA) {
+      setToast("Install the app first to enable push notifications");
+      return;
+    }
     let state = "Notification" in window ? Notification.permission : "unsupported";
     if (state !== "granted") {
       state = await requestPushPermission();
@@ -4301,12 +4311,17 @@ export default function App() {
             </div>
             <div style={{display:"flex",alignItems:"center",gap:8}}>
               {/* Dark/light toggle — sun/moon pill */}
-              <button onClick={toggleDark} title={dark?"Switch to light mode":"Switch to dark mode"} style={{position:"relative",width:56,height:28,borderRadius:14,border:"none",background:dark?"#4ade80":"#1a3828",cursor:"pointer",flexShrink:0,padding:0,transition:"background .25s"}}>
-                {/* Sliding knob — rendered first so icons sit on top */}
+              <button onClick={toggleDark} title={dark?"Switch to light mode":"Switch to dark mode"} style={{position:"relative",width:56,height:28,borderRadius:14,border:"none",background:dark?"#4ade80":"#1a3828",cursor:"pointer",flexShrink:0,padding:0,transition:"background .25s",display:"flex",alignItems:"center"}}>
+                {/* Sun icon — left side */}
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" style={{position:"absolute",left:5,top:"50%",transform:"translateY(-50%)",opacity:dark?1:0.4,transition:"opacity .2s",pointerEvents:"none",zIndex:1}}>
+                  <circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                </svg>
+                {/* Moon icon — right side */}
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="#fff" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" style={{position:"absolute",right:6,top:"50%",transform:"translateY(-50%)",opacity:dark?0.4:1,transition:"opacity .2s",pointerEvents:"none",zIndex:1}}>
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                </svg>
+                {/* Sliding knob */}
                 <span style={{position:"absolute",top:3,left:dark?29:3,width:20,height:20,borderRadius:"50%",background:"#e5e5ea",boxShadow:"0 1px 4px rgba(0,0,0,.35)",transition:"left .22s cubic-bezier(.4,0,.2,1)",display:"block",zIndex:0}}/>
-                {/* Track icons — above knob */}
-                <span style={{position:"absolute",left:5,top:"50%",transform:"translateY(-50%)",fontSize:11,lineHeight:1,opacity:dark?1:0.35,transition:"opacity .2s",zIndex:1,pointerEvents:"none"}}>☀️</span>
-                <span style={{position:"absolute",right:5,top:"50%",transform:"translateY(-50%)",fontSize:11,lineHeight:1,opacity:dark?0.35:1,transition:"opacity .2s",zIndex:1,pointerEvents:"none"}}>🌙</span>
               </button>
               {/* Profile / sync avatar */}
               <button onClick={()=>setShowSyncModal(true)} title="My Account" style={{position:"relative",width:36,height:36,borderRadius:"50%",border:`2px solid ${syncProfile?C.green:dark?"#2a4f38":"#1a3828"}`,background:syncProfile?`${C.green}18`:dark?"#0c1a12":"#1a3828",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,flexShrink:0,transition:"border-color .2s,background .2s",overflow:"hidden",padding:0}}>
