@@ -98,8 +98,61 @@ export default async function handler(req, res) {
       .filter(ev => ["Goal","Card","subst"].includes(ev.type))
       .sort((a, b) => (a.time?.elapsed||0) - (b.time?.elapsed||0));
 
+    // Step 4: Get fixture stats (possession, shots, etc.) for live/finished matches
+    let stats = null;
+    if (isLive || isFinished) {
+      const statsCacheKey = `stats_${fid}`;
+      let statsData = getCached(statsCacheKey, ttl);
+      if (!statsData) {
+        try {
+          const r = await fetch(
+            `https://${RAPIDAPI_HOST}/v3/fixtures/statistics?fixture=${fid}`,
+            { headers: { "X-RapidAPI-Key": RAPIDAPI_KEY, "X-RapidAPI-Host": RAPIDAPI_HOST } }
+          );
+          if (r.ok) {
+            statsData = await r.json();
+            setCached(statsCacheKey, statsData);
+          }
+        } catch(e) { /* stats are optional */ }
+      }
+      if (statsData?.response?.length >= 2) {
+        const parseVal = v => {
+          if (v === null || v === undefined) return null;
+          if (typeof v === "string" && v.endsWith("%")) return parseFloat(v);
+          return typeof v === "number" ? v : null;
+        };
+        const extract = (teamStats, type) => parseVal(teamStats?.statistics?.find(s=>s.type===type)?.value);
+        const h = statsData.response[0];
+        const a = statsData.response[1];
+        stats = {
+          home: {
+            possession: extract(h, "Ball Possession"),
+            shots: extract(h, "Total Shots"),
+            shotsOn: extract(h, "Shots on Goal"),
+            corners: extract(h, "Corner Kicks"),
+            fouls: extract(h, "Fouls"),
+            yellow: extract(h, "Yellow Cards"),
+            red: extract(h, "Red Cards"),
+            passes: extract(h, "Total passes"),
+            passAcc: extract(h, "Passes %"),
+          },
+          away: {
+            possession: extract(a, "Ball Possession"),
+            shots: extract(a, "Total Shots"),
+            shotsOn: extract(a, "Shots on Goal"),
+            corners: extract(a, "Corner Kicks"),
+            fouls: extract(a, "Fouls"),
+            yellow: extract(a, "Yellow Cards"),
+            red: extract(a, "Red Cards"),
+            passes: extract(a, "Total passes"),
+            passAcc: extract(a, "Passes %"),
+          }
+        };
+      }
+    }
+
     res.setHeader("Cache-Control", isLive ? "no-cache" : "s-maxage=3600");
-    return res.status(200).json(events);
+    return res.status(200).json({ events, stats, status, elapsed: fixture.fixture.status?.elapsed });
 
   } catch (err) {
     console.error("[matchevents]", err.message);
