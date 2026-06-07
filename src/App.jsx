@@ -3669,15 +3669,15 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
     "email-sent": "Check Your Email", predictions: "My Predictions",
   }[screen] || "";
 
-  return (
-    <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",zIndex:1000,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
-      <div onClick={e=>e.stopPropagation()} style={{background:C.s1,border:`1px solid ${C.b2}`,borderRadius:"20px 20px 0 0",width:"100%",maxWidth:520,maxHeight:"92vh",overflowY:"auto",paddingBottom:32}}>
+  const isDesktop = typeof window !== "undefined" && window.innerWidth >= 640;
 
+  const innerContent = (
+    <>
         {/* Header */}
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"18px 20px 14px",borderBottom:`1px solid ${C.b1}`,position:"sticky",top:0,background:C.s1,zIndex:1}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:isDesktop?"14px 18px 12px":"18px 20px 14px",borderBottom:`1px solid ${C.b1}`,position:"sticky",top:0,background:C.s1,zIndex:1,borderRadius:isDesktop?"12px 12px 0 0":undefined}}>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             {screen !== "home" && <button onClick={()=>{setScreen("home");setError("");}} style={{background:"none",border:"none",color:C.mid,fontSize:22,cursor:"pointer",padding:"0 4px 0 0",lineHeight:1}}>‹</button>}
-            <span style={{fontSize:17,fontWeight:700,color:C.green}}>{screenTitle}</span>
+            <span style={{fontSize:isDesktop?15:17,fontWeight:700,color:C.green}}>{screenTitle}</span>
           </div>
           <button onClick={onClose} style={{background:"none",border:"none",color:C.mid,fontSize:24,cursor:"pointer"}}>×</button>
         </div>
@@ -4045,6 +4045,98 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
           </div>
         )}
 
+    </>
+  );
+
+  if (isDesktop) {
+    // Desktop: compact dropdown with name/email header + menu rows
+    return (
+      <>
+        <div onClick={onClose} style={{position:"fixed",inset:0,zIndex:999}}/>
+        <div onClick={e=>e.stopPropagation()} style={{position:"fixed",top:58,right:14,width:280,background:C.s1,border:`1px solid ${C.b2}`,borderRadius:14,boxShadow:"0 8px 32px rgba(0,0,0,0.4)",zIndex:1000,overflow:"hidden"}}>
+
+          {screen === "home" ? (
+            <>
+              {/* Profile header */}
+              <div style={{padding:"16px 16px 12px",borderBottom:`1px solid ${C.b1}`,textAlign:"center"}}>
+                <div style={{width:52,height:52,borderRadius:"50%",margin:"0 auto 10px",background:syncProfile?`${C.green}22`:C.s2,border:`2px solid ${syncProfile?C.green:C.b2}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,overflow:"hidden",cursor:"pointer"}} onClick={()=>setShowAvatarPicker(true)}>
+                  {userAvatar && userAvatar.startsWith("data:") ? <img src={userAvatar} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="avatar"/>
+                  : userAvatar && userAvatar.startsWith("icon:") ? (()=>{const ic=FOOTBALL_ICONS.find(i=>i.id===userAvatar);return ic?<svg width="34" height="34" viewBox="0 0 76 76" dangerouslySetInnerHTML={{__html:ic.svg}}/>:"⚽";})()
+                  : userAvatar && userAvatar.startsWith("flag:") ? <img src={`https://flagcdn.com/w80/${FLAG_CODES_MAP[userAvatar.slice(5)]}.png`} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="flag"/>
+                  : userAvatar && userAvatar.startsWith("crest:") ? <img src={getCrestUrl(userAvatar)} style={{width:"85%",height:"85%",objectFit:"contain"}} alt="crest"/>
+                  : syncProfile ? "⚽" : "👤"}
+                </div>
+                <div style={{fontWeight:700,fontSize:15,color:C.text}}>{displayName || syncProfile?.email?.split("@")[0] || "My Account"}</div>
+                {syncProfile?.email && <div style={{fontSize:12,color:C.dim,marginTop:2}}>{syncProfile.email}</div>}
+                {syncProfile?.pin && <div style={{fontSize:11,color:C.mid,marginTop:2}}>PIN: <strong style={{color:C.gold}}>{syncProfile.pin}</strong></div>}
+                {syncProfile && <div style={{fontSize:10,color:C.green,fontWeight:600,marginTop:4}}>✅ Syncing</div>}
+              </div>
+
+              {/* Menu rows */}
+              <div style={{padding:"6px 0"}}>
+                {[
+                  { icon:"⭐", label:"My Matches", sub:`${saved.length} saved`, action:()=>{onClose();onShowSaved();} },
+                  { icon:"🔮", label:"My Predictions", sub:"View your picks", action:()=>setScreen("predictions") },
+                  { icon:"⭐", label:"My Teams", sub:favTeams.length?favTeams.slice(0,2).join(", ")+(favTeams.length>2?` +${favTeams.length-2}`:""):"None selected", action:()=>setScreen("teams") },
+                  { icon:"📍", label:"Location", sub:locationOverride?`Custom: ${locationOverride.label}`:`Auto: ${geoData.city||"Detected"}`, action:()=>setScreen("location") },
+                  { icon:"🔗", label:syncProfile?"Sync settings":"Sign in / Sync", sub:syncProfile?"Manage sync":"Keep progress across devices", action:()=>setScreen("sync") },
+                ].map(row => (
+                  <button key={row.label} onClick={row.action} style={{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"10px 16px",background:"none",border:"none",cursor:"pointer",textAlign:"left",borderRadius:0}} onMouseEnter={e=>e.currentTarget.style.background=C.s2} onMouseLeave={e=>e.currentTarget.style.background="none"}>
+                    <span style={{fontSize:18,width:22,textAlign:"center",flexShrink:0}}>{row.icon}</span>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:13,fontWeight:600,color:C.text}}>{row.label}</div>
+                      <div style={{fontSize:11,color:C.dim,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{row.sub}</div>
+                    </div>
+                    <span style={{color:C.dim,fontSize:14}}>›</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Sign out */}
+              {syncProfile && (
+                <div style={{borderTop:`1px solid ${C.b1}`,padding:"6px 0"}}>
+                  <button onClick={()=>{persistProfile(null);setToast("Signed out.");onClose();}} style={{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"10px 16px",background:"none",border:"none",cursor:"pointer",color:C.dim,fontSize:13}} onMouseEnter={e=>e.currentTarget.style.background=C.s2} onMouseLeave={e=>e.currentTarget.style.background="none"}>
+                    <span style={{fontSize:18,width:22,textAlign:"center"}}>↩</span> Sign out
+                  </button>
+                </div>
+              )}
+
+              {/* Avatar picker trigger */}
+              {showAvatarPicker && (
+                <div style={{position:"absolute",inset:0,background:C.s1,borderRadius:14,overflowY:"auto",zIndex:10}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"14px 16px 10px",borderBottom:`1px solid ${C.b1}`}}>
+                    <span style={{fontWeight:700,fontSize:14,color:C.green}}>Choose Avatar</span>
+                    <button onClick={()=>setShowAvatarPicker(false)} style={{background:"none",border:"none",color:C.mid,fontSize:20,cursor:"pointer"}}>×</button>
+                  </div>
+                  <div style={{display:"flex",borderBottom:`1px solid ${C.b1}`}}>
+                    {[["icons","⚽"],["crests","🛡️"],["flags","🏳️"],["upload","📷"]].map(([id,icon])=>(
+                      <button key={id} onClick={()=>{setAvatarTab(id);setAvatarSearch("");}} style={{flex:1,padding:"8px 2px",background:"none",border:"none",borderBottom:`2px solid ${avatarTab===id?C.green:"transparent"}`,color:avatarTab===id?C.green:C.dim,fontSize:13,cursor:"pointer"}}>{icon}</button>
+                    ))}
+                  </div>
+                  <div style={{padding:10,maxHeight:300,overflowY:"auto"}}>
+                    {avatarTab==="icons" && <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6}}>{FOOTBALL_ICONS.map(icon=>{const active=userAvatar===icon.id;return(<button key={icon.id} onClick={()=>selectPresetAvatar(icon.id)} style={{padding:"8px 2px",border:`2px solid ${active?C.green:C.b2}`,borderRadius:8,background:active?`${C.green}22`:C.s2,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:3}}><svg width="36" height="36" viewBox="0 0 76 76" dangerouslySetInnerHTML={{__html:icon.svg}}/><span style={{fontSize:8,color:active?C.green:C.dim}}>{icon.label}</span></button>);})}</div>}
+                    {avatarTab==="flags" && <><input value={avatarSearch} onChange={e=>setAvatarSearch(e.target.value)} placeholder="Search..." style={{width:"100%",padding:"6px 10px",background:C.s2,border:`1px solid ${C.b2}`,borderRadius:7,color:C.text,fontSize:12,outline:"none",marginBottom:8,boxSizing:"border-box"}}/><div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:5}}>{filteredTeams.map(team=>{const code=FLAG_CODES_MAP[team];const id=`flag:${team}`;const active=userAvatar===id;return code?(<button key={team} onClick={()=>selectPresetAvatar(id)} title={team} style={{padding:0,border:`2px solid ${active?C.green:"transparent"}`,borderRadius:6,background:"transparent",cursor:"pointer",overflow:"hidden",aspectRatio:"3/2"}}><img src={`https://flagcdn.com/w80/${code}.png`} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} alt={team}/></button>):null;})}</div></>}
+                    {avatarTab==="crests" && <><input value={avatarSearch} onChange={e=>setAvatarSearch(e.target.value)} placeholder="Search..." style={{width:"100%",padding:"6px 10px",background:C.s2,border:`1px solid ${C.b2}`,borderRadius:7,color:C.text,fontSize:12,outline:"none",marginBottom:8,boxSizing:"border-box"}}/><div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6}}>{filteredTeams.map(team=>{const url=TEAM_CRESTS[team];const id=`crest:${team}`;const active=userAvatar===id;return url?(<button key={team} onClick={()=>selectPresetAvatar(id)} title={team} style={{padding:"6px 2px",border:`2px solid ${active?C.green:C.b2}`,borderRadius:8,background:active?`${C.green}22`:C.s2,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:3}}><img src={url} style={{width:36,height:36,objectFit:"contain"}} alt={team} onError={e=>{e.target.style.display="none"}}/><span style={{fontSize:8,color:active?C.green:C.dim,textAlign:"center"}}>{team}</span></button>):null;})}</div></>}
+                    {avatarTab==="upload" && <div style={{textAlign:"center",padding:"16px 0"}}><div style={{width:60,height:60,borderRadius:"50%",margin:"0 auto 12px",border:`2px dashed ${C.b2}`,background:C.s2,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}>{userAvatar?.startsWith("data:")?<img src={userAvatar} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="avatar"/>:<span style={{fontSize:24}}>📷</span>}</div><label style={{display:"inline-block",padding:"9px 18px",borderRadius:10,background:`linear-gradient(135deg,${C.green},#22c55e)`,color:"#030a05",fontWeight:700,fontSize:13,cursor:"pointer"}}>Choose Photo<input type="file" accept="image/*" onChange={handlePhotoUpload} style={{display:"none"}}/></label>{userAvatar?.startsWith("data:")&&<button onClick={()=>{persistAvatar(null);setToast("Photo removed.");}} style={{display:"block",margin:"8px auto 0",background:"none",border:"none",color:C.dim,fontSize:11,cursor:"pointer",textDecoration:"underline"}}>Remove</button>}</div>}
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            /* Sub-screens — full innerContent for non-home screens */
+            <div style={{maxHeight:"80vh",overflowY:"auto"}}>
+              {innerContent}
+            </div>
+          )}
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",zIndex:1000,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:C.s1,border:`1px solid ${C.b2}`,borderRadius:"20px 20px 0 0",width:"100%",maxWidth:520,maxHeight:"92vh",overflowY:"auto",paddingBottom:32}}>
+        {innerContent}
       </div>
     </div>
   );
