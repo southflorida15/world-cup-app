@@ -247,6 +247,34 @@ export default async function handler(req, res) {
       return res.status(200).json({ result, preds: preds.sort((a,b) => (b.pts||0)-(a.pts||0)) });
     }
 
+    // ── reset ─────────────────────────────────────────────────────────────
+    // POST ?action=reset  (requires x-admin-secret header)
+    // Wipes ALL predictor data: users, predictions, scores, results, names.
+    // Sync/push subscription keys (uid:*, pin:*, push:*) are NOT touched.
+    if (action === "reset") {
+      const secret = req.headers["x-admin-secret"];
+      if (secret !== process.env.PREDICTOR_ADMIN_SECRET) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const patterns = ["user:*", "pred:*", "predSet:*", "score:*", "result:*"];
+      let totalDeleted = 0;
+      for (const pattern of patterns) {
+        let cursor = 0;
+        do {
+          const [nextCursor, keys] = await kv.scan(cursor, { match: pattern, count: 200 });
+          cursor = parseInt(nextCursor) || 0;
+          if (keys.length) {
+            await Promise.all(keys.map(k => kv.del(k)));
+            totalDeleted += keys.length;
+          }
+        } while (cursor !== 0);
+      }
+      await kv.del("names");
+      totalDeleted++;
+      console.log("[predictor] reset — deleted " + totalDeleted + " keys");
+      return res.status(200).json({ ok: true, deleted: totalDeleted });
+    }
+
     return res.status(404).json({ error: `Unknown action: ${action}` });
 
   } catch (err) {
