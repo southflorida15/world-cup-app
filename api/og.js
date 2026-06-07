@@ -2,12 +2,125 @@
 // ?format=image → SVG image for OG crawlers
 // default       → HTML share page
 
+const VENUE_COORDS = {
+  // USA
+  "MetLife Stadium":           { lat: 40.8135, lng: -74.0745, tz: "America/New_York",     city: "East Rutherford, NJ" },
+  "AT&T Stadium":              { lat: 32.7478, lng: -97.0928, tz: "America/Chicago",      city: "Arlington, TX" },
+  "SoFi Stadium":              { lat: 33.9535, lng: -118.3392,tz: "America/Los_Angeles",  city: "Inglewood, CA" },
+  "Levi's Stadium":            { lat: 37.4033, lng: -121.9694,tz: "America/Los_Angeles",  city: "Santa Clara, CA" },
+  "Arrowhead Stadium":         { lat: 39.0489, lng: -94.4839, tz: "America/Chicago",      city: "Kansas City, MO" },
+  "Lincoln Financial Field":   { lat: 39.9008, lng: -75.1675, tz: "America/New_York",     city: "Philadelphia, PA" },
+  "Gillette Stadium":          { lat: 42.0909, lng: -71.2643, tz: "America/New_York",     city: "Foxborough, MA" },
+  "Hard Rock Stadium":         { lat: 25.9580, lng: -80.2389, tz: "America/New_York",     city: "Miami Gardens, FL" },
+  "NRG Stadium":               { lat: 29.6847, lng: -95.4107, tz: "America/Chicago",      city: "Houston, TX" },
+  "Allegiant Stadium":         { lat: 36.0909, lng: -115.1833,tz: "America/Los_Angeles",  city: "Las Vegas, NV" },
+  "Seattle Stadium":           { lat: 47.5952, lng: -122.3316,tz: "America/Los_Angeles",  city: "Seattle, WA" },
+  // Canada
+  "BC Place":                  { lat: 49.2768, lng: -123.1116,tz: "America/Vancouver",    city: "Vancouver, BC" },
+  "BMO Field":                 { lat: 43.6333, lng: -79.4186, tz: "America/Toronto",      city: "Toronto, ON" },
+  // Mexico
+  "Estadio Azteca":            { lat: 19.3030, lng: -99.1506, tz: "America/Mexico_City",  city: "Mexico City" },
+  "Estadio Akron":             { lat: 20.6709, lng: -103.4619,tz: "America/Mexico_City",  city: "Guadalajara" },
+  "Estadio BBVA":              { lat: 25.6693, lng: -100.2439,tz: "America/Monterrey",    city: "Monterrey" },
+};
+
+const WMO_LABEL = {
+  0:"Clear",1:"Mainly Clear",2:"Partly Cloudy",3:"Overcast",
+  45:"Foggy",48:"Icy Fog",
+  51:"Light Drizzle",53:"Drizzle",55:"Heavy Drizzle",
+  61:"Light Rain",63:"Rain",65:"Heavy Rain",
+  71:"Light Snow",73:"Snow",75:"Heavy Snow",
+  80:"Showers",81:"Showers",82:"Heavy Showers",
+  95:"Thunderstorm",96:"Thunderstorm",99:"Thunderstorm",
+};
+const WMO_EMOJI = {
+  0:"☀️",1:"🌤",2:"⛅",3:"☁️",
+  45:"🌫",48:"🌫",
+  51:"🌦",53:"🌧",55:"🌧",
+  61:"🌧",63:"🌧",65:"🌧",
+  71:"🌨",73:"❄️",75:"❄️",
+  80:"🌦",81:"🌧",82:"⛈",
+  95:"⛈",96:"⛈",99:"⛈",
+};
+
+async function getWeather(venueName, dateStr) {
+  // dateStr expected as "Jun 14" or "June 14" or "2026-06-14"
+  // Normalize to YYYY-MM-DD
+  try {
+    const coords = Object.entries(VENUE_COORDS).find(([k]) =>
+      venueName.toLowerCase().includes(k.toLowerCase()) ||
+      k.toLowerCase().includes(venueName.toLowerCase())
+    );
+    if (!coords) return null;
+    const { lat, lng, tz } = coords[1];
+
+    let isoDate;
+    if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
+      isoDate = dateStr.slice(0, 10);
+    } else {
+      const parsed = new Date(dateStr + " 2026");
+      if (isNaN(parsed)) return null;
+      isoDate = parsed.toISOString().slice(0, 10);
+    }
+
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=temperature_2m_max,temperature_2m_min,weathercode&temperature_unit=fahrenheit&timezone=${encodeURIComponent(tz)}&start_date=${isoDate}&end_date=${isoDate}`;
+    const r = await fetch(url);
+    if (!r.ok) return null;
+    const d = await r.json();
+    if (!d.daily?.weathercode?.length) return null;
+
+    const code  = d.daily.weathercode[0];
+    const tmax  = Math.round(d.daily.temperature_2m_max[0]);
+    const tmin  = Math.round(d.daily.temperature_2m_min[0]);
+    return {
+      emoji:  WMO_EMOJI[code]  || "🌡",
+      label:  WMO_LABEL[code]  || "Mixed",
+      tmax,
+      tmin,
+      summary: `${WMO_EMOJI[code] || "🌡"} ${tmax}°F / ${tmin}°F · ${WMO_LABEL[code] || "Mixed"}`,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export default async function handler(req, res) {
   const { home="Team A", away="Team B", hg, ag, group="", date="", venue="", stage="", p1, p2, format } = req.query;
 
-  const hasScore = hg !== undefined && ag !== undefined;
+  const hasScore   = hg !== undefined && ag !== undefined;
   const stageLabel = stage || (group ? `Group ${group}` : "World Cup 2026");
-  const venueShort = venue ? venue.split(",")[0] : "";
+  const venueShort = venue ? venue.split(",")[0].trim() : "";
+
+  // Venue coords for map links
+  const venueEntry = venueShort
+    ? Object.entries(VENUE_COORDS).find(([k]) =>
+        venueShort.toLowerCase().includes(k.toLowerCase()) ||
+        k.toLowerCase().includes(venueShort.toLowerCase())
+      )
+    : null;
+  const venueCity  = venueEntry ? venueEntry[1].city : (venue ? venue.split(",").slice(1).join(",").trim() : "");
+  const venueLabel = venueShort + (venueCity ? ` · ${venueCity}` : "");
+  const venueLat   = venueEntry ? venueEntry[1].lat : null;
+  const venueLng   = venueEntry ? venueEntry[1].lng : null;
+
+  // Apple Maps deep link (works on iOS/macOS), falls back to Google Maps
+  const appleMapsUrl  = venueLat
+    ? `https://maps.apple.com/?ll=${venueLat},${venueLng}&q=${encodeURIComponent(venueShort)}`
+    : venueShort ? `https://maps.apple.com/?q=${encodeURIComponent(venueShort)}` : "";
+  const googleMapsUrl = venueLat
+    ? `https://www.google.com/maps/search/?api=1&query=${venueLat},${venueLng}`
+    : venueShort ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venueShort)}` : "";
+
+  // Weather (skip for image-only mode to keep it fast)
+  let weather = null;
+  if (format !== "image" && venueShort && date) {
+    weather = await getWeather(venueShort, date);
+  }
+
+  // Weather tap URL — wttr.in city page (works in any browser, no app needed)
+  const weatherUrl = venueCity
+    ? `https://wttr.in/${encodeURIComponent(venueCity)}?m`
+    : venueShort ? `https://wttr.in/${encodeURIComponent(venueShort)}?m` : "";
 
   const FLAGS = {
     "Mexico":"mx","South Africa":"za","South Korea":"kr","Czechia":"cz","Canada":"ca",
@@ -101,7 +214,57 @@ export default async function handler(req, res) {
     ? "Full time: " + home + " " + hg + "-" + ag + " " + away + " - " + stageLabel + (date ? " - " + date : "")
     : stageLabel + (date ? " - " + date : "") + " - Open to see odds, stats and more";
 
-  const mapsUrl = venueShort ? "https://maps.apple.com/?q=" + encodeURIComponent(venueShort) : "";
+  // Venue row HTML — tappable, opens Maps (iOS detection via JS)
+  const venueRowHtml = venueShort ? `
+  <div class="row tappable" onclick="
+    var ua=navigator.userAgent||'';
+    var isApple=/iPhone|iPad|iPod|Macintosh/.test(ua)&&'ontouchend' in document||/Mac/.test(ua);
+    window.open(isApple?'${appleMapsUrl}':'${googleMapsUrl}','_blank');
+  ">
+    <div class="ri">📍</div>
+    <div>
+      <div class="rl">VENUE</div>
+      <div class="rv tap-blue">${venueLabel}</div>
+      <div class="rs">Tap for directions</div>
+    </div>
+    <div class="tap-arrow">›</div>
+  </div>` : "";
+
+  // Weather row HTML — tappable, opens wttr.in
+  const weatherRowHtml = weather ? `
+  <div class="row tappable" onclick="window.open('${weatherUrl}','_blank')">
+    <div class="ri">${weather.emoji}</div>
+    <div>
+      <div class="rl">MATCH DAY FORECAST</div>
+      <div class="rv tap-blue">${weather.label} · ${weather.tmax}°F / ${weather.tmin}°F</div>
+      <div class="rs">Tap for full forecast</div>
+    </div>
+    <div class="tap-arrow">›</div>
+  </div>` : "";
+
+  // Date/stage row
+  const dateRowHtml = date ? `
+  <div class="row">
+    <div class="ri">📅</div>
+    <div>
+      <div class="rl">MATCH</div>
+      <div class="rv">${stageLabel} · ${date}</div>
+    </div>
+  </div>` : "";
+
+  // Odds row
+  const oddsRowHtml = (!hasScore && p1 && p2) ? `
+  <div class="row">
+    <div class="ri">🎯</div>
+    <div style="flex:1">
+      <div class="rl">POLYMARKET WIN PROBABILITY</div>
+      <div style="display:flex;gap:16px;margin-top:6px;align-items:center">
+        <div style="text-align:center"><div style="font-size:24px;font-weight:900;color:#4ade80">${p1}%</div><div style="font-size:11px;color:#3d6a4d">${home}</div></div>
+        <div style="flex:1;text-align:center;color:#3d6a4d">vs</div>
+        <div style="text-align:center"><div style="font-size:24px;font-weight:900;color:#38bdf8">${p2}%</div><div style="font-size:11px;color:#3d6a4d">${away}</div></div>
+      </div>
+    </div>
+  </div>` : "";
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -114,7 +277,7 @@ export default async function handler(req, res) {
 <meta property="og:image" content="${ogImg}"/>
 <meta property="og:image:width" content="1200"/>
 <meta property="og:image:height" content="630"/>
-<meta property="og:url" content="${base + "/api/og?" + imgParams.toString().replace("&format=image", "")}"/>
+<meta property="og:url" content="${base + "/api/og?" + imgParams.toString().replace("&format=image","").replace("format=image&","").replace("format=image","") }"/>
 <meta property="og:type" content="website"/>
 <meta property="og:site_name" content="FIFA World Cup 2026"/>
 <meta name="twitter:card" content="summary_large_image"/>
@@ -125,24 +288,30 @@ export default async function handler(req, res) {
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{background:#060e0a;font-family:system-ui,sans-serif;color:#d4ead9}
 body{display:flex;flex-direction:column;align-items:center;padding-bottom:env(safe-area-inset-bottom,24px)}
-.top{width:100%;background:linear-gradient(180deg,#0c1a12,#060e0a);padding:16px 16px 0}
-.logo{margin-bottom:12px}
+.top{width:100%;background:linear-gradient(180deg,#0c1a12,#060e0a);padding:16px 16px 0;display:flex;flex-direction:column;align-items:center}
+.card-wrap{width:100%;max-width:560px}
+.logo{margin-bottom:12px;align-self:flex-start}
 .logo-sm{font-size:10px;color:#3d6a4d;font-weight:700;letter-spacing:.2em}
 .logo-wc{font-size:18px;font-weight:900;color:#d4ead9;line-height:1}
 .logo-yr{font-size:18px;font-weight:900;color:#4ade80;line-height:1}
 .card{width:100%;border-radius:16px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.6)}
 .card svg{width:100%;height:auto;display:block}
-.section{width:100%;max-width:500px;padding:12px 16px 0}
+.section{width:100%;max-width:560px;padding:12px 16px 0}
 .row{display:flex;align-items:center;gap:10px;padding:12px 14px;background:#0c1a12;border:1px solid #1a3828;border-radius:12px;margin-bottom:8px}
+.tappable{cursor:pointer;transition:background .15s,border-color .15s}
+.tappable:hover{background:#0f2218;border-color:#2a4f38}
+.tappable:active{background:#142d1e}
+.tap-arrow{margin-left:auto;font-size:20px;color:#3d6a4d;flex-shrink:0}
 .ri{font-size:20px;flex-shrink:0}
 .rl{font-size:11px;color:#3d6a4d;font-weight:600;margin-bottom:2px}
 .rv{font-size:14px;color:#d4ead9;font-weight:600}
+.tap-blue{color:#60a5fa}
 .rs{font-size:12px;color:#7aaa8a;margin-top:2px}
-.btns{display:flex;gap:10px;padding:16px 16px 0;width:100%;max-width:500px}
+.btns{display:flex;gap:10px;padding:16px 16px 0;width:100%;max-width:560px}
 .btn{flex:1;padding:14px 0;border-radius:14px;font-weight:700;font-size:15px;cursor:pointer;border:none;text-align:center;text-decoration:none;display:block}
 .green{background:linear-gradient(135deg,#4ade80,#22c55e);color:#030a05}
 .outline{background:rgba(74,222,128,.1);color:#4ade80;border:1px solid rgba(74,222,128,.3)}
-.hint{font-size:12px;color:#3d6a4d;text-align:center;line-height:1.6;padding:12px 16px 0;max-width:500px}
+.hint{font-size:12px;color:#3d6a4d;text-align:center;line-height:1.6;padding:12px 16px 0;max-width:560px}
 </style>
 </head>
 <body>
@@ -152,12 +321,15 @@ body{display:flex;flex-direction:column;align-items:center;padding-bottom:env(sa
     <div class="logo-wc">WORLD CUP</div>
     <div class="logo-yr">2026</div>
   </div>
-  <div class="card">${svg}</div>
+  <div class="card-wrap">
+    <div class="card">${svg}</div>
+  </div>
 </div>
 <div class="section">
-  ${venueShort ? `<div class="row" onclick="window.open('${mapsUrl}','_blank')" style="cursor:pointer"><div class="ri">📍</div><div><div class="rl">VENUE</div><div class="rv" style="color:#60a5fa">${venueShort}</div><div class="rs">Tap for directions</div></div></div>` : ""}
-  ${date ? `<div class="row"><div class="ri">📅</div><div><div class="rl">MATCH</div><div class="rv">${stageLabel} · ${date}</div></div></div>` : ""}
-  ${(!hasScore && p1 && p2) ? `<div class="row"><div class="ri">🎯</div><div style="flex:1"><div class="rl">POLYMARKET WIN PROBABILITY</div><div style="display:flex;gap:16px;margin-top:6px;align-items:center"><div style="text-align:center"><div style="font-size:24px;font-weight:900;color:#4ade80">${p1}%</div><div style="font-size:11px;color:#3d6a4d">${home}</div></div><div style="flex:1;text-align:center;color:#3d6a4d">vs</div><div style="text-align:center"><div style="font-size:24px;font-weight:900;color:#38bdf8">${p2}%</div><div style="font-size:11px;color:#3d6a4d">${away}</div></div></div></div></div>` : ""}
+  ${venueRowHtml}
+  ${weatherRowHtml}
+  ${dateRowHtml}
+  ${oddsRowHtml}
 </div>
 <div class="btns">
   <a href="${appUrl}" class="btn green">⚽ Open App</a>
