@@ -480,16 +480,22 @@ const BROADCAST = {
   DEFAULT: { primary:"FOX · FS1",        streaming:"Peacock · Tubi (free)",           note:"🌍" },
 };
 
-// Detect user country via IP geolocation (free, no key needed)
+// Detect user country + city via IP geolocation (free, no key needed)
 function useCountry() {
-  const [country, setCountry] = useState("US"); // default US
+  const [geoData, setGeoData] = useState({ country: "US", city: "", region: "" });
   useEffect(() => {
     fetch("https://ipapi.co/json/")
       .then(r => r.json())
-      .then(d => { if (d?.country_code) setCountry(d.country_code); })
-      .catch(() => {}); // silently fail — stays US
+      .then(d => {
+        if (d?.country_code) setGeoData({
+          country: d.country_code,
+          city: d.city || "",
+          region: d.region || "",
+        });
+      })
+      .catch(() => {});
   }, []);
-  return country;
+  return geoData;
 }
 
 function getBroadcast(countryCode) {
@@ -3392,6 +3398,592 @@ function TopScorersTab({ tabTop=116 }) {
   );
 }
 
+
+// ── SYNC MODAL ─────────────────────────────────────────────────────────────
+function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved, favTeams, setToast, setSaved, setFavTeams, dark, setDark, geoData, locationOverride, setLocationOverride, onShowSaved, userAvatar, persistAvatar }) {
+  const [screen, setScreen] = useState("home");
+  const [pin, setPin] = useState("");
+  const [pinInput, setPinInput] = useState("");
+  const [email, setEmail] = useState(syncProfile?.email || "");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [showLocPicker, setShowLocPicker] = useState(false);
+  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
+  const [avatarTab, setAvatarTab] = useState("flags"); // flags | confs | upload
+  const [avatarSearch, setAvatarSearch] = useState("");
+  const [locSearch, setLocSearch] = useState("");
+  const [userPreds, setUserPreds] = useState(null);
+  const [predsLoading, setPredsLoading] = useState(false);
+
+  // Reset to home when modal opens
+  useEffect(() => { if (open) { setScreen("home"); setError(""); } }, [open]);
+
+  // Load predictions when showing them
+  useEffect(() => {
+    if (screen !== "predictions" || userPreds !== null) return;
+    setPredsLoading(true);
+    fetch(`/api/predictor?action=getPreds&userId=${syncUid}`)
+      .then(r => r.json()).then(d => setUserPreds(d || {}))
+      .catch(() => setUserPreds({}))
+      .finally(() => setPredsLoading(false));
+  }, [screen, syncUid, userPreds]);
+
+  if (!open) return null;
+
+  const persistProfile = (p) => {
+    setSyncProfile(p);
+    try { localStorage.setItem("wc2026_syncprofile", JSON.stringify(p)); } catch {}
+  };
+
+  const handleCreatePIN = async () => {
+    setLoading(true); setError("");
+    try {
+      const r = await fetch("/api/sync?action=pin-create", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ uid: syncUid, saved, favTeams, dark, locationOverride }),
+      });
+      const d = await r.json();
+      if (!d.ok) throw new Error(d.error);
+      setPin(d.pin);
+      persistProfile({ uid: syncUid, pin: d.pin, method: "pin" });
+      setScreen("pin-created");
+    } catch(e) { setError(e.message); }
+    setLoading(false);
+  };
+
+  const handleJoinPIN = async () => {
+    if (pinInput.length < 4) return;
+    setLoading(true); setError("");
+    try {
+      const r = await fetch("/api/sync?action=pin-join", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pin: pinInput }),
+      });
+      const d = await r.json();
+      if (!d.ok) throw new Error(d.error || "PIN not found. Check and try again.");
+      const p = d.profile;
+      if (p.saved?.length)      setSaved(p.saved);
+      if (p.favTeams?.length)   setFavTeams(p.favTeams);
+      if (p.dark !== undefined) setDark(p.dark);
+      if (p.locationOverride)   { setLocationOverride(p.locationOverride); try { localStorage.setItem("wc2026_location", JSON.stringify(p.locationOverride)); } catch {} }
+      if (p.avatar) persistAvatar(p.avatar);
+      persistProfile({ uid: p.uid, pin: p.pin, email: p.email, method: "pin" });
+      setToast("✅ Synced! Your progress has been restored.");
+      onClose();
+    } catch(e) { setError(e.message); }
+    setLoading(false);
+  };
+
+  const handleSendMagic = async () => {
+    if (!email.includes("@")) { setError("Enter a valid email address."); return; }
+    setLoading(true); setError("");
+    try {
+      const r = await fetch("/api/sync?action=magic-send", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, uid: syncUid, saved, favTeams, dark, locationOverride }),
+      });
+      const d = await r.json();
+      if (!d.ok && !d.dev) throw new Error(d.error);
+      setScreen("email-sent");
+    } catch(e) { setError(e.message); }
+    setLoading(false);
+  };
+
+  // Avatar helpers
+  const CONF_OPTIONS = [
+    { id:"conf:UEFA",     label:"UEFA",     emoji:"🇪🇺", sub:"Europe" },
+    { id:"conf:CONMEBOL", label:"CONMEBOL", emoji:"🌎", sub:"South America" },
+    { id:"conf:CONCACAF", label:"CONCACAF", emoji:"🌍", sub:"N/C America" },
+    { id:"conf:CAF",      label:"CAF",      emoji:"🌍", sub:"Africa" },
+    { id:"conf:AFC",      label:"AFC",      emoji:"🌏", sub:"Asia" },
+    { id:"conf:OFC",      label:"OFC",      emoji:"🌊", sub:"Oceania" },
+  ];
+  // Federation crest URLs from Wikimedia Commons — stable, official sources
+  const TEAM_CRESTS = {
+    "Argentina":    "https://upload.wikimedia.org/wikipedia/en/thumb/c/c1/Argentina_national_football_team_badge.svg/200px-Argentina_national_football_team_badge.svg.png",
+    "France":       "https://upload.wikimedia.org/wikipedia/en/thumb/4/43/Logo_FFF.svg/200px-Logo_FFF.svg.png",
+    "Brazil":       "https://upload.wikimedia.org/wikipedia/en/thumb/0/09/CBF_logo.svg/200px-CBF_logo.svg.png",
+    "England":      "https://upload.wikimedia.org/wikipedia/en/thumb/b/be/Flag_of_England.svg/200px-Flag_of_England.svg.png",
+    "Spain":        "https://upload.wikimedia.org/wikipedia/en/thumb/4/44/Spain_national_football_team_badge_or_crest.png/200px-Spain_national_football_team_badge_or_crest.png",
+    "Germany":      "https://upload.wikimedia.org/wikipedia/en/thumb/7/7a/Logo_des_Deutschen_Fu%C3%9Fball-Bundes.svg/200px-Logo_des_Deutschen_Fu%C3%9Fball-Bundes.svg.png",
+    "Portugal":     "https://upload.wikimedia.org/wikipedia/en/thumb/f/fd/FPF-2016.svg/200px-FPF-2016.svg.png",
+    "Netherlands":  "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/KNVB_-_Logo.png/200px-KNVB_-_Logo.png",
+    "Belgium":      "https://upload.wikimedia.org/wikipedia/commons/thumb/0/09/RBFA.svg/200px-RBFA.svg.png",
+    "Norway":       "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fd/Nff.svg/200px-Nff.svg.png",
+    "Mexico":       "https://upload.wikimedia.org/wikipedia/en/thumb/0/0e/Mexico_men%27s_national_football_team_crest.svg/200px-Mexico_men%27s_national_football_team_crest.svg.png",
+    "United States":"https://upload.wikimedia.org/wikipedia/en/thumb/a/a6/US_Soccer_logo_2022.svg/200px-US_Soccer_logo_2022.svg.png",
+    "Morocco":      "https://upload.wikimedia.org/wikipedia/en/thumb/0/0b/FRMF_%28logo%29.png/200px-FRMF_%28logo%29.png",
+    "Uruguay":      "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/Logo_AUF.svg/200px-Logo_AUF.svg.png",
+    "Croatia":      "https://upload.wikimedia.org/wikipedia/en/thumb/6/60/Croatian_Football_Federation_logo.svg/200px-Croatian_Football_Federation_logo.svg.png",
+    "Japan":        "https://upload.wikimedia.org/wikipedia/en/thumb/6/6d/JFA.svg/200px-JFA.svg.png",
+    "Senegal":      "https://upload.wikimedia.org/wikipedia/en/thumb/0/0a/Federation_Senegalaise_de_Football.png/200px-Federation_Senegalaise_de_Football.png",
+    "Egypt":        "https://upload.wikimedia.org/wikipedia/en/thumb/f/fc/Egyptian_Football_Association_logo.png/200px-Egyptian_Football_Association_logo.png",
+    "Colombia":     "https://upload.wikimedia.org/wikipedia/en/thumb/3/36/Football_Federation_of_Colombia.svg/200px-Football_Federation_of_Colombia.svg.png",
+    "South Korea":  "https://upload.wikimedia.org/wikipedia/en/thumb/5/5c/KFA_logo.svg/200px-KFA_logo.svg.png",
+    "Canada":       "https://upload.wikimedia.org/wikipedia/en/thumb/b/bf/Canada_Soccer_Logo.svg/200px-Canada_Soccer_Logo.svg.png",
+    "Switzerland":  "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d1/SFV-ASF.svg/200px-SFV-ASF.svg.png",
+    "Austria":      "https://upload.wikimedia.org/wikipedia/en/thumb/5/58/OFB-Logo.svg/200px-OFB-Logo.svg.png",
+    "Sweden":       "https://upload.wikimedia.org/wikipedia/en/thumb/3/3e/Swedish_Football_Association_logo.svg/200px-Swedish_Football_Association_logo.svg.png",
+    "Iran":         "https://upload.wikimedia.org/wikipedia/en/thumb/3/37/Football_Federation_Islamic_Republic_of_Iran_logo.svg/200px-Football_Federation_Islamic_Republic_of_Iran_logo.svg.png",
+    "Algeria":      "https://upload.wikimedia.org/wikipedia/en/thumb/5/54/Federation_Algerienne_de_Football.png/200px-Federation_Algerienne_de_Football.png",
+    "Ecuador":      "https://upload.wikimedia.org/wikipedia/en/thumb/e/e0/Ecuador_F%C3%BAtbol_Federation_logo.png/200px-Ecuador_F%C3%BAtbol_Federation_logo.png",
+    "Paraguay":     "https://upload.wikimedia.org/wikipedia/en/thumb/0/0a/APF-logo.svg/200px-APF-logo.svg.png",
+    "Scotland":     "https://upload.wikimedia.org/wikipedia/en/thumb/5/5c/Scottish_Football_Association_new_crest.png/200px-Scottish_Football_Association_new_crest.png",
+    "Australia":    "https://upload.wikimedia.org/wikipedia/en/thumb/8/8d/Socceroos_crest.svg/200px-Socceroos_crest.svg.png",
+    "Turkiye":      "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5d/TFF.svg/200px-TFF.svg.png",
+    "Ivory Coast":  "https://upload.wikimedia.org/wikipedia/en/thumb/5/5e/FIF_%28logo%29.png/200px-FIF_%28logo%29.png",
+    "Tunisia":      "https://upload.wikimedia.org/wikipedia/en/thumb/3/3e/FTF_Logo.png/200px-FTF_Logo.png",
+    "Saudi Arabia": "https://upload.wikimedia.org/wikipedia/en/thumb/4/46/Saudi_Arabian_Football_Federation_%28logo%29.png/200px-Saudi_Arabian_Football_Federation_%28logo%29.png",
+    "Ghana":        "https://upload.wikimedia.org/wikipedia/en/thumb/4/40/Ghana_Football_Association_logo.png/200px-Ghana_Football_Association_logo.png",
+    "DR Congo":     "https://upload.wikimedia.org/wikipedia/en/thumb/7/72/FECOFA.png/200px-FECOFA.png",
+    "Uzbekistan":   "https://upload.wikimedia.org/wikipedia/en/thumb/3/35/Uzbekistan_Football_Association_logo.svg/200px-Uzbekistan_Football_Association_logo.svg.png",
+    "Cape Verde":   "https://upload.wikimedia.org/wikipedia/en/thumb/3/3d/FFCV-logo.svg/200px-FFCV-logo.svg.png",
+    "Qatar":        "https://upload.wikimedia.org/wikipedia/en/thumb/1/18/Qatar_Football_Association_Logo.png/200px-Qatar_Football_Association_Logo.png",
+    "Bosnia & Herz.":"https://upload.wikimedia.org/wikipedia/en/thumb/6/6d/Logo_of_the_Football_Federation_of_Bosnia_and_Herzegovina.png/200px-Logo_of_the_Football_Federation_of_Bosnia_and_Herzegovina.png",
+    "South Africa": "https://upload.wikimedia.org/wikipedia/en/thumb/e/e8/SAFA.png/200px-SAFA.png",
+    "Haiti":        "https://upload.wikimedia.org/wikipedia/en/thumb/c/cf/Haiti_Football_Federation_logo.png/200px-Haiti_Football_Federation_logo.png",
+    "New Zealand":  "https://upload.wikimedia.org/wikipedia/en/thumb/4/46/New_Zealand_Football_logo.svg/200px-New_Zealand_Football_logo.svg.png",
+    "Jordan":       "https://upload.wikimedia.org/wikipedia/en/thumb/8/83/Jordan_Football_Association_logo.png/200px-Jordan_Football_Association_logo.png",
+    "Iraq":         "https://upload.wikimedia.org/wikipedia/en/thumb/e/e3/IFA_logo.png/200px-IFA_logo.png",
+    "Panama":       "https://upload.wikimedia.org/wikipedia/en/thumb/d/df/FEPAFUT.png/200px-FEPAFUT.png",
+    "Curacao":      "https://upload.wikimedia.org/wikipedia/en/thumb/7/79/Curacao_football_federation.png/200px-Curacao_football_federation.png",
+    "Czechia":      "https://upload.wikimedia.org/wikipedia/en/thumb/7/72/FACR_%28logo%29.svg/200px-FACR_%28logo%29.svg.png",
+  };
+  const ALL_TEAMS = ["Argentina","France","Brazil","England","Spain","Germany","Portugal","Netherlands","Belgium","Norway","Mexico","United States","Morocco","Uruguay","Croatia","Japan","Senegal","Egypt","Colombia","South Korea","Canada","Switzerland","Austria","Sweden","Iran","Algeria","Ecuador","Paraguay","Scotland","Australia","Turkiye","Ivory Coast","Tunisia","Saudi Arabia","Ghana","DR Congo","Uzbekistan","Cape Verde","Qatar","Bosnia & Herz.","South Africa","Haiti","New Zealand","Jordan","Iraq","Panama","Curacao","Czechia"];
+  const FLAG_CODES_MAP = {"Mexico":"mx","South Africa":"za","South Korea":"kr","Czechia":"cz","Canada":"ca","Bosnia & Herz.":"ba","Qatar":"qa","Switzerland":"ch","Brazil":"br","Morocco":"ma","Haiti":"ht","Scotland":"gb-sct","United States":"us","Paraguay":"py","Australia":"au","Turkiye":"tr","Germany":"de","Curacao":"cw","Ivory Coast":"ci","Ecuador":"ec","Netherlands":"nl","Japan":"jp","Sweden":"se","Tunisia":"tn","Belgium":"be","Egypt":"eg","Iran":"ir","New Zealand":"nz","Spain":"es","Cape Verde":"cv","Saudi Arabia":"sa","Uruguay":"uy","France":"fr","Senegal":"sn","Iraq":"iq","Norway":"no","Argentina":"ar","Algeria":"dz","Austria":"at","Jordan":"jo","Portugal":"pt","DR Congo":"cd","Uzbekistan":"uz","Colombia":"co","England":"gb-eng","Croatia":"hr","Ghana":"gh","Panama":"pa"};
+  const filteredTeams = avatarSearch
+    ? ALL_TEAMS.filter(t => t.toLowerCase().includes(avatarSearch.toLowerCase()))
+    : ALL_TEAMS;
+
+  const handlePhotoUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = 160; canvas.height = 160;
+        const ctx = canvas.getContext("2d");
+        // Crop to square from center
+        const size = Math.min(img.width, img.height);
+        const sx = (img.width - size) / 2;
+        const sy = (img.height - size) / 2;
+        ctx.drawImage(img, sx, sy, size, size, 0, 0, 160, 160);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
+        persistAvatar(dataUrl);
+        setShowAvatarPicker(false);
+        setToast("Avatar updated!");
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const selectPresetAvatar = (id) => {
+    persistAvatar(id);
+    setShowAvatarPicker(false);
+    setToast("Avatar updated!");
+  };
+
+  const getCrestUrl = (av) => {
+    if (!av?.startsWith("crest:")) return null;
+    const team = av.slice(6);
+    return TEAM_CRESTS[team] || null;
+  };
+
+  const renderAvatarPreview = () => {
+    if (!userAvatar) return <span style={{fontSize:32}}>👤</span>;
+    if (userAvatar.startsWith("data:")) return <img src={userAvatar} style={{width:60,height:60,borderRadius:"50%",objectFit:"cover"}} alt="avatar"/>;
+    if (userAvatar.startsWith("crest:")) {
+      const url = getCrestUrl(userAvatar);
+      return url ? <img src={url} style={{width:50,height:50,objectFit:"contain"}} alt="crest"/> : <span style={{fontSize:32}}>🛡️</span>;
+    }
+    if (userAvatar.startsWith("flag:")) {
+      const code = FLAG_CODES_MAP[userAvatar.slice(5)];
+      return code ? <img src={`https://flagcdn.com/w80/${code}.png`} style={{width:60,height:40,objectFit:"cover",borderRadius:4}} alt="flag"/> : <span style={{fontSize:32}}>🏳️</span>;
+    }
+    if (userAvatar.startsWith("conf:")) {
+      const em = {"UEFA":"🇪🇺","CONMEBOL":"🌎","CONCACAF":"🌍","CAF":"🌍","AFC":"🌏","OFC":"🌊"}[userAvatar.slice(5)];
+      return <span style={{fontSize:36}}>{em||"⚽"}</span>;
+    }
+    return <span style={{fontSize:32}}>👤</span>;
+  };
+
+    const isSynced = !!syncProfile;
+  const displayLocation = locationOverride
+    ? locationOverride.label
+    : (geoData.city ? `${geoData.city}${geoData.region ? ", " + geoData.region : ""}` : "Auto-detected");
+
+  // World Cup host cities for location picker
+  const HOST_CITIES_PICK = [
+    { label: "New York / NJ", country: "US" }, { label: "Los Angeles", country: "US" },
+    { label: "Dallas", country: "US" }, { label: "San Francisco", country: "US" },
+    { label: "Miami", country: "US" }, { label: "Atlanta", country: "US" },
+    { label: "Seattle", country: "US" }, { label: "Boston", country: "US" },
+    { label: "Philadelphia", country: "US" }, { label: "Kansas City", country: "US" },
+    { label: "Houston", country: "US" }, { label: "Toronto", country: "CA" },
+    { label: "Vancouver", country: "CA" }, { label: "Mexico City", country: "MX" },
+    { label: "Guadalajara", country: "MX" }, { label: "Monterrey", country: "MX" },
+  ];
+  const filteredCities = locSearch
+    ? HOST_CITIES_PICK.filter(c => c.label.toLowerCase().includes(locSearch.toLowerCase()))
+    : HOST_CITIES_PICK;
+
+  const inputStyle = { width:"100%", padding:"11px 14px", background:C.s2, border:`1px solid ${C.b2}`, borderRadius:10, color:C.text, fontSize:15, outline:"none", boxSizing:"border-box" };
+  const btnPrimary = { width:"100%", padding:"13px 0", borderRadius:12, border:"none", background:`linear-gradient(135deg,${C.green},#22c55e)`, color:"#030a05", fontWeight:700, fontSize:15, cursor:"pointer" };
+  const btnSecondary = { width:"100%", padding:"11px 0", borderRadius:12, border:`1px solid ${C.b2}`, background:C.s2, color:C.text, fontWeight:600, fontSize:14, cursor:"pointer", marginTop:8 };
+
+  const screenTitle = {
+    home: isSynced ? "My Account" : "My Account",
+    "pin-create": "Create PIN", "pin-created": "Your PIN",
+    "pin-join": "Enter PIN", email: "Sign in with Email",
+    "email-sent": "Check Your Email", predictions: "My Predictions",
+  }[screen] || "";
+
+  return (
+    <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",zIndex:1000,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:C.s1,border:`1px solid ${C.b2}`,borderRadius:"20px 20px 0 0",width:"100%",maxWidth:520,maxHeight:"92vh",overflowY:"auto",paddingBottom:32}}>
+
+        {/* Header */}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"18px 20px 14px",borderBottom:`1px solid ${C.b1}`,position:"sticky",top:0,background:C.s1,zIndex:1}}>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            {screen !== "home" && <button onClick={()=>{setScreen("home");setError("");}} style={{background:"none",border:"none",color:C.mid,fontSize:22,cursor:"pointer",padding:"0 4px 0 0",lineHeight:1}}>‹</button>}
+            <span style={{fontSize:17,fontWeight:700,color:C.green}}>{screenTitle}</span>
+          </div>
+          <button onClick={onClose} style={{background:"none",border:"none",color:C.mid,fontSize:24,cursor:"pointer"}}>×</button>
+        </div>
+
+        <div style={{padding:"16px 20px 0"}}>
+
+          {/* ── HOME ── */}
+          {screen === "home" && (
+            <div>
+              {/* Avatar + sync status */}
+              <div style={{display:"flex",alignItems:"center",gap:14,padding:"12px 14px",background:C.s2,borderRadius:14,marginBottom:16,border:`1px solid ${isSynced?C.green+"44":C.b1}`}}>
+                <div onClick={()=>setShowAvatarPicker(true)} style={{position:"relative",width:52,height:52,borderRadius:"50%",flexShrink:0,background:isSynced?`${C.green}22`:C.bg,border:`2.5px solid ${isSynced?C.green:C.b2}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,cursor:"pointer",overflow:"hidden"}}>
+                  {userAvatar && userAvatar.startsWith("data:")
+                    ? <img src={userAvatar} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="avatar"/>
+                    : userAvatar && userAvatar.startsWith("crest:")
+                      ? <img src={getCrestUrl(userAvatar)} style={{width:"80%",height:"80%",objectFit:"contain"}} alt="crest"/>
+                      : userAvatar && userAvatar.startsWith("flag:")
+                        ? <img src={`https://flagcdn.com/w80/${FLAG_CODES_MAP[userAvatar.slice(5)]}.png`} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="avatar"/>
+                        : userAvatar && userAvatar.startsWith("conf:")
+                          ? <span style={{fontSize:26}}>{ {"UEFA":"🇪🇺","CONMEBOL":"🌎","CONCACAF":"🌍","CAF":"🌍","AFC":"🌏","OFC":"🌊"}[userAvatar.slice(5)]||"⚽"}</span>
+                          : isSynced ? "⚽" : "👤"
+                  }
+                  <div style={{position:"absolute",bottom:0,left:0,right:0,background:"rgba(0,0,0,.45)",fontSize:9,color:"#fff",textAlign:"center",padding:"2px 0",lineHeight:1.4}}>edit</div>
+                </div>
+                <div style={{flex:1,minWidth:0}}>
+                  {isSynced ? <>
+                    <div style={{fontWeight:700,color:C.text,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{syncProfile.email || "PIN User"}</div>
+                    {syncProfile.pin && <div style={{fontSize:12,color:C.mid,marginTop:1}}>PIN: <strong style={{color:C.gold,letterSpacing:"0.1em"}}>{syncProfile.pin}</strong></div>}
+                    <div style={{fontSize:11,color:C.green,marginTop:3,fontWeight:600}}>✅ Syncing across devices</div>
+                  </> : <>
+                    <div style={{fontWeight:700,color:C.text,fontSize:14}}>Not signed in</div>
+                    <div style={{fontSize:11,color:C.dim,marginTop:2,lineHeight:1.4}}>Sign in to keep your progress on every device</div>
+                  </>}
+                </div>
+                {isSynced && <button onClick={()=>{persistProfile(null);setToast("Signed out.");onClose();}} style={{fontSize:11,color:C.dim,background:"none",border:`1px solid ${C.b2}`,borderRadius:8,padding:"4px 8px",cursor:"pointer",flexShrink:0}}>Sign out</button>}
+              </div>
+
+              {/* ── My Teams ── */}
+              <div style={{marginBottom:14}}>
+                <div style={{fontSize:11,color:C.mid,fontWeight:700,letterSpacing:"0.08em",marginBottom:8}}>⭐ MY TEAMS <span style={{color:favTeams.length===4?C.red:C.gold}}>({favTeams.length}/4)</span></div>
+                <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:8}}>
+                  {favTeams.length > 0
+                    ? favTeams.map(t => (
+                        <div key={t} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 10px",background:C.s2,border:`1px solid ${C.gold}44`,borderRadius:20}}>
+                          <Crest team={t} size={20}/>
+                          <span style={{fontSize:12,color:C.gold,fontWeight:600}}>{t}</span>
+                          <button onClick={()=>setFavTeams(prev=>{const n=prev.filter(x=>x!==t);try{localStorage.setItem("wc2026_favs",JSON.stringify(n))}catch{};return n;})} style={{background:"none",border:"none",color:C.dim,fontSize:14,cursor:"pointer",padding:0,lineHeight:1}}>×</button>
+                        </div>
+                      ))
+                    : <div style={{fontSize:12,color:C.dim}}>No teams selected yet</div>
+                  }
+                </div>
+                {favTeams.length < 4 && (
+                  <div style={{display:"flex",gap:6,flexWrap:"wrap",maxHeight:120,overflowY:"auto"}}>
+                    {Object.keys(TEAMS).filter(t=>!favTeams.includes(t)).map(t=>(
+                      <button key={t} onClick={()=>setFavTeams(prev=>{if(prev.length>=4)return prev;const n=[...prev,t];try{localStorage.setItem("wc2026_favs",JSON.stringify(n))}catch{};return n;})} style={{display:"flex",alignItems:"center",gap:5,padding:"4px 8px",borderRadius:16,border:`1px solid ${C.b2}`,background:C.bg,color:C.mid,fontSize:11,cursor:"pointer"}}>
+                        <Crest team={t} size={14}/>{t}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div style={{borderTop:`1px solid ${C.b1}`,margin:"4px 0 14px"}}/>
+
+              {/* ── My Matches ── */}
+              <button onClick={()=>{onClose();onShowSaved();}} style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"13px 14px",background:C.s2,border:`1px solid ${C.b1}`,borderRadius:12,cursor:"pointer",marginBottom:8}}>
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  <span style={{fontSize:18}}>⭐</span>
+                  <div style={{textAlign:"left"}}>
+                    <div style={{fontWeight:700,color:C.text,fontSize:14}}>My Matches</div>
+                    <div style={{fontSize:11,color:C.dim}}>{saved.length} match{saved.length!==1?"es":""} saved</div>
+                  </div>
+                </div>
+                <span style={{color:C.mid,fontSize:18}}>›</span>
+              </button>
+
+              {/* ── My Predictions ── */}
+              <button onClick={()=>setScreen("predictions")} style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"13px 14px",background:C.s2,border:`1px solid ${C.b1}`,borderRadius:12,cursor:"pointer",marginBottom:8}}>
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  <span style={{fontSize:18}}>🔮</span>
+                  <div style={{textAlign:"left"}}>
+                    <div style={{fontWeight:700,color:C.text,fontSize:14}}>My Predictions</div>
+                    <div style={{fontSize:11,color:C.dim}}>Tap to see your picks</div>
+                  </div>
+                </div>
+                <span style={{color:C.mid,fontSize:18}}>›</span>
+              </button>
+
+              {/* ── Location ── */}
+              <button onClick={()=>setShowLocPicker(v=>!v)} style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"13px 14px",background:C.s2,border:`1px solid ${C.b1}`,borderRadius:12,cursor:"pointer",marginBottom:8}}>
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  <span style={{fontSize:18}}>📍</span>
+                  <div style={{textAlign:"left"}}>
+                    <div style={{fontWeight:700,color:C.text,fontSize:14}}>Location</div>
+                    <div style={{fontSize:11,color:locationOverride?C.gold:C.dim}}>{locationOverride?"Custom: ":"Auto: "}{displayLocation}</div>
+                  </div>
+                </div>
+                <span style={{color:C.mid,fontSize:18}}>{showLocPicker?"∨":"›"}</span>
+              </button>
+
+              {showLocPicker && (
+                <div style={{background:C.s2,border:`1px solid ${C.b1}`,borderRadius:12,padding:12,marginBottom:8,marginTop:-6}}>
+                  <input value={locSearch} onChange={e=>setLocSearch(e.target.value)} placeholder="Search city..." style={{...inputStyle,fontSize:13,padding:"8px 12px",marginBottom:8}}/>
+                  {locationOverride && (
+                    <button onClick={()=>{setLocationOverride(null);try{localStorage.removeItem("wc2026_location")}catch{};setLocSearch("");setShowLocPicker(false);}} style={{width:"100%",padding:"7px 0",borderRadius:8,background:`${C.red||"#f87171"}18`,border:`1px solid ${C.red||"#f87171"}44`,color:C.red||"#f87171",fontSize:12,fontWeight:600,cursor:"pointer",marginBottom:8}}>✕ Reset to auto-detected</button>
+                  )}
+                  <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                    {filteredCities.map(c=>(
+                      <button key={c.label} onClick={()=>{const loc={label:c.label,country:c.country};setLocationOverride(loc);try{localStorage.setItem("wc2026_location",JSON.stringify(loc))}catch{};setLocSearch("");setShowLocPicker(false);setToast(`📍 Location set to ${c.label}`);}} style={{padding:"5px 10px",borderRadius:16,fontSize:12,cursor:"pointer",border:`1px solid ${locationOverride?.label===c.label?C.green:C.b2}`,background:locationOverride?.label===c.label?`${C.green}22`:C.bg,color:locationOverride?.label===c.label?C.green:C.mid,fontWeight:locationOverride?.label===c.label?700:400}}>
+                        {c.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div style={{borderTop:`1px solid ${C.b1}`,margin:"4px 0 14px"}}/>
+
+              {/* ── Sync options ── */}
+              {!isSynced ? (
+                <div>
+                  <div style={{fontSize:11,color:C.mid,fontWeight:700,letterSpacing:"0.08em",marginBottom:10}}>🔗 SYNC ACROSS DEVICES</div>
+                  <div style={{display:"flex",gap:8,marginBottom:8}}>
+                    <button onClick={()=>setScreen("pin-create")} style={{flex:1,padding:"11px 8px",borderRadius:12,border:`1px solid ${C.green}44`,background:`${C.green}15`,color:C.green,fontWeight:700,fontSize:13,cursor:"pointer"}}>🔢 Create PIN</button>
+                    <button onClick={()=>setScreen("pin-join")}   style={{flex:1,padding:"11px 8px",borderRadius:12,border:`1px solid ${C.b2}`,background:C.bg,color:C.mid,fontWeight:600,fontSize:13,cursor:"pointer"}}>I have a PIN</button>
+                  </div>
+                  <button onClick={()=>setScreen("email")} style={{...btnSecondary,marginTop:0,fontSize:13}}>✉️ Continue with Email</button>
+                </div>
+              ) : (
+                <div style={{fontSize:12,color:C.dim,textAlign:"center",lineHeight:1.5}}>Your progress syncs automatically across all signed-in devices.</div>
+              )}
+            </div>
+          )}
+
+          {/* ── PREDICTIONS ── */}
+          {screen === "predictions" && (
+            <div>
+              {predsLoading && <div style={{textAlign:"center",padding:"30px 0",color:C.mid,fontSize:14}}>Loading your predictions…</div>}
+              {!predsLoading && userPreds !== null && Object.keys(userPreds).length === 0 && (
+                <div style={{textAlign:"center",padding:"30px 0"}}>
+                  <div style={{fontSize:"2rem",marginBottom:8}}>🔮</div>
+                  <div style={{color:C.mid,fontSize:14}}>No predictions yet.</div>
+                  <div style={{fontSize:12,color:C.dim,marginTop:4}}>Head to the Predictor tab to make your picks.</div>
+                </div>
+              )}
+              {!predsLoading && userPreds && Object.keys(userPreds).length > 0 && (
+                <div>
+                  {MATCHES.filter(m=>userPreds[m.id]).map(m=>{
+                    const p = userPreds[m.id];
+                    return (
+                      <div key={m.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 12px",background:C.s2,borderRadius:10,marginBottom:6,border:`1px solid ${C.b1}`}}>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontSize:12,fontWeight:700,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.home} vs {m.away}</div>
+                          <div style={{fontSize:10,color:C.dim}}>{m.date}</div>
+                        </div>
+                        <div style={{fontWeight:900,fontSize:18,color:C.green,fontFamily:"monospace",marginLeft:8}}>{p.hg ?? "?"} – {p.ag ?? "?"}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── PIN CREATE ── */}
+          {screen === "pin-create" && (
+            <div>
+              <div style={{fontSize:13,color:C.dim,lineHeight:1.6,marginBottom:20}}>We'll generate a 6-digit PIN tied to your current progress. Write it down — you'll enter it on any other device to sync.</div>
+              {error && <div style={{color:"#f87171",fontSize:13,marginBottom:12,padding:"10px 12px",background:"rgba(248,113,113,0.1)",borderRadius:8}}>{error}</div>}
+              <button onClick={handleCreatePIN} disabled={loading} style={{...btnPrimary,opacity:loading?0.6:1}}>{loading?"Generating...":"Generate My PIN"}</button>
+            </div>
+          )}
+
+          {/* ── PIN CREATED ── */}
+          {screen === "pin-created" && (
+            <div style={{textAlign:"center"}}>
+              <div style={{fontSize:13,color:C.dim,marginBottom:16,lineHeight:1.5}}>Here's your sync PIN. Use it on any device to restore your saved matches, predictions and favorite teams.</div>
+              <div style={{background:C.s2,border:`1px solid ${C.green}44`,borderRadius:14,padding:"20px 16px",marginBottom:20}}>
+                <div style={{fontSize:11,color:C.mid,fontWeight:600,letterSpacing:"0.1em",marginBottom:8}}>YOUR PIN</div>
+                <div style={{fontSize:40,fontWeight:900,color:C.green,letterSpacing:"0.2em",fontFamily:"monospace"}}>{syncProfile?.pin || pin}</div>
+              </div>
+              <div style={{fontSize:12,color:C.dim,marginBottom:20,lineHeight:1.5}}>Screenshot this. On another device, tap the profile icon → "I have a PIN".</div>
+              <button onClick={onClose} style={btnPrimary}>Done</button>
+            </div>
+          )}
+
+          {/* ── PIN JOIN ── */}
+          {screen === "pin-join" && (
+            <div>
+              <div style={{fontSize:13,color:C.dim,lineHeight:1.6,marginBottom:20}}>Enter the PIN from your other device to restore your progress here.</div>
+              <input value={pinInput} onChange={e=>setPinInput(e.target.value.replace(/[^0-9]/g,"").slice(0,6))} placeholder="Enter 6-digit PIN" inputMode="numeric" maxLength={6} style={{...inputStyle,fontSize:24,textAlign:"center",fontFamily:"monospace",letterSpacing:"0.2em",marginBottom:12}}/>
+              {error && <div style={{color:"#f87171",fontSize:13,marginBottom:12,padding:"10px 12px",background:"rgba(248,113,113,0.1)",borderRadius:8}}>{error}</div>}
+              <button onClick={handleJoinPIN} disabled={loading||pinInput.length<6} style={{...btnPrimary,opacity:loading||pinInput.length<6?0.5:1}}>{loading?"Looking up...":"Restore My Progress"}</button>
+            </div>
+          )}
+
+          {/* ── EMAIL ── */}
+          {screen === "email" && (
+            <div>
+              <div style={{fontSize:13,color:C.dim,lineHeight:1.6,marginBottom:20}}>Enter your email and we'll send a one-tap sign-in link. No password, no app to install.</div>
+              <input value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" type="email" inputMode="email" style={{...inputStyle,marginBottom:12}}/>
+              {error && <div style={{color:"#f87171",fontSize:13,marginBottom:12,padding:"10px 12px",background:"rgba(248,113,113,0.1)",borderRadius:8}}>{error}</div>}
+              <button onClick={handleSendMagic} disabled={loading} style={{...btnPrimary,opacity:loading?0.6:1}}>{loading?"Sending...":"Send Sign-in Link"}</button>
+            </div>
+          )}
+
+          {/* ── EMAIL SENT ── */}
+          {screen === "email-sent" && (
+            <div style={{textAlign:"center",padding:"10px 0"}}>
+              <div style={{fontSize:48,marginBottom:16}}>📬</div>
+              <div style={{fontWeight:700,color:C.text,fontSize:17,marginBottom:8}}>Check your inbox</div>
+              <div style={{fontSize:13,color:C.dim,lineHeight:1.6,marginBottom:20}}>We sent a sign-in link to <strong style={{color:C.text}}>{email}</strong>. Tap it on any device to sync your progress. The link expires in 15 minutes.</div>
+              <div style={{fontSize:12,color:C.mid,background:C.s2,borderRadius:10,padding:"10px 14px",lineHeight:1.5}}>Didn't get it? Check spam, or <button onClick={()=>setScreen("email")} style={{background:"none",border:"none",color:C.green,cursor:"pointer",fontSize:12,fontWeight:600,padding:0}}>try again</button>.</div>
+            </div>
+          )}
+
+        </div>
+
+        {/* ── AVATAR PICKER OVERLAY ── */}
+        {showAvatarPicker && (
+          <div onClick={()=>setShowAvatarPicker(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.7)",zIndex:1100,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
+            <div onClick={e=>e.stopPropagation()} style={{background:C.s1,border:`1px solid ${C.b2}`,borderRadius:"20px 20px 0 0",width:"100%",maxWidth:520,maxHeight:"80vh",display:"flex",flexDirection:"column"}}>
+              {/* Picker header */}
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 18px 12px",borderBottom:`1px solid ${C.b1}`,flexShrink:0}}>
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  {/* Current avatar preview */}
+                  <div style={{width:40,height:40,borderRadius:"50%",border:`2px solid ${C.green}`,background:C.s2,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",flexShrink:0}}>
+                    {renderAvatarPreview()}
+                  </div>
+                  <span style={{fontWeight:700,fontSize:16,color:C.green}}>Choose Avatar</span>
+                </div>
+                <button onClick={()=>setShowAvatarPicker(false)} style={{background:"none",border:"none",color:C.mid,fontSize:22,cursor:"pointer"}}>×</button>
+              </div>
+
+              {/* Tabs */}
+              <div style={{display:"flex",borderBottom:`1px solid ${C.b1}`,flexShrink:0}}>
+                {[["crests","🛡️ Crests"],["flags","🏳️ Flags"],["confs","🏆 Confederations"],["upload","📷 My Photo"]].map(([id,label])=>(
+                  <button key={id} onClick={()=>{setAvatarTab(id);setAvatarSearch("");}} style={{flex:1,padding:"10px 2px",background:"none",border:"none",borderBottom:`2px solid ${avatarTab===id?C.green:"transparent"}`,color:avatarTab===id?C.green:C.dim,fontWeight:avatarTab===id?700:400,fontSize:11,cursor:"pointer"}}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Content */}
+              <div style={{overflowY:"auto",padding:12,flex:1}}>
+
+                {/* Federation Crests */}
+                {avatarTab === "crests" && (
+                  <div>
+                    <input value={avatarSearch} onChange={e=>setAvatarSearch(e.target.value)} placeholder="Search team..." style={{width:"100%",padding:"8px 12px",background:C.s2,border:`1px solid ${C.b2}`,borderRadius:8,color:C.text,fontSize:13,outline:"none",marginBottom:10,boxSizing:"border-box"}}/>
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8}}>
+                      {filteredTeams.map(team => {
+                        const crestSrc = TEAM_CRESTS[team];
+                        const id = `crest:${team}`;
+                        const active = userAvatar === id;
+                        if (!crestSrc) return null;
+                        return (
+                          <button key={team} onClick={()=>selectPresetAvatar(id)} title={team} style={{padding:"8px 4px",border:`2px solid ${active?C.green:"transparent"}`,borderRadius:10,background:active?`${C.green}22`:C.s2,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:4,position:"relative"}}>
+                            <img src={crestSrc} style={{width:44,height:44,objectFit:"contain"}} alt={team} onError={e=>{e.target.style.display="none";}}/>
+                            <span style={{fontSize:9,color:active?C.green:C.dim,textAlign:"center",lineHeight:1.2,fontWeight:active?700:400}}>{team}</span>
+                            {active && <div style={{position:"absolute",top:2,right:2,width:12,height:12,borderRadius:"50%",background:C.green,display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,color:"#030a05",fontWeight:900}}>✓</div>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Team Flags */}
+                {avatarTab === "flags" && (
+                  <div>
+                    <input value={avatarSearch} onChange={e=>setAvatarSearch(e.target.value)} placeholder="Search team..." style={{width:"100%",padding:"8px 12px",background:C.s2,border:`1px solid ${C.b2}`,borderRadius:8,color:C.text,fontSize:13,outline:"none",marginBottom:10,boxSizing:"border-box"}}/>
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:6}}>
+                      {filteredTeams.map(team => {
+                        const code = FLAG_CODES_MAP[team];
+                        const id = `flag:${team}`;
+                        const active = userAvatar === id;
+                        return code ? (
+                          <button key={team} onClick={()=>selectPresetAvatar(id)} title={team} style={{padding:0,border:`2px solid ${active?C.green:"transparent"}`,borderRadius:8,background:active?`${C.green}22`:"transparent",cursor:"pointer",overflow:"hidden",aspectRatio:"3/2",position:"relative"}}>
+                            <img src={`https://flagcdn.com/w80/${code}.png`} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} alt={team}/>
+                            {active && <div style={{position:"absolute",top:2,right:2,width:12,height:12,borderRadius:"50%",background:C.green,display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,color:"#030a05",fontWeight:900}}>✓</div>}
+                          </button>
+                        ) : null;
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Confederations */}
+                {avatarTab === "confs" && (
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
+                    {CONF_OPTIONS.map(c => {
+                      const active = userAvatar === c.id;
+                      return (
+                        <button key={c.id} onClick={()=>selectPresetAvatar(c.id)} style={{padding:"14px 8px",border:`2px solid ${active?C.green:C.b2}`,borderRadius:12,background:active?`${C.green}22`:C.s2,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
+                          <span style={{fontSize:32}}>{c.emoji}</span>
+                          <span style={{fontSize:11,fontWeight:700,color:active?C.green:C.text}}>{c.label}</span>
+                          <span style={{fontSize:9,color:C.dim}}>{c.sub}</span>
+                          {active && <span style={{fontSize:10,color:C.green,fontWeight:700}}>✓ Selected</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Upload Photo */}
+                {avatarTab === "upload" && (
+                  <div style={{textAlign:"center",padding:"20px 0"}}>
+                    <div style={{width:80,height:80,borderRadius:"50%",margin:"0 auto 16px",border:`2px dashed ${C.b2}`,background:C.s2,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}>
+                      {userAvatar?.startsWith("data:") ? <img src={userAvatar} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="avatar"/> : <span style={{fontSize:32}}>📷</span>}
+                    </div>
+                    <div style={{fontSize:13,color:C.dim,marginBottom:16,lineHeight:1.5}}>Upload a photo from your device. It'll be cropped to a circle and stored securely.</div>
+                    <label style={{display:"inline-block",padding:"12px 24px",borderRadius:12,background:`linear-gradient(135deg,${C.green},#22c55e)`,color:"#030a05",fontWeight:700,fontSize:15,cursor:"pointer"}}>
+                      Choose Photo
+                      <input type="file" accept="image/*" onChange={handlePhotoUpload} style={{display:"none"}}/>
+                    </label>
+                    {userAvatar?.startsWith("data:") && (
+                      <button onClick={()=>{persistAvatar(null);setToast("Photo removed.");}} style={{display:"block",margin:"12px auto 0",background:"none",border:"none",color:C.dim,fontSize:12,cursor:"pointer",textDecoration:"underline"}}>Remove photo</button>
+                    )}
+                  </div>
+                )}
+
+              </div>
+            </div>
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
+}
+
+
 // ── APP ────────────────────────────────────────────────────────────────────
 const TABS = [
   {id:"live",      icon:"🔴", label:"Live"},
@@ -3404,7 +3996,6 @@ const TABS = [
   {id:"predictor", icon:"🔮", label:"Predictor"},
   {id:"sim",       icon:"🎮", label:"Simulator"},
   {id:"bracket",   icon:"🏆", label:"My Bracket"},
-  {id:"saved",     icon:"⭐", label:"Saved"},
 ];
 
 // ── PWA INSTALL BANNER ────────────────────────────────────────────────────
@@ -3507,7 +4098,12 @@ function InstallBanner() {
 
 export default function App() {
   const [tab, setTab] = useState("live");
-  const country = useCountry();
+  const geoData = useCountry();
+  const [locationOverride, setLocationOverride] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("wc2026_location") || "null"); } catch { return null; }
+  });
+  const country = locationOverride?.country || geoData.country;
+  const [showSavedView, setShowSavedView] = useState(false);
 
   const tabBarRef = useRef(null);
   const [tabBarBottom, setTabBarBottom] = useState(140);
@@ -3533,7 +4129,13 @@ export default function App() {
   const [statsTeam, setStatsTeam] = useState("");
   const [modal, setModal] = useState({open:false,match:null});
   const [eventsModal, setEventsModal] = useState({open:false,match:null});
-  const [saved, setSaved] = useState([]);
+  const [saved, setSaved] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("wc2026_saved") || "[]"); } catch { return []; }
+  });
+  // Keep saved in localStorage whenever it changes
+  useEffect(() => {
+    try { localStorage.setItem("wc2026_saved", JSON.stringify(saved)); } catch {}
+  }, [saved]);
   const [toast, setToast] = useState("");
   const [dark, setDark] = useState(() => { try { return localStorage.getItem("wc2026_dark") !== "false"; } catch { return true; }});
   const [favTeams, setFavTeams] = useState(() => {
@@ -3541,6 +4143,75 @@ export default function App() {
   });
   const [showFavPicker, setShowFavPicker] = useState(false);
   const favTeam = favTeams[0] || "";
+
+  // ── Sync / profile state ──────────────────────────────────────────────────
+  const [showSyncModal, setShowSyncModal] = useState(false);
+  const [syncProfile, setSyncProfile] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("wc2026_syncprofile") || "null"); } catch { return null; }
+  });
+  const [userAvatar, setUserAvatar] = useState(() => {
+    try { return localStorage.getItem("wc2026_avatar") || null; } catch { return null; }
+  });
+  const persistAvatar = (av) => {
+    setUserAvatar(av);
+    try { localStorage.setItem("wc2026_avatar", av || ""); } catch {}
+  };
+  const [syncUid] = useState(() => {
+    try {
+      let id = localStorage.getItem("wc2026_uid");
+      if (!id) { id = crypto.randomUUID(); localStorage.setItem("wc2026_uid", id); }
+      return id;
+    } catch { return crypto.randomUUID(); }
+  });
+
+  // Auto-handle magic link redirect on load
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const syncStatus = params.get("sync");
+    if (syncStatus === "ok") {
+      try {
+        const profile = JSON.parse(decodeURIComponent(params.get("profile") || "null"));
+        if (profile?.uid) {
+          // Pull full profile from KV
+          fetch("/api/sync?action=pull", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ uid: profile.uid }),
+          }).then(r => r.json()).then(data => {
+            if (data.ok && data.profile) {
+              const p = data.profile;
+              if (p.saved?.length)    setSaved(p.saved);
+              if (p.favTeams?.length) setFavTeams(p.favTeams);
+              if (p.dark !== undefined) setDark(p.dark);
+              if (p.locationOverride) { setLocationOverride(p.locationOverride); try { localStorage.setItem("wc2026_location", JSON.stringify(p.locationOverride)); } catch {} }
+              if (p.avatar) persistAvatar(p.avatar);
+              setSyncProfile({ uid: p.uid, email: p.email, pin: p.pin, method: "email" });
+              try { localStorage.setItem("wc2026_syncprofile", JSON.stringify({ uid: p.uid, email: p.email, pin: p.pin, method: "email" })); } catch {}
+              setToast("✅ Synced! Your progress has been restored.");
+            }
+          }).catch(() => {});
+        }
+      } catch {}
+      // Clean up URL
+      window.history.replaceState({}, "", window.location.pathname);
+    } else if (syncStatus === "expired") {
+      setToast("⚠️ Sign-in link expired. Please try again.");
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
+
+  // Push state to KV whenever saved/favTeams/dark/location changes (if synced)
+  useEffect(() => {
+    if (!syncProfile?.uid) return;
+    const t = setTimeout(() => {
+      fetch("/api/sync?action=push", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ uid: syncProfile.uid, saved, favTeams, dark, locationOverride, avatar: userAvatar }),
+      }).catch(() => {});
+    }, 1500);
+    return () => clearTimeout(t);
+  }, [saved, favTeams, dark, locationOverride, userAvatar, syncProfile]);
 
   // Apply theme — mutates C so all components pick up new colors on re-render
   const theme = dark ? DARK : LIGHT;
@@ -3597,48 +4268,31 @@ export default function App() {
               </div>
             </div>
             <div style={{display:"flex",alignItems:"center",gap:8}}>
-              {/* Dark/light toggle */}
-              <button onClick={toggleDark} title={dark?"Switch to light mode":"Switch to dark mode"} style={{width:28,height:28,borderRadius:"50%",border:`1px solid ${C.b2}`,background:C.s2,cursor:"pointer",fontSize:13,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                {dark ? "☀️" : "🌙"}
+              {/* Dark/light toggle — sun/moon pill */}
+              <button onClick={toggleDark} title={dark?"Switch to light mode":"Switch to dark mode"} style={{position:"relative",width:56,height:28,borderRadius:14,border:"none",background:dark?"#4ade80":"#1a3828",cursor:"pointer",flexShrink:0,padding:0,transition:"background .25s"}}>
+                {/* Track icons */}
+                <span style={{position:"absolute",left:6,top:"50%",transform:"translateY(-50%)",fontSize:12,lineHeight:1,opacity:dark?1:0.4,transition:"opacity .2s"}}>☀️</span>
+                <span style={{position:"absolute",right:6,top:"50%",transform:"translateY(-50%)",fontSize:12,lineHeight:1,opacity:dark?0.4:1,transition:"opacity .2s"}}>🌙</span>
+                {/* Sliding knob */}
+                <span style={{position:"absolute",top:3,left:dark?29:3,width:20,height:20,borderRadius:"50%",background:"#ffffff",boxShadow:"0 1px 5px rgba(0,0,0,.4)",transition:"left .22s cubic-bezier(.4,0,.2,1)",display:"block"}}/>
               </button>
-              {/* Favorite teams button */}
-              <button onClick={()=>setShowFavPicker(v=>!v)} style={{display:"flex",alignItems:"center",gap:5,background:favTeams.length?`${C.gold}22`:`${C.s2}`,border:`1px solid ${favTeams.length?C.gold:C.b2}`,borderRadius:20,padding:"5px 10px",cursor:"pointer"}}>
-                {favTeams.length > 0
-                  ? <>{favTeams.map(t=><Crest key={t} team={t} size={22}/>)}<span style={{fontSize:13,color:C.gold,fontWeight:700,marginLeft:4}}>{favTeams.length===1?favTeams[0]:`${favTeams.length} teams`}</span></>
-                  : <span style={{fontSize:11,color:C.dim}}>⭐ My Teams</span>
+              {/* Profile / sync avatar */}
+              <button onClick={()=>setShowSyncModal(true)} title="My Account" style={{position:"relative",width:36,height:36,borderRadius:"50%",border:`2px solid ${syncProfile?C.green:dark?"#2a4f38":"#1a3828"}`,background:syncProfile?`${C.green}18`:dark?"#0c1a12":"#1a3828",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,flexShrink:0,transition:"border-color .2s,background .2s",overflow:"hidden",padding:0}}>
+                {userAvatar && userAvatar.startsWith("data:")
+                  ? <img src={userAvatar} style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:"50%"}} alt="avatar"/>
+                  : userAvatar && userAvatar.startsWith("flag:")
+                    ? <img src={`https://flagcdn.com/w80/${FLAG_CODES[userAvatar.slice(5)]}.png`} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="avatar"/>
+                    : userAvatar && userAvatar.startsWith("crest:")
+                      ? <img src={(()=>{const u=userAvatar.slice(6);return {"Argentina":"https://upload.wikimedia.org/wikipedia/en/thumb/c/c1/Argentina_national_football_team_badge.svg/200px-Argentina_national_football_team_badge.svg.png","Brazil":"https://upload.wikimedia.org/wikipedia/en/thumb/0/09/CBF_logo.svg/200px-CBF_logo.svg.png","France":"https://upload.wikimedia.org/wikipedia/en/thumb/4/43/Logo_FFF.svg/200px-Logo_FFF.svg.png","England":"https://upload.wikimedia.org/wikipedia/en/thumb/b/be/Flag_of_England.svg/200px-Flag_of_England.svg.png","Spain":"https://upload.wikimedia.org/wikipedia/en/thumb/4/44/Spain_national_football_team_badge_or_crest.png/200px-Spain_national_football_team_badge_or_crest.png","Germany":"https://upload.wikimedia.org/wikipedia/en/thumb/7/7a/Logo_des_Deutschen_Fu%C3%9Fball-Bundes.svg/200px-Logo_des_Deutschen_Fu%C3%9Fball-Bundes.svg.png","Portugal":"https://upload.wikimedia.org/wikipedia/en/thumb/f/fd/FPF-2016.svg/200px-FPF-2016.svg.png","Mexico":"https://upload.wikimedia.org/wikipedia/en/thumb/0/0e/Mexico_men%27s_national_football_team_crest.svg/200px-Mexico_men%27s_national_football_team_crest.svg.png","United States":"https://upload.wikimedia.org/wikipedia/en/thumb/a/a6/US_Soccer_logo_2022.svg/200px-US_Soccer_logo_2022.svg.png","Uruguay":"https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/Logo_AUF.svg/200px-Logo_AUF.svg.png","Japan":"https://upload.wikimedia.org/wikipedia/en/thumb/6/6d/JFA.svg/200px-JFA.svg.png","South Korea":"https://upload.wikimedia.org/wikipedia/en/thumb/5/5c/KFA_logo.svg/200px-KFA_logo.svg.png","Canada":"https://upload.wikimedia.org/wikipedia/en/thumb/b/bf/Canada_Soccer_Logo.svg/200px-Canada_Soccer_Logo.svg.png"}[u]||null})()}  style={{width:"100%",height:"100%",objectFit:"contain"}} alt="crest"/>
+                      : userAvatar && userAvatar.startsWith("conf:")
+                        ? <span style={{fontSize:20,lineHeight:1}}>{{"UEFA":"🇪🇺","CONMEBOL":"🌎","CONCACAF":"🌍","CAF":"🌍","AFC":"🌏","OFC":"🌊"}[userAvatar.slice(5)]||"⚽"}</span>
+                        : syncProfile ? "⚽" : "👤"
                 }
+                {syncProfile && <span style={{position:"absolute",bottom:1,right:1,width:9,height:9,borderRadius:"50%",background:C.green,border:`1.5px solid ${C.bg}`,zIndex:1}}/>}
+                {!syncProfile && favTeams.length > 0 && <span style={{position:"absolute",bottom:1,right:1,width:9,height:9,borderRadius:"50%",background:C.gold,border:`1.5px solid ${C.bg}`,zIndex:1}}/>}
               </button>
             </div>
           </div>
-
-          {/* Favorite teams picker dropdown */}
-          {showFavPicker && (
-            <div style={{position:"absolute",top:"100%",right:14,background:C.s1,border:`1px solid ${C.b2}`,borderRadius:12,padding:10,zIndex:200,maxHeight:320,overflowY:"auto",width:240,boxShadow:"0 8px 32px rgba(0,0,0,0.4)"}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"0 4px",marginBottom:8}}>
-                <span style={{fontSize:11,color:C.dim,fontWeight:700}}>MY TEAMS <span style={{color:favTeams.length===4?C.red:C.gold}}>({favTeams.length}/4)</span></span>
-                {favTeams.length>0 && <button onClick={()=>{setFavTeams([]);try{localStorage.setItem("wc2026_favs","[]")}catch{};}} style={{fontSize:10,padding:"2px 8px",borderRadius:10,background:`${C.red}22`,border:`1px solid ${C.red}33`,color:C.red,cursor:"pointer"}}>Clear all</button>}
-              </div>
-              {Object.keys(GROUPS).map(g => (
-                <div key={g} style={{marginBottom:6}}>
-                  <div style={{fontSize:9,color:C.dim,fontWeight:700,padding:"2px 4px",letterSpacing:"0.1em"}}>GROUP {g}</div>
-                  {GROUPS[g].teams.map(t => {
-                    const sel = favTeams.includes(t);
-                    const maxed = !sel && favTeams.length >= 4;
-                    return (
-                      <button key={t} onClick={()=>!maxed&&toggleFav(t)} style={{width:"100%",display:"flex",alignItems:"center",gap:7,padding:"5px 8px",borderRadius:8,background:sel?`${C.gold}22`:"transparent",border:"none",cursor:maxed?"not-allowed":"pointer",marginBottom:1,opacity:maxed?0.4:1}}>
-                        <div style={{width:16,height:16,borderRadius:4,border:`2px solid ${sel?C.gold:C.dim}`,background:sel?C.gold:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                          {sel && <span style={{color:"#030a05",fontSize:10,fontWeight:900,lineHeight:1}}>✓</span>}
-                        </div>
-                        <Crest team={t} size={18}/>
-                        <span style={{fontSize:12,color:sel?C.gold:C.text,fontWeight:sel?700:400}}>{t}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              ))}
-            </div>
-          )}
-          {showFavPicker && <div onClick={()=>setShowFavPicker(false)} style={{position:"fixed",inset:0,zIndex:199}}/>}
 
           <div style={{display:"flex",overflowX:"auto",scrollbarWidth:"none",marginBottom:-1}}>
             {TABS.map(t=>(
@@ -3660,9 +4314,43 @@ export default function App() {
           {tab==="predictor" && <PredictorTab/>}
           {tab==="sim"       && <SimTab tabTop={tabBarBottom}/>}
           {tab==="bracket"   && <MyBracketTab tabTop={tabBarBottom}/>}
-          {tab==="saved"     && <SavedTab saved={saved} onRemove={onRemove} tabTop={tabBarBottom}/>}
         </div>
         {/* AddModal removed — saving is now instant via star button */}
+
+        {/* Saved view — full overlay triggered from avatar modal */}
+        {showSavedView && (
+          <div style={{position:"fixed",inset:0,background:C.bg,zIndex:200,overflowY:"auto",display:"flex",flexDirection:"column"}}>
+            <div style={{display:"flex",alignItems:"center",gap:12,padding:"16px 16px 12px",borderBottom:`1px solid ${C.b1}`,background:C.s1,position:"sticky",top:0,zIndex:1}}>
+              <button onClick={()=>setShowSavedView(false)} style={{background:"none",border:"none",color:C.mid,fontSize:22,cursor:"pointer",lineHeight:1,padding:0}}>‹</button>
+              <span style={{fontWeight:700,fontSize:17,color:C.green}}>My Matches</span>
+              <span style={{fontSize:13,color:C.dim,marginLeft:"auto"}}>{saved.length} saved</span>
+            </div>
+            <div style={{padding:"12px 14px"}}>
+              <SavedTab saved={saved} onRemove={onRemove} tabTop={0}/>
+            </div>
+          </div>
+        )}
+
+        <SyncModal
+          open={showSyncModal}
+          onClose={()=>setShowSyncModal(false)}
+          syncProfile={syncProfile}
+          setSyncProfile={setSyncProfile}
+          syncUid={syncUid}
+          saved={saved}
+          favTeams={favTeams}
+          setToast={setToast}
+          setSaved={setSaved}
+          setFavTeams={setFavTeams}
+          dark={dark}
+          setDark={setDark}
+          geoData={geoData}
+          locationOverride={locationOverride}
+          setLocationOverride={setLocationOverride}
+          onShowSaved={()=>setShowSavedView(true)}
+          userAvatar={userAvatar}
+          persistAvatar={persistAvatar}
+        />
         <MatchEventsModal match={eventsModal.match} open={eventsModal.open} onClose={()=>setEventsModal({open:false,match:null})} onAction={onAction}/>
         <Toast msg={toast} onDone={()=>setToast("")}/>
         <InstallBanner/>

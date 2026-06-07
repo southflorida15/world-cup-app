@@ -34,7 +34,7 @@ export default async function handler(req, res) {
   // ── PIN CREATE ────────────────────────────────────────────────────────────
   if (action === "pin-create" && req.method === "POST") {
     try {
-      const { uid, saved, favTeams } = req.body;
+      const { uid, saved, favTeams, dark, locationOverride, avatar } = req.body;
       if (!uid) return res.status(400).json({ error: "uid required" });
 
       // Generate a unique PIN
@@ -45,7 +45,7 @@ export default async function handler(req, res) {
         if (attempts > 20) return res.status(500).json({ error: "Could not generate unique PIN" });
       } while (await kv.get(`pin:${pin}`));
 
-      const profile = { uid, pin, saved: saved || [], favTeams: favTeams || [], updatedAt: Date.now() };
+      const profile = { uid, pin, saved: saved || [], favTeams: favTeams || [], dark, locationOverride, avatar: avatar || null, updatedAt: Date.now() };
 
       // Store by PIN and by UID
       await kv.set(`pin:${pin}`,  profile, { ex: 60 * 60 * 24 * 180 }); // 180 days
@@ -76,13 +76,13 @@ export default async function handler(req, res) {
   // ── MAGIC LINK SEND ───────────────────────────────────────────────────────
   if (action === "magic-send" && req.method === "POST") {
     try {
-      const { email, uid, saved, favTeams } = req.body;
+      const { email, uid, saved, favTeams, dark, locationOverride, avatar } = req.body;
       if (!email || !uid) return res.status(400).json({ error: "email and uid required" });
 
       const magicToken = genToken();
 
       // Save profile + pending token
-      const profile = { uid, email, saved: saved || [], favTeams: favTeams || [], updatedAt: Date.now() };
+      const profile = { uid, email, saved: saved || [], favTeams: favTeams || [], dark, locationOverride, avatar: avatar || null, updatedAt: Date.now() };
       await kv.set(`magic:${magicToken}`, { ...profile, email }, { ex: 60 * 15 }); // 15 min TTL
       await kv.set(`uid:${uid}`, profile, { ex: 60 * 60 * 24 * 180 });
 
@@ -153,11 +153,11 @@ export default async function handler(req, res) {
   // ── PUSH (save state to KV) ───────────────────────────────────────────────
   if (action === "push" && req.method === "POST") {
     try {
-      const { uid, saved, favTeams } = req.body;
+      const { uid, saved, favTeams, dark, locationOverride, avatar } = req.body;
       if (!uid) return res.status(400).json({ error: "uid required" });
 
       const existing = await kv.get(`uid:${uid}`) || {};
-      const profile = { ...existing, uid, saved: saved || [], favTeams: favTeams || [], updatedAt: Date.now() };
+      const profile = { ...existing, uid, saved: saved || [], favTeams: favTeams || [], dark, locationOverride, avatar: avatar !== undefined ? avatar : (existing.avatar || null), updatedAt: Date.now() };
 
       await kv.set(`uid:${uid}`, profile, { ex: 60 * 60 * 24 * 180 });
       // If user has a PIN, keep that entry in sync too
