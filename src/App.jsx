@@ -3421,7 +3421,7 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const [nameInput, setNameInput] = useState(displayName || "");
   const [nameFocused, setNameFocused] = useState(false);
-  const [avatarTab, setAvatarTab] = useState("flags"); // flags | confs | upload
+  const [avatarTab, setAvatarTab] = useState("icons"); // icons | crests | flags | confs | upload
   const [avatarSearch, setAvatarSearch] = useState("");
   const [locSearch, setLocSearch] = useState("");
   const [userPreds, setUserPreds] = useState(null);
@@ -3562,6 +3562,21 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
     "Curacao":      "https://upload.wikimedia.org/wikipedia/en/thumb/7/79/Curacao_football_federation.png/200px-Curacao_football_federation.png",
     "Czechia":      "https://upload.wikimedia.org/wikipedia/en/thumb/7/72/FACR_%28logo%29.svg/200px-FACR_%28logo%29.svg.png",
   };
+  const FOOTBALL_ICONS = [
+    { id:"icon:ball",    label:"Ball",        svg:'<circle cx="32" cy="32" r="22" fill="none" stroke="#4ade80" stroke-width="2.5"/><path d="M32 10 L32 54 M10 32 L54 32" stroke="#4ade80" stroke-width="1.5" fill="none" opacity="0.4"/><path d="M16 16 L48 16 M16 48 L48 48" stroke="#4ade80" stroke-width="1.5" fill="none" opacity="0.4"/><circle cx="32" cy="32" r="7" fill="#4ade80"/>' },
+    { id:"icon:trophy",  label:"Trophy",      svg:'<path d="M20 10 L20 36 Q20 46 32 46 L44 46 Q56 46 56 36 L56 10 Z" fill="none" stroke="#f59e0b" stroke-width="2.2" stroke-linejoin="round"/><path d="M20 18 Q8 18 8 28 Q8 38 20 38" fill="none" stroke="#f59e0b" stroke-width="2.2"/><path d="M56 18 Q68 18 68 28 Q68 38 56 38" fill="none" stroke="#f59e0b" stroke-width="2.2"/><rect x="29" y="46" width="6" height="10" fill="#f59e0b"/><rect x="22" y="56" width="20" height="4" rx="2" fill="#f59e0b"/>' },
+    { id:"icon:boot",    label:"Boot",        svg:'<path d="M22 52 L22 20 Q22 13 29 13 L42 13 Q49 13 49 20 L49 32 L58 32 Q65 32 65 39 L65 52 Q65 58 58 58 L29 58 Q22 58 22 52 Z" fill="none" stroke="#4ade80" stroke-width="2.2" stroke-linejoin="round"/><line x1="34" y1="13" x2="34" y2="32" stroke="#4ade80" stroke-width="1.5" opacity="0.5"/><line x1="30" y1="58" x2="30" y2="64" stroke="#4ade80" stroke-width="3" stroke-linecap="round"/><line x1="41" y1="58" x2="41" y2="64" stroke="#4ade80" stroke-width="3" stroke-linecap="round"/><line x1="52" y1="58" x2="52" y2="64" stroke="#4ade80" stroke-width="3" stroke-linecap="round"/>' },
+    { id:"icon:goal",    label:"Goal",        svg:'<rect x="10" y="18" width="60" height="38" rx="2" fill="none" stroke="#4ade80" stroke-width="2.2"/><line x1="10" y1="56" x2="37" y2="24" stroke="#4ade80" stroke-width="1" opacity="0.35"/><line x1="37" y1="56" x2="64" y2="24" stroke="#4ade80" stroke-width="1" opacity="0.35"/><line x1="10" y1="30" x2="70" y2="30" stroke="#4ade80" stroke-width="1" opacity="0.35"/><line x1="10" y1="43" x2="70" y2="43" stroke="#4ade80" stroke-width="1" opacity="0.35"/><line x1="28" y1="18" x2="28" y2="56" stroke="#4ade80" stroke-width="1" opacity="0.35"/><line x1="46" y1="18" x2="46" y2="56" stroke="#4ade80" stroke-width="1" opacity="0.35"/>' },
+    { id:"icon:whistle", label:"Whistle",     svg:'<circle cx="34" cy="36" r="18" fill="none" stroke="#f59e0b" stroke-width="2.2"/><circle cx="34" cy="36" r="7" fill="#f59e0b"/><path d="M52 36 L66 29 L70 34 L56 41 Z" fill="#f59e0b"/><line x1="70" y1="29" x2="76" y2="24" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round"/>' },
+    { id:"icon:gloves",  label:"Gloves",      svg:'<path d="M24 54 L24 24 Q24 16 32 16 L34 16 Q40 16 40 22 L40 30 Q44 25 50 25 Q56 25 56 31 L56 36 Q60 31 66 33 Q72 36 70 42 L60 58 Q55 64 48 64 L34 64 Q24 64 24 54 Z" fill="none" stroke="#4ade80" stroke-width="2.2" stroke-linejoin="round"/>' },
+    { id:"icon:jersey",  label:"Jersey",      svg:'<path d="M18 18 L8 38 L22 42 L22 68 L54 68 L54 42 L68 38 L58 18 Q50 26 38 26 Q26 26 18 18 Z" fill="none" stroke="#4ade80" stroke-width="2.2" stroke-linejoin="round"/><line x1="22" y1="42" x2="54" y2="42" stroke="#4ade80" stroke-width="1.2" opacity="0.4"/>' },
+    { id:"icon:var",     label:"VAR",         svg:'<rect x="10" y="20" width="56" height="34" rx="4" fill="none" stroke="#f59e0b" stroke-width="2.2"/><line x1="10" y1="37" x2="66" y2="37" stroke="#f59e0b" stroke-width="1" opacity="0.4"/><line x1="38" y1="20" x2="38" y2="54" stroke="#f59e0b" stroke-width="1" opacity="0.4"/><text x="38" y="43" text-anchor="middle" font-size="14" font-weight="700" fill="#f59e0b" font-family="system-ui">VAR</text><circle cx="38" cy="62" r="4" fill="#f59e0b"/>' },
+    { id:"icon:captain", label:"Captain",     svg:'<rect x="14" y="24" width="48" height="26" rx="13" fill="none" stroke="#f59e0b" stroke-width="2.2"/><text x="38" y="43" text-anchor="middle" font-size="22" font-weight="700" fill="#f59e0b" font-family="system-ui">C</text>' },
+    { id:"icon:flag",    label:"Corner flag", svg:'<line x1="32" y1="65" x2="32" y2="14" stroke="#4ade80" stroke-width="3" stroke-linecap="round"/><path d="M32 14 L60 24 L32 34 Z" fill="#4ade80"/><circle cx="32" cy="68" r="5" fill="#4ade80"/>' },
+    { id:"icon:golden",  label:"Golden Boot", svg:'<path d="M22 50 L22 22 Q22 15 29 15 L44 15 Q51 15 51 22 L51 34 L62 34 Q69 34 69 41 L69 50 Q69 56 62 56 L29 56 Q22 56 22 50 Z" fill="#f59e0b" opacity="0.9"/><circle cx="24" cy="10" r="5" fill="#f59e0b"/><circle cx="36" cy="7" r="5" fill="#f59e0b"/><circle cx="48" cy="10" r="5" fill="#f59e0b"/>' },
+    { id:"icon:tactics", label:"Tactics",     svg:'<rect x="8" y="14" width="60" height="44" rx="4" fill="#1a3828" stroke="#4ade80" stroke-width="2"/><circle cx="38" cy="26" r="5" fill="#4ade80"/><circle cx="20" cy="36" r="5" fill="#4ade80" opacity="0.7"/><circle cx="56" cy="36" r="5" fill="#4ade80" opacity="0.7"/><circle cx="28" cy="47" r="5" fill="#f59e0b"/><circle cx="48" cy="47" r="5" fill="#f59e0b"/><path d="M38 31 Q28 38 28 47" stroke="#4ade80" stroke-width="1.2" fill="none" stroke-dasharray="3,2"/>' },
+  ];
+
   const ALL_TEAMS = ["Argentina","France","Brazil","England","Spain","Germany","Portugal","Netherlands","Belgium","Norway","Mexico","United States","Morocco","Uruguay","Croatia","Japan","Senegal","Egypt","Colombia","South Korea","Canada","Switzerland","Austria","Sweden","Iran","Algeria","Ecuador","Paraguay","Scotland","Australia","Turkiye","Ivory Coast","Tunisia","Saudi Arabia","Ghana","DR Congo","Uzbekistan","Cape Verde","Qatar","Bosnia & Herz.","South Africa","Haiti","New Zealand","Jordan","Iraq","Panama","Curacao","Czechia"];
   const FLAG_CODES_MAP = {"Mexico":"mx","South Africa":"za","South Korea":"kr","Czechia":"cz","Canada":"ca","Bosnia & Herz.":"ba","Qatar":"qa","Switzerland":"ch","Brazil":"br","Morocco":"ma","Haiti":"ht","Scotland":"gb-sct","United States":"us","Paraguay":"py","Australia":"au","Turkiye":"tr","Germany":"de","Curacao":"cw","Ivory Coast":"ci","Ecuador":"ec","Netherlands":"nl","Japan":"jp","Sweden":"se","Tunisia":"tn","Belgium":"be","Egypt":"eg","Iran":"ir","New Zealand":"nz","Spain":"es","Cape Verde":"cv","Saudi Arabia":"sa","Uruguay":"uy","France":"fr","Senegal":"sn","Iraq":"iq","Norway":"no","Argentina":"ar","Algeria":"dz","Austria":"at","Jordan":"jo","Portugal":"pt","DR Congo":"cd","Uzbekistan":"uz","Colombia":"co","England":"gb-eng","Croatia":"hr","Ghana":"gh","Panama":"pa"};
   const filteredTeams = avatarSearch
@@ -3608,6 +3623,10 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
   const renderAvatarPreview = () => {
     if (!userAvatar) return <span style={{fontSize:32}}>👤</span>;
     if (userAvatar.startsWith("data:")) return <img src={userAvatar} style={{width:60,height:60,borderRadius:"50%",objectFit:"cover"}} alt="avatar"/>;
+    if (userAvatar.startsWith("icon:")) {
+      const icon = FOOTBALL_ICONS.find(i=>i.id===userAvatar);
+      return icon ? <svg width="52" height="52" viewBox="0 0 76 76" dangerouslySetInnerHTML={{__html:icon.svg}}/> : <span style={{fontSize:32}}>⚽</span>;
+    }
     if (userAvatar.startsWith("crest:")) {
       const url = getCrestUrl(userAvatar);
       return url ? <img src={url} style={{width:50,height:50,objectFit:"contain"}} alt="crest"/> : <span style={{fontSize:32}}>🛡️</span>;
@@ -3615,10 +3634,6 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
     if (userAvatar.startsWith("flag:")) {
       const code = FLAG_CODES_MAP[userAvatar.slice(5)];
       return code ? <img src={`https://flagcdn.com/w80/${code}.png`} style={{width:60,height:40,objectFit:"cover",borderRadius:4}} alt="flag"/> : <span style={{fontSize:32}}>🏳️</span>;
-    }
-    if (userAvatar.startsWith("conf:")) {
-      const em = {"UEFA":"🇪🇺","CONMEBOL":"🌎","CONCACAF":"🌍","CAF":"🌍","AFC":"🌏","OFC":"🌊"}[userAvatar.slice(5)];
-      return <span style={{fontSize:36}}>{em||"⚽"}</span>;
     }
     return <span style={{fontSize:32}}>👤</span>;
   };
@@ -3677,9 +3692,11 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
                 <div onClick={()=>setShowAvatarPicker(true)} style={{position:"relative",width:52,height:52,borderRadius:"50%",flexShrink:0,background:isSynced?`${C.green}22`:C.bg,border:`2.5px solid ${isSynced?C.green:C.b2}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,cursor:"pointer",overflow:"hidden"}}>
                   {userAvatar && userAvatar.startsWith("data:")
                     ? <img src={userAvatar} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="avatar"/>
-                    : userAvatar && userAvatar.startsWith("crest:")
-                      ? <img src={getCrestUrl(userAvatar)} style={{width:"80%",height:"80%",objectFit:"contain"}} alt="crest"/>
-                      : userAvatar && userAvatar.startsWith("flag:")
+                    : userAvatar && userAvatar.startsWith("icon:")
+                      ? (() => { const ic = FOOTBALL_ICONS.find(i=>i.id===userAvatar); return ic ? <svg width="36" height="36" viewBox="0 0 76 76" dangerouslySetInnerHTML={{__html:ic.svg}}/> : "⚽"; })()
+                      : userAvatar && userAvatar.startsWith("crest:")
+                        ? <img src={getCrestUrl(userAvatar)} style={{width:"80%",height:"80%",objectFit:"contain"}} alt="crest"/>
+                        : userAvatar && userAvatar.startsWith("flag:")
                         ? <img src={`https://flagcdn.com/w80/${FLAG_CODES_MAP[userAvatar.slice(5)]}.png`} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="avatar"/>
                         : userAvatar && userAvatar.startsWith("conf:")
                           ? <span style={{fontSize:26}}>{ {"UEFA":"🇪🇺","CONMEBOL":"🌎","CONCACAF":"🌍","CAF":"🌍","AFC":"🌏","OFC":"🌊"}[userAvatar.slice(5)]||"⚽"}</span>
@@ -3921,7 +3938,7 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
 
               {/* Tabs */}
               <div style={{display:"flex",borderBottom:`1px solid ${C.b1}`,flexShrink:0}}>
-                {[["crests","🛡️ Crests"],["flags","🏳️ Flags"],["confs","🏆 Confederations"],["upload","📷 My Photo"]].map(([id,label])=>(
+                {[["icons","⚽ Icons"],["crests","🛡️ Crests"],["flags","🏳️ Flags"],["upload","📷 Photo"]].map(([id,label])=>(
                   <button key={id} onClick={()=>{setAvatarTab(id);setAvatarSearch("");}} style={{flex:1,padding:"10px 2px",background:"none",border:"none",borderBottom:`2px solid ${avatarTab===id?C.green:"transparent"}`,color:avatarTab===id?C.green:C.dim,fontWeight:avatarTab===id?700:400,fontSize:11,cursor:"pointer"}}>
                     {label}
                   </button>
@@ -3930,6 +3947,22 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
 
               {/* Content */}
               <div style={{overflowY:"auto",padding:12,flex:1}}>
+
+                {/* Football Icons */}
+                {avatarTab === "icons" && (
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8}}>
+                    {FOOTBALL_ICONS.map(icon => {
+                      const active = userAvatar === icon.id;
+                      return (
+                        <button key={icon.id} onClick={()=>selectPresetAvatar(icon.id)} title={icon.label} style={{padding:"10px 4px",border:`2px solid ${active?C.green:C.b2}`,borderRadius:10,background:active?`${C.green}22`:C.s2,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:4,position:"relative"}}>
+                          <svg width="48" height="48" viewBox="0 0 76 76" dangerouslySetInnerHTML={{__html:icon.svg}}/>
+                          <span style={{fontSize:9,color:active?C.green:C.dim,textAlign:"center",lineHeight:1.2,fontWeight:active?700:400}}>{icon.label}</span>
+                          {active && <div style={{position:"absolute",top:2,right:2,width:12,height:12,borderRadius:"50%",background:C.green,display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,color:"#030a05",fontWeight:900}}>✓</div>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
 
                 {/* Federation Crests */}
                 {avatarTab === "crests" && (
@@ -4311,25 +4344,27 @@ export default function App() {
             </div>
             <div style={{display:"flex",alignItems:"center",gap:8}}>
               {/* Dark/light toggle — sun/moon pill */}
-              <button onClick={toggleDark} title={dark?"Switch to light mode":"Switch to dark mode"} style={{position:"relative",width:56,height:28,borderRadius:14,border:"none",background:dark?"#4ade80":"#1a3828",cursor:"pointer",flexShrink:0,padding:0,transition:"background .25s",display:"flex",alignItems:"center"}}>
-                {/* Sun icon — left side */}
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" style={{position:"absolute",left:5,top:"50%",transform:"translateY(-50%)",opacity:dark?1:0.4,transition:"opacity .2s",pointerEvents:"none",zIndex:1}}>
-                  <circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+              <button onClick={toggleDark} title={dark?"Switch to light mode":"Switch to dark mode"} style={{position:"relative",width:56,height:28,borderRadius:14,border:"none",background:dark?"#4ade80":"#1a3828",cursor:"pointer",flexShrink:0,padding:0,transition:"background .25s"}}>
+                {/* Sliding knob */}
+                <span style={{position:"absolute",top:4,left:dark?32:4,width:20,height:20,borderRadius:"50%",background:"#e5e5ea",boxShadow:"0 1px 4px rgba(0,0,0,.35)",transition:"left .22s cubic-bezier(.4,0,.2,1)",display:"block"}}/>
+                {/* Sun — visible in dark mode, sits in left exposed area */}
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(5,50,20,0.8)" strokeWidth="2.5" strokeLinecap="round" style={{position:"absolute",left:7,top:7,opacity:dark?1:0,transition:"opacity .2s",pointerEvents:"none"}}>
+                  <circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.22" y1="19.78" x2="6.34" y2="17.66"/><line x1="17.66" y1="6.34" x2="19.78" y2="4.22"/>
                 </svg>
-                {/* Moon icon — right side */}
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="#fff" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" style={{position:"absolute",right:6,top:"50%",transform:"translateY(-50%)",opacity:dark?0.4:1,transition:"opacity .2s",pointerEvents:"none",zIndex:1}}>
+                {/* Moon — visible in light mode, sits in right exposed area */}
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="rgba(255,255,255,0.9)" stroke="none" style={{position:"absolute",right:7,top:8,opacity:dark?0:1,transition:"opacity .2s",pointerEvents:"none"}}>
                   <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
                 </svg>
-                {/* Sliding knob */}
-                <span style={{position:"absolute",top:3,left:dark?29:3,width:20,height:20,borderRadius:"50%",background:"#e5e5ea",boxShadow:"0 1px 4px rgba(0,0,0,.35)",transition:"left .22s cubic-bezier(.4,0,.2,1)",display:"block",zIndex:0}}/>
               </button>
               {/* Profile / sync avatar */}
               <button onClick={()=>setShowSyncModal(true)} title="My Account" style={{position:"relative",width:36,height:36,borderRadius:"50%",border:`2px solid ${syncProfile?C.green:dark?"#2a4f38":"#1a3828"}`,background:syncProfile?`${C.green}18`:dark?"#0c1a12":"#1a3828",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,flexShrink:0,transition:"border-color .2s,background .2s",overflow:"hidden",padding:0}}>
                 {userAvatar && userAvatar.startsWith("data:")
                   ? <img src={userAvatar} style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:"50%"}} alt="avatar"/>
-                  : userAvatar && userAvatar.startsWith("flag:")
-                    ? <img src={`https://flagcdn.com/w80/${FLAG_CODES[userAvatar.slice(5)]}.png`} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="avatar"/>
-                    : userAvatar && userAvatar.startsWith("crest:")
+                  : userAvatar && userAvatar.startsWith("icon:")
+                    ? (() => { const ic = FOOTBALL_ICONS.find(i=>i.id===userAvatar); return ic ? <svg width="22" height="22" viewBox="0 0 76 76" dangerouslySetInnerHTML={{__html:ic.svg}}/> : "⚽"; })()
+                    : userAvatar && userAvatar.startsWith("flag:")
+                      ? <img src={`https://flagcdn.com/w80/${FLAG_CODES[userAvatar.slice(5)]}.png`} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="avatar"/>
+                      : userAvatar && userAvatar.startsWith("crest:")
                       ? <img src={(()=>{const u=userAvatar.slice(6);return {"Argentina":"https://upload.wikimedia.org/wikipedia/en/thumb/c/c1/Argentina_national_football_team_badge.svg/200px-Argentina_national_football_team_badge.svg.png","Brazil":"https://upload.wikimedia.org/wikipedia/en/thumb/0/09/CBF_logo.svg/200px-CBF_logo.svg.png","France":"https://upload.wikimedia.org/wikipedia/en/thumb/4/43/Logo_FFF.svg/200px-Logo_FFF.svg.png","England":"https://upload.wikimedia.org/wikipedia/en/thumb/b/be/Flag_of_England.svg/200px-Flag_of_England.svg.png","Spain":"https://upload.wikimedia.org/wikipedia/en/thumb/4/44/Spain_national_football_team_badge_or_crest.png/200px-Spain_national_football_team_badge_or_crest.png","Germany":"https://upload.wikimedia.org/wikipedia/en/thumb/7/7a/Logo_des_Deutschen_Fu%C3%9Fball-Bundes.svg/200px-Logo_des_Deutschen_Fu%C3%9Fball-Bundes.svg.png","Portugal":"https://upload.wikimedia.org/wikipedia/en/thumb/f/fd/FPF-2016.svg/200px-FPF-2016.svg.png","Mexico":"https://upload.wikimedia.org/wikipedia/en/thumb/0/0e/Mexico_men%27s_national_football_team_crest.svg/200px-Mexico_men%27s_national_football_team_crest.svg.png","United States":"https://upload.wikimedia.org/wikipedia/en/thumb/a/a6/US_Soccer_logo_2022.svg/200px-US_Soccer_logo_2022.svg.png","Uruguay":"https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/Logo_AUF.svg/200px-Logo_AUF.svg.png","Japan":"https://upload.wikimedia.org/wikipedia/en/thumb/6/6d/JFA.svg/200px-JFA.svg.png","South Korea":"https://upload.wikimedia.org/wikipedia/en/thumb/5/5c/KFA_logo.svg/200px-KFA_logo.svg.png","Canada":"https://upload.wikimedia.org/wikipedia/en/thumb/b/bf/Canada_Soccer_Logo.svg/200px-Canada_Soccer_Logo.svg.png"}[u]||null})()}  style={{width:"100%",height:"100%",objectFit:"contain"}} alt="crest"/>
                       : userAvatar && userAvatar.startsWith("conf:")
                         ? <span style={{fontSize:20,lineHeight:1}}>{{"UEFA":"🇪🇺","CONMEBOL":"🌎","CONCACAF":"🌍","CAF":"🌍","AFC":"🌏","OFC":"🌊"}[userAvatar.slice(5)]||"⚽"}</span>

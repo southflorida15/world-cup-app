@@ -9,7 +9,11 @@
 //   POST ?action=push         → save current state to KV (for synced user)
 //   POST ?action=pull         → fetch latest state from KV
 
-import { kv } from "@vercel/kv";
+import { Redis } from "@upstash/redis";
+const kv = new Redis({
+  url: process.env.KV_REST_API_URL,
+  token: process.env.KV_REST_API_TOKEN,
+});
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY; // add this to Vercel env vars
 const APP_URL        = process.env.APP_URL || "https://world-cup-app-iota.vercel.app";
