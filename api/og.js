@@ -3,25 +3,23 @@
 // default       → HTML share page
 
 const VENUE_COORDS = {
-  // USA
-  "MetLife Stadium":           { lat: 40.8135, lng: -74.0745, tz: "America/New_York",     city: "East Rutherford, NJ" },
-  "AT&T Stadium":              { lat: 32.7478, lng: -97.0928, tz: "America/Chicago",      city: "Arlington, TX" },
-  "SoFi Stadium":              { lat: 33.9535, lng: -118.3392,tz: "America/Los_Angeles",  city: "Inglewood, CA" },
-  "Levi's Stadium":            { lat: 37.4033, lng: -121.9694,tz: "America/Los_Angeles",  city: "Santa Clara, CA" },
-  "Arrowhead Stadium":         { lat: 39.0489, lng: -94.4839, tz: "America/Chicago",      city: "Kansas City, MO" },
-  "Lincoln Financial Field":   { lat: 39.9008, lng: -75.1675, tz: "America/New_York",     city: "Philadelphia, PA" },
-  "Gillette Stadium":          { lat: 42.0909, lng: -71.2643, tz: "America/New_York",     city: "Foxborough, MA" },
-  "Hard Rock Stadium":         { lat: 25.9580, lng: -80.2389, tz: "America/New_York",     city: "Miami Gardens, FL" },
-  "NRG Stadium":               { lat: 29.6847, lng: -95.4107, tz: "America/Chicago",      city: "Houston, TX" },
-  "Allegiant Stadium":         { lat: 36.0909, lng: -115.1833,tz: "America/Los_Angeles",  city: "Las Vegas, NV" },
-  "Seattle Stadium":           { lat: 47.5952, lng: -122.3316,tz: "America/Los_Angeles",  city: "Seattle, WA" },
-  // Canada
-  "BC Place":                  { lat: 49.2768, lng: -123.1116,tz: "America/Vancouver",    city: "Vancouver, BC" },
-  "BMO Field":                 { lat: 43.6333, lng: -79.4186, tz: "America/Toronto",      city: "Toronto, ON" },
-  // Mexico
-  "Estadio Azteca":            { lat: 19.3030, lng: -99.1506, tz: "America/Mexico_City",  city: "Mexico City" },
-  "Estadio Akron":             { lat: 20.6709, lng: -103.4619,tz: "America/Mexico_City",  city: "Guadalajara" },
-  "Estadio BBVA":              { lat: 25.6693, lng: -100.2439,tz: "America/Monterrey",    city: "Monterrey" },
+  // Exact names from App.jsx match data
+  "New York New Jersey Stadium": { lat: 40.8135, lng: -74.0745, tz: "America/New_York",    city: "East Rutherford, NJ" },
+  "SoFi Stadium":                { lat: 33.9535, lng: -118.3392,tz: "America/Los_Angeles", city: "Inglewood, CA" },
+  "Seattle Stadium":             { lat: 47.5952, lng: -122.3316,tz: "America/Los_Angeles", city: "Seattle, WA" },
+  "BC Place":                    { lat: 49.2768, lng: -123.1116,tz: "America/Vancouver",   city: "Vancouver, BC" },
+  "Dallas Stadium":              { lat: 32.7478, lng: -97.0928, tz: "America/Chicago",     city: "Arlington, TX" },
+  "Kansas City Stadium":         { lat: 39.0489, lng: -94.4839, tz: "America/Chicago",     city: "Kansas City, MO" },
+  "Philadelphia Stadium":        { lat: 39.9008, lng: -75.1675, tz: "America/New_York",    city: "Philadelphia, PA" },
+  "Boston Stadium":              { lat: 42.0909, lng: -71.2643, tz: "America/New_York",    city: "Foxborough, MA" },
+  "Miami Stadium":               { lat: 25.9580, lng: -80.2389, tz: "America/New_York",    city: "Miami Gardens, FL" },
+  "Houston Stadium":             { lat: 29.6847, lng: -95.4107, tz: "America/Chicago",     city: "Houston, TX" },
+  "Atlanta Stadium":             { lat: 33.7554, lng: -84.4009, tz: "America/New_York",    city: "Atlanta, GA" },
+  "San Francisco Bay Area Stadium":{ lat: 37.4033,lng: -121.9694,tz:"America/Los_Angeles", city: "Santa Clara, CA" },
+  "Toronto Stadium":             { lat: 43.6333, lng: -79.4186, tz: "America/Toronto",     city: "Toronto, ON" },
+  "Mexico City Stadium":         { lat: 19.3030, lng: -99.1506, tz: "America/Mexico_City", city: "Mexico City" },
+  "Estadio Guadalajara":         { lat: 20.6709, lng: -103.4619,tz: "America/Mexico_City", city: "Guadalajara" },
+  "Estadio Monterrey":           { lat: 25.6693, lng: -100.2439,tz: "America/Monterrey",   city: "Monterrey" },
 };
 
 const WMO_LABEL = {
