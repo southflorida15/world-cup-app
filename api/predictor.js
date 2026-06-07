@@ -15,7 +15,11 @@
 //   leaderboard GET                            → [ { userId, name, pts, exact, correct } ... ]
 //   allPreds   GET   ?matchId=...              → everyone's predictions for a match (revealed after FT)
 
-import { kv } from "@vercel/kv";
+import { Redis } from "@upstash/redis";
+const kv = new Redis({
+  url: process.env.KV_REST_API_URL,
+  token: process.env.KV_REST_API_TOKEN,
+});
 
 // ── Score calculation (same logic as frontend) ────────────────────────────
 function calcScore(pred, actual) {
@@ -137,7 +141,7 @@ export default async function handler(req, res) {
       let cursor = 0;
       do {
         const [nextCursor, keys] = await kv.scan(cursor, { match: "user:*", count: 100 });
-        cursor = parseInt(nextCursor);
+        cursor = parseInt(nextCursor) || 0;
         for (const key of keys) {
           const uid = key.replace("user:", "");
           userIds.push(uid);
@@ -167,7 +171,7 @@ export default async function handler(req, res) {
       let cursor = 0;
       do {
         const [nextCursor, keys] = await kv.scan(cursor, { match: "user:*", count: 100 });
-        cursor = parseInt(nextCursor);
+        cursor = parseInt(nextCursor) || 0;
         keys.forEach(k => userIds.push(k.replace("user:", "")));
       } while (cursor !== 0);
 
