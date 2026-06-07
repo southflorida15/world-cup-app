@@ -2927,19 +2927,26 @@ function MatchEventsModal({ match, open, onClose, onAction }) {
       ? events.filter(ev=>ev.type==="Goal"||ev.type==="Card").slice(0,5)
           .map(ev=>({type:ev.type==="Goal"?"goal":ev.detail?.includes("Yellow")?"yellow":"red",name:ev.player?.name?.split(" ").pop()||"",min:ev.time?.elapsed||"",side:normTeam(ev.team?.name||"")===match.home?"home":"away"}))
       : [];
-    const params = new URLSearchParams({
-      home:match.home, away:match.away,
-      ...(hasScore?{hg:sc.hg,ag:sc.ag}:{}),
-      ...(match.group?{group:match.group}:{stage:match.stage||"World Cup 2026"}),
-      date:match.date, venue:(match.venue||"").split(",")[0],
-      ...(!hasScore&&p1?{p1:p1.poly}:{}),
-      ...(!hasScore&&p2?{p2:p2.poly}:{}),
-      ...(keyEvents.length>0?{events:encodeURIComponent(JSON.stringify(keyEvents))}:{}),
-      v:Date.now(),
-    });
-    const imageUrl=`${base}/api/og?${params}`;
-    if(navigator.share) navigator.share({title:`${match.home} vs ${match.away} — World Cup 2026`,url:imageUrl}).catch(()=>{});
-    else navigator.clipboard?.writeText(imageUrl);
+    const params = new URLSearchParams();
+    params.set("home", match.home);
+    params.set("away", match.away);
+    if (hasScore) { params.set("hg", sc.hg); params.set("ag", sc.ag); }
+    if (match.group) params.set("group", match.group);
+    else params.set("stage", match.stage||"World Cup 2026");
+    if (match.date) params.set("date", match.date);
+    if (match.venue) params.set("venue", match.venue.split(",")[0]);
+    if (!hasScore && p1) params.set("p1", p1.poly);
+    if (!hasScore && p2) params.set("p2", p2.poly);
+    if (keyEvents.length > 0) params.set("events", encodeURIComponent(JSON.stringify(keyEvents)));
+    const shareUrl = base + "/api/og?" + params.toString();
+    const title = hasScore
+      ? match.home + " " + sc.hg + "-" + sc.ag + " " + match.away + " · World Cup 2026"
+      : match.home + " vs " + match.away + " · World Cup 2026";
+    if (navigator.share) {
+      navigator.share({ title, url: shareUrl }).catch(()=>{});
+    } else {
+      navigator.clipboard?.writeText(shareUrl);
+    }
   };
 
   return (
@@ -3016,23 +3023,35 @@ function MatchEventsModal({ match, open, onClose, onAction }) {
           )}
 
           {/* ── ODDS ── */}
-          {!finished && (
+          {!finished && simOdds && (
             <div style={{marginBottom:12}}>
               <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",marginBottom:8}}>WIN PROBABILITY</div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
                 {[
-                  {label:match.home, val:simOdds?.win1, poly:p1?.poly, color:C.green},
-                  {label:"Draw",     val:simOdds?.draw,  poly:null,      color:C.gold},
-                  {label:match.away, val:simOdds?.win2, poly:p2?.poly, color:C.rival},
-                ].map(({label,val,poly,color})=>(
+                  {label:match.home, sim:simOdds.win1, poly:p1?.poly, color:C.green},
+                  {label:"Draw",     sim:simOdds.draw,  poly:null,     color:C.gold},
+                  {label:match.away, sim:simOdds.win2, poly:p2?.poly, color:C.rival},
+                ].map(({label,sim,poly,color})=>(
                   <div key={label} style={{background:C.s1,border:`1px solid ${color}33`,borderRadius:10,padding:"10px 6px",textAlign:"center"}}>
-                    <div style={{fontSize:22,fontWeight:900,color,lineHeight:1}}>{val}%</div>
-                    <div style={{fontSize:9,color:C.dim,marginTop:3,marginBottom:poly?4:0}}>Simulator</div>
-                    {poly && <div style={{fontSize:12,fontWeight:700,color,borderTop:`1px solid ${color}22`,paddingTop:4}}>{poly}% <span style={{fontSize:9,color:C.dim}}>Polymarket</span></div>}
-                    <div style={{fontSize:10,color:C.mid,marginTop:3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{label}</div>
+                    {/* Polymarket odds — only if available */}
+                    {poly ? (
+                      <>
+                        <div style={{fontSize:22,fontWeight:900,color,lineHeight:1}}>{poly}%</div>
+                        <div style={{fontSize:9,color:C.dim,marginTop:2,marginBottom:4}}>Polymarket</div>
+                        <div style={{borderTop:`1px solid ${color}22`,paddingTop:4,fontSize:11,color:C.dim}}>{sim}% sim</div>
+                      </>
+                    ) : (
+                      <>
+                        <div style={{fontSize:22,fontWeight:900,color,lineHeight:1}}>{sim}%</div>
+                        <div style={{fontSize:9,color:C.dim,marginTop:2}}>Simulator</div>
+                      </>
+                    )}
+                    <div style={{fontSize:10,color:C.mid,marginTop:4,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{label}</div>
                   </div>
                 ))}
               </div>
+              {(p1||p2) && <div style={{fontSize:10,color:C.dim,marginTop:6,textAlign:"right"}}>Polymarket odds where available · Simulator: {(5000).toLocaleString()} runs</div>}
+              {(!p1&&!p2) && <div style={{fontSize:10,color:C.dim,marginTop:6,textAlign:"right"}}>Based on {(5000).toLocaleString()} simulated tournaments</div>}
             </div>
           )}
 
