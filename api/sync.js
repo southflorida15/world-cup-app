@@ -58,7 +58,7 @@ export default async function handler(req, res) {
         } while (await kv.get(`pin:${pin}`));
       }
 
-      const profile = { uid, pin, saved: saved || [], favTeams: favTeams || [], dark, locationOverride, avatar: avatar || null, updatedAt: Date.now() };
+      const profile = { uid, pin, saved: saved || [], favTeams: favTeams || [], dark, locationOverride, avatar: avatar || null, displayName: displayName || "", updatedAt: Date.now() };
 
       // Store by PIN and by UID
       await kv.set(`pin:${pin}`,  profile, { ex: 60 * 60 * 24 * 180 }); // 180 days

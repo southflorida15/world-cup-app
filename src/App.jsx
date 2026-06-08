@@ -2607,6 +2607,44 @@ function SavedTab({ saved, onRemove, tabTop=116 }) {
   );
 }
 
+const HOST_CITIES = {
+  "New York/New Jersey": { country:"🇺🇸", tz:"America/New_York", lat:40.8135, lon:-74.0745, stadium:"MetLife Stadium", capacity:82500 },
+  "Los Angeles":         { country:"🇺🇸", tz:"America/Los_Angeles", lat:33.9535, lon:-118.3392, stadium:"SoFi Stadium", capacity:70240 },
+  "Dallas":              { country:"🇺🇸", tz:"America/Chicago", lat:32.7474, lon:-97.0945, stadium:"AT&T Stadium", capacity:80000 },
+  "San Francisco":       { country:"🇺🇸", tz:"America/Los_Angeles", lat:37.4031, lon:-121.9694, stadium:"Levi's Stadium", capacity:68500 },
+  "Miami":               { country:"🇺🇸", tz:"America/New_York", lat:25.9580, lon:-80.2389, stadium:"Hard Rock Stadium", capacity:65326 },
+  "Atlanta":             { country:"🇺🇸", tz:"America/New_York", lat:33.7553, lon:-84.4006, stadium:"Mercedes-Benz Stadium", capacity:71000 },
+  "Seattle":             { country:"🇺🇸", tz:"America/Los_Angeles", lat:47.5952, lon:-122.3316, stadium:"Lumen Field", capacity:69000 },
+  "Boston":              { country:"🇺🇸", tz:"America/New_York", lat:42.3467, lon:-71.0972, stadium:"Gillette Stadium", capacity:65878 },
+  "Philadelphia":        { country:"🇺🇸", tz:"America/New_York", lat:39.9012, lon:-75.1675, stadium:"Lincoln Financial Field", capacity:69796 },
+  "Kansas City":         { country:"🇺🇸", tz:"America/Chicago", lat:39.0489, lon:-94.4839, stadium:"Arrowhead Stadium", capacity:76416 },
+  "Houston":             { country:"🇺🇸", tz:"America/Chicago", lat:29.6847, lon:-95.4107, stadium:"NRG Stadium", capacity:72220 },
+  "Toronto":             { country:"🇨🇦", tz:"America/Toronto", lat:43.6333, lon:-79.3891, stadium:"BMO Field", capacity:45000 },
+  "Vancouver":           { country:"🇨🇦", tz:"America/Vancouver", lat:49.2767, lon:-123.1115, stadium:"BC Place", capacity:54500 },
+  "Mexico City":         { country:"🇲🇽", tz:"America/Mexico_City", lat:19.3029, lon:-99.1505, stadium:"Estadio Azteca", capacity:87523 },
+  "Guadalajara":         { country:"🇲🇽", tz:"America/Mexico_City", lat:20.6867, lon:-103.4079, stadium:"Estadio Akron", capacity:49850 },
+  "Monterrey":           { country:"🇲🇽", tz:"America/Monterrey", lat:25.6694, lon:-100.2436, stadium:"Estadio BBVA", capacity:53500 },
+};
+
+const VENUE_TO_CITY = {
+  "New York New Jersey Stadium, East Rutherford":"New York/New Jersey",
+  "SoFi Stadium, Los Angeles":"Los Angeles",
+  "Dallas Stadium, Dallas":"Dallas",
+  "San Francisco Bay Area Stadium, San Francisco":"San Francisco",
+  "Miami Stadium, Miami":"Miami",
+  "Atlanta Stadium, Atlanta":"Atlanta",
+  "Seattle Stadium, Seattle":"Seattle",
+  "Boston Stadium, Boston":"Boston",
+  "Philadelphia Stadium, Philadelphia":"Philadelphia",
+  "Kansas City Stadium, Kansas City":"Kansas City",
+  "Houston Stadium, Houston":"Houston",
+  "Toronto Stadium, Toronto":"Toronto",
+  "BC Place, Vancouver":"Vancouver",
+  "Mexico City Stadium, Mexico City":"Mexico City",
+  "Estadio Guadalajara, Zapopan":"Guadalajara",
+  "Estadio Monterrey, Guadalupe":"Monterrey",
+};
+
 function useWeather(lat, lon, enabled) {
   const [wx, setWx] = useState(null);
   useEffect(() => {
