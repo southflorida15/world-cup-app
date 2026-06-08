@@ -1020,6 +1020,7 @@ function SchedTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=
   const [groupF, setGroupF] = useState("All");
   const [teamF, setTeamF] = useState("");
   const [venueF, setVenueF] = useState("");
+  const [roundF, setRoundF] = useState("");
   const [selDate, setSelDate] = useState(null); // null = all dates
   const stripRef = useRef(null);
 
@@ -1038,7 +1039,7 @@ function SchedTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=
     if (active) active.scrollIntoView({ behavior:"smooth", block:"nearest", inline:"center" });
   }, [selDate]);
 
-  const allTeams = [...new Set(MATCHES.flatMap(m=>[m.home,m.away]))].sort();
+  const allTeams = [...new Set(MATCHES.flatMap(m=>[m.home,m.away]).filter(t => t && !/^(QF|SF|RO|W|L|M|Match|Winner|Loser)/.test(t) && t.length > 2))].sort();
   const allVenues = [...new Set(MATCHES.map(m=>m.venue))].sort();
 
   const shown = MATCHES.filter(m => {
@@ -1053,6 +1054,16 @@ function SchedTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=
     if(filterMode==="group") { if(groupF==="All")return true; if(groupF==="Knockout")return!m.group; return m.group===groupF; }
     if(filterMode==="team") return !teamF||m.home===teamF||m.away===teamF;
     if(filterMode==="venue") return !venueF||m.venue===venueF;
+    if(filterMode==="round") {
+      if(!roundF) return true;
+      if(roundF==="group") return !!m.group;
+      if(roundF==="r32") return m.stage==="Round of 32"||m.round==="R32"||(!m.group&&m.id>=65&&m.id<=96);
+      if(roundF==="r16") return m.stage==="Round of 16"||m.round==="R16"||(!m.group&&m.id>=97&&m.id<=104);
+      if(roundF==="qf") return m.stage==="Quarter-Final"||m.round==="QF"||(!m.group&&m.id>=105&&m.id<=108);
+      if(roundF==="sf") return m.stage==="Semi-Final"||m.round==="SF"||(!m.group&&m.id>=109&&m.id<=110);
+      if(roundF==="final") return m.stage==="Final"||m.round==="Final"||m.id>=111;
+      return true;
+    }
     return true;
   });
   const byDate = shown.reduce((a,m)=>{ const {dateLabel}=matchTimes(m); const key=dateLabel||m.date; (a[key]=a[key]||[]).push(m); return a; },{});
@@ -1096,6 +1107,7 @@ function SchedTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=
           <button style={ss(filterMode==="group")} onClick={()=>setFilterMode("group")}>🗂 Group</button>
           <button style={ss(filterMode==="team")} onClick={()=>setFilterMode("team")}>👥 Team</button>
           <button style={ss(filterMode==="venue")} onClick={()=>setFilterMode("venue")}>📍 Venue</button>
+          <button style={ss(filterMode==="round")} onClick={()=>setFilterMode("round")}>🏆 Round</button>
         </div>
         {filterMode==="group" && (
           <div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none"}}>
@@ -1113,6 +1125,13 @@ function SchedTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=
             <option value="">All venues</option>
             {allVenues.map(v=><option key={v} value={v}>{v}</option>)}
           </select>
+        )}
+        {filterMode==="round" && (
+          <div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none"}}>
+            {[{id:"",label:"All"},{id:"group",label:"Group Stage"},{id:"r32",label:"Round of 32"},{id:"r16",label:"Round of 16"},{id:"qf",label:"Quarter-Finals"},{id:"sf",label:"Semi-Finals"},{id:"final",label:"Final"}].map(r=>
+              <Pill key={r.id} active={roundF===r.id} onClick={()=>setRoundF(r.id)} color={r.id===""?C.mid:C.gold}>{r.label}</Pill>
+            )}
+          </div>
         )}
       </div>
 
@@ -3199,7 +3218,7 @@ function WeatherBadge({ lat, lon }) {
   );
 }
 
-function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set() }) {
+function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), userPredHg, userPredAg }) {
   const [events, setEvents] = useState(null);
   const [matchStats, setMatchStats] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -3262,20 +3281,36 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set() }
     if (!hasScore && p1) params.set("p1", p1.poly);
     if (!hasScore && p2) params.set("p2", p2.poly);
     if (keyEvents.length > 0) params.set("events", encodeURIComponent(JSON.stringify(keyEvents)));
-    // Include user's prediction if they made one
-    const userPred = preds?.[match.id];
-    if (userPred?.hg !== undefined && userPred?.hg !== "" && userPred?.ag !== undefined && userPred?.ag !== "") {
-      params.set("predHg", userPred.hg);
-      params.set("predAg", userPred.ag);
+    // Include user's prediction if passed as prop
+    if (userPredHg !== undefined && userPredHg !== "" && userPredAg !== undefined && userPredAg !== "") {
+      params.set("predHg", userPredHg);
+      params.set("predAg", userPredAg);
     }
     const shareUrl = base + "/api/og?" + params.toString();
     const title = hasScore
       ? match.home + " " + sc.hg + "-" + sc.ag + " " + match.away + " · World Cup 2026"
       : match.home + " vs " + match.away + " · World Cup 2026";
+    // Trim URL if too long (events JSON can bloat it) — Safari has ~2KB limit
+    const finalUrl = shareUrl.length > 1800
+      ? base + "/api/og?" + new URLSearchParams({
+          home: match.home, away: match.away,
+          ...(hasScore ? {hg: sc.hg, ag: sc.ag} : {}),
+          ...(match.group ? {group: match.group} : {stage: match.stage||"World Cup 2026"}),
+          ...(match.date ? {date: match.date} : {}),
+          ...(match.venue ? {venue: match.venue.split(",")[0]} : {}),
+        }).toString()
+      : shareUrl;
+
     if (navigator.share) {
-      navigator.share({ title, url: shareUrl }).catch(()=>{});
+      navigator.share({
+        title,
+        text: hasScore
+          ? `${match.home} ${sc.hg}-${sc.ag} ${match.away} · World Cup 2026`
+          : `${match.home} vs ${match.away} · World Cup 2026 · ${match.date||""}`,
+        url: finalUrl,
+      }).catch(()=>{});
     } else {
-      navigator.clipboard?.writeText(shareUrl);
+      navigator.clipboard?.writeText(finalUrl).then(()=>alert("Link copied!")).catch(()=>{});
     }
   };
 
@@ -4590,10 +4625,14 @@ export default function App() {
         {showSavedView && (
           <div style={{position:"fixed",inset:0,background:C.bg,zIndex:200,display:"flex",flexDirection:"column"}}>
             {/* Back header */}
-            <div style={{display:"flex",alignItems:"center",gap:12,padding:"16px 16px 12px",borderBottom:`1px solid ${C.b1}`,background:C.s1,flexShrink:0,maxWidth:700,width:"100%",alignSelf:"center",boxSizing:"border-box"}}>
-              <button onClick={()=>setShowSavedView(false)} style={{background:"none",border:"none",color:C.mid,fontSize:28,cursor:"pointer",lineHeight:1,padding:"0 4px",fontWeight:300}}>‹</button>
-              <span style={{fontWeight:700,fontSize:17,color:C.green}}>My Matches</span>
-              <span style={{fontSize:13,color:C.dim,marginLeft:"auto"}}>{saved.length} saved</span>
+            <div style={{width:"100%",borderBottom:`1px solid ${C.b1}`,background:C.s1,flexShrink:0}}>
+              <div style={{display:"flex",alignItems:"center",gap:12,padding:"14px 16px 12px",maxWidth:700,margin:"0 auto"}}>
+                <button onClick={()=>setShowSavedView(false)} style={{background:"none",border:"none",color:C.green,fontSize:15,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:6,padding:"4px 10px 4px 0"}}>
+                  <span style={{fontSize:20,lineHeight:1}}>‹</span> Back
+                </button>
+                <span style={{fontWeight:700,fontSize:17,color:C.green}}>My Matches</span>
+                <span style={{fontSize:13,color:C.dim,marginLeft:"auto"}}>{saved.length} saved</span>
+              </div>
             </div>
             {/* Scrollable content */}
             <div style={{flex:1,overflowY:"auto",position:"relative"}} id="saved-scroll">
@@ -4620,7 +4659,7 @@ export default function App() {
             try{localStorage.removeItem("wc2026_favs")}catch{}
           }}
         />
-        <MatchEventsModal match={eventsModal.match} open={eventsModal.open} onClose={()=>setEventsModal({open:false,match:null})} onAction={onAction} savedIds={savedIds}/>
+        <MatchEventsModal match={eventsModal.match} open={eventsModal.open} onClose={()=>setEventsModal({open:false,match:null})} onAction={onAction} savedIds={savedIds} userPredHg={eventsModal.predHg} userPredAg={eventsModal.predAg}/>
         <Toast msg={toast} onDone={()=>setToast("")}/>
         <InstallBanner/>
       </div>

@@ -207,6 +207,8 @@ export default async function handler(req, res) {
   if (ag !== undefined) imgParams.set("ag", ag);
   if (p1) imgParams.set("p1", p1);
   if (p2) imgParams.set("p2", p2);
+  if (predHg !== undefined) imgParams.set("predHg", predHg);
+  if (predAg !== undefined) imgParams.set("predAg", predAg);
 
   const ogImg  = base + "/api/og?" + imgParams.toString();
   const appUrl = base;
