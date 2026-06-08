@@ -4156,6 +4156,26 @@ export default function App() {
   const [showFavPicker, setShowFavPicker] = useState(false);
   const favTeam = favTeams[0] || "";
 
+  // Auto-pull on startup — if already signed in, fetch latest profile from KV
+  useEffect(() => {
+    if (!syncProfile?.uid) return;
+    fetch("/api/sync?action=pull", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ uid: syncProfile.uid })
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (!data.ok || !data.profile) return;
+        const p = data.profile;
+        if (p.avatar) persistAvatar(p.avatar);
+        if (p.displayName) persistDisplayName(p.displayName);
+        if (p.favTeams?.length) setFavTeams(p.favTeams);
+        if (p.dark !== undefined) setDark(p.dark);
+      })
+      .catch(() => {});
+  }, []); // runs once on mount
+
   // Magic link redirect handler
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
