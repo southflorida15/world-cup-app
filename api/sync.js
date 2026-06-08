@@ -38,16 +38,25 @@ export default async function handler(req, res) {
   // ── PIN CREATE ────────────────────────────────────────────────────────────
   if (action === "pin-create" && req.method === "POST") {
     try {
-      const { uid, saved, favTeams, dark, locationOverride, avatar, displayName } = req.body;
+      const { uid, saved, favTeams, dark, locationOverride, avatar, displayName, chosenPin } = req.body;
       if (!uid) return res.status(400).json({ error: "uid required" });
 
-      // Generate a unique PIN
-      let pin, attempts = 0;
-      do {
-        pin = genPIN();
-        attempts++;
-        if (attempts > 20) return res.status(500).json({ error: "Could not generate unique PIN" });
-      } while (await kv.get(`pin:${pin}`));
+      let pin;
+      if (chosenPin) {
+        // User chose their own PIN — validate it
+        if (!/^\d{6}$/.test(chosenPin)) return res.status(400).json({ error: "PIN must be 6 digits" });
+        const existing = await kv.get(`pin:${chosenPin}`);
+        if (existing && existing.uid !== uid) return res.status(409).json({ error: "That PIN is already taken. Please choose another." });
+        pin = chosenPin;
+      } else {
+        // Generate a unique PIN as fallback
+        let attempts = 0;
+        do {
+          pin = genPIN();
+          attempts++;
+          if (attempts > 20) return res.status(500).json({ error: "Could not generate unique PIN" });
+        } while (await kv.get(`pin:${pin}`));
+      }
 
       const profile = { uid, pin, saved: saved || [], favTeams: favTeams || [], dark, locationOverride, avatar: avatar || null, updatedAt: Date.now() };
 
@@ -170,6 +179,32 @@ export default async function handler(req, res) {
       }
 
       return res.status(200).json({ ok: true });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  }
+
+  // ── PIN CHANGE ───────────────────────────────────────────────────────────
+  if (action === "pin-change" && req.method === "POST") {
+    try {
+      const { uid, oldPin, newPin, saved, favTeams, dark, locationOverride, displayName, avatar } = req.body;
+      if (!uid || !newPin) return res.status(400).json({ error: "uid and newPin required" });
+      if (!/^\d{6}$/.test(newPin)) return res.status(400).json({ error: "PIN must be 6 digits" });
+
+      // Check new PIN not taken by someone else
+      const existing = await kv.get(`pin:${newPin}`);
+      if (existing && existing.uid !== uid) return res.status(409).json({ error: "That PIN is already taken. Please choose another." });
+
+      const profile = { uid, pin: newPin, saved: saved || [], favTeams: favTeams || [], dark, locationOverride, displayName: displayName || "", avatar: avatar || null, updatedAt: Date.now() };
+
+      // Delete old PIN key
+      if (oldPin && oldPin !== newPin) await kv.del(`pin:${oldPin}`);
+
+      // Save under new PIN and uid
+      await kv.set(`pin:${newPin}`, profile, { ex: 60 * 60 * 24 * 180 });
+      await kv.set(`uid:${uid}`, profile, { ex: 60 * 60 * 24 * 180 });
+
+      return res.status(200).json({ ok: true, pin: newPin });
     } catch (err) {
       return res.status(500).json({ error: err.message });
     }

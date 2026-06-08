@@ -4,8 +4,17 @@ import React, { useState, useEffect, useContext, createContext, useCallback, use
 const C = {
   bg:"#060e0a", s1:"#0c1a12", s2:"#112618", b1:"#1a3828", b2:"#234833",
   green:"#4ade80", greenS:"#4ade8055", gold:"#fbbf24", blue:"#60a5fa",
-  rival:"#38bdf8", // sky blue — Team 2 color in H2H (neutral, not "loser" red)
-  red:"#f87171", text:"#d4ead9", mid:"#7aaa8a", dim:"#3d6a4d",
+  rival:"#38bdf8", red:"#f87171", text:"#d4ead9", mid:"#7aaa8a", dim:"#3d6a4d",
+};
+const DARK = {
+  bg:"#060e0a", s1:"#0c1a12", s2:"#112618", b1:"#1a3828", b2:"#234833",
+  green:"#4ade80", greenS:"#4ade8055", gold:"#fbbf24", blue:"#60a5fa",
+  rival:"#38bdf8", red:"#f87171", text:"#d4ead9", mid:"#7aaa8a", dim:"#3d6a4d",
+};
+const LIGHT = {
+  bg:"#e8f5ec", s1:"#d4ead9", s2:"#c0ddc9", b1:"#a0c8b0", b2:"#80b090",
+  green:"#166534", greenS:"#16653444", gold:"#92400e", blue:"#1d4ed8",
+  rival:"#0369a1", red:"#991b1b", text:"#0a1f10", mid:"#1a5c30", dim:"#2d7a4a",
 };
 
 // ── GROUPS ────────────────────────────────────────────────────────────────
@@ -882,11 +891,8 @@ function SchedTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=
   const byDate = shown.reduce((a,m)=>{ const {dateLabel}=matchTimes(m); const key=dateLabel||m.date; (a[key]=a[key]||[]).push(m); return a; },{});
   const ss=(active,color=C.green)=>({padding:"5px 12px",borderRadius:20,border:`1px solid ${active?color:C.b1}`,background:active?`${color}18`:"transparent",color:active?color:C.mid,fontSize:12,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap"});
 
-  const [filterHeight, setFilterHeight] = useState(0);
   const filterRef = useRef(null);
-  useEffect(() => {
-    if (filterRef.current) setFilterHeight(filterRef.current.offsetHeight);
-  }, [filterMode, selDate]);
+  const filterHeight = useElemHeight(filterRef);
 
   return (
     <div>
@@ -2345,16 +2351,16 @@ function SavedMatchCard({ item, onRemove }) {
     return Notification.permission;
   });
   const [notified, setNotified] = useState(false);
-  const [showInstallTip, setShowInstallTip] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const m = item.match;
-  const finished = false; // saved matches are upcoming by definition
 
   const notifyText = `⚽ ${m.home} vs ${m.away} · ${m.date} · ${m.time} · ${m.venue?.split(",")[0]||""}`;
-
   const handleWhatsApp = () => window.open(`https://wa.me/?text=${encodeURIComponent(notifyText)}`, "_blank");
   const handleSMS      = () => window.open(`sms:&body=${encodeURIComponent(notifyText)}`, "_blank");
+  const handleCalendar = () => downloadICS([item]);
 
   const handlePush = async () => {
+    if (pushState === "needs-install") { setExpanded(true); return; }
     let state = pushState;
     if (state !== "granted") {
       state = await requestPushPermission();
@@ -2365,98 +2371,74 @@ function SavedMatchCard({ item, onRemove }) {
     try {
       const reg = await navigator.serviceWorker.ready;
       let sub = await reg.pushManager.getSubscription();
-      if (!sub) {
-        sub = await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array("BHlG2j1aEN_PheVmM_kw6eG5ho26LSMdtxSVEjiz9HnYqKTWWlOrdFdX-U3qUqR-VLxDrvOBik17FS7NJ1kJdr8"),
-        });
-      }
-      await fetch("/api/push-subscribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subscription: sub.toJSON(), matches: [m], minsBefore: 60 }),
-      });
+      if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array("BHlG2j1aEN_PheVmM_kw6eG5ho26LSMdtxSVEjiz9HnYqKTWWlOrdFdX-U3qUqR-VLxDrvOBik17FS7NJ1kJdr8") });
+      await fetch("/api/push-subscribe", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ subscription: sub.toJSON(), matches:[m], minsBefore:60 }) });
     } catch(e) { console.warn("Push subscribe failed:", e); }
     setNotified(true);
   };
 
-  const handleCalendar = () => downloadICS([item]);
-
   return (
-    <Card style={{marginBottom:8}}>
-      <div style={{padding:"11px 13px"}}>
-        {/* Match header */}
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
-          <div style={{display:"flex",alignItems:"center",gap:10}}>
-            <Crest team={m.home} size={24}/>
-            <div>
-              <div style={{fontWeight:700,color:C.text,marginBottom:2,fontSize:14}}>{m.home} vs {m.away}</div>
-              <div style={{fontSize:11,color:C.dim}}>{m.date} · {m.time} · {m.venue?.split(",")[0]||""}</div>
-            </div>
-          </div>
-          <button onClick={()=>onRemove(item.id)} style={{background:"none",border:"none",color:C.dim,fontSize:20,cursor:"pointer",lineHeight:1}}>×</button>
+    <div style={{background:C.s2,border:`1px solid ${C.b1}`,borderRadius:12,marginBottom:6,overflow:"hidden"}}>
+      {/* Single compact row */}
+      <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px"}}>
+        <Crest team={m.home} size={22}/>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontWeight:700,color:C.text,fontSize:13,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{m.home} vs {m.away}</div>
+          <div style={{fontSize:11,color:C.dim,marginTop:1}}>{m.date} · {m.time} · {m.venue?.split(",")[0]||""}</div>
         </div>
-        {/* Action buttons */}
-        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-          <button onClick={handleCalendar} style={{flex:"1 1 auto",padding:"7px 6px",borderRadius:9,cursor:"pointer",border:`1px solid ${C.green}44`,background:`${C.green}15`,color:C.green,fontSize:11,fontWeight:600}}>📅 Calendar</button>
-          <button onClick={handleWhatsApp} style={{flex:"1 1 auto",padding:"7px 6px",borderRadius:9,cursor:"pointer",border:`1px solid #25d36644`,background:"#25d36615",color:"#25d366",fontSize:11,fontWeight:600}}>💬 WhatsApp</button>
-          <button onClick={handleSMS}      style={{flex:"1 1 auto",padding:"7px 6px",borderRadius:9,cursor:"pointer",border:`1px solid ${C.blue}44`,background:`${C.blue}15`,color:C.blue,fontSize:11,fontWeight:600}}>📱 SMS</button>
-          <button onClick={pushState==="needs-install"?()=>setShowInstallTip(v=>!v):handlePush} disabled={pushState==="denied"} style={{flex:"1 1 auto",padding:"7px 6px",borderRadius:9,cursor:pushState==="denied"?"not-allowed":"pointer",border:`1px solid ${notified?C.green:pushState==="needs-install"?C.blue:C.gold}44`,background:notified?`${C.green}15`:pushState==="needs-install"?`${C.blue}15`:`${C.gold}15`,color:notified?C.green:pushState==="needs-install"?C.blue:C.gold,fontSize:11,fontWeight:600,opacity:pushState==="denied"?0.5:1}}>
-            {notified ? "🔔 Set!" : pushState==="denied" ? "🔔 Blocked" : pushState==="needs-install" ? "🔔 Install" : "🔔 Push"}
+        {/* Inline action icons */}
+        <div style={{display:"flex",gap:4,alignItems:"center",flexShrink:0}}>
+          <button onClick={handleCalendar} title="Add to Calendar" style={{padding:"5px 7px",borderRadius:7,border:`1px solid ${C.green}44`,background:`${C.green}15`,color:C.green,fontSize:13,cursor:"pointer",lineHeight:1}}>📅</button>
+          <button onClick={handleWhatsApp} title="WhatsApp" style={{padding:"5px 7px",borderRadius:7,border:"1px solid #25d36644",background:"#25d36615",color:"#25d366",fontSize:13,cursor:"pointer",lineHeight:1}}>💬</button>
+          <button onClick={handleSMS} title="SMS" style={{padding:"5px 7px",borderRadius:7,border:`1px solid ${C.blue}44`,background:`${C.blue}15`,color:C.blue,fontSize:13,cursor:"pointer",lineHeight:1}}>📱</button>
+          <button onClick={handlePush} title="Push notification" disabled={pushState==="denied"} style={{padding:"5px 7px",borderRadius:7,border:`1px solid ${notified?C.green:pushState==="needs-install"?C.blue:C.gold}44`,background:notified?`${C.green}15`:pushState==="needs-install"?`${C.blue}15`:`${C.gold}15`,color:notified?C.green:pushState==="needs-install"?C.blue:C.gold,fontSize:13,cursor:pushState==="denied"?"not-allowed":"pointer",lineHeight:1,opacity:pushState==="denied"?0.4:1}}>
+            {notified?"✓":"🔔"}
           </button>
+          <button onClick={()=>onRemove(item.id)} style={{padding:"5px 7px",borderRadius:7,border:`1px solid ${C.b2}`,background:"none",color:C.dim,fontSize:15,cursor:"pointer",lineHeight:1}}>×</button>
         </div>
-        {pushState==="denied" && <div style={{fontSize:10,color:C.dim,marginTop:4}}>Enable notifications in browser settings to use Push.</div>}
-        {pushState==="needs-install" && showInstallTip && <div style={{fontSize:11,color:C.blue,marginTop:6,padding:"8px 10px",background:`${C.blue}12`,borderRadius:8,lineHeight:1.5}}>To get push notifications, install the app first: in your browser tap <strong>⋯ → Install app</strong> (Chrome) or <strong>Share → Add to Home Screen</strong> (Safari), then come back here.</div>}
       </div>
-    </Card>
+      {/* Install tip — only shown if push tapped on non-PWA */}
+      {pushState==="needs-install" && expanded && (
+        <div style={{padding:"8px 12px 10px",borderTop:`1px solid ${C.b1}`,fontSize:11,color:C.blue,lineHeight:1.5,background:`${C.blue}08`}}>
+          Install the app first: <strong>⋯ → Install app</strong> (Chrome) or <strong>Share → Add to Home Screen</strong> (Safari).
+        </div>
+      )}
+    </div>
   );
 }
 
 function SavedTab({ saved, onRemove, tabTop=116 }) {
   const _ref = useRef(null);
   const _h   = useElemHeight(_ref);
-
-  // Master push state
   const [masterPushDone, setMasterPushDone] = useState(false);
 
-  const handleMasterCalendar = () => { downloadICS(saved); };
+  // Sort by match date/time using MATCH_UTC
+  const sorted = [...saved].sort((a, b) => {
+    const ta = MATCH_UTC[a.match?.id] ? new Date(MATCH_UTC[a.match.id]).getTime() : 0;
+    const tb = MATCH_UTC[b.match?.id] ? new Date(MATCH_UTC[b.match.id]).getTime() : 0;
+    return ta - tb;
+  });
 
+  const handleMasterCalendar = () => downloadICS(saved);
   const handleMasterWhatsApp = () => {
-    const lines = saved.map(it => `⚽ ${it.match.home} vs ${it.match.away} · ${it.match.date} · ${it.match.time} · ${it.match.venue?.split(",")[0]||""}`).join("\n");
+    const lines = sorted.map(it => `⚽ ${it.match.home} vs ${it.match.away} · ${it.match.date} · ${it.match.time}`).join("\n");
     window.open(`https://wa.me/?text=${encodeURIComponent(lines)}`, "_blank");
   };
-
   const handleMasterSMS = () => {
-    const lines = saved.map(it => `⚽ ${it.match.home} vs ${it.match.away} · ${it.match.date} · ${it.match.time} · ${it.match.venue?.split(",")[0]||""}`).join("\n");
+    const lines = sorted.map(it => `⚽ ${it.match.home} vs ${it.match.away} · ${it.match.date} · ${it.match.time}`).join("\n");
     window.open(`sms:&body=${encodeURIComponent(lines)}`, "_blank");
   };
-
   const handleMasterPush = async () => {
     const isPWA = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
-    if (!isPWA) {
-      setToast("Install the app first to enable push notifications");
-      return;
-    }
+    if (!isPWA) { alert("Install the app first to enable push notifications"); return; }
     let state = "Notification" in window ? Notification.permission : "unsupported";
-    if (state !== "granted") {
-      state = await requestPushPermission();
-      if (state !== "granted") return;
-    }
+    if (state !== "granted") { state = await requestPushPermission(); if (state !== "granted") return; }
     saved.forEach(it => scheduleNotification(it.match, 60));
     try {
       const reg = await navigator.serviceWorker.ready;
       let sub = await reg.pushManager.getSubscription();
-      if (!sub) {
-        sub = await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array("BHlG2j1aEN_PheVmM_kw6eG5ho26LSMdtxSVEjiz9HnYqKTWWlOrdFdX-U3qUqR-VLxDrvOBik17FS7NJ1kJdr8"),
-        });
-      }
-      await fetch("/api/push-subscribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subscription: sub.toJSON(), matches: saved.map(x=>x.match), minsBefore: 60 }),
-      });
+      if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array("BHlG2j1aEN_PheVmM_kw6eG5ho26LSMdtxSVEjiz9HnYqKTWWlOrdFdX-U3qUqR-VLxDrvOBik17FS7NJ1kJdr8") });
+      await fetch("/api/push-subscribe", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ subscription: sub.toJSON(), matches: saved.map(x=>x.match), minsBefore:60 }) });
       setMasterPushDone(true);
     } catch(e) { console.warn("Master push failed:", e); }
   };
@@ -2475,939 +2457,24 @@ function SavedTab({ saved, onRemove, tabTop=116 }) {
       <div ref={_ref} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"8px 13px",maxWidth:700,margin:"0 auto"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
           <span style={{fontSize:12,fontWeight:700,color:C.mid,letterSpacing:"0.06em"}}>ALL MATCHES ({saved.length})</span>
-          <button onClick={()=>saved.forEach(it=>onRemove(it.id))} style={{background:"none",border:"none",color:C.dim,fontSize:11,cursor:"pointer",padding:"2px 6px",borderRadius:6,border:`1px solid ${C.b2}`}}>Clear all</button>
+          <button onClick={()=>saved.forEach(it=>onRemove(it.id))} style={{background:"none",border:`1px solid ${C.b2}`,color:C.dim,fontSize:11,cursor:"pointer",padding:"2px 8px",borderRadius:6}}>Clear all</button>
         </div>
         <div style={{display:"flex",gap:6}}>
-          <button onClick={handleMasterCalendar} style={{flex:1,padding:"7px 4px",borderRadius:9,cursor:"pointer",border:`1px solid ${C.green}44`,background:`${C.green}15`,color:C.green,fontSize:11,fontWeight:600}}>📅 Calendar</button>
-          <button onClick={handleMasterWhatsApp} style={{flex:1,padding:"7px 4px",borderRadius:9,cursor:"pointer",border:"1px solid #25d36644",background:"#25d36615",color:"#25d366",fontSize:11,fontWeight:600}}>💬 WhatsApp</button>
-          <button onClick={handleMasterSMS}      style={{flex:1,padding:"7px 4px",borderRadius:9,cursor:"pointer",border:`1px solid ${C.blue}44`,background:`${C.blue}15`,color:C.blue,fontSize:11,fontWeight:600}}>📱 SMS</button>
-          <button onClick={handleMasterPush} style={{flex:1,padding:"7px 4px",borderRadius:9,cursor:"pointer",border:`1px solid ${masterPushDone?C.green:C.gold}44`,background:masterPushDone?`${C.green}15`:`${C.gold}15`,color:masterPushDone?C.green:C.gold,fontSize:11,fontWeight:600}}>
-            {masterPushDone?"🔔 Set!":"🔔 Push"}
-          </button>
+          <button onClick={handleMasterCalendar} style={{flex:1,padding:"6px 4px",borderRadius:8,cursor:"pointer",border:`1px solid ${C.green}44`,background:`${C.green}15`,color:C.green,fontSize:11,fontWeight:600}}>📅 Calendar</button>
+          <button onClick={handleMasterWhatsApp} style={{flex:1,padding:"6px 4px",borderRadius:8,cursor:"pointer",border:"1px solid #25d36644",background:"#25d36615",color:"#25d366",fontSize:11,fontWeight:600}}>💬 WhatsApp</button>
+          <button onClick={handleMasterSMS}      style={{flex:1,padding:"6px 4px",borderRadius:8,cursor:"pointer",border:`1px solid ${C.blue}44`,background:`${C.blue}15`,color:C.blue,fontSize:11,fontWeight:600}}>📱 SMS</button>
+          <button onClick={handleMasterPush}     style={{flex:1,padding:"6px 4px",borderRadius:8,cursor:"pointer",border:`1px solid ${masterPushDone?C.green:C.gold}44`,background:masterPushDone?`${C.green}15`:`${C.gold}15`,color:masterPushDone?C.green:C.gold,fontSize:11,fontWeight:600}}>{masterPushDone?"🔔 Set!":"🔔 Push"}</button>
         </div>
       </div>
-      {/* Spacer to prevent content hiding under sticky header */}
       <div style={{height:_h||80}}/>
 
-      {/* Individual match cards */}
-      {saved.map(item=>(
+      {/* Matches sorted by date/time */}
+      {sorted.map(item=>(
         <SavedMatchCard key={item.id} item={item} onRemove={onRemove}/>
       ))}
     </div>
   );
 }
-
-// ── HOST CITY DATA ────────────────────────────────────────────────────────
-const HOST_CITIES = {
-  "New York/New Jersey": { country:"🇺🇸", tz:"America/New_York", lat:40.8135, lon:-74.0745, stadium:"MetLife Stadium", capacity:82500, transit:"NJ Transit from Penn Station (~30 min)", parking:"Lot A–H, arrive 3h early for finals", fanzone:"Midtown Manhattan Fan Festival · Times Square", tip:"Hosts the Final — book hotels 6+ months out." },
-  "Los Angeles":         { country:"🇺🇸", tz:"America/Los_Angeles", lat:33.9535, lon:-118.3392, stadium:"SoFi Stadium", capacity:70240, transit:"Metro C Line to Inglewood, or rideshare", parking:"~$40–80, book via SoFi app", fanzone:"Hollywood Fan Festival · LA Live", tip:"Traffic is brutal — take the Metro." },
-  "Dallas":              { country:"🇺🇸", tz:"America/Chicago", lat:32.7474, lon:-97.0945, stadium:"AT&T Stadium", capacity:80000, transit:"DART from downtown (~25 min)", parking:"On-site lots, $30–50", fanzone:"Fair Park Fan Festival · Deep Ellum", tip:"June heat can exceed 100°F — hydrate." },
-  "San Francisco":       { country:"🇺🇸", tz:"America/Los_Angeles", lat:37.4031, lon:-121.9694, stadium:"Levi's Stadium", capacity:68500, transit:"VTA Light Rail from Santa Clara", parking:"On-site, $30–60", fanzone:"Civic Center Fan Festival · Embarcadero", tip:"Fog rolls in at night — bring a layer." },
-  "Miami":               { country:"🇺🇸", tz:"America/New_York", lat:25.9580, lon:-80.2389, stadium:"Hard Rock Stadium", capacity:65326, transit:"Uber/Lyft recommended · Brightline to Aventura", parking:"On-site, $40", fanzone:"Bayfront Park Fan Festival", tip:"Afternoon thunderstorms common in June–July." },
-  "Atlanta":             { country:"🇺🇸", tz:"America/New_York", lat:33.7553, lon:-84.4006, stadium:"Mercedes-Benz Stadium", capacity:71000, transit:"MARTA train (Blue/Green line)", parking:"GWCC lots, $20–40", fanzone:"Centennial Olympic Park Fan Festival", tip:"MARTA is the easiest option — skip driving." },
-  "Seattle":             { country:"🇺🇸", tz:"America/Los_Angeles", lat:47.5952, lon:-122.3316, stadium:"Lumen Field", capacity:69000, transit:"Link Light Rail from downtown (~15 min)", parking:"Limited near stadium — transit recommended", fanzone:"Seattle Center Fan Festival", tip:"Most walkable WC venue in North America." },
-  "Boston":              { country:"🇺🇸", tz:"America/New_York", lat:42.3467, lon:-71.0972, stadium:"Gillette Stadium", capacity:65878, transit:"Commuter Rail from South Station (~45 min)", parking:"On-site, $40–60", fanzone:"City Hall Plaza Fan Festival", tip:"Plan for commuter rail — no direct subway." },
-  "Philadelphia":        { country:"🇺🇸", tz:"America/New_York", lat:39.9012, lon:-75.1675, stadium:"Lincoln Financial Field", capacity:69796, transit:"SEPTA Broad St Line + shuttle", parking:"Sports Complex lots, $25–40", fanzone:"Benjamin Franklin Parkway Fan Festival", tip:"Cheesesteak before every match is mandatory." },
-  "Kansas City":         { country:"🇺🇸", tz:"America/Chicago", lat:39.0489, lon:-94.4839, stadium:"Arrowhead Stadium", capacity:76416, transit:"Limited transit — rideshare recommended", parking:"On-site lots, $30–50", fanzone:"Crown Center Fan Festival · Power & Light District", tip:"Most passionate crowds in the US." },
-  "Houston":             { country:"🇺🇸", tz:"America/Chicago", lat:29.6847, lon:-95.4107, stadium:"NRG Stadium", capacity:72220, transit:"METRORail from downtown (~20 min)", parking:"On-site, $30–50", fanzone:"Discovery Green Fan Festival", tip:"Retractable roof — only fully covered WC venue." },
-  "Toronto":             { country:"🇨🇦", tz:"America/Toronto", lat:43.6333, lon:-79.3891, stadium:"BMO Field (expanded)", capacity:45000, transit:"TTC Streetcar to Exhibition Place", parking:"On-site, CAD $30–50", fanzone:"Nathan Phillips Square Fan Festival", tip:"Best food scene of any WC host city." },
-  "Vancouver":           { country:"🇨🇦", tz:"America/Vancouver", lat:49.2767, lon:-123.1115, stadium:"BC Place", capacity:54500, transit:"SkyTrain from downtown (5 min walk)", parking:"Limited — SkyTrain strongly recommended", fanzone:"Jack Poole Plaza Fan Festival", tip:"Most walkable city on the WC circuit." },
-  "Mexico City":         { country:"🇲🇽", tz:"America/Mexico_City", lat:19.3029, lon:-99.1505, stadium:"Estadio Azteca", capacity:87523, transit:"Metro Line 2 to Tasqueña + Tren Ligero", parking:"Limited — Metro recommended", fanzone:"Zócalo Fan Festival", tip:"Altitude is 2,240m — energy may be lower than usual." },
-  "Guadalajara":         { country:"🇲🇽", tz:"America/Mexico_City", lat:20.6867, lon:-103.4079, stadium:"Estadio Akron", capacity:49850, transit:"Macrobús + shuttle from downtown", parking:"On-site, MXN $100–200", fanzone:"Expo Guadalajara Fan Festival", tip:"Most underrated host city — incredible food and nightlife." },
-  "Monterrey":           { country:"🇲🇽", tz:"America/Monterrey", lat:25.6694, lon:-100.2436, stadium:"Estadio BBVA", capacity:53500, transit:"Metro Line 2 + shuttle", parking:"On-site, MXN $100", fanzone:"Macroplaza Fan Festival", tip:"Surrounded by mountains — stunning backdrop." },
-};
-
-// Map venue string → city key
-const VENUE_TO_CITY = {
-  "New York New Jersey Stadium, East Rutherford":"New York/New Jersey",
-  "SoFi Stadium, Los Angeles":"Los Angeles",
-  "Dallas Stadium, Dallas":"Dallas",
-  "San Francisco Bay Area Stadium, San Francisco":"San Francisco",
-  "Miami Stadium, Miami":"Miami",
-  "Atlanta Stadium, Atlanta":"Atlanta",
-  "Seattle Stadium, Seattle":"Seattle",
-  "Boston Stadium, Boston":"Boston",
-  "Philadelphia Stadium, Philadelphia":"Philadelphia",
-  "Kansas City Stadium, Kansas City":"Kansas City",
-  "Houston Stadium, Houston":"Houston",
-  "Toronto Stadium, Toronto":"Toronto",
-  "BC Place, Vancouver":"Vancouver",
-  "Mexico City Stadium, Mexico City":"Mexico City",
-  "Estadio Guadalajara, Zapopan":"Guadalajara",
-  "Estadio Monterrey, Guadalupe":"Monterrey",
-};
-
-// ── MATCHDAY ENHANCED CARD ────────────────────────────────────────────────
-function useWeather(lat, lon, enabled) {
-  const [wx, setWx] = useState(null);
-  useEffect(() => {
-    if (!enabled || !lat || !lon) return;
-    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weathercode,windspeed_10m&temperature_unit=fahrenheit&timezone=auto`)
-      .then(r => r.json())
-      .then(d => {
-        const c = d?.current;
-        if (!c) return;
-        const code = c.weathercode;
-        const icon = code <= 1 ? "☀️" : code <= 3 ? "⛅" : code <= 48 ? "🌫️" : code <= 67 ? "🌧️" : code <= 77 ? "🌨️" : code <= 82 ? "🌦️" : "⛈️";
-        setWx({ temp: Math.round(c.temperature_2m), icon, wind: Math.round(c.windspeed_10m) });
-      })
-      .catch(() => {});
-  }, [lat, lon, enabled]);
-  return wx;
-}
-
-function MatchdayCard({ m, onAction, favTeam }) {
-  const { favTeams=[] } = useContext(FavCtx);
-  const { getScore } = useContext(LiveScoresCtx);
-  const sc = getScore(m.home, m.away);
-  const cityKey = VENUE_TO_CITY[m.venue];
-  const city = cityKey ? HOST_CITIES[cityKey] : null;
-  const wx = useWeather(city?.lat, city?.lon, !!city);
-  const now = Date.now();
-  const iso = MATCH_UTC[m.id];
-  const msToKO = iso ? new Date(iso).getTime() - now : null;
-  const hoursToKO = msToKO ? msToKO / 3600000 : null;
-  const isMatchday = hoursToKO !== null && hoursToKO > 0 && hoursToKO < 24;
-  const isFav = favTeams?.length && (favTeams.includes(m.home) || favTeams.includes(m.away));
-  const { localTime } = matchTimes(m);
-  const live = sc ? statusIsLive(sc.status) : false;
-  const finished = sc ? statusIsFinished(sc.status) : false;
-  const hasScore = sc && sc.hg !== null && sc.ag !== null;
-
-  // Countdown
-  const [countdown, setCountdown] = useState("");
-  useEffect(() => {
-    if (!isMatchday) return;
-    const tick = () => {
-      const diff = new Date(iso).getTime() - Date.now();
-      if (diff <= 0) { setCountdown("KICK OFF!"); return; }
-      const h = Math.floor(diff / 3600000);
-      const min = Math.floor((diff % 3600000) / 60000);
-      const sec = Math.floor((diff % 60000) / 1000);
-      setCountdown(h > 0 ? `${h}h ${min}m` : `${min}m ${sec}s`);
-    };
-    tick();
-    const t = setInterval(tick, 1000);
-    return () => clearInterval(t);
-  }, [isMatchday, iso]);
-
-  const cardBorder = isFav ? C.gold : live ? C.greenS : C.b1;
-  const cardBg = live ? `linear-gradient(135deg,#0a1f10,#0d2815)` : `linear-gradient(135deg,${C.s1},${C.s2})`;
-
-  return (
-    <Card style={{marginBottom:8, border:`1px solid ${cardBorder}`, background:cardBg, opacity:finished?0.75:1}}>
-      <div style={{padding:"11px 13px"}}>
-        {/* Fav banner */}
-        {isFav && !live && !finished && (
-          <div style={{fontSize:10,color:C.gold,fontWeight:700,marginBottom:6,letterSpacing:"0.05em"}}>⭐ YOUR TEAM</div>
-        )}
-        {/* Header row */}
-        <div style={{display:"flex",justifyContent:"space-between",marginBottom:7}}>
-          {m.group ? <Badge>Group {m.group}</Badge> : <Badge color={C.gold}>{m.stage||"Knockout"}</Badge>}
-          <div style={{display:"flex",alignItems:"center",gap:6}}>
-            {isMatchday && countdown && !live && <span style={{fontSize:11,fontWeight:700,color:C.gold}}>⏱ {countdown}</span>}
-            {wx && <span style={{fontSize:11,color:C.mid}}>{wx.icon} {wx.temp}°F</span>}
-            <span style={{fontSize:11,color:C.dim}}>{localTime}</span>
-          </div>
-        </div>
-        {/* Teams + score */}
-        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:7}}>
-          <Crest team={m.home} size={24}/>
-          <span style={{fontWeight:700,color:favTeams?.includes(m.home)?C.gold:C.text,flex:1,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.home}</span>
-          {hasScore ? (
-            <div style={{textAlign:"center",minWidth:64}}>
-              <div style={{fontWeight:900,fontSize:22,color:live?C.green:C.text,fontFamily:"monospace",lineHeight:1}}>{sc.hg} – {sc.ag}</div>
-              {statusLabel(sc.status,sc.elapsed) && <div style={{fontSize:10,fontWeight:700,marginTop:2,color:live?C.green:C.dim}}>{live?"🔴 ":""}{statusLabel(sc.status,sc.elapsed)}</div>}
-            </div>
-          ) : (
-            <span style={{fontSize:11,color:C.dim,fontWeight:700,minWidth:40,textAlign:"center"}}>VS</span>
-          )}
-          <span style={{fontWeight:700,color:favTeams?.includes(m.away)?C.gold:C.text,flex:1,fontSize:14,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.away}</span>
-          <Crest team={m.away} size={24}/>
-        </div>
-        {/* Venue */}
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:m.tv?4:0}}>
-          <span onClick={()=>openMaps(m.venue)} style={{fontSize:11,color:C.blue,cursor:"pointer"}}>📍 <span style={{textDecoration:"underline",textDecorationStyle:"dotted"}}>{m.venue}</span></span>
-          {!finished && (() => { const isSaved = savedIds.has(m.id); return (
-            <button onClick={()=>onAction(m)} style={{background:isSaved?`${C.gold}22`:`${C.green}22`,border:`1px solid ${isSaved?C.gold:C.greenS}`,color:isSaved?C.gold:C.green,padding:"3px 9px",borderRadius:20,fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
-              <StarIcon filled={isSaved} size={12}/> {isSaved?"Saved":"Add"}
-            </button>
-          ); })()}
-          {finished && <span style={{fontSize:10,color:C.dim,fontStyle:"italic"}}>Final</span>}
-        </div>
-        {m.tv && <div style={{fontSize:11,color:finished?C.dim:C.gold,marginBottom: isMatchday&&city?4:0}}>📺 {m.tv}</div>}
-        {/* Matchday extra info */}
-        {isMatchday && city && (
-          <div style={{marginTop:8,padding:"8px 10px",background:C.bg,borderRadius:8,border:`1px solid ${C.b1}`}}>
-            <div style={{fontSize:10,color:C.gold,fontWeight:700,marginBottom:5}}>🏟️ MATCHDAY INFO · {cityKey?.toUpperCase()}</div>
-            <div style={{fontSize:11,color:C.mid,marginBottom:3}}>🚇 {city.transit}</div>
-            <div style={{fontSize:11,color:C.mid,marginBottom:3}}>🅿️ {city.parking}</div>
-            {wx && <div style={{fontSize:11,color:C.mid}}>🌡️ Currently {wx.icon} {wx.temp}°F · Wind {wx.wind} mph</div>}
-          </div>
-        )}
-      </div>
-    </Card>
-  );
-}
-
-// ── FAVORITE TEAM CONTEXT ─────────────────────────────────────────────────
-const FavCtx = createContext({ favTeam:"", favTeams:[], setFavTeam:()=>{} });
-
-// ── PREDICTOR — KV-backed multi-user ─────────────────────────────────────
-
-// Stable userId — just a device key, not sensitive data
-function getUserId() {
-  try {
-    let id = localStorage.getItem("wc2026_uid");
-    if (!id) { id = crypto.randomUUID(); localStorage.setItem("wc2026_uid", id); }
-    return id;
-  } catch { return "anon"; }
-}
-
-function scoreOnePred(pred, actual) {
-  if (!pred || actual.hg === null || actual.ag === null) return null;
-  const ph = parseInt(pred.hg), pa = parseInt(pred.ag);
-  const ah = parseInt(actual.hg), aa = parseInt(actual.ag);
-  if (isNaN(ph)||isNaN(pa)) return null;
-  if (ph===ah && pa===aa) return 3;
-  const pr = ph>pa?"H":ph<pa?"A":"D";
-  const ar = ah>aa?"H":ah<aa?"A":"D";
-  return pr===ar ? 1 : 0;
-}
-
-async function apiPred(action, params={}, body=null) {
-  const qs = new URLSearchParams({ action, ...params }).toString();
-  const opts = body
-    ? { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body) }
-    : { method:"GET" };
-  const res = await fetch(`/api/predictor?${qs}`, opts);
-  if (!res.ok) { const e = await res.json().catch(()=>({error:res.statusText})); throw new Error(e.error||res.statusText); }
-  return res.json();
-}
-
-// Debounce helper — saves prediction 800ms after last keystroke
-function useDebounce(fn, ms) {
-  const t = useRef(null);
-  return useCallback((...args) => {
-    clearTimeout(t.current);
-    t.current = setTimeout(() => fn(...args), ms);
-  }, [fn, ms]);
-}
-
-function PredictorTab() {
-  const { getScore, isFinished } = useContext(LiveScoresCtx);
-  const { favTeam, favTeams=[] } = useContext(FavCtx);
-  const userId = useMemo(getUserId, []);
-
-  // User registration state
-  const [user, setUser]         = useState(null);   // { userId, name } or null
-  const [userLoading, setUL]    = useState(true);
-  const [nameInput, setNameInput] = useState("");
-  const [nameErr, setNameErr]   = useState("");
-  const [nameSaving, setNS]     = useState(false);
-
-  // Predictions: { [matchId]: { hg, ag } }
-  const [preds, setPreds]       = useState({});
-  const [predSaving, setPSaving]= useState({});  // { [matchId]: bool }
-
-  // Leaderboard
-  const [board, setBoard]       = useState(null);
-  const [boardLoading, setBL]   = useState(false);
-  const [filter, setFilter]     = useState("upcoming");
-  const [showInfo, setShowInfo] = useState(false);
-
-  // ── Load user + their predictions on mount ──────────────────────────────
-  useEffect(() => {
-    (async () => {
-      setUL(true);
-      try {
-        const u = await apiPred("getUser", { userId });
-        setUser(u);
-        if (u) {
-          const p = await apiPred("getPreds", { userId });
-          // Normalise keys to numbers
-          const normalised = {};
-          Object.entries(p||{}).forEach(([k,v]) => { normalised[Number(k)] = v; });
-          setPreds(normalised);
-        }
-      } catch(e) { console.error("predictor init", e); }
-      finally { setUL(false); }
-    })();
-  }, [userId]);
-
-  // ── Load leaderboard when that tab is active ────────────────────────────
-  useEffect(() => {
-    if (filter !== "board") return;
-    setBL(true);
-    apiPred("leaderboard")
-      .then(b => setBoard(b))
-      .catch(() => setBoard([]))
-      .finally(() => setBL(false));
-  }, [filter]);
-
-  // ── Register ────────────────────────────────────────────────────────────
-  const handleRegister = async () => {
-    if (!nameInput.trim()) return;
-    setNS(true); setNameErr("");
-    try {
-      const u = await apiPred("register", {}, { userId, name: nameInput.trim() });
-      setUser(u);
-    } catch(e) { setNameErr(e.message || "Could not save name"); }
-    finally { setNS(false); }
-  };
-
-  // ── Save a single prediction to KV (debounced) ──────────────────────────
-  const savePredToKV = useCallback(async (matchId, hg, ag) => {
-    if (!user) return;
-    setPSaving(p => ({...p, [matchId]: true}));
-    try {
-      await apiPred("savePred", {}, { userId, matchId, hg, ag });
-    } catch(e) { console.error("savePred", e); }
-    finally { setPSaving(p => ({...p, [matchId]: false})); }
-  }, [userId, user]);
-
-  const debouncedSave = useDebounce(savePredToKV, 800);
-
-  const upd = (id, field, val) => {
-    const clean = val.replace(/\D/,"");
-    const next = { ...preds, [id]: { ...(preds[id]||{}), [field]: clean }};
-    setPreds(next);
-    const updated = next[id];
-    if (updated?.hg !== undefined && updated?.ag !== undefined && updated.hg !== "" && updated.ag !== "") {
-      debouncedSave(id, parseInt(updated.hg), parseInt(updated.ag));
-    }
-  };
-
-  // ── Score totals ────────────────────────────────────────────────────────
-  const upcoming  = MATCHES.filter(m => m.group && !isFinished(m.home, m.away));
-  const finished  = MATCHES.filter(m => m.group &&  isFinished(m.home, m.away));
-  let totalPts = 0, totalPossible = 0, exact = 0, correct = 0;
-  finished.forEach(m => {
-    const sc = getScore(m.home, m.away);
-    if (!sc) return;
-    const pts = scoreOnePred(preds[m.id], sc);
-    if (pts !== null) { totalPts += pts; totalPossible += 3; if(pts===3)exact++; if(pts>=1)correct++; }
-  });
-
-  const shownMatches = filter==="fav"
-    ? MATCHES.filter(m=>m.group&&(favTeams?.includes(m.home)||favTeams?.includes(m.away)))
-    : filter==="finished" ? finished : upcoming;
-
-  // ── Registration gate ───────────────────────────────────────────────────
-  if (userLoading) return (
-    <div style={{textAlign:"center",padding:"48px 20px"}}>
-      <div style={{width:28,height:28,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto 12px"}}/>
-      <div style={{fontSize:13,color:C.mid}}>Loading predictor...</div>
-    </div>
-  );
-
-  if (!user) return (
-    <div style={{paddingTop:12}}>
-      <div style={{background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b2}`,borderRadius:12,padding:14,marginBottom:14,textAlign:"center"}}>
-        <div style={{fontSize:"1.6rem",marginBottom:4}}>🔮</div>
-        <div style={{fontWeight:700,fontSize:17,color:C.green,marginBottom:4}}>Match Predictor</div>
-        <div style={{fontSize:12,color:C.mid,lineHeight:1.5}}>Pick scores for every group match. Compete with friends on the leaderboard.</div>
-      </div>
-      <Card style={{padding:18}}>
-        <div style={{fontWeight:700,color:C.text,fontSize:15,marginBottom:4}}>Choose your display name</div>
-        <div style={{fontSize:12,color:C.dim,marginBottom:14}}>This is how you'll appear on the leaderboard — pick something your friends will recognise.</div>
-        <input
-          value={nameInput}
-          onChange={e=>{setNameInput(e.target.value.slice(0,20));setNameErr("");}}
-          onKeyDown={e=>e.key==="Enter"&&handleRegister()}
-          placeholder="e.g. Pablo, FootballFan99..."
-          maxLength={20}
-          style={{width:"100%",padding:"12px 14px",background:C.s2,border:`1px solid ${nameErr?C.red:C.b2}`,borderRadius:10,color:C.text,fontSize:15,outline:"none",marginBottom:8}}
-        />
-        {nameErr && <div style={{fontSize:12,color:C.red,marginBottom:8}}>{nameErr}</div>}
-        <div style={{fontSize:11,color:C.dim,marginBottom:14}}>{20-nameInput.length} characters remaining</div>
-        <button
-          onClick={handleRegister}
-          disabled={nameSaving||!nameInput.trim()}
-          style={{width:"100%",padding:"12px 0",borderRadius:12,background:nameInput.trim()?`linear-gradient(135deg,${C.green},#22c55e)`:C.b2,border:"none",color:nameInput.trim()?"#030a05":C.dim,fontWeight:700,fontSize:15,cursor:nameInput.trim()?"pointer":"default",opacity:nameSaving?0.6:1}}
-        >{nameSaving?"Saving...":"Join the Predictor →"}</button>
-      </Card>
-    </div>
-  );
-
-  // ── Main predictor UI ───────────────────────────────────────────────────
-  return (
-    <div style={{paddingTop:12}}>
-      <div style={{background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b2}`,borderRadius:12,padding:14,marginBottom:14}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-          <div>
-            <div style={{fontWeight:700,fontSize:18,color:C.green}}>🔮 MATCH PREDICTOR</div>
-            <div style={{fontSize:11,color:C.mid,marginTop:2}}>Playing as <strong style={{color:C.gold}}>{user.name}</strong></div>
-          </div>
-          <button onClick={()=>setShowInfo(v=>!v)} style={{background:"none",border:`1px solid ${C.b2}`,borderRadius:20,color:C.dim,fontSize:11,padding:"3px 10px",cursor:"pointer"}}>Scoring?</button>
-        </div>
-        {showInfo && (
-          <div style={{marginTop:10,padding:10,background:C.bg,borderRadius:8,fontSize:12,color:C.mid,lineHeight:1.8}}>
-            <div>⚽⚽⚽ <strong style={{color:C.green}}>3 pts</strong> — Exact score</div>
-            <div>⚽ <strong style={{color:C.gold}}>1 pt</strong> — Correct result (Win / Draw / Loss)</div>
-            <div>❌ <strong style={{color:C.red}}>0 pts</strong> — Wrong result</div>
-            <div style={{marginTop:6,fontSize:11,color:C.dim}}>Predictions auto-save as you type. Lock-in before kick-off — no changes after!</div>
-          </div>
-        )}
-        {totalPossible > 0 && (
-          <div style={{display:"flex",gap:8,marginTop:12}}>
-            {[
-              [totalPts,       "POINTS",   C.green],
-              [exact,          "EXACT",    C.gold],
-              [correct,        "CORRECT",  C.blue],
-              [totalPossible>0?Math.round((totalPts/totalPossible)*100):0, "ACCURACY %", C.mid],
-            ].map(([v,l,col])=>(
-              <div key={l} style={{flex:1,textAlign:"center",background:`${col}18`,border:`1px solid ${col}33`,borderRadius:10,padding:"8px 4px"}}>
-                <div style={{fontWeight:900,fontSize:22,color:col}}>{v}{l==="ACCURACY %"?"%":""}</div>
-                <div style={{fontSize:9,color:C.dim}}>{l}</div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Filter tabs */}
-      <div style={{display:"flex",gap:6,marginBottom:14,overflowX:"auto",scrollbarWidth:"none"}}>
-        <Pill active={filter==="upcoming"} onClick={()=>setFilter("upcoming")} color={C.green}>Upcoming ({upcoming.length})</Pill>
-        <Pill active={filter==="finished"} onClick={()=>setFilter("finished")} color={C.gold}>Finished ({finished.length})</Pill>
-        {favTeams?.length > 0 && <Pill active={filter==="fav"} onClick={()=>setFilter("fav")} color={C.gold}>⭐ My Teams</Pill>}
-        <Pill active={filter==="board"} onClick={()=>setFilter("board")} color={C.rival}>🏅 Leaderboard</Pill>
-      </div>
-
-      {/* ── LEADERBOARD ── */}
-      {filter==="board" && (
-        <div>
-          {boardLoading && <div style={{textAlign:"center",padding:"32px 0"}}><div style={{width:24,height:24,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto"}}/></div>}
-          {!boardLoading && board && board.length === 0 && (
-            <div style={{textAlign:"center",padding:"32px 20px",color:C.dim,fontSize:13}}>No predictions scored yet. Check back after June 11!</div>
-          )}
-          {!boardLoading && board && board.map((entry, i) => {
-            const isMe = entry.userId === userId;
-            const medal = i===0?"🥇":i===1?"🥈":i===2?"🥉":null;
-            return (
-              <Card key={entry.userId} style={{marginBottom:7,border:`1px solid ${isMe?C.gold:C.b1}`,background:isMe?`linear-gradient(135deg,${C.gold}0a,${C.s1})`:""}}>
-                <div style={{padding:"10px 13px",display:"flex",alignItems:"center",gap:10}}>
-                  <div style={{fontWeight:700,color:C.dim,minWidth:26,fontSize:14,textAlign:"center"}}>{medal||`#${i+1}`}</div>
-                  <div style={{flex:1}}>
-                    <div style={{fontWeight:700,color:isMe?C.gold:C.text,fontSize:14}}>{entry.name}{isMe&&<span style={{fontSize:10,color:C.gold,marginLeft:6}}>(you)</span>}</div>
-                    <div style={{fontSize:11,color:C.dim,marginTop:2}}>{entry.predCount} predictions · {entry.exact} exact · {entry.correct} correct</div>
-                  </div>
-                  <div style={{textAlign:"right"}}>
-                    <div style={{fontWeight:900,fontSize:22,color:i===0?C.gold:i<3?C.green:C.mid}}>{entry.pts}</div>
-                    <div style={{fontSize:9,color:C.dim}}>pts</div>
-                  </div>
-                </div>
-                {i===0&&entry.pts>0&&<div style={{height:2,background:`linear-gradient(90deg,${C.gold},transparent)`}}/>}
-              </Card>
-            );
-          })}
-          <div style={{textAlign:"center",marginTop:12}}>
-            <button onClick={()=>{setBL(true);apiPred("leaderboard").then(b=>setBoard(b)).finally(()=>setBL(false));}} style={{fontSize:12,color:C.dim,background:"none",border:`1px solid ${C.b2}`,borderRadius:20,padding:"5px 14px",cursor:"pointer"}}>↻ Refresh</button>
-          </div>
-        </div>
-      )}
-
-      {/* ── MATCH LIST ── */}
-      {filter !== "board" && (
-        <>
-          {shownMatches.length===0 && (
-            <div style={{textAlign:"center",padding:"32px 20px",color:C.dim}}>
-              <div style={{fontSize:"2rem",marginBottom:8}}>⏳</div>
-              <div style={{fontSize:13}}>{filter==="upcoming"?"No upcoming matches yet — check back June 11!":"No finished matches yet."}</div>
-            </div>
-          )}
-          {shownMatches.map(m => {
-            const sc = getScore(m.home, m.away);
-            const done = isFinished(m.home, m.away);
-            const pred = preds[m.id] || {};
-            const pts = done && sc ? scoreOnePred(pred, sc) : null;
-            const ptColor = pts===3?C.green:pts===1?C.gold:pts===0?C.red:C.dim;
-            const hasPred = pred.hg!==undefined && pred.ag!==undefined && pred.hg!=="" && pred.ag!=="";
-            const saving = predSaving[m.id];
-            return (
-              <Card key={m.id} style={{marginBottom:8,border:`1px solid ${pts===3?C.green:pts===1?C.gold:pts===0?C.red:hasPred?`${C.green}44`:C.b1}`}}>
-                <div style={{padding:"10px 13px"}}>
-                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
-                    <Badge>Group {m.group} · {m.date}</Badge>
-                    <div style={{display:"flex",alignItems:"center",gap:6}}>
-                      {saving && <span style={{fontSize:10,color:C.dim}}>saving...</span>}
-                      {!saving && hasPred && !done && <span style={{fontSize:10,color:C.green}}>✓ saved</span>}
-                      {pts !== null && <div style={{fontWeight:700,color:ptColor,fontSize:12}}>{pts===3?"⚽⚽⚽ +3":pts===1?"⚽ +1":"❌ 0"}pts</div>}
-                    </div>
-                  </div>
-                  <div style={{display:"flex",alignItems:"center",gap:8}}>
-                    <Crest team={m.home} size={22}/>
-                    <span style={{fontWeight:700,color:C.text,flex:1,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.home}</span>
-                    <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
-                      {done && sc && (
-                        <div style={{textAlign:"center",minWidth:48}}>
-                          <div style={{fontSize:9,color:C.dim,marginBottom:1}}>Result</div>
-                          <div style={{fontWeight:800,fontSize:18,color:C.text,fontFamily:"monospace"}}>{sc.hg}–{sc.ag}</div>
-                        </div>
-                      )}
-                      {!done && (
-                        <>
-                          <input value={pred.hg||""} onChange={e=>upd(m.id,"hg",e.target.value)} placeholder="?" maxLength={2}
-                            style={{width:34,textAlign:"center",background:C.s2,border:`1px solid ${hasPred?C.green:C.b2}`,borderRadius:8,color:C.green,fontSize:16,fontWeight:700,padding:"4px 0",outline:"none"}}/>
-                          <span style={{color:C.dim,fontWeight:700}}>–</span>
-                          <input value={pred.ag||""} onChange={e=>upd(m.id,"ag",e.target.value)} placeholder="?" maxLength={2}
-                            style={{width:34,textAlign:"center",background:C.s2,border:`1px solid ${hasPred?C.green:C.b2}`,borderRadius:8,color:C.green,fontSize:16,fontWeight:700,padding:"4px 0",outline:"none"}}/>
-                        </>
-                      )}
-                      {done && hasPred && (
-                        <div style={{textAlign:"center",minWidth:48}}>
-                          <div style={{fontSize:9,color:C.dim,marginBottom:1}}>Your pick</div>
-                          <div style={{fontWeight:800,fontSize:18,color:ptColor,fontFamily:"monospace"}}>{pred.hg}–{pred.ag}</div>
-                        </div>
-                      )}
-                    </div>
-                    <span style={{fontWeight:700,color:C.text,flex:1,fontSize:13,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.away}</span>
-                    <Crest team={m.away} size={22}/>
-                  </div>
-                </div>
-              </Card>
-            );
-          })}
-        </>
-      )}
-    </div>
-  );
-}
-
-
-// ── THEME CONTEXT (dark/light) ────────────────────────────────────────────
-const ThemeCtx = createContext({ dark:true });
-const DARK = {
-  bg:"#060e0a", s1:"#0c1a12", s2:"#112618", b1:"#1a3828", b2:"#234833",
-  green:"#4ade80", greenS:"#4ade8055", gold:"#fbbf24", blue:"#60a5fa",
-  rival:"#38bdf8", red:"#f87171", text:"#d4ead9", mid:"#7aaa8a", dim:"#3d6a4d",
-};
-const LIGHT = {
-  bg:"#f0faf3", s1:"#ffffff", s2:"#e8f5ec", b1:"#c5e0cc", b2:"#a8d4b0",
-  green:"#16a34a", greenS:"#16a34a55", gold:"#d97706", blue:"#2563eb",
-  rival:"#0284c7", red:"#dc2626", text:"#0f2d1a", mid:"#2d6a3f", dim:"#6b9e79",
-};
-
-// ── MATCH EVENTS API ──────────────────────────────────────────────────────
-const eventsCache = {};
-async function fetchMatchEvents(fixtureId) {
-  if (eventsCache[fixtureId]) return eventsCache[fixtureId];
-  try {
-    const res = await fetch(`/api/matchevents?fixtureId=${fixtureId}`);
-    if (!res.ok) throw new Error(res.statusText);
-    const data = await res.json();
-    // Handle both old format (array) and new format ({events, stats})
-    const result = Array.isArray(data) ? { events: data, stats: null } : data;
-    eventsCache[fixtureId] = result;
-    return result;
-  } catch(e) {
-    console.error("[matchevents]", e.message);
-    return null;
-  }
-}
-
-// ── MATCH EVENTS MODAL ────────────────────────────────────────────────────
-// ── WEATHER BADGE ─────────────────────────────────────────────────────────
-function WeatherBadge({ lat, lon }) {
-  const wx = useWeather(lat, lon, true);
-  if (!wx) return null;
-  return (
-    <div style={{textAlign:"center",flexShrink:0}}>
-      <div style={{fontSize:18,lineHeight:1}}>{wx.icon}</div>
-      <div style={{fontSize:11,fontWeight:700,color:C.text}}>{wx.temp}°F</div>
-      <div style={{fontSize:9,color:C.dim}}>at venue</div>
-    </div>
-  );
-}
-
-function MatchEventsModal({ match, open, onClose, onAction }) {
-  const [events, setEvents] = useState(null);
-  const [matchStats, setMatchStats] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const { getScore } = useContext(LiveScoresCtx);
-  const { favTeams=[] } = useContext(FavCtx);
-  const country = useContext(CountryCtx);
-  const bc = getBroadcast(country);
-  const isUS = country === "US" || !BROADCAST[country];
-
-  useEffect(() => {
-    if (!open || !match) return;
-    setEvents(null); setLoading(true);
-    fetchMatchEvents(`${match.home}|${match.away}`)
-      .then(d => {
-        setEvents(d?.events || []);
-        setMatchStats(d?.stats || null);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, [open, match]);
-
-  const sc = match ? getScore(match.home, match.away) : null;
-  const hasScore = sc && sc.hg !== null && sc.ag !== null;
-  const live = sc ? statusIsLive(sc.status) : false;
-  const finished = sc ? statusIsFinished(sc.status) : false;
-  const { localTime } = match ? matchTimes(match) : {};
-
-  // Polymarket odds
-  const p1 = match ? PREDS.find(x=>x.team===match.home) : null;
-  const p2 = match ? PREDS.find(x=>x.team===match.away) : null;
-
-  // Simulated odds for draw probability
-  const simOdds = useMemo(() => {
-    if (!match) return null;
-    const N = 5000; let w1=0, w2=0, d=0;
-    for(let i=0;i<N;i++){const r=simMatch(match.home,match.away);if(r.res==="home")w1++;else if(r.res==="away")w2++;else d++;}
-    return {
-      win1: ((w1/N)*100).toFixed(0),
-      draw: ((d/N)*100).toFixed(0),
-      win2: ((w2/N)*100).toFixed(0),
-    };
-  }, [match?.home, match?.away]);
-
-  if (!match) return null;
-
-  const shareMatch = () => {
-    const base = window.location.origin;
-    const keyEvents = events && events.length > 0
-      ? events.filter(ev=>ev.type==="Goal"||ev.type==="Card").slice(0,5)
-          .map(ev=>({type:ev.type==="Goal"?"goal":ev.detail?.includes("Yellow")?"yellow":"red",name:ev.player?.name?.split(" ").pop()||"",min:ev.time?.elapsed||"",side:normTeam(ev.team?.name||"")===match.home?"home":"away"}))
-      : [];
-    const params = new URLSearchParams();
-    params.set("home", match.home);
-    params.set("away", match.away);
-    if (hasScore) { params.set("hg", sc.hg); params.set("ag", sc.ag); }
-    if (match.group) params.set("group", match.group);
-    else params.set("stage", match.stage||"World Cup 2026");
-    if (match.date) params.set("date", match.date);
-    if (match.venue) params.set("venue", match.venue.split(",")[0]);
-    if (!hasScore && p1) params.set("p1", p1.poly);
-    if (!hasScore && p2) params.set("p2", p2.poly);
-    if (keyEvents.length > 0) params.set("events", encodeURIComponent(JSON.stringify(keyEvents)));
-    const shareUrl = base + "/api/og?" + params.toString();
-    const title = hasScore
-      ? match.home + " " + sc.hg + "-" + sc.ag + " " + match.away + " · World Cup 2026"
-      : match.home + " vs " + match.away + " · World Cup 2026";
-    if (navigator.share) {
-      navigator.share({ title, url: shareUrl }).catch(()=>{});
-    } else {
-      navigator.clipboard?.writeText(shareUrl);
-    }
-  };
-
-  return (
-    <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",zIndex:1000,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
-      <div onClick={e=>e.stopPropagation()} style={{background:C.bg,border:`1px solid ${C.b2}`,borderRadius:"18px 18px 0 0",width:"100%",maxWidth:620,maxHeight:"92vh",overflowY:"auto",paddingBottom:20}}>
-
-        {/* ── HERO HEADER ── */}
-        <div style={{background:`linear-gradient(135deg,${C.s1},${C.s2})`,padding:"16px 18px 20px",position:"relative"}}>
-          <button onClick={onClose} style={{position:"absolute",top:14,right:14,background:"none",border:"none",color:C.mid,fontSize:22,cursor:"pointer"}}>×</button>
-
-          {/* Stage + match info */}
-          <div style={{textAlign:"center",marginBottom:16}}>
-            <div style={{fontSize:12,color:C.dim,fontWeight:700,letterSpacing:"0.1em"}}>{match.group?`GROUP ${match.group}`:(match.stage||"WORLD CUP 2026").toUpperCase()}</div>
-            {match.date && <div style={{fontSize:13,color:C.mid,marginTop:2}}>{match.date} · {localTime}</div>}
-          </div>
-
-          {/* Teams hero */}
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
-            {/* Home */}
-            <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:8}}>
-              <Crest team={match.home} size={64}/>
-              <span style={{fontWeight:700,fontSize:16,color:favTeams.includes(match.home)?C.gold:C.text,textAlign:"center"}}>{match.home}</span>
-            </div>
-            {/* Score / vs */}
-            <div style={{textAlign:"center",minWidth:80}}>
-              {hasScore ? (
-                <>
-                  <div style={{fontWeight:900,fontSize:44,color:live?C.green:C.text,fontFamily:"monospace",lineHeight:1}}>{sc.hg}–{sc.ag}</div>
-                  <div style={{fontSize:11,fontWeight:700,color:live?C.green:C.dim,marginTop:4}}>
-                    {live?"🔴 ":""}{statusLabel(sc.status,sc.elapsed)||"FT"}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div style={{fontSize:13,fontWeight:700,color:C.dim}}>VS</div>
-                  <div style={{fontSize:11,color:C.dim,marginTop:4}}>Upcoming</div>
-                </>
-              )}
-            </div>
-            {/* Away */}
-            <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:8}}>
-              <Crest team={match.away} size={64}/>
-              <span style={{fontWeight:700,fontSize:16,color:favTeams.includes(match.away)?C.gold:C.text,textAlign:"center"}}>{match.away}</span>
-            </div>
-          </div>
-        </div>
-
-        <div style={{padding:"14px 18px"}}>
-
-          {/* ── VENUE ── */}
-          <div onClick={()=>openMaps(match.venue)} style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",background:C.s1,border:`1px solid ${C.b1}`,borderRadius:10,marginBottom:12,cursor:"pointer"}}>
-            <span style={{fontSize:20}}>📍</span>
-            <div style={{flex:1}}>
-              <div style={{fontSize:13,fontWeight:600,color:C.blue,textDecoration:"underline",textDecorationStyle:"dotted"}}>{match.venue.split(",")[0]}</div>
-              <div style={{fontSize:11,color:C.dim,marginTop:2}}>{match.venue.split(",").slice(1).join(",").trim()} · Tap for directions</div>
-            </div>
-            {(() => { const city = VENUE_TO_CITY[match.venue]; const cityData = city ? HOST_CITIES[city] : null; return cityData ? <WeatherBadge lat={cityData.lat} lon={cityData.lon}/> : null; })()}
-          </div>
-
-          {/* ── TV ── */}
-          {match.tv && (
-            <div style={{padding:"10px 14px",background:C.s1,border:`1px solid ${C.b1}`,borderRadius:10,marginBottom:12}}>
-              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:bc.streaming?6:0}}>
-                <span style={{fontSize:16}}>📺</span>
-                <div style={{fontSize:13,color:C.gold,fontWeight:600}}>{isUS ? match.tv : `${bc.note} ${bc.primary}`}</div>
-              </div>
-              {bc.streaming && (
-                <div style={{display:"flex",alignItems:"center",gap:8}}>
-                  <span style={{fontSize:16}}>💻</span>
-                  <div style={{fontSize:12,color:C.mid}}>{bc.streaming}</div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ── ODDS ── */}
-          {!finished && simOdds && (
-            <div style={{marginBottom:12}}>
-              <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",marginBottom:8}}>WIN PROBABILITY</div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
-                {[
-                  {label:match.home, sim:simOdds.win1, poly:p1?.poly, color:C.green},
-                  {label:"Draw",     sim:simOdds.draw,  poly:null,     color:C.gold},
-                  {label:match.away, sim:simOdds.win2, poly:p2?.poly, color:C.rival},
-                ].map(({label,sim,poly,color})=>(
-                  <div key={label} style={{background:C.s1,border:`1px solid ${color}33`,borderRadius:10,padding:"10px 6px",textAlign:"center"}}>
-                    {/* Polymarket odds — only if available */}
-                    {poly ? (
-                      <>
-                        <div style={{fontSize:22,fontWeight:900,color,lineHeight:1}}>{poly}%</div>
-                        <div style={{fontSize:9,color:C.dim,marginTop:2,marginBottom:4}}>Polymarket</div>
-                        <div style={{borderTop:`1px solid ${color}22`,paddingTop:4,fontSize:11,color:C.dim}}>{sim}% sim</div>
-                      </>
-                    ) : (
-                      <>
-                        <div style={{fontSize:22,fontWeight:900,color,lineHeight:1}}>{sim}%</div>
-                        <div style={{fontSize:9,color:C.dim,marginTop:2}}>Simulator</div>
-                      </>
-                    )}
-                    <div style={{fontSize:10,color:C.mid,marginTop:4,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{label}</div>
-                  </div>
-                ))}
-              </div>
-              {(p1||p2) && <div style={{fontSize:10,color:C.dim,marginTop:6,textAlign:"right"}}>Polymarket odds where available · Simulator: {(5000).toLocaleString()} runs</div>}
-              {(!p1&&!p2) && <div style={{fontSize:10,color:C.dim,marginTop:6,textAlign:"right"}}>Based on {(5000).toLocaleString()} simulated tournaments</div>}
-            </div>
-          )}
-
-          {/* ── MATCH STATS ── */}
-          {matchStats && (live || finished) && (
-            <div style={{marginBottom:12}}>
-              <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",marginBottom:8}}>MATCH STATS</div>
-              {[
-                ["Possession", matchStats.home.possession, matchStats.away.possession, true, "%"],
-                ["Shots", matchStats.home.shots, matchStats.away.shots, false, ""],
-                ["Shots on Target", matchStats.home.shotsOn, matchStats.away.shotsOn, false, ""],
-                ["Corners", matchStats.home.corners, matchStats.away.corners, false, ""],
-                ["Fouls", matchStats.home.fouls, matchStats.away.fouls, true, ""],
-                ["Pass Accuracy", matchStats.home.passAcc, matchStats.away.passAcc, true, "%"],
-              ].filter(([,h,a]) => h!==null && a!==null).map(([label, hv, av, lowerBetter, unit]) => {
-                const total = hv + av || 1;
-                const hPct = Math.round((hv/total)*100);
-                return (
-                  <div key={label} style={{marginBottom:8}}>
-                    <div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:3}}>
-                      <span style={{fontWeight:700,color:C.green}}>{hv}{unit}</span>
-                      <span style={{color:C.dim,fontSize:11}}>{label}</span>
-                      <span style={{fontWeight:700,color:C.rival}}>{av}{unit}</span>
-                    </div>
-                    <div style={{height:4,background:C.s2,borderRadius:2,overflow:"hidden",display:"flex"}}>
-                      <div style={{width:`${hPct}%`,background:C.green,borderRadius:"2px 0 0 2px"}}/>
-                      <div style={{flex:1,background:C.rival}}/>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* ── MATCH EVENTS ── */}
-          {(live || finished) && (
-            <div style={{marginBottom:12}}>
-              <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",marginBottom:8}}>MATCH TIMELINE</div>
-              {loading && (
-                <div style={{textAlign:"center",padding:"20px 0"}}>
-                  <div style={{width:22,height:22,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto 8px"}}/>
-                  <div style={{fontSize:12,color:C.mid}}>Loading events…</div>
-                </div>
-              )}
-              {!loading && events && events.length > 0 && events.map((ev,i)=>{
-                const isHome = normTeam(ev.team?.name||"")=== match.home;
-                const icon = ev.type==="Goal"?(ev.detail==="Own Goal"?"⚽🔴":ev.detail==="Penalty"?"⚽🎯":"⚽"):ev.type==="Card"?(ev.detail==="Yellow Card"?"🟨":"🟥"):ev.type==="subst"?"🔄":"•";
-                return (
-                  <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 0",borderBottom:`1px solid ${C.b1}`}}>
-                    <div style={{flex:1,textAlign:"right"}}>
-                      {isHome && <span style={{fontSize:13,color:C.text,fontWeight:ev.type==="Goal"?700:400}}>{ev.player?.name||""}</span>}
-                      {isHome && ev.type==="subst" && <div style={{fontSize:10,color:C.dim}}>↑ {ev.assist?.name||""}</div>}
-                    </div>
-                    <div style={{display:"flex",flexDirection:"column",alignItems:"center",minWidth:52,flexShrink:0}}>
-                      <div style={{fontSize:11,fontWeight:700,color:C.gold}}>{ev.time?.elapsed}{ev.time?.extra?`+${ev.time.extra}`:""}'</div>
-                      <div style={{fontSize:16}}>{icon}</div>
-                    </div>
-                    <div style={{flex:1}}>
-                      {!isHome && <span style={{fontSize:13,color:C.text,fontWeight:ev.type==="Goal"?700:400}}>{ev.player?.name||""}</span>}
-                      {!isHome && ev.type==="subst" && <div style={{fontSize:10,color:C.dim}}>↑ {ev.assist?.name||""}</div>}
-                    </div>
-                  </div>
-                );
-              })}
-              {!loading && events && events.length === 0 && <div style={{fontSize:12,color:C.dim,textAlign:"center",padding:"16px 0"}}>No events yet.</div>}
-            </div>
-          )}
-
-          {/* ── ACTIONS ── */}
-          <div style={{display:"flex",gap:8,marginTop:8}}>
-            {!finished && (() => { const isSaved = savedIds.has(match.id); return (
-              <button onClick={()=>{onAction(match);onClose();}} style={{flex:1,padding:"11px 0",borderRadius:12,background:isSaved?`${C.gold}22`:`linear-gradient(135deg,${C.green},#22c55e)`,border:isSaved?`1px solid ${C.gold}`:"none",color:isSaved?"#f59e0b":"#030a05",fontWeight:700,fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
-                <StarIcon filled={isSaved} size={15}/> {isSaved?"Saved":"Save Match"}
-              </button>
-            ); })()}
-            <button onClick={shareMatch} style={{flex:1,padding:"11px 0",borderRadius:12,background:`${C.blue}22`,border:`1px solid ${C.blue}44`,color:C.blue,fontWeight:700,fontSize:14,cursor:"pointer"}}>📤 Share</button>
-          </div>
-
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── TOP SCORERS TAB ───────────────────────────────────────────────────────
-// Pre-tournament "ones to watch" — will be replaced by live data after Jun 11
-const ONES_TO_WATCH = [
-  {name:"Kylian Mbappé",    team:"France",       flag:"🇫🇷", pos:"FW", club:"Real Madrid",   note:"Golden Boot favourite"},
-  {name:"Erling Haaland",   team:"Norway",        flag:"🇳🇴", pos:"FW", club:"Man City",       note:"Most prolific striker alive"},
-  {name:"Vinicius Jr.",     team:"Brazil",        flag:"🇧🇷", pos:"FW", club:"Real Madrid",   note:"Ballon d'Or contender"},
-  {name:"Harry Kane",       team:"England",       flag:"🏴󠁧󠁢󠁥󠁮󠁧󠁿", pos:"FW", club:"Bayern Munich",  note:"England all-time top scorer"},
-  {name:"Lamine Yamal",     team:"Spain",         flag:"🇪🇸", pos:"FW", club:"Barcelona",     note:"Euro 2024 breakout star"},
-  {name:"Mohamed Salah",    team:"Egypt",         flag:"🇪🇬", pos:"FW", club:"Liverpool",     note:"World's best right now"},
-  {name:"Lionel Messi",     team:"Argentina",     flag:"🇦🇷", pos:"FW", club:"Inter Miami",   note:"The GOAT · last hurrah"},
-  {name:"Cristiano Ronaldo",team:"Portugal",      flag:"🇵🇹", pos:"FW", club:"Al Nassr",      note:"Final World Cup at 41"},
-  {name:"Jamal Musiala",    team:"Germany",       flag:"🇩🇪", pos:"MF", club:"Bayern Munich",  note:"Silky dribbler"},
-  {name:"Florian Wirtz",    team:"Germany",       flag:"🇩🇪", pos:"MF", club:"Bayer Leverkusen",note:"Bundesliga's best"},
-  {name:"Pedri",            team:"Spain",         flag:"🇪🇸", pos:"MF", club:"Barcelona",     note:"Generational talent"},
-  {name:"Martin Ødegaard",  team:"Norway",        flag:"🇳🇴", pos:"MF", club:"Arsenal",       note:"Arsenal captain"},
-  {name:"Jude Bellingham",  team:"England",       flag:"🏴󠁧󠁢󠁥󠁮󠁧󠁿", pos:"MF", club:"Real Madrid",   note:"World-class at 21"},
-  {name:"Kevin De Bruyne",  team:"Belgium",       flag:"🇧🇪", pos:"MF", club:"Napoli",        note:"World's best midfielder"},
-  {name:"Rodri",            team:"Spain",         flag:"🇪🇸", pos:"MF", club:"Man City",       note:"2024 Ballon d'Or"},
-  {name:"Darwin Núñez",     team:"Uruguay",       flag:"🇺🇾", pos:"FW", club:"Liverpool",     note:"Powerful & explosive"},
-  {name:"Luis Díaz",        team:"Colombia",      flag:"🇨🇴", pos:"FW", club:"Liverpool",     note:"PL class winger"},
-  {name:"Son Heung-min",    team:"South Korea",   flag:"🇰🇷", pos:"FW", club:"Tottenham",     note:"Carries entire nation"},
-  {name:"Takefusa Kubo",    team:"Japan",         flag:"🇯🇵", pos:"MF", club:"Real Sociedad",  note:"Japan's golden boy"},
-  {name:"Achraf Hakimi",    team:"Morocco",       flag:"🇲🇦", pos:"DF", club:"PSG",           note:"World's best RB"},
-];
-
-function TopScorersTab({ tabTop=116 }) {
-  const { allFixtures } = useContext(LiveScoresCtx);
-  const [filter, setFilter] = useState("all");
-
-  // Try to build live scorers from allFixtures events
-  const liveScorers = useMemo(() => {
-    if (!allFixtures?.length) return [];
-    const scorers = {};
-    allFixtures.forEach(f => {
-      const events = f.events || [];
-      events.forEach(ev => {
-        if (ev.type !== "Goal" || ev.detail === "Own Goal") return;
-        const player = ev.player?.name;
-        const teamName = normTeam(ev.team?.name || "");
-        if (!player) return;
-        const key = player;
-        if (!scorers[key]) scorers[key] = { name:player, team:teamName, goals:0, assists:0 };
-        scorers[key].goals++;
-      });
-      // Assists
-      events.forEach(ev => {
-        if (ev.type !== "Goal" || ev.detail === "Own Goal") return;
-        const player = ev.assist?.name;
-        const teamName = normTeam(ev.team?.name || "");
-        if (!player) return;
-        if (!scorers[player]) scorers[player] = { name:player, team:teamName, goals:0, assists:0 };
-        scorers[player].assists++;
-      });
-    });
-    return Object.values(scorers).sort((a,b)=>b.goals-a.goals||(b.goals+b.assists)-(a.goals+a.assists));
-  }, [allFixtures]);
-
-  const hasLive = liveScorers.length > 0;
-  const _tshRef = useRef(null); const _tshH = useElemHeight(_tshRef);
-
-  return (
-    <div>
-      <div ref={_tshRef} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"8px 13px",maxWidth:700,margin:"0 auto"}}>
-        <div style={{fontWeight:700,fontSize:16,color:C.green,marginBottom:!hasLive?4:0}}>⚽ TOP SCORERS <span style={{fontSize:11,color:C.dim,fontWeight:400}}>{hasLive?"· Live data":"· Pre-tournament"}</span></div>
-        {!hasLive && (
-          <div style={{display:"flex",gap:6}}>
-            <Pill active={filter==="all"} onClick={()=>setFilter("all")}  color={C.green}>All</Pill>
-            <Pill active={filter==="FW"}  onClick={()=>setFilter("FW")}   color={C.red}>Strikers</Pill>
-            <Pill active={filter==="MF"}  onClick={()=>setFilter("MF")}   color={C.gold}>Midfielders</Pill>
-            <Pill active={filter==="DF"}  onClick={()=>setFilter("DF")}   color={C.blue}>Defenders</Pill>
-          </div>
-        )}
-      </div>
-      <div style={{height:_tshH||50}}/>
-      {!hasLive && (
-          <div>
-          {ONES_TO_WATCH.filter(p=>filter==="all"||p.pos===filter).map((p,i) => (
-            <Card key={p.name} style={{marginBottom:7}}>
-              <div style={{padding:"10px 13px",display:"flex",alignItems:"center",gap:10}}>
-                <div style={{fontWeight:700,color:C.dim,minWidth:24,fontSize:13,textAlign:"center"}}>#{i+1}</div>
-                <div style={{flex:1}}>
-                  <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2}}>
-                    <span style={{fontWeight:700,color:C.text,fontSize:14}}>{p.name}</span>
-                    <span style={{fontSize:10,fontWeight:700,padding:"1px 6px",borderRadius:6,
-                      background:p.pos==="FW"?`${C.red}22`:p.pos==="MF"?`${C.gold}22`:`${C.blue}22`,
-                      color:p.pos==="FW"?C.red:p.pos==="MF"?C.gold:C.blue}}>{p.pos}</span>
-                  </div>
-                  <div style={{fontSize:11,color:C.dim}}>{p.flag} {p.team} · {p.club}</div>
-                  <div style={{fontSize:11,color:C.mid,marginTop:2,fontStyle:"italic"}}>{p.note}</div>
-                </div>
-                <Crest team={p.team} size={28}/>
-              </div>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      {hasLive && (
-        <div>
-          {liveScorers.slice(0,20).map((p,i) => {
-            const medal = i===0?"🥇":i===1?"🥈":i===2?"🥉":null;
-            return (
-              <Card key={p.name} style={{marginBottom:7}}>
-                <div style={{padding:"10px 13px",display:"flex",alignItems:"center",gap:10}}>
-                  <div style={{fontWeight:700,color:C.dim,minWidth:26,fontSize:14,textAlign:"center"}}>{medal||`#${i+1}`}</div>
-                  <div style={{flex:1}}>
-                    <div style={{fontWeight:700,color:C.text,fontSize:14,marginBottom:2}}>{p.name}</div>
-                    <div style={{fontSize:11,color:C.dim}}>{getFlag(p.team)} {p.team}</div>
-                  </div>
-                  <div style={{textAlign:"center",minWidth:40}}>
-                    <div style={{fontWeight:900,fontSize:24,color:i===0?C.green:i<3?C.gold:C.mid,lineHeight:1}}>{p.goals}</div>
-                    <div style={{fontSize:9,color:C.dim}}>goals</div>
-                  </div>
-                  <div style={{textAlign:"center",minWidth:36}}>
-                    <div style={{fontWeight:700,fontSize:16,color:C.blue,lineHeight:1}}>{p.assists}</div>
-                    <div style={{fontSize:9,color:C.dim}}>assists</div>
-                  </div>
-                </div>
-              </Card>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
 
 // ── SYNC MODAL ─────────────────────────────────────────────────────────────
 function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved, favTeams, setToast, setSaved, setFavTeams, dark, setDark, geoData, locationOverride, setLocationOverride, onShowSaved, userAvatar, persistAvatar, displayName, persistDisplayName }) {
@@ -3449,16 +2516,34 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
   };
 
   const handleCreatePIN = async () => {
+    if (pin.length < 6) { setError("Please enter a 6-digit PIN."); return; }
     setLoading(true); setError("");
     try {
       const r = await fetch("/api/sync?action=pin-create", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ uid: syncUid, saved, favTeams, dark, locationOverride }),
+        body: JSON.stringify({ uid: syncUid, saved, favTeams, dark, locationOverride, displayName, avatar: userAvatar, chosenPin: pin }),
       });
       const d = await r.json();
       if (!d.ok) throw new Error(d.error);
-      setPin(d.pin);
       persistProfile({ uid: syncUid, pin: d.pin, method: "pin" });
+      setScreen("pin-created");
+    } catch(e) { setError(e.message); }
+    setLoading(false);
+  };
+
+  const handleChangePIN = async () => {
+    if (pin.length < 6) { setError("Please enter a 6-digit PIN."); return; }
+    if (pin === syncProfile?.pin) { setError("That's already your current PIN."); return; }
+    setLoading(true); setError("");
+    try {
+      // Delete old PIN key then create new one
+      const r = await fetch("/api/sync?action=pin-change", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ uid: syncUid, oldPin: syncProfile?.pin, newPin: pin, saved, favTeams, dark, locationOverride, displayName, avatar: userAvatar }),
+      });
+      const d = await r.json();
+      if (!d.ok) throw new Error(d.error);
+      persistProfile({ ...syncProfile, pin });
       setScreen("pin-created");
     } catch(e) { setError(e.message); }
     setLoading(false);
@@ -3679,6 +2764,7 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
   const screenTitle = {
     home: "My Account",
     "pin-create": "Create PIN", "pin-created": "Your PIN",
+    "pin-change": "Change PIN",
     "pin-join": "Enter PIN", email: "Sign in with Email",
     "email-sent": "Check Your Email", predictions: "My Predictions",
     teams: "My Teams", location: "Location", sync: "Sync",
@@ -3787,7 +2873,7 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
                     {/* Team picker — auto-collapse when 4 selected */}
                     {favTeams.length < 4 ? (
                       <div style={{display:"flex",gap:5,flexWrap:"wrap",maxHeight:150,overflowY:"auto"}}>
-                        {Object.keys(TEAMS).filter(t=>!favTeams.includes(t)).map(t=>(
+                        {Object.keys(TEAMS).filter(t=>!favTeams.includes(t)).sort().map(t=>(
                           <button key={t} onClick={()=>{setFavTeams(prev=>{if(prev.length>=4)return prev;const n=[...prev,t];try{localStorage.setItem("wc2026_favs",JSON.stringify(n))}catch{};if(n.length===4)setTeamsExpanded(false);return n;});}} style={{display:"flex",alignItems:"center",gap:4,padding:"4px 8px",borderRadius:14,border:`1px solid ${C.b2}`,background:C.bg,color:C.mid,fontSize:11,cursor:"pointer"}}>
                             <Crest team={t} size={13}/>{t}
                           </button>
@@ -3870,7 +2956,12 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
                   <button onClick={()=>setScreen("email")} style={{...btnSecondary,marginTop:0,fontSize:13}}>✉️ Continue with Email</button>
                 </div>
               ) : (
-                <div style={{fontSize:12,color:C.dim,textAlign:"center",lineHeight:1.5}}>Your progress syncs automatically across all signed-in devices.</div>
+                <div>
+                  <div style={{fontSize:12,color:C.dim,textAlign:"center",lineHeight:1.5,marginBottom:10}}>Your progress syncs automatically across all signed-in devices.</div>
+                  {syncProfile?.pin && (
+                    <button onClick={()=>{setPin("");setScreen("pin-change");setError("");}} style={{width:"100%",padding:"9px 0",borderRadius:10,border:`1px solid ${C.b2}`,background:C.s2,color:C.mid,fontSize:13,fontWeight:600,cursor:"pointer"}}>🔁 Change PIN</button>
+                  )}
+                </div>
               )}
             </div>
           )}
@@ -3892,7 +2983,7 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
               </div>
               {favTeams.length < 4 && (
                 <div style={{display:"flex",gap:5,flexWrap:"wrap",maxHeight:140,overflowY:"auto"}}>
-                  {Object.keys(TEAMS).filter(t=>!favTeams.includes(t)).map(t=>(
+                  {Object.keys(TEAMS).filter(t=>!favTeams.includes(t)).sort().map(t=>(
                     <button key={t} onClick={()=>setFavTeams(prev=>{if(prev.length>=4)return prev;const n=[...prev,t];try{localStorage.setItem("wc2026_favs",JSON.stringify(n))}catch{};return n;})} style={{display:"flex",alignItems:"center",gap:4,padding:"4px 8px",borderRadius:14,border:`1px solid ${C.b2}`,background:C.bg,color:C.mid,fontSize:11,cursor:"pointer"}}>
                       <Crest team={t} size={13}/>{t}
                     </button>
@@ -3953,9 +3044,19 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
           {/* ── PIN CREATE ── */}
           {screen === "pin-create" && (
             <div>
-              <div style={{fontSize:13,color:C.dim,lineHeight:1.6,marginBottom:20}}>We'll generate a 6-digit PIN tied to your current progress. Write it down — you'll enter it on any other device to sync.</div>
+              <div style={{fontSize:13,color:C.dim,lineHeight:1.5,marginBottom:16}}>Choose a 6-digit PIN you'll remember. You'll use it to sign in on any other device.</div>
+              <input
+                value={pin}
+                onChange={e=>setPin(e.target.value.replace(/[^0-9]/g,"").slice(0,6))}
+                placeholder="Choose a 6-digit PIN"
+                inputMode="numeric"
+                maxLength={6}
+                style={{...inputStyle,fontSize:24,textAlign:"center",fontFamily:"monospace",letterSpacing:"0.2em",marginBottom:12}}
+              />
               {error && <div style={{color:"#f87171",fontSize:13,marginBottom:12,padding:"10px 12px",background:"rgba(248,113,113,0.1)",borderRadius:8}}>{error}</div>}
-              <button onClick={handleCreatePIN} disabled={loading} style={{...btnPrimary,opacity:loading?0.6:1}}>{loading?"Generating...":"Generate My PIN"}</button>
+              <button onClick={handleCreatePIN} disabled={loading||pin.length<6} style={{...btnPrimary,opacity:loading||pin.length<6?0.5:1,marginBottom:8}}>{loading?"Saving...":"Set My PIN"}</button>
+              <div style={{textAlign:"center",margin:"8px 0 4px",fontSize:12,color:C.dim}}>or</div>
+              <button onClick={()=>setScreen("email")} style={{...btnSecondary,marginTop:0,fontSize:13}}>✉️ Sign in with Email instead</button>
             </div>
           )}
 
@@ -3969,6 +3070,33 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
               </div>
               <div style={{fontSize:12,color:C.dim,marginBottom:20,lineHeight:1.5}}>Screenshot this. On another device, tap the profile icon → "I have a PIN".</div>
               <button onClick={onClose} style={btnPrimary}>Done</button>
+              <button onClick={()=>{setPin("");setScreen("pin-change");setError("");}} style={{...btnSecondary,marginTop:8,fontSize:13}}>🔁 Change PIN</button>
+            </div>
+          )}
+
+          {/* ── PIN CHANGE ── */}
+          {screen === "pin-change" && (
+            <div>
+              {syncProfile?.pin && (
+                <div style={{background:C.s2,border:`1px solid ${C.b1}`,borderRadius:10,padding:"12px 14px",marginBottom:16,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                  <div>
+                    <div style={{fontSize:11,color:C.mid,fontWeight:600,marginBottom:2}}>CURRENT PIN</div>
+                    <div style={{fontSize:24,fontWeight:900,color:C.dim,letterSpacing:"0.2em",fontFamily:"monospace"}}>{syncProfile.pin}</div>
+                  </div>
+                  <span style={{fontSize:11,color:C.dim}}>will be replaced</span>
+                </div>
+              )}
+              <div style={{fontSize:13,color:C.dim,lineHeight:1.5,marginBottom:12}}>Enter a new 6-digit PIN.</div>
+              <input
+                value={pin}
+                onChange={e=>setPin(e.target.value.replace(/[^0-9]/g,"").slice(0,6))}
+                placeholder="New 6-digit PIN"
+                inputMode="numeric"
+                maxLength={6}
+                style={{...inputStyle,fontSize:24,textAlign:"center",fontFamily:"monospace",letterSpacing:"0.2em",marginBottom:12}}
+              />
+              {error && <div style={{color:"#f87171",fontSize:13,marginBottom:12,padding:"10px 12px",background:"rgba(248,113,113,0.1)",borderRadius:8}}>{error}</div>}
+              <button onClick={handleChangePIN} disabled={loading||pin.length<6} style={{...btnPrimary,opacity:loading||pin.length<6?0.5:1}}>{loading?"Saving...":"Update PIN"}</button>
             </div>
           )}
 
@@ -4139,7 +3267,7 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
     return (
       <>
         <div onClick={onClose} style={{position:"fixed",inset:0,zIndex:999}}/>
-        <div onClick={e=>e.stopPropagation()} style={{position:"fixed",top:58,right:14,width:280,background:C.s1,border:`1px solid ${C.b2}`,borderRadius:14,boxShadow:"0 8px 32px rgba(0,0,0,0.4)",zIndex:1000,overflow:"hidden"}}>
+        <div onClick={e=>e.stopPropagation()} style={{position:"fixed",top:58,right:14,width:280,background:C.s1,border:`1px solid ${C.b2}`,borderRadius:14,boxShadow:"0 8px 32px rgba(0,0,0,0.4)",zIndex:1000,overflow:"hidden",maxHeight:"85vh",overflowY:"auto"}}>
 
           {screen === "home" ? (
             <>
@@ -4165,7 +3293,7 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
                   { icon:"🔮", label:"My Predictions", sub:"View your picks", action:()=>setScreen("predictions") },
                   { icon:"⭐", label:"My Teams", sub:favTeams.length?favTeams.slice(0,2).join(", ")+(favTeams.length>2?` +${favTeams.length-2}`:""):"None selected", action:()=>setScreen("teams") },
                   { icon:"📍", label:"Location", sub:locationOverride?`Custom: ${locationOverride.label}`:`Auto: ${geoData.city||"Detected"}`, action:()=>setScreen("location") },
-                  { icon:"🔗", label:syncProfile?"Sync settings":"Sign in / Sync", sub:syncProfile?"Manage sync":"Keep progress across devices", action:()=>setScreen(syncProfile?"pin-create":"email") },
+                  { icon:"🔗", label:syncProfile?"Sync settings":"Sign in / Sync", sub:syncProfile?"Manage sync":"Keep progress across devices", action:()=>setScreen("pin-create") },
                 ].map(row => (
                   <button key={row.label} onClick={row.action} style={{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"10px 16px",background:"none",border:"none",cursor:"pointer",textAlign:"left",borderRadius:0}} onMouseEnter={e=>e.currentTarget.style.background=C.s2} onMouseLeave={e=>e.currentTarget.style.background="none"}>
                     <span style={{fontSize:18,width:22,textAlign:"center",flexShrink:0}}>{row.icon}</span>
