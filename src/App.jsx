@@ -2525,17 +2525,20 @@ function SavedMatchCard({ item, onRemove, notifiedIds=new Set(), onNotified=()=>
     onNotified(m.id);
   };
   return (
-    <div style={{background:C.s2,border:`1px solid ${C.b1}`,borderRadius:12,marginBottom:6,overflow:"hidden"}}>
+    <div style={{background:C.s2,border:`1px solid ${C.gold}33`,borderLeft:`3px solid ${C.gold}`,borderRadius:12,marginBottom:6,overflow:"hidden"}}>
       <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px"}}>
         <Crest team={m.home} size={22}/>
         <div style={{flex:1,minWidth:0}}>
-          <div style={{fontWeight:700,color:C.text,fontSize:13,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{m.home} vs {m.away}</div>
+          <div style={{display:"flex",alignItems:"center",gap:5}}>
+            <span style={{color:C.gold,fontSize:11}}>★</span>
+            <span style={{fontWeight:700,color:C.text,fontSize:13,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{m.home} vs {m.away}</span>
+          </div>
           <div style={{fontSize:11,color:C.dim,marginTop:1}}>{m.date} · {m.time} · {m.venue?.split(",")[0]||""}</div>
         </div>
         <div style={{display:"flex",gap:4,alignItems:"center",flexShrink:0}}>
           <button onClick={handleCalendar} title="Add to Calendar" style={{padding:"5px 10px",borderRadius:7,border:`1px solid ${C.green}44`,background:`${C.green}15`,color:C.green,fontSize:12,fontWeight:600,cursor:"pointer"}}>📅 Calendar</button>
           <button onClick={handlePush} disabled={pushState==="denied"} title={pushState==="needs-install"?"Install app to enable push":"Set push notification"} style={{padding:"5px 10px",borderRadius:7,border:`1px solid ${notified?C.green:pushState==="denied"?C.b2:C.gold}44`,background:notified?`${C.green}15`:pushState==="denied"?C.s1:`${C.gold}15`,color:notified?C.green:pushState==="denied"?C.dim:C.gold,fontSize:12,fontWeight:600,cursor:pushState==="denied"?"not-allowed":"pointer",opacity:pushState==="denied"?0.4:1}}>
-            {notified?"🔔 Set":pushState==="needs-install"?"🔔 Install app":"🔔 Notify me"}
+            {notified?"🔔 Set":"🔔 Notify me"}
           </button>
           <button onClick={()=>onRemove(item.id)} style={{padding:"5px 7px",borderRadius:7,border:`1px solid ${C.b2}`,background:"none",color:C.dim,fontSize:15,cursor:"pointer",lineHeight:1}}>×</button>
         </div>
@@ -2571,15 +2574,19 @@ function SavedTab({ saved, onRemove, tabTop=116 }) {
   });
 
   // Filter options derived from saved matches
-  const groups = [...new Set(sorted.map(x=>x.match?.group).filter(Boolean))].sort();
-  const teams  = [...new Set(sorted.flatMap(x=>[x.match?.home,x.match?.away]).filter(Boolean))].sort();
-  const dates  = [...new Set(sorted.map(x=>x.match?.date).filter(Boolean))];
+  const groups = [...new Set(sorted.map(x=>x.match?.group?.trim()).filter(Boolean))].sort();
+  const teams  = [...new Set(sorted.flatMap(x=>[x.match?.home?.trim(),x.match?.away?.trim()]).filter(Boolean))].sort();
+  const dates  = [...new Set(sorted.map(x=>x.match?.date?.trim()).filter(Boolean))];
 
   const filtered = sorted.filter(item => {
     const m = item.match;
-    if (filterMode === "group") return !filterVal || m.group === filterVal;
-    if (filterMode === "team")  return !filterVal || m.home === filterVal || m.away === filterVal;
-    if (filterMode === "date")  return !filterVal || m.date === filterVal;
+    const home = m.home?.trim();
+    const away = m.away?.trim();
+    const group = m.group?.trim();
+    const date = m.date?.trim();
+    if (filterMode === "group") return !filterVal || group === filterVal;
+    if (filterMode === "team")  return !filterVal || home === filterVal || away === filterVal;
+    if (filterMode === "date")  return !filterVal || date === filterVal;
     return true;
   });
 
@@ -2623,7 +2630,7 @@ function SavedTab({ saved, onRemove, tabTop=116 }) {
   return (
     <div style={{maxWidth:700,margin:"0 auto"}}>
       {/* Sticky controls */}
-      <div ref={_ref} style={{position:"sticky",top:tabTop,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"8px 13px"}}>
+      <div ref={_ref} style={{position:"sticky",top:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"8px 13px"}}>
         {/* Master actions */}
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
           <span style={{fontSize:12,fontWeight:700,color:C.mid,letterSpacing:"0.06em"}}>ALL MATCHES ({saved.length}){filterMode!=="all"&&filtered.length!==saved.length?<span style={{color:C.dim,fontWeight:400}}> · {filtered.length} shown</span>:null}</span>
@@ -2653,7 +2660,7 @@ function SavedTab({ saved, onRemove, tabTop=116 }) {
           </div>
         )}
       </div>
-      <div style={{height:8}}/>
+      <div style={{height:12}}/>
       {filtered.length === 0
         ? <div style={{textAlign:"center",padding:"32px 0",color:C.dim,fontSize:13}}>No matches match this filter.</div>
         : filtered.map(item=>(<SavedMatchCard key={item.id} item={item} onRemove={onRemove} notifiedIds={notifiedIds} onNotified={(id)=>setNotifiedIds(prev=>new Set([...prev,id]))}/>))
@@ -4589,7 +4596,7 @@ export default function App() {
               <span style={{fontSize:13,color:C.dim,marginLeft:"auto"}}>{saved.length} saved</span>
             </div>
             {/* Scrollable content */}
-            <div style={{flex:1,overflowY:"auto"}}>
+            <div style={{flex:1,overflowY:"auto",position:"relative"}} id="saved-scroll">
               <div style={{maxWidth:700,margin:"0 auto",padding:"0 13px 80px"}}>
                 <SavedTab saved={saved} onRemove={onRemove} tabTop={57}/>
               </div>
