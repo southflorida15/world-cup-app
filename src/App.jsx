@@ -3619,6 +3619,158 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
   );
 }
 
+
+// ── WC NEWS TAB ────────────────────────────────────────────────────────────
+function timeAgo(isoStr) {
+  const diff = (Date.now() - new Date(isoStr).getTime()) / 1000;
+  if (diff < 60) return "just now";
+  if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff/3600)}h ago`;
+  return `${Math.floor(diff/86400)}d ago`;
+}
+
+function QuickFacts({ tabTop }) {
+  const { getScore, isFinished } = useContext(LiveScoresCtx);
+
+  const finishedMatches = MATCHES.filter(m => isFinished(m.home, m.away));
+  const scores = finishedMatches.map(m => {
+    const sc = getScore(m.home, m.away);
+    return sc ? { ...m, hg: sc.hg ?? 0, ag: sc.ag ?? 0 } : null;
+  }).filter(Boolean);
+
+  if (scores.length === 0) return (
+    <div style={{background:C.s2,borderRadius:12,padding:16,marginBottom:16,border:`1px solid ${C.b1}`}}>
+      <div style={{fontSize:12,fontWeight:700,color:C.mid,letterSpacing:"0.08em",marginBottom:8}}>⚡ TOURNAMENT FACTS</div>
+      <div style={{fontSize:13,color:C.dim,textAlign:"center",padding:"12px 0"}}>Facts will appear here as matches are played.</div>
+    </div>
+  );
+
+  // Compute facts from live data
+  const goalScorers = {};
+  const matchGoals = scores.map(m => ({ m, total: m.hg + m.ag }));
+  const highestScoring = matchGoals.sort((a,b)=>b.total-a.total)[0];
+  const totalGoals = scores.reduce((s,m)=>s+m.hg+m.ag, 0);
+  const avgGoals = (totalGoals / scores.length).toFixed(1);
+
+  // Biggest upset: finished match where group underdog won
+  // Use home/away position as proxy — away win = mild upset
+  const awayWins = scores.filter(m => m.ag > m.hg);
+  const biggestUpset = awayWins.length > 0 ? awayWins[awayWins.length - 1] : null;
+
+  // Most one-sided match
+  const mostOneSided = [...scores].sort((a,b)=>(Math.abs(b.hg-b.ag))-(Math.abs(a.hg-a.ag)))[0];
+  const biggestMargin = mostOneSided ? Math.abs(mostOneSided.hg - mostOneSided.ag) : 0;
+
+  // Clean sheets
+  const cleanSheets = scores.filter(m => m.hg === 0 || m.ag === 0).length;
+
+  const facts = [
+    { icon:"⚽", label:"Goals scored", value:`${totalGoals} (avg ${avgGoals}/match)` },
+    { icon:"🏟️", label:"Matches played", value:`${scores.length} of 72` },
+    { icon:"🎯", label:"Clean sheets", value:`${cleanSheets}` },
+    highestScoring && { icon:"🔥", label:"Highest-scoring match", value:`${highestScoring.m.home} ${highestScoring.m.hg}–${highestScoring.m.ag} ${highestScoring.m.away} (${highestScoring.total} goals)` },
+    biggestMargin > 2 && mostOneSided && { icon:"💥", label:"Biggest win", value:`${mostOneSided.hg > mostOneSided.ag ? mostOneSided.home : mostOneSided.away} won ${Math.max(mostOneSided.hg,mostOneSided.ag)}–${Math.min(mostOneSided.hg,mostOneSided.ag)}` },
+    biggestUpset && { icon:"😱", label:"Away win", value:`${biggestUpset.away} ${biggestUpset.ag}–${biggestUpset.hg} ${biggestUpset.home}` },
+  ].filter(Boolean);
+
+  return (
+    <div style={{background:C.s2,borderRadius:12,padding:16,marginBottom:16,border:`1px solid ${C.b1}`}}>
+      <div style={{fontSize:12,fontWeight:700,color:C.mid,letterSpacing:"0.08em",marginBottom:12}}>⚡ TOURNAMENT FACTS SO FAR</div>
+      {facts.map((f,i) => (
+        <div key={i} style={{display:"flex",alignItems:"flex-start",gap:10,marginBottom:i<facts.length-1?10:0}}>
+          <span style={{fontSize:18,flexShrink:0}}>{f.icon}</span>
+          <div>
+            <div style={{fontSize:11,color:C.dim,fontWeight:600}}>{f.label}</div>
+            <div style={{fontSize:13,color:C.text,fontWeight:600,marginTop:1}}>{f.value}</div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function WCNewsTab({ tabTop=116 }) {
+  const _ref = useRef(null);
+  const _h = useElemHeight(_ref);
+  const [articles, setArticles] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [lastFetch, setLastFetch] = useState(null);
+
+  const fetchNews = async () => {
+    setLoading(true); setError(null);
+    try {
+      const r = await fetch("/api/news");
+      const d = await r.json();
+      if (d.articles?.length) { setArticles(d.articles); setLastFetch(Date.now()); }
+      else setError("No articles found.");
+    } catch(e) { setError("Couldn't load news. Try again."); }
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchNews(); }, []);
+
+  return (
+    <div>
+      {/* Sticky header */}
+      <div ref={_ref} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"10px 13px 8px",maxWidth:700,margin:"0 auto"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <span style={{fontSize:13,fontWeight:700,color:C.green}}>📰 WC 2026 News</span>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            {lastFetch && <span style={{fontSize:11,color:C.dim}}>Updated {timeAgo(new Date(lastFetch).toISOString())}</span>}
+            <button onClick={fetchNews} disabled={loading} style={{padding:"4px 10px",borderRadius:8,border:`1px solid ${C.b2}`,background:C.s2,color:C.mid,fontSize:11,cursor:"pointer",opacity:loading?0.5:1}}>↻ Refresh</button>
+          </div>
+        </div>
+      </div>
+      <div style={{height:_h||50}}/>
+
+      <div style={{padding:"0 0 20px"}}>
+        {/* Tournament facts */}
+        <QuickFacts tabTop={tabTop}/>
+
+        {/* News feed */}
+        <div style={{fontSize:12,fontWeight:700,color:C.mid,letterSpacing:"0.08em",marginBottom:10}}>🗞️ LATEST HEADLINES</div>
+
+        {loading && (
+          <div style={{textAlign:"center",padding:"40px 0"}}>
+            <div style={{width:24,height:24,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto 10px"}}/>
+            <div style={{fontSize:13,color:C.dim}}>Loading news…</div>
+          </div>
+        )}
+
+        {!loading && error && (
+          <div style={{textAlign:"center",padding:"30px 0"}}>
+            <div style={{fontSize:13,color:C.dim,marginBottom:12}}>{error}</div>
+            <button onClick={fetchNews} style={{padding:"8px 20px",borderRadius:10,border:`1px solid ${C.green}`,background:`${C.green}15`,color:C.green,fontSize:13,cursor:"pointer"}}>Try again</button>
+          </div>
+        )}
+
+        {!loading && !error && articles.map((a, i) => (
+          <a key={i} href={a.url} target="_blank" rel="noopener noreferrer" style={{display:"block",textDecoration:"none",marginBottom:10}}>
+            <div style={{background:C.s2,border:`1px solid ${C.b1}`,borderRadius:12,overflow:"hidden",display:"flex",gap:0,transition:"border-color .15s"}}
+              onMouseEnter={e=>e.currentTarget.style.borderColor=C.green}
+              onMouseLeave={e=>e.currentTarget.style.borderColor=C.b1}>
+              {a.image && (
+                <img src={a.image} alt="" style={{width:90,height:90,objectFit:"cover",flexShrink:0}}
+                  onError={e=>{e.target.style.display="none";}}/>
+              )}
+              <div style={{padding:"10px 12px",flex:1,minWidth:0}}>
+                <div style={{fontSize:13,fontWeight:700,color:C.text,lineHeight:1.4,marginBottom:4,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{a.title}</div>
+                {a.description && <div style={{fontSize:11,color:C.dim,lineHeight:1.4,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden",marginBottom:6}}>{a.description}</div>}
+                <div style={{display:"flex",alignItems:"center",gap:6}}>
+                  <span style={{fontSize:10,color:C.mid,fontWeight:600}}>{a.source}</span>
+                  <span style={{fontSize:10,color:C.dim}}>·</span>
+                  <span style={{fontSize:10,color:C.dim}}>{timeAgo(a.publishedAt)}</span>
+                </div>
+              </div>
+            </div>
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── APP ────────────────────────────────────────────────────────────────────
 const TABS = [
   {id:"live",      icon:"🔴", label:"Live"},
@@ -3631,6 +3783,7 @@ const TABS = [
   {id:"predictor", icon:"🔮", label:"Predictor"},
   {id:"sim",       icon:"🎮", label:"Simulator"},
   {id:"bracket",   icon:"🏆", label:"My Bracket"},
+  {id:"news",       icon:"📰", label:"WC News"},
 ];
 
 // ── PWA INSTALL BANNER ────────────────────────────────────────────────────
@@ -3919,6 +4072,7 @@ export default function App() {
           {tab==="predictor" && <PredictorTab/>}
           {tab==="sim"       && <SimTab tabTop={tabBarBottom}/>}
           {tab==="bracket"   && <MyBracketTab tabTop={tabBarBottom}/>}
+          {tab==="news"       && <WCNewsTab tabTop={tabBarBottom}/>}
           {tab==="saved"     && <div style={{paddingTop:14}}><SavedTab saved={saved} onRemove={onRemove}/></div>}
         </div>
         {/* Saved view overlay */}
