@@ -3502,6 +3502,7 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
             <button onClick={()=>setScreen("pin-join")} style={{flex:1,padding:"11px 8px",borderRadius:12,border:`1px solid ${C.b2}`,background:C.bg,color:C.mid,fontWeight:600,fontSize:13,cursor:"pointer"}}>I have a PIN</button>
           </div>
           <button onClick={()=>setScreen("email")} style={{...btnSecondary,marginTop:0,fontSize:13}}>✉️ Continue with Email</button>
+          <div style={{height:16}}/>
         </div>
       ) : (
         <div>
