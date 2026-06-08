@@ -51,11 +51,10 @@ export default async function handler(req, res) {
     // POST { userId, name }
     // Saves a display name for a user. userId is a client-generated UUID.
     if (action === "register") {
-      const { userId, name } = req.body || {};
+      const { userId, name, avatar, city, country } = req.body || {};
       if (!userId || !name) return res.status(400).json({ error: "Missing userId or name" });
       const clean = name.trim().slice(0, 20);
       if (!clean) return res.status(400).json({ error: "Name too short" });
-      // Check name not already taken by someone else
       const existing = await kv.get(`user:${userId}`);
       if (!existing) {
         const names = await kv.smembers("names") || [];
@@ -64,7 +63,18 @@ export default async function handler(req, res) {
         }
         await kv.sadd("names", clean);
       }
-      await kv.set(`user:${userId}`, { userId, name: clean, registeredAt: Date.now() });
+      // Store full avatar separately (supports base64 photos)
+      if (avatar) {
+        await kv.set(`avatar:${userId}`, avatar, { ex: 60 * 60 * 24 * 365 });
+      }
+      const userData = {
+        userId, name: clean,
+        hasAvatar: !!avatar,
+        city: city || existing?.city || "",
+        country: country || existing?.country || "",
+        registeredAt: existing?.registeredAt || Date.now()
+      };
+      await kv.set(`user:${userId}`, userData);
       return res.status(200).json({ userId, name: clean });
     }
 
@@ -201,12 +211,25 @@ export default async function handler(req, res) {
           });
         }
         const predCount = (await kv.smembers(`predSet:${uid}`) || []).length;
-        return { userId: uid, name: user.name, pts, exact, correct, predCount };
+        return { userId: uid, name: user.name, hasAvatar: user.hasAvatar || false, city: user.city || "", country: user.country || "", pts, exact, correct, predCount };
       }));
 
-      const board = results
+      const sorted = results
         .filter(Boolean)
         .sort((a, b) => b.pts - a.pts || b.exact - a.exact || b.correct - a.correct);
+
+      // Batch fetch avatars for users that have one
+      const avatarUserIds = sorted.filter(e => e.hasAvatar).map(e => e.userId);
+      const avatarMap = {};
+      if (avatarUserIds.length) {
+        const avatarKeys = avatarUserIds.map(uid => `avatar:${uid}`);
+        const avatarValues = await kv.mget(...avatarKeys);
+        avatarUserIds.forEach((uid, i) => {
+          if (avatarValues[i]) avatarMap[uid] = avatarValues[i];
+        });
+      }
+
+      const board = sorted.map(e => ({ ...e, avatar: avatarMap[e.userId] || null }));
 
       return res.status(200).json(board);
     }
@@ -245,34 +268,6 @@ export default async function handler(req, res) {
       } while (cursor !== 0);
 
       return res.status(200).json({ result, preds: preds.sort((a,b) => (b.pts||0)-(a.pts||0)) });
-    }
-
-    // ── reset ─────────────────────────────────────────────────────────────
-    // POST ?action=reset  (requires x-admin-secret header)
-    // Wipes ALL predictor data: users, predictions, scores, results, names.
-    // Sync/push subscription keys (uid:*, pin:*, push:*) are NOT touched.
-    if (action === "reset") {
-      const secret = req.headers["x-admin-secret"];
-      if (secret !== process.env.PREDICTOR_ADMIN_SECRET) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
-      const patterns = ["user:*", "pred:*", "predSet:*", "score:*", "result:*"];
-      let totalDeleted = 0;
-      for (const pattern of patterns) {
-        let cursor = 0;
-        do {
-          const [nextCursor, keys] = await kv.scan(cursor, { match: pattern, count: 200 });
-          cursor = parseInt(nextCursor) || 0;
-          if (keys.length) {
-            await Promise.all(keys.map(k => kv.del(k)));
-            totalDeleted += keys.length;
-          }
-        } while (cursor !== 0);
-      }
-      await kv.del("names");
-      totalDeleted++;
-      console.log("[predictor] reset — deleted " + totalDeleted + " keys");
-      return res.status(200).json({ ok: true, deleted: totalDeleted });
     }
 
     return res.status(404).json({ error: `Unknown action: ${action}` });
