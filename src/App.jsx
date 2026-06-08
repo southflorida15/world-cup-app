@@ -3349,17 +3349,8 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
   const isSynced = !!syncProfile;
   const persistProfile = (p) => { setSyncProfile(p); try { localStorage.setItem("wc2026_syncprofile", JSON.stringify(p)); } catch {} };
 
-  const HOST_CITIES_PICK = [
-    {label:"New York / NJ",country:"US"},{label:"Los Angeles",country:"US"},{label:"Dallas",country:"US"},
-    {label:"San Francisco",country:"US"},{label:"Miami",country:"US"},{label:"Atlanta",country:"US"},
-    {label:"Seattle",country:"US"},{label:"Boston",country:"US"},{label:"Philadelphia",country:"US"},
-    {label:"Kansas City",country:"US"},{label:"Houston",country:"US"},{label:"Toronto",country:"CA"},
-    {label:"Vancouver",country:"CA"},{label:"Mexico City",country:"MX"},{label:"Guadalajara",country:"MX"},{label:"Monterrey",country:"MX"},
-  ];
-  const filteredCities = locSearch ? HOST_CITIES_PICK.filter(c=>c.label.toLowerCase().includes(locSearch.toLowerCase())) : HOST_CITIES_PICK;
   const ALL_TEAMS_LIST = Object.values(GROUPS).flatMap(g=>g.teams).sort();
   const filteredTeams = avatarSearch ? ALL_TEAMS_LIST.filter(t=>t.toLowerCase().includes(avatarSearch.toLowerCase())) : ALL_TEAMS_LIST;
-  const displayLocation = locationOverride ? locationOverride.label : (geoData.city ? `${geoData.city}${geoData.region?", "+geoData.region:""}` : "Auto-detected");
 
   const selectPresetAvatar = (id) => { persistAvatar(id); setShowAvatarPicker(false); setToast("Avatar updated!"); };
 
