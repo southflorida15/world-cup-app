@@ -2330,16 +2330,14 @@ function MyBracketTab({ tabTop=116 }) {
 
 // ── SAVED TAB ──────────────────────────────────────────────────────────────
 // ── SAVED TAB ──────────────────────────────────────────────────────────────
-function SavedMatchCard({ item, onRemove }) {
+function SavedMatchCard({ item, onRemove, notifiedIds=new Set(), onNotified=()=>{} }) {
   const isPWA = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
   const [pushState, setPushState] = useState(() => {
     if (!("Notification" in window)) return "unsupported";
     if (!isPWA) return "needs-install";
     return Notification.permission;
   });
-  const [notified, setNotified] = useState(() => {
-    try { const set = JSON.parse(localStorage.getItem("wc2026_push_set") || "[]"); return set.includes(item.match?.id); } catch { return false; }
-  });
+  const notified = notifiedIds.has(item.match?.id);
   const [showInstallTip, setShowInstallTip] = useState(false);
   const m = item.match;
   const handleCalendar = () => downloadICS([item]);
@@ -2354,11 +2352,11 @@ function SavedMatchCard({ item, onRemove }) {
       if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array("BHlG2j1aEN_PheVmM_kw6eG5ho26LSMdtxSVEjiz9HnYqKTWWlOrdFdX-U3qUqR-VLxDrvOBik17FS7NJ1kJdr8") });
       await fetch("/api/push-subscribe", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ subscription: sub.toJSON(), matches:[m], minsBefore:60 }) });
     } catch(e) { console.warn("Push subscribe failed:", e); }
-    setNotified(true);
     try {
       const set = JSON.parse(localStorage.getItem("wc2026_push_set") || "[]");
       if (!set.includes(m.id)) { set.push(m.id); localStorage.setItem("wc2026_push_set", JSON.stringify(set)); }
     } catch {}
+    onNotified(m.id);
   };
   return (
     <div style={{background:C.s2,border:`1px solid ${C.b1}`,borderRadius:12,marginBottom:6,overflow:"hidden"}}>
@@ -2394,6 +2392,9 @@ function SavedTab({ saved, onRemove, tabTop=116 }) {
   const _ref = useRef(null);
   const _h = useElemHeight(_ref);
   const [masterPushDone, setMasterPushDone] = useState(false);
+  const [notifiedIds, setNotifiedIds] = useState(() => {
+    try { return new Set(JSON.parse(localStorage.getItem("wc2026_push_set") || "[]")); } catch { return new Set(); }
+  });
   const sorted = [...saved].sort((a,b) => {
     const ta = MATCH_UTC[a.match?.id] ? new Date(MATCH_UTC[a.match.id]).getTime() : 0;
     const tb = MATCH_UTC[b.match?.id] ? new Date(MATCH_UTC[b.match.id]).getTime() : 0;
@@ -2412,6 +2413,14 @@ function SavedTab({ saved, onRemove, tabTop=116 }) {
       if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey:urlBase64ToUint8Array("BHlG2j1aEN_PheVmM_kw6eG5ho26LSMdtxSVEjiz9HnYqKTWWlOrdFdX-U3qUqR-VLxDrvOBik17FS7NJ1kJdr8") });
       await fetch("/api/push-subscribe", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ subscription:sub.toJSON(), matches:saved.map(x=>x.match), minsBefore:60 }) });
       setMasterPushDone(true);
+      // Mark all match IDs as notified in localStorage so individual cards update
+      try {
+        const ids = saved.map(x=>x.match?.id).filter(Boolean);
+        const existing = JSON.parse(localStorage.getItem("wc2026_push_set") || "[]");
+        const merged = [...new Set([...existing, ...ids])];
+        localStorage.setItem("wc2026_push_set", JSON.stringify(merged));
+        setNotifiedIds(new Set(merged));
+      } catch {}
     } catch(e) { console.warn("Master push failed:", e); }
   };
   if (saved.length === 0) return (
@@ -2434,7 +2443,7 @@ function SavedTab({ saved, onRemove, tabTop=116 }) {
         </div>
       </div>
       <div style={{height:_h||80}}/>
-      {sorted.map(item=>(<SavedMatchCard key={item.id} item={item} onRemove={onRemove}/>))}
+      {sorted.map(item=>(<SavedMatchCard key={item.id} item={item} onRemove={onRemove} notifiedIds={notifiedIds} onNotified={(id)=>setNotifiedIds(prev=>new Set([...prev,id]))}/>))}
     </div>
   );
 }
