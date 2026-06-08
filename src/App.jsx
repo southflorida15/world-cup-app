@@ -3419,6 +3419,7 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
   const [error, setError] = useState("");
   const [showLocPicker, setShowLocPicker] = useState(false);
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
+  const [teamsExpanded, setTeamsExpanded] = useState(false);
   const [nameInput, setNameInput] = useState(displayName || "");
   const [nameFocused, setNameFocused] = useState(false);
   const [avatarTab, setAvatarTab] = useState("icons"); // icons | crests | flags | confs | upload
@@ -3676,11 +3677,12 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
   const btnSecondary = { width:"100%", padding:"11px 0", borderRadius:12, border:`1px solid ${C.b2}`, background:C.s2, color:C.text, fontWeight:600, fontSize:14, cursor:"pointer", marginTop:8 };
 
   const screenTitle = {
-    home: isSynced ? "My Account" : "My Account",
+    home: "My Account",
     "pin-create": "Create PIN", "pin-created": "Your PIN",
     "pin-join": "Enter PIN", email: "Sign in with Email",
     "email-sent": "Check Your Email", predictions: "My Predictions",
-  }[screen] || "";
+    teams: "My Teams", location: "Location", sync: "Sync",
+  }[screen] || "My Account";
 
   const isDesktop = typeof window !== "undefined" && window.innerWidth >= 640;
 
@@ -3753,26 +3755,50 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
 
               {/* ── My Teams ── */}
               <div style={{marginBottom:14}}>
-                <div style={{fontSize:11,color:C.mid,fontWeight:700,letterSpacing:"0.08em",marginBottom:8}}>⭐ MY TEAMS <span style={{color:favTeams.length===4?C.red:C.gold}}>({favTeams.length}/4)</span></div>
-                <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:8}}>
-                  {favTeams.length > 0
-                    ? favTeams.map(t => (
-                        <div key={t} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 10px",background:C.s2,border:`1px solid ${C.gold}44`,borderRadius:20}}>
-                          <Crest team={t} size={20}/>
-                          <span style={{fontSize:12,color:C.gold,fontWeight:600}}>{t}</span>
-                          <button onClick={()=>setFavTeams(prev=>{const n=prev.filter(x=>x!==t);try{localStorage.setItem("wc2026_favs",JSON.stringify(n))}catch{};return n;})} style={{background:"none",border:"none",color:C.dim,fontSize:14,cursor:"pointer",padding:0,lineHeight:1}}>×</button>
-                        </div>
-                      ))
-                    : <div style={{fontSize:12,color:C.dim}}>No teams selected yet</div>
-                  }
-                </div>
-                {favTeams.length < 4 && (
-                  <div style={{display:"flex",gap:6,flexWrap:"wrap",maxHeight:120,overflowY:"auto"}}>
-                    {Object.keys(TEAMS).filter(t=>!favTeams.includes(t)).map(t=>(
-                      <button key={t} onClick={()=>setFavTeams(prev=>{if(prev.length>=4)return prev;const n=[...prev,t];try{localStorage.setItem("wc2026_favs",JSON.stringify(n))}catch{};return n;})} style={{display:"flex",alignItems:"center",gap:5,padding:"4px 8px",borderRadius:16,border:`1px solid ${C.b2}`,background:C.bg,color:C.mid,fontSize:11,cursor:"pointer"}}>
-                        <Crest team={t} size={14}/>{t}
-                      </button>
-                    ))}
+                {/* Header row — always visible, tappable to expand */}
+                <button onClick={()=>setTeamsExpanded(v=>!v)} style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"11px 13px",background:C.s2,border:`1px solid ${teamsExpanded?C.gold+"44":C.b1}`,borderRadius:teamsExpanded?"10px 10px 0 0":10,cursor:"pointer"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <span style={{fontSize:16}}>⭐</span>
+                    <div style={{textAlign:"left"}}>
+                      <div style={{fontSize:13,fontWeight:700,color:C.text}}>My Teams</div>
+                      <div style={{fontSize:11,color:favTeams.length?C.gold:C.dim}}>
+                        {favTeams.length ? favTeams.join(", ") : "Tap to select up to 4 teams"}
+                      </div>
+                    </div>
+                  </div>
+                  <span style={{color:C.dim,fontSize:16,transition:"transform .2s",transform:teamsExpanded?"rotate(90deg)":"none"}}>›</span>
+                </button>
+
+                {/* Expanded picker */}
+                {teamsExpanded && (
+                  <div style={{background:C.s2,border:`1px solid ${C.gold}44`,borderTop:`1px solid ${C.b1}`,borderRadius:"0 0 10px 10px",padding:"10px 12px"}}>
+                    {/* Selected chips */}
+                    {favTeams.length > 0 && (
+                      <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
+                        {favTeams.map(t => (
+                          <div key={t} style={{display:"flex",alignItems:"center",gap:5,padding:"4px 8px",background:C.bg,border:`1px solid ${C.gold}44`,borderRadius:16}}>
+                            <Crest team={t} size={16}/>
+                            <span style={{fontSize:11,color:C.gold,fontWeight:600}}>{t}</span>
+                            <button onClick={()=>setFavTeams(prev=>{const n=prev.filter(x=>x!==t);try{localStorage.setItem("wc2026_favs",JSON.stringify(n))}catch{};return n;})} style={{background:"none",border:"none",color:C.dim,fontSize:13,cursor:"pointer",padding:0,lineHeight:1}}>×</button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {/* Team picker — auto-collapse when 4 selected */}
+                    {favTeams.length < 4 ? (
+                      <div style={{display:"flex",gap:5,flexWrap:"wrap",maxHeight:150,overflowY:"auto"}}>
+                        {Object.keys(TEAMS).filter(t=>!favTeams.includes(t)).map(t=>(
+                          <button key={t} onClick={()=>{setFavTeams(prev=>{if(prev.length>=4)return prev;const n=[...prev,t];try{localStorage.setItem("wc2026_favs",JSON.stringify(n))}catch{};if(n.length===4)setTeamsExpanded(false);return n;});}} style={{display:"flex",alignItems:"center",gap:4,padding:"4px 8px",borderRadius:14,border:`1px solid ${C.b2}`,background:C.bg,color:C.mid,fontSize:11,cursor:"pointer"}}>
+                            <Crest team={t} size={13}/>{t}
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <div style={{fontSize:11,color:C.gold,textAlign:"center",padding:"6px 0"}}>
+                        4/4 teams selected ✓
+                        <button onClick={()=>setTeamsExpanded(false)} style={{display:"block",margin:"6px auto 0",padding:"5px 14px",borderRadius:8,border:`1px solid ${C.b2}`,background:"none",color:C.mid,fontSize:11,cursor:"pointer"}}>Done</button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -3846,6 +3872,51 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
               ) : (
                 <div style={{fontSize:12,color:C.dim,textAlign:"center",lineHeight:1.5}}>Your progress syncs automatically across all signed-in devices.</div>
               )}
+            </div>
+          )}
+
+          {/* ── TEAMS ── */}
+          {screen === "teams" && (
+            <div>
+              <div style={{fontSize:11,color:C.mid,fontWeight:700,letterSpacing:"0.08em",marginBottom:8}}>⭐ MY TEAMS <span style={{color:favTeams.length===4?C.red:C.gold}}>({favTeams.length}/4)</span></div>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:10}}>
+                {favTeams.length > 0
+                  ? favTeams.map(t => (
+                      <div key={t} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 10px",background:C.s2,border:`1px solid ${C.gold}44`,borderRadius:20}}>
+                        <Crest team={t} size={18}/><span style={{fontSize:12,color:C.gold,fontWeight:600}}>{t}</span>
+                        <button onClick={()=>setFavTeams(prev=>{const n=prev.filter(x=>x!==t);try{localStorage.setItem("wc2026_favs",JSON.stringify(n))}catch{};return n;})} style={{background:"none",border:"none",color:C.dim,fontSize:14,cursor:"pointer",padding:0,lineHeight:1}}>×</button>
+                      </div>
+                    ))
+                  : <div style={{fontSize:12,color:C.dim}}>No teams selected yet</div>
+                }
+              </div>
+              {favTeams.length < 4 && (
+                <div style={{display:"flex",gap:5,flexWrap:"wrap",maxHeight:140,overflowY:"auto"}}>
+                  {Object.keys(TEAMS).filter(t=>!favTeams.includes(t)).map(t=>(
+                    <button key={t} onClick={()=>setFavTeams(prev=>{if(prev.length>=4)return prev;const n=[...prev,t];try{localStorage.setItem("wc2026_favs",JSON.stringify(n))}catch{};return n;})} style={{display:"flex",alignItems:"center",gap:4,padding:"4px 8px",borderRadius:14,border:`1px solid ${C.b2}`,background:C.bg,color:C.mid,fontSize:11,cursor:"pointer"}}>
+                      <Crest team={t} size={13}/>{t}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── LOCATION ── */}
+          {screen === "location" && (
+            <div>
+              <div style={{fontSize:12,color:C.dim,marginBottom:12,lineHeight:1.5}}>Choose a city to see broadcast info and weather as if you were there.</div>
+              {locationOverride && (
+                <button onClick={()=>{setLocationOverride(null);try{localStorage.removeItem("wc2026_location")}catch{};}} style={{width:"100%",padding:"8px 0",borderRadius:8,background:`rgba(248,113,113,0.1)`,border:"1px solid rgba(248,113,113,0.3)",color:"#f87171",fontSize:12,fontWeight:600,cursor:"pointer",marginBottom:10}}>✕ Reset to auto-detected ({geoData.city || "your location"})</button>
+              )}
+              <input value={locSearch} onChange={e=>setLocSearch(e.target.value)} placeholder="Search city..." style={{width:"100%",padding:"8px 12px",background:C.s2,border:`1px solid ${C.b2}`,borderRadius:8,color:C.text,fontSize:13,outline:"none",marginBottom:10,boxSizing:"border-box"}}/>
+              <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                {filteredCities.map(c=>(
+                  <button key={c.label} onClick={()=>{const loc={label:c.label,country:c.country};setLocationOverride(loc);try{localStorage.setItem("wc2026_location",JSON.stringify(loc))}catch{};setLocSearch("");setToast(`📍 Location set to ${c.label}`);setScreen("home");}} style={{padding:"5px 10px",borderRadius:14,fontSize:12,cursor:"pointer",border:`1px solid ${locationOverride?.label===c.label?C.green:C.b2}`,background:locationOverride?.label===c.label?`${C.green}22`:C.bg,color:locationOverride?.label===c.label?C.green:C.mid,fontWeight:locationOverride?.label===c.label?700:400}}>
+                    {c.label}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 
@@ -3989,7 +4060,8 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
                         if (!crestSrc) return null;
                         return (
                           <button key={team} onClick={()=>selectPresetAvatar(id)} title={team} style={{padding:"8px 4px",border:`2px solid ${active?C.green:"transparent"}`,borderRadius:10,background:active?`${C.green}22`:C.s2,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:4,position:"relative"}}>
-                            <img src={crestSrc} style={{width:44,height:44,objectFit:"contain"}} alt={team} onError={e=>{e.target.style.display="none";}}/>
+                            <img src={crestSrc} crossOrigin="anonymous" style={{width:44,height:44,objectFit:"contain"}} alt={team} onError={e=>{e.target.style.display="none";e.target.nextSibling&&(e.target.nextSibling.style.display="flex");}}/>
+                            <span style={{display:"none",width:44,height:44,alignItems:"center",justifyContent:"center",fontSize:20}}>🛡️</span>
                             <span style={{fontSize:9,color:active?C.green:C.dim,textAlign:"center",lineHeight:1.2,fontWeight:active?700:400}}>{team}</span>
                             {active && <div style={{position:"absolute",top:2,right:2,width:12,height:12,borderRadius:"50%",background:C.green,display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,color:"#030a05",fontWeight:900}}>✓</div>}
                           </button>
@@ -4010,8 +4082,9 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
                         const active = userAvatar === id;
                         return code ? (
                           <button key={team} onClick={()=>selectPresetAvatar(id)} title={team} style={{padding:0,border:`2px solid ${active?C.green:"transparent"}`,borderRadius:8,background:active?`${C.green}22`:"transparent",cursor:"pointer",overflow:"hidden",aspectRatio:"3/2",position:"relative"}}>
-                            <img src={`https://flagcdn.com/w80/${code}.png`} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} alt={team}/>
-                            {active && <div style={{position:"absolute",top:2,right:2,width:12,height:12,borderRadius:"50%",background:C.green,display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,color:"#030a05",fontWeight:900}}>✓</div>}
+                            <img src={`https://flagcdn.com/w80/${code}.png`} crossOrigin="anonymous" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} alt={team} onError={e=>{e.target.style.display="none";e.target.nextSibling&&(e.target.nextSibling.style.display="flex");}}/>
+                            <span style={{display:"none",width:"100%",height:"100%",alignItems:"center",justifyContent:"center",fontSize:10,color:C.dim,textAlign:"center",padding:"2px"}}>🏳️</span>
+                            {active && <div style={{position:"absolute",top:2,right:2,width:12,height:12,borderRadius:"50%",background:C.green,display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,color:"#030a05",fontWeight:900,zIndex:1}}>✓</div>}
                           </button>
                         ) : null;
                       })}
@@ -4092,7 +4165,7 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
                   { icon:"🔮", label:"My Predictions", sub:"View your picks", action:()=>setScreen("predictions") },
                   { icon:"⭐", label:"My Teams", sub:favTeams.length?favTeams.slice(0,2).join(", ")+(favTeams.length>2?` +${favTeams.length-2}`:""):"None selected", action:()=>setScreen("teams") },
                   { icon:"📍", label:"Location", sub:locationOverride?`Custom: ${locationOverride.label}`:`Auto: ${geoData.city||"Detected"}`, action:()=>setScreen("location") },
-                  { icon:"🔗", label:syncProfile?"Sync settings":"Sign in / Sync", sub:syncProfile?"Manage sync":"Keep progress across devices", action:()=>setScreen("sync") },
+                  { icon:"🔗", label:syncProfile?"Sync settings":"Sign in / Sync", sub:syncProfile?"Manage sync":"Keep progress across devices", action:()=>setScreen(syncProfile?"pin-create":"email") },
                 ].map(row => (
                   <button key={row.label} onClick={row.action} style={{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"10px 16px",background:"none",border:"none",cursor:"pointer",textAlign:"left",borderRadius:0}} onMouseEnter={e=>e.currentTarget.style.background=C.s2} onMouseLeave={e=>e.currentTarget.style.background="none"}>
                     <span style={{fontSize:18,width:22,textAlign:"center",flexShrink:0}}>{row.icon}</span>
