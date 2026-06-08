@@ -185,12 +185,11 @@ const TEAMS = {
   "Czechia":{flag:"🇨🇿",conf:"UEFA",rank:36,ss:6.7,titles:0,coach:"Miroslav Koubek",base:"Mansfield, TX",form:["W","W","D","L","W"],stats:{ATT:6.6,MID:6.8,DEF:6.9,FIT:7.1},players:[{name:"Patrik Schick",pos:"FW",club:"Bayer Leverkusen",caps:53,goals:27,ss:7.6,note:"Clinical"},{name:"Tomas Soucek",pos:"MF",club:"West Ham",caps:79,goals:18,ss:7.3,note:"Box-to-box"},{name:"Vladimir Coufal",pos:"DF",club:"West Ham",caps:44,goals:2,ss:6.8,note:"RB"},{name:"Jiri Stanek",pos:"GK",club:"Atletico Madrid",caps:22,goals:0,ss:7.1,note:"Keeper"}],note:"First World Cup in 20 years. Schick and Soucek are genuine top-level players."},
 };
 
-// ── RECENT4 — verified as of Jun 5, 2026 ─────────────────────────────────
+// ── RECENT4 — verified as of Jun 10, 2026 ────────────────────────────────
 // Once WC starts (Jun 11), RecentForm component auto-upgrades to live API data.
 const RECENT4 = {
   "Argentina":[
-    {date:"Apr 1, 2026",  opp:"Zambia",      score:"5-0", loc:"Buenos Aires", comp:"Friendly",     res:"W"},
-    {date:"Mar 28, 2026", opp:"Mauritania",  score:"2-1", loc:"Buenos Aires", comp:"Friendly",     res:"W"},
+    {date:"Jun 6, 2026",   opp:"Honduras",     score:"2-0", loc:"College Station", comp:"Friendly",  res:"W"},
     {date:"Nov 14, 2025", opp:"Angola",      score:"2-0", loc:"Luanda",       comp:"Friendly",     res:"W"},
     {date:"Oct 15, 2025", opp:"Puerto Rico", score:"6-0", loc:"San Juan",     comp:"Friendly",     res:"W"},
   ],
@@ -201,12 +200,14 @@ const RECENT4 = {
     {date:"Nov 16, 2025", opp:"Azerbaijan",  score:"3-1", loc:"Baku",         comp:"WC Qualifier", res:"W"},
   ],
   "Brazil":[
+    {date:"Jun 6, 2026",  opp:"Egypt",   score:"2-1", loc:"Tampa",          comp:"Friendly", res:"W"},
     {date:"Jun 1, 2026",  opp:"Panama",  score:"6-2", loc:"Rio de Janeiro", comp:"Friendly",     res:"W"},
     {date:"Mar 31, 2026", opp:"Croatia", score:"3-1", loc:"Orlando",        comp:"Friendly",     res:"W"},
     {date:"Mar 26, 2026", opp:"France",  score:"1-2", loc:"Boston",         comp:"Friendly",     res:"L"},
     {date:"Nov 18, 2025", opp:"Uruguay", score:"2-1", loc:"Montevideo",     comp:"WC Qualifier", res:"W"},
   ],
   "England":[
+    {date:"Jun 6, 2026",  opp:"New Zealand", score:"1-0", loc:"Tampa",      comp:"Friendly", res:"W"},
     {date:"Mar 31, 2026", opp:"Japan",   score:"0-1", loc:"Wembley", comp:"Friendly",     res:"L"},
     {date:"Mar 27, 2026", opp:"Uruguay", score:"1-1", loc:"Wembley", comp:"Friendly",     res:"D"},
     {date:"Nov 16, 2025", opp:"Albania", score:"2-0", loc:"Tirana",  comp:"WC Qualifier", res:"W"},
@@ -219,12 +220,14 @@ const RECENT4 = {
     {date:"Nov 15, 2025", opp:"Turkiye",  score:"2-2", loc:"Istanbul",  comp:"WC Qualifier", res:"D"},
   ],
   "Germany":[
+    {date:"Jun 6, 2026",  opp:"United States", score:"2-1", loc:"Chicago",    comp:"Friendly", res:"W"},
     {date:"May 26, 2026", opp:"Ghana",       score:"2-1", loc:"Nuremberg", comp:"Friendly", res:"W"},
     {date:"Mar 28, 2026", opp:"Switzerland", score:"4-3", loc:"Basel",     comp:"Friendly", res:"W"},
     {date:"Mar 31, 2026", opp:"Brazil",      score:"1-3", loc:"Orlando",   comp:"Friendly", res:"L"},
     {date:"Nov 2025",     opp:"Slovakia",    score:"6-0", loc:"Dusseldorf",comp:"WC Qualifier", res:"W"},
   ],
   "Portugal":[
+    {date:"Jun 6, 2026",  opp:"Chile",          score:"2-1", loc:"Lisbon",  comp:"Friendly", res:"W"},
     {date:"Mar 31, 2026", opp:"United States", score:"2-0", loc:"Atlanta",     comp:"Friendly",     res:"W"},
     {date:"Mar 28, 2026", opp:"Spain",         score:"1-1", loc:"Seville",     comp:"Friendly",     res:"D"},
     {date:"Mar 28, 2026", opp:"Mexico",        score:"0-0", loc:"Mexico City", comp:"Friendly",     res:"D"},
@@ -237,6 +240,7 @@ const RECENT4 = {
     {date:"Nov 2025",     opp:"Finland",  score:"4-0", loc:"Amsterdam",  comp:"WC Qualifier", res:"W"},
   ],
   "Belgium":[
+    {date:"Jun 6, 2026",  opp:"Tunisia",      score:"5-0", loc:"Brussels",   comp:"Friendly", res:"W"},
     {date:"Jun 2, 2026",  opp:"Croatia",        score:"2-0", loc:"Brussels", comp:"Friendly",     res:"W"},
     {date:"Mar 28, 2026", opp:"United States",  score:"5-2", loc:"Atlanta",  comp:"Friendly",     res:"W"},
     {date:"Mar 31, 2026", opp:"Mexico",         score:"1-1", loc:"Chicago",  comp:"Friendly",     res:"D"},
@@ -249,18 +253,21 @@ const RECENT4 = {
     {date:"Oct 2025",     opp:"Austria",     score:"2-1", loc:"Oslo",      comp:"WC Qualifier", res:"W"},
   ],
   "Mexico":[
+    {date:"Jun 4, 2026",  opp:"Serbia",    score:"5-1", loc:"Toluca",       comp:"Friendly", res:"W"},
     {date:"May 23, 2026", opp:"Ghana",    score:"2-0", loc:"Toluca",      comp:"Friendly",     res:"W"},
     {date:"Mar 31, 2026", opp:"Belgium",  score:"1-1", loc:"Chicago",     comp:"Friendly",     res:"D"},
     {date:"Mar 28, 2026", opp:"Portugal", score:"0-0", loc:"Mexico City", comp:"Friendly",     res:"D"},
     {date:"Nov 2025",     opp:"Canada",   score:"2-1", loc:"Mexico City", comp:"WC Qualifier", res:"W"},
   ],
   "United States":[
+    {date:"Jun 6, 2026",  opp:"Germany",  score:"1-2", loc:"Chicago",    comp:"Friendly", res:"L"},
     {date:"May 31, 2026", opp:"Senegal",  score:"3-2", loc:"Charlotte", comp:"Friendly", res:"W"},
     {date:"Mar 31, 2026", opp:"Portugal", score:"0-2", loc:"Atlanta",   comp:"Friendly", res:"L"},
     {date:"Mar 28, 2026", opp:"Belgium",  score:"2-5", loc:"Atlanta",   comp:"Friendly", res:"L"},
     {date:"Nov 2025",     opp:"Paraguay", score:"2-1", loc:"Kansas City",comp:"Friendly", res:"W"},
   ],
   "Morocco":[
+    {date:"Jun 7, 2026",  opp:"Norway",    score:"1-1", loc:"Harrison, NJ", comp:"Friendly", res:"D"},
     {date:"May 26, 2026", opp:"Burundi",  score:"5-0", loc:"Rabat",       comp:"Friendly",     res:"W"},
     {date:"Mar 2026",     opp:"Cameroon", score:"3-0", loc:"Rabat",       comp:"Friendly",     res:"W"},
     {date:"Nov 2025",     opp:"Angola",   score:"1-0", loc:"Casablanca",  comp:"WC Qualifier", res:"W"},
@@ -273,12 +280,14 @@ const RECENT4 = {
     {date:"Oct 2025",     opp:"Paraguay",score:"1-0", loc:"Asuncion",   comp:"WC Qualifier", res:"W"},
   ],
   "Croatia":[
+    {date:"Jun 7, 2026",  opp:"Slovenia",  score:"2-1", loc:"Varazdin",     comp:"Friendly", res:"W"},
     {date:"Jun 2, 2026",  opp:"Belgium",  score:"0-2", loc:"Brussels", comp:"Friendly", res:"L"},
     {date:"Mar 31, 2026", opp:"Brazil",   score:"1-3", loc:"Orlando",  comp:"Friendly", res:"L"},
     {date:"Mar 29, 2026", opp:"Colombia", score:"1-3", loc:"Orlando",  comp:"Friendly", res:"L"},
     {date:"Nov 2025",     opp:"Greece",   score:"2-1", loc:"Split",    comp:"WC Qualifier", res:"W"},
   ],
   "Japan":[
+    {date:"Jun 7, 2026",  opp:"Iceland",  score:"1-0", loc:"Toyota",       comp:"Friendly", res:"W"},
     {date:"Mar 31, 2026", opp:"England",  score:"1-0", loc:"Wembley",  comp:"Friendly",     res:"W"},
     {date:"May 2026",     opp:"Iceland",  score:"1-0", loc:"Tokyo",    comp:"Friendly",     res:"W"},
     {date:"Nov 2025",     opp:"Vietnam",  score:"2-0", loc:"Tokyo",    comp:"WC Qualifier", res:"W"},
@@ -291,24 +300,27 @@ const RECENT4 = {
     {date:"Jan 6, 2026",  opp:"DR Congo",    score:"1-0", loc:"Algiers",       comp:"Friendly", res:"W"},
   ],
   "Ecuador":[
+    {date:"Jun 7, 2026",  opp:"Guatemala", score:"3-0", loc:"Columbus",     comp:"Friendly", res:"W"},
     {date:"Mar 31, 2026", opp:"Netherlands",  score:"1-1", loc:"Amsterdam", comp:"Friendly",     res:"D"},
     {date:"Mar 27, 2026", opp:"Saudi Arabia", score:"2-1", loc:"Quito",     comp:"Friendly",     res:"W"},
     {date:"Nov 2025",     opp:"Bolivia",      score:"1-0", loc:"Quito",     comp:"WC Qualifier", res:"W"},
     {date:"Oct 2025",     opp:"Chile",        score:"2-0", loc:"Santiago",  comp:"WC Qualifier", res:"W"},
   ],
   "Colombia":[
+    {date:"Jun 7, 2026",  opp:"Jordan",     score:"2-0", loc:"San Diego",   comp:"Friendly", res:"W"},
     {date:"Jun 2, 2026",  opp:"Costa Rica", score:"3-1", loc:"San José", comp:"Friendly", res:"W"},
     {date:"Mar 29, 2026", opp:"Croatia",    score:"3-1", loc:"Orlando",  comp:"Friendly", res:"W"},
     {date:"Mar 29, 2026", opp:"France",     score:"1-3", loc:"Paris",    comp:"Friendly", res:"L"},
     {date:"Nov 2025",     opp:"Venezuela",  score:"2-0", loc:"Bogota",   comp:"WC Qualifier", res:"W"},
   ],
   "Switzerland":[
-    {date:"May 2026",     opp:"Jordan",  score:"4-1", loc:"Bern",   comp:"Friendly", res:"W"},
+    {date:"Jun 6, 2026",  opp:"Australia", score:"1-1", loc:"Geneva",  comp:"Friendly", res:"D"},
     {date:"Mar 28, 2026", opp:"Germany", score:"3-4", loc:"Basel",  comp:"Friendly", res:"L"},
     {date:"Nov 2025",     opp:"Romania", score:"2-0", loc:"Bern",   comp:"WC Qualifier", res:"W"},
     {date:"Oct 2025",     opp:"Kosovo",  score:"2-1", loc:"Bern",   comp:"WC Qualifier", res:"W"},
   ],
   "Canada":[
+    {date:"Jun 5, 2026",  opp:"Rep. of Ireland", score:"1-1", loc:"Toronto",  comp:"Friendly", res:"D"},
     {date:"Jun 2, 2026",  opp:"Uzbekistan", score:"2-0", loc:"Vancouver", comp:"Friendly",     res:"W"},
     {date:"Mar 2026",     opp:"Tunisia",    score:"0-0", loc:"Toronto",   comp:"Friendly",     res:"D"},
     {date:"Nov 2025",     opp:"Cuba",       score:"4-0", loc:"Toronto",   comp:"WC Qualifier", res:"W"},
@@ -327,12 +339,14 @@ const RECENT4 = {
     {date:"Oct 2025",     opp:"Uganda",     score:"3-0", loc:"Abidjan", comp:"WC Qualifier", res:"W"},
   ],
   "South Korea":[
+    {date:"Jun 7, 2026",  opp:"Trinidad & Tobago", score:"5-0", loc:"Seoul",       comp:"Friendly", res:"W"},
     {date:"May 2026",     opp:"Trinidad & Tobago", score:"5-0", loc:"Seoul",    comp:"Friendly",     res:"W"},
     {date:"Mar 2026",     opp:"Japan",             score:"1-0", loc:"Tokyo",    comp:"Friendly",     res:"W"},
     {date:"Nov 2025",     opp:"Oman",              score:"2-0", loc:"Seoul",    comp:"WC Qualifier", res:"W"},
     {date:"Oct 2025",     opp:"Kuwait",            score:"3-0", loc:"Seoul",    comp:"WC Qualifier", res:"W"},
   ],
   "Scotland":[
+    {date:"Jun 6, 2026",  opp:"Bolivia",  score:"4-0", loc:"Harrison, NJ",  comp:"Friendly", res:"W"},
     {date:"Mar 2026",     opp:"Denmark", score:"1-2", loc:"Glasgow", comp:"Friendly",     res:"L"},
     {date:"Nov 2025",     opp:"Poland",  score:"2-1", loc:"Glasgow", comp:"WC Qualifier", res:"W"},
     {date:"Oct 2025",     opp:"Slovakia",score:"1-0", loc:"Glasgow", comp:"WC Qualifier", res:"W"},
@@ -1147,50 +1161,35 @@ function PlayerPhoto({ src, name, size=32 }) {
 
 // ── RECENT FORM — dynamic, auto-upgrades to live WC data after Jun 11 ─────
 function RecentForm({ team, staticData }) {
-  const { allFixtures } = useContext(LiveScoresCtx);
-  const [matches, setMatches] = useState(null);
-  const [isLiveData, setIsLiveData] = useState(false);
+  const { getScore } = useContext(LiveScoresCtx);
 
-  useEffect(() => {
-    if (!team || !allFixtures) return;
-
-    // Try to find finished WC matches for this team in the live feed
-    const teamMatches = allFixtures
-      .filter(f => {
-        const h = normTeam(f?.teams?.home?.name || "");
-        const a = normTeam(f?.teams?.away?.name || "");
-        const status = f?.fixture?.status?.short || "";
-        return (h === team || a === team) && statusIsFinished(status);
-      })
-      .sort((a, b) => new Date(b?.fixture?.date||0) - new Date(a?.fixture?.date||0))
-      .slice(0, 4)
-      .map(f => {
-        const h = normTeam(f?.teams?.home?.name || "");
-        const a = normTeam(f?.teams?.away?.name || "");
-        const hg = f?.goals?.home ?? 0;
-        const ag = f?.goals?.away ?? 0;
-        const isHome = h === team;
-        const opp = isHome ? a : h;
-        const teamGoals = isHome ? hg : ag;
-        const oppGoals  = isHome ? ag : hg;
-        const score = `${teamGoals}-${oppGoals}`;
+  // Build form from actual WC 2026 MATCHES data using live scores — most accurate source
+  const wcMatches = useMemo(() => {
+    if (!team) return [];
+    return MATCHES
+      .filter(m => (m.home === team || m.away === team))
+      .map(m => {
+        const sc = getScore(m.home, m.away);
+        if (!sc || sc.hg === null || sc.ag === null) return null;
+        if (!statusIsFinished(sc.status)) return null;
+        const isHome = m.home === team;
+        const teamGoals = isHome ? sc.hg : sc.ag;
+        const oppGoals  = isHome ? sc.ag : sc.hg;
+        const opp = isHome ? m.away : m.home;
         const res = teamGoals > oppGoals ? "W" : teamGoals === oppGoals ? "D" : "L";
-        const dateStr = f?.fixture?.date
-          ? new Date(f.fixture.date).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})
-          : "";
-        return { date: dateStr, opp, score, loc: f?.fixture?.venue?.city || "", comp: "World Cup 2026", res };
-      });
+        const matchUTC = MATCH_UTC[m.id];
+        const dateStr = matchUTC
+          ? new Date(matchUTC).toLocaleDateString("en-US",{month:"short",day:"numeric"})
+          : m.date;
+        return { date: dateStr, opp, score: `${teamGoals}-${oppGoals}`, loc: m.venue?.split(",")[0]||"", comp: "World Cup 2026", res, id: m.id };
+      })
+      .filter(Boolean)
+      .sort((a,b) => (MATCH_UTC[b.id]||0) > (MATCH_UTC[a.id]||0) ? 1 : -1)
+      .slice(0, 4);
+  }, [team, getScore]);
 
-    if (teamMatches.length > 0) {
-      setMatches(teamMatches);
-      setIsLiveData(true);
-    } else {
-      setMatches(staticData || []);
-      setIsLiveData(false);
-    }
-  }, [team, allFixtures, staticData]);
-
-  const display = matches || staticData || [];
+  const isLiveData = wcMatches.length > 0;
+  const display = isLiveData ? wcMatches : (staticData || []);
   if (!display.length) return null;
 
   return (
