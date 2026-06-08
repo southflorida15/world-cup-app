@@ -1984,7 +1984,7 @@ function H2HTab({ tabTop=116 }) {
     <div>
       {/* Fixed team selector */}
       <div ref={_h2hRef} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"8px 13px",maxWidth:700,margin:"0 auto"}}>
-        <div style={{fontWeight:700,color:C.green,fontSize:14,marginBottom:8}}>⚔️ COMPARE TEAMS</div>
+        <div style={{fontWeight:700,color:C.green,fontSize:14,marginBottom:8}}>⚔️ COMPARE TEAMS HEAD TO HEAD</div>
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:team1&&team2&&team1!==team2?8:0}}>
           <div style={{flex:1}}>
             <select value={team1} onChange={e=>{setTeam1(e.target.value);setD1(null);setFetched(false);}} style={{width:"100%",padding:"7px 10px",background:C.s2,border:`1px solid ${C.b2}`,borderRadius:8,color:C.text,fontSize:13,outline:"none"}}>
@@ -2337,7 +2337,9 @@ function SavedMatchCard({ item, onRemove }) {
     if (!isPWA) return "needs-install";
     return Notification.permission;
   });
-  const [notified, setNotified] = useState(false);
+  const [notified, setNotified] = useState(() => {
+    try { const set = JSON.parse(localStorage.getItem("wc2026_push_set") || "[]"); return set.includes(item.match?.id); } catch { return false; }
+  });
   const [showInstallTip, setShowInstallTip] = useState(false);
   const m = item.match;
   const handleCalendar = () => downloadICS([item]);
@@ -2353,6 +2355,10 @@ function SavedMatchCard({ item, onRemove }) {
       await fetch("/api/push-subscribe", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ subscription: sub.toJSON(), matches:[m], minsBefore:60 }) });
     } catch(e) { console.warn("Push subscribe failed:", e); }
     setNotified(true);
+    try {
+      const set = JSON.parse(localStorage.getItem("wc2026_push_set") || "[]");
+      if (!set.includes(m.id)) { set.push(m.id); localStorage.setItem("wc2026_push_set", JSON.stringify(set)); }
+    } catch {}
   };
   return (
     <div style={{background:C.s2,border:`1px solid ${C.b1}`,borderRadius:12,marginBottom:6,overflow:"hidden"}}>
@@ -3779,11 +3785,11 @@ const TABS = [
   {id:"scorers",   icon:"⚽", label:"Scorers"},
   {id:"stats",     icon:"📊", label:"Stats"},
   {id:"h2h",       icon:"⚔️", label:"H2H"},
+  {id:"news",       icon:"📰", label:"WC News"},
   {id:"predict",   icon:"🎯", label:"Odds"},
   {id:"predictor", icon:"🔮", label:"Predictor"},
   {id:"sim",       icon:"🎮", label:"Simulator"},
   {id:"bracket",   icon:"🏆", label:"My Bracket"},
-  {id:"news",       icon:"📰", label:"WC News"},
 ];
 
 // ── PWA INSTALL BANNER ────────────────────────────────────────────────────
