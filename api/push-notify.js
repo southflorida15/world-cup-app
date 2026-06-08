@@ -23,7 +23,8 @@ const WINDOW_MAX = 75;
 
 export default async function handler(req, res) {
   const auth = req.headers.authorization || "";
-  if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
+  const validSecret = process.env.CRON_SECRET || process.env.PREDICTOR_ADMIN_SECRET;
+  if (!validSecret || auth !== `Bearer ${validSecret}`) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 

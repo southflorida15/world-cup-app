@@ -2340,9 +2340,6 @@ function SavedMatchCard({ item, onRemove }) {
   const [notified, setNotified] = useState(false);
   const [showInstallTip, setShowInstallTip] = useState(false);
   const m = item.match;
-  const notifyText = `⚽ ${m.home} vs ${m.away} · ${m.date} · ${m.time} · ${m.venue?.split(",")[0]||""}`;
-  const handleWhatsApp = () => window.open(`https://wa.me/?text=${encodeURIComponent(notifyText)}`, "_blank");
-  const handleSMS = () => window.open(`sms:&body=${encodeURIComponent(notifyText)}`, "_blank");
   const handleCalendar = () => downloadICS([item]);
   const handlePush = async () => {
     if (pushState === "needs-install") { setShowInstallTip(v=>!v); return; }
@@ -2366,18 +2363,21 @@ function SavedMatchCard({ item, onRemove }) {
           <div style={{fontSize:11,color:C.dim,marginTop:1}}>{m.date} · {m.time} · {m.venue?.split(",")[0]||""}</div>
         </div>
         <div style={{display:"flex",gap:4,alignItems:"center",flexShrink:0}}>
-          <button onClick={handleCalendar} title="Add to Calendar" style={{padding:"5px 7px",borderRadius:7,border:`1px solid ${C.green}44`,background:`${C.green}15`,color:C.green,fontSize:13,cursor:"pointer",lineHeight:1}}>📅</button>
-          <button onClick={handleWhatsApp} title="WhatsApp" style={{padding:"5px 7px",borderRadius:7,border:"1px solid #25d36644",background:"#25d36615",color:"#25d366",fontSize:13,cursor:"pointer",lineHeight:1}}>💬</button>
-          <button onClick={handleSMS} title="SMS" style={{padding:"5px 7px",borderRadius:7,border:`1px solid ${C.blue}44`,background:`${C.blue}15`,color:C.blue,fontSize:13,cursor:"pointer",lineHeight:1}}>📱</button>
-          <button onClick={handlePush} disabled={pushState==="denied"} style={{padding:"5px 7px",borderRadius:7,border:`1px solid ${notified?C.green:pushState==="needs-install"?C.blue:C.gold}44`,background:notified?`${C.green}15`:pushState==="needs-install"?`${C.blue}15`:`${C.gold}15`,color:notified?C.green:pushState==="needs-install"?C.blue:C.gold,fontSize:13,cursor:pushState==="denied"?"not-allowed":"pointer",lineHeight:1,opacity:pushState==="denied"?0.4:1}}>
-            {notified?"✓":"🔔"}
+          <button onClick={handleCalendar} title="Add to Calendar" style={{padding:"5px 10px",borderRadius:7,border:`1px solid ${C.green}44`,background:`${C.green}15`,color:C.green,fontSize:12,fontWeight:600,cursor:"pointer"}}>📅 Calendar</button>
+          <button onClick={handlePush} disabled={pushState==="denied"} title={pushState==="needs-install"?"Install app to enable push":"Set push notification"} style={{padding:"5px 10px",borderRadius:7,border:`1px solid ${notified?C.green:pushState==="denied"?C.b2:C.gold}44`,background:notified?`${C.green}15`:pushState==="denied"?C.s1:`${C.gold}15`,color:notified?C.green:pushState==="denied"?C.dim:C.gold,fontSize:12,fontWeight:600,cursor:pushState==="denied"?"not-allowed":"pointer",opacity:pushState==="denied"?0.4:1}}>
+            {notified?"🔔 Set":pushState==="needs-install"?"🔔 Install app":"🔔 Notify me"}
           </button>
           <button onClick={()=>onRemove(item.id)} style={{padding:"5px 7px",borderRadius:7,border:`1px solid ${C.b2}`,background:"none",color:C.dim,fontSize:15,cursor:"pointer",lineHeight:1}}>×</button>
         </div>
       </div>
       {pushState==="needs-install" && showInstallTip && (
-        <div style={{padding:"8px 12px 10px",borderTop:`1px solid ${C.b1}`,fontSize:11,color:C.blue,lineHeight:1.5,background:`${C.blue}08`}}>
-          Install the app first: <strong>⋯ → Install app</strong> (Chrome) or <strong>Share → Add to Home Screen</strong> (Safari).
+        <div style={{padding:"10px 12px",borderTop:`1px solid ${C.b1}`,background:`${C.blue}08`}}>
+          <div style={{fontSize:12,fontWeight:700,color:C.blue,marginBottom:4}}>Install the app to get notifications</div>
+          <div style={{fontSize:11,color:C.dim,lineHeight:1.6}}>
+            <strong>iPhone:</strong> Safari → Share ↑ → Add to Home Screen<br/>
+            <strong>Android:</strong> Chrome → ⋯ → Add to Home Screen<br/>
+            <strong>Desktop:</strong> Click the install icon in your browser address bar
+          </div>
         </div>
       )}
     </div>
@@ -2394,8 +2394,6 @@ function SavedTab({ saved, onRemove, tabTop=116 }) {
     return ta - tb;
   });
   const handleMasterCalendar = () => downloadICS(saved);
-  const handleMasterWhatsApp = () => { const lines = sorted.map(it=>`⚽ ${it.match.home} vs ${it.match.away} · ${it.match.date} · ${it.match.time}`).join("\n"); window.open(`https://wa.me/?text=${encodeURIComponent(lines)}`,"_blank"); };
-  const handleMasterSMS = () => { const lines = sorted.map(it=>`⚽ ${it.match.home} vs ${it.match.away} · ${it.match.date} · ${it.match.time}`).join("\n"); window.open(`sms:&body=${encodeURIComponent(lines)}`,"_blank"); };
   const handleMasterPush = async () => {
     const isPWA = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
     if (!isPWA) { alert("Install the app first to enable push notifications"); return; }
@@ -2425,10 +2423,8 @@ function SavedTab({ saved, onRemove, tabTop=116 }) {
           <button onClick={()=>saved.forEach(it=>onRemove(it.id))} style={{background:"none",border:`1px solid ${C.b2}`,color:C.dim,fontSize:11,cursor:"pointer",padding:"2px 8px",borderRadius:6}}>Clear all</button>
         </div>
         <div style={{display:"flex",gap:6}}>
-          <button onClick={handleMasterCalendar} style={{flex:1,padding:"6px 4px",borderRadius:8,cursor:"pointer",border:`1px solid ${C.green}44`,background:`${C.green}15`,color:C.green,fontSize:11,fontWeight:600}}>📅 Calendar</button>
-          <button onClick={handleMasterWhatsApp} style={{flex:1,padding:"6px 4px",borderRadius:8,cursor:"pointer",border:"1px solid #25d36644",background:"#25d36615",color:"#25d366",fontSize:11,fontWeight:600}}>💬 WhatsApp</button>
-          <button onClick={handleMasterSMS} style={{flex:1,padding:"6px 4px",borderRadius:8,cursor:"pointer",border:`1px solid ${C.blue}44`,background:`${C.blue}15`,color:C.blue,fontSize:11,fontWeight:600}}>📱 SMS</button>
-          <button onClick={handleMasterPush} style={{flex:1,padding:"6px 4px",borderRadius:8,cursor:"pointer",border:`1px solid ${masterPushDone?C.green:C.gold}44`,background:masterPushDone?`${C.green}15`:`${C.gold}15`,color:masterPushDone?C.green:C.gold,fontSize:11,fontWeight:600}}>{masterPushDone?"🔔 Set!":"🔔 Push"}</button>
+          <button onClick={handleMasterCalendar} style={{flex:1,padding:"6px 4px",borderRadius:8,cursor:"pointer",border:`1px solid ${C.green}44`,background:`${C.green}15`,color:C.green,fontSize:11,fontWeight:600}}>📅 Export all</button>
+          <button onClick={handleMasterPush} style={{flex:1,padding:"6px 4px",borderRadius:8,cursor:"pointer",border:`1px solid ${masterPushDone?C.green:C.gold}44`,background:masterPushDone?`${C.green}15`:`${C.gold}15`,color:masterPushDone?C.green:C.gold,fontSize:11,fontWeight:600}}>{masterPushDone?"🔔 All set!":"🔔 Notify all"}</button>
         </div>
       </div>
       <div style={{height:_h||80}}/>
