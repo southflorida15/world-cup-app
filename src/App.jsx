@@ -4159,6 +4159,7 @@ export default function App() {
   // Auto-pull on startup — if already signed in, fetch latest profile from KV
   useEffect(() => {
     if (!syncProfile?.uid) return;
+    const t = setTimeout(() => {
     fetch("/api/sync?action=pull", {
       method: "POST",
       headers: {"Content-Type":"application/json"},
@@ -4174,7 +4175,9 @@ export default function App() {
         if (p.dark !== undefined) setDark(p.dark);
       })
       .catch(() => {});
-  }, []); // runs once on mount
+    }, 800); // small delay ensures KV is settled
+    return () => clearTimeout(t);
+  }, [syncProfile?.uid]); // re-pull if uid changes (e.g. after sign-in)
 
   // Magic link redirect handler
   useEffect(() => {
