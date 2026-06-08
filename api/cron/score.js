@@ -68,6 +68,10 @@ export default async function handler(req, res) {
       },
     });
 
+    if (r.status === 429) {
+      console.warn("[cron/score] Rate limited by Highlightly API — skipping this run");
+      return res.status(200).json({ ok: true, skipped: true, reason: "rate_limited" });
+    }
     if (!r.ok) {
       const body = await r.text().catch(() => "");
       throw new Error(`Fixtures API ${r.status}: ${body.slice(0, 120)}`);
