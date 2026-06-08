@@ -4092,13 +4092,15 @@ export default function App() {
         </div>
         {/* Saved view overlay */}
         {showSavedView && (
-          <div style={{position:"fixed",inset:0,background:C.bg,zIndex:200,overflowY:"auto",display:"flex",flexDirection:"column"}}>
-            <div style={{display:"flex",alignItems:"center",gap:12,padding:"16px 16px 12px",borderBottom:`1px solid ${C.b1}`,background:C.s1,position:"sticky",top:0,zIndex:1}}>
-              <button onClick={()=>setShowSavedView(false)} style={{background:"none",border:"none",color:C.mid,fontSize:22,cursor:"pointer",lineHeight:1,padding:0}}>‹</button>
+          <div style={{position:"fixed",inset:0,background:C.bg,zIndex:200,display:"flex",flexDirection:"column"}}>
+            {/* Back header */}
+            <div style={{display:"flex",alignItems:"center",gap:12,padding:"16px 16px 12px",borderBottom:`1px solid ${C.b1}`,background:C.s1,flexShrink:0}}>
+              <button onClick={()=>setShowSavedView(false)} style={{background:"none",border:"none",color:C.mid,fontSize:28,cursor:"pointer",lineHeight:1,padding:"0 4px",fontWeight:300}}>‹</button>
               <span style={{fontWeight:700,fontSize:17,color:C.green}}>My Matches</span>
               <span style={{fontSize:13,color:C.dim,marginLeft:"auto"}}>{saved.length} saved</span>
             </div>
-            <div style={{padding:"12px 14px"}}>
+            {/* Scrollable content — SavedTab sticky header sits at top of this div */}
+            <div style={{flex:1,overflowY:"auto",position:"relative"}}>
               <SavedTab saved={saved} onRemove={onRemove} tabTop={0}/>
             </div>
           </div>
