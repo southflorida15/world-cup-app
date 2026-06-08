@@ -358,80 +358,7 @@ const RECENT4 = {
     {date:"Oct 2025",     opp:"Slovakia",score:"1-0", loc:"Glasgow", comp:"WC Qualifier", res:"W"},
     {date:"Sep 2025",     opp:"Lithuania",score:"3-0",loc:"Glasgow", comp:"WC Qualifier", res:"W"},
   ],
-};
-
-const PREDS = [
-  {team:"France",poly:18.3,odds:"+451",trend:"📈"},{team:"Spain",poly:16.7,odds:"+501",trend:"📉"},
-  {team:"England",poly:11.3,odds:"+781",trend:"➡️"},{team:"Brazil",poly:9.0,odds:"+1010",trend:"📈"},
-  {team:"Argentina",poly:8.3,odds:"+1100",trend:"➡️"},{team:"Germany",poly:7.1,odds:"+1300",trend:"📈"},
-  {team:"Portugal",poly:5.4,odds:"+1750",trend:"➡️"},{team:"Netherlands",poly:4.8,odds:"+1950",trend:"📉"},
-  {team:"Belgium",poly:3.2,odds:"+3000",trend:"📉"},{team:"United States",poly:2.8,odds:"+3400",trend:"📈"},
-  {team:"Mexico",poly:2.1,odds:"+4500",trend:"📈"},{team:"Norway",poly:1.0,odds:"+9000",trend:"📈"},
-  {team:"Others",poly:10.0,odds:"—",trend:""},
-];
-
-// ── SIMULATOR ENGINE ──────────────────────────────────────────────────────
-const STR = {Spain:87,France:86,England:83,Brazil:82,Argentina:81,Germany:79,Portugal:77,Netherlands:76,Belgium:73,Uruguay:71,Colombia:70,Mexico:69,Morocco:68,"United States":67,Croatia:66,Japan:65,Senegal:64,Switzerland:63,Sweden:62,"South Korea":61,Ecuador:60,Norway:59,Australia:57,Austria:56,Czechia:55,"Bosnia & Herz.":54,"Ivory Coast":53,Paraguay:52,Ghana:51,Algeria:50,Iran:48,"DR Congo":46,Uzbekistan:41,"New Zealand":40,Jordan:39,Iraq:38,Panama:38,Curacao:37,Haiti:36,"South Africa":43,"Cape Verde":42,Qatar:44,Tunisia:50,Turkiye:60,Egypt:66,Scotland:58,"Saudi Arabia":49};
-const gs = (t) => STR[t] || 48;
-const HOME_VENUES = {"United States":["SoFi Stadium, Los Angeles","New York New Jersey Stadium, East Rutherford","Dallas Stadium, Dallas","San Francisco Bay Area Stadium, San Francisco","Seattle Stadium, Seattle","Kansas City Stadium, Kansas City","Philadelphia Stadium, Philadelphia","Boston Stadium, Boston","Atlanta Stadium, Atlanta","Miami Stadium, Miami","Houston Stadium, Houston"],"Canada":["Toronto Stadium, Toronto","BC Place, Vancouver"],"Mexico":["Mexico City Stadium, Mexico City","Estadio Guadalajara, Zapopan","Estadio Monterrey, Guadalupe"]};
-const FORM_DATA = {"Spain":["D","D","D","W","W"],"France":["L","W","W","D","W"],"England":["L","D","W","W","W"],"Brazil":["W","W","L","W","W"],"Argentina":["W","W","D","W","W"],"Germany":["W","L","W","W","W"],"Portugal":["W","D","W","W","D"],"Netherlands":["L","D","W","W","W"],"Belgium":["W","W","D","W","D"],"Norway":["W","L","W","W","W"],"Mexico":["W","D","D","D","W"],"United States":["W","L","L","W","W"],"Morocco":["W","W","D","W","L"],"Uruguay":["D","D","W","W","L"],"Croatia":["L","L","L","W","D"],"Japan":["W","W","W","D","W"],"Senegal":["L","W","D","W","D"],"Colombia":["W","W","W","D","D"],"Switzerland":["W","L","W","D","W"],"Austria":["W","W","W","D","W"],"Sweden":["D","W","W","D","W"],"South Korea":["W","W","D","L","W"],"Egypt":["D","W","D","W","L"],"Ecuador":["D","W","W","L","W"],"Turkiye":["W","W","D","W","L"],"Ivory Coast":["W","W","D","W","L"],"Iran":["W","D","W","D","W"],"Algeria":["W","D","W","L","W"],"Ghana":["W","D","L","W","D"],"Paraguay":["D","W","L","D","W"],"Scotland":["L","D","W","W","D"],"Australia":["W","D","W","W","L"],"Czechia":["W","W","D","L","W"],"Tunisia":["W","D","L","W","D"],"Saudi Arabia":["D","W","L","W","D"],"Canada":["W","D","W","L","W"],"Bosnia & Herz.":["W","D","L","W","D"],"DR Congo":["W","W","D","L","W"],"Uzbekistan":["L","W","D","W","W"],"Cape Verde":["W","D","W","L","W"],"South Africa":["D","W","L","D","W"],"Qatar":["L","D","W","L","W"],"Haiti":["W","L","D","L","W"],"New Zealand":["W","D","L","W","D"],"Jordan":["D","W","L","D","W"],"Iraq":["D","W","D","L","W"],"Panama":["D","W","D","W","L"],"Curacao":["W","L","D","W","L"]};
-const formScore = (team) => { const form = FORM_DATA[team] || ["D","D","D","D","D"]; const pts = form.slice(-5).reduce((s,r) => s+(r==="W"?1:r==="D"?0.5:0), 0); return 0.9+(pts/5)*0.2; };
-const poisson = (lambda) => { const L = Math.exp(-lambda); let k=0, p=1; do { k++; p*=Math.random(); } while(p>L); return k-1; };
-const xG = (rating) => 0.6 + ((rating-37)/(87-37))*1.5;
-const simMatch = (home, away, venue="") => {
-  const hr=gs(home), ar=gs(away);
-  const boost = Object.entries(HOME_VENUES).some(([n,v])=>n===home&&v.includes(venue)) ? 5 : 0;
-  const hxg = xG(hr+boost)*formScore(home), axg = xG(ar)*formScore(away);
-  const avg = (hxg+axg)/2;
-  const hF = Math.max(0.3, avg+(hxg-avg)*0.85), aF = Math.max(0.3, avg+(axg-avg)*0.85);
-  const hg = poisson(hF), ag = poisson(aF);
-  return { hg, ag, res: hg>ag?"home":hg<ag?"away":"draw" };
-};
-const simKO = (t1, t2) => { const r=simMatch(t1||"TBD",t2||"TBD"); if(r.res==="draw") return Math.random()<gs(t1||"TBD")/(gs(t1||"TBD")+gs(t2||"TBD"))?t1:t2; return r.res==="home"?t1:t2; };
-const calcStandings = (letter, results) => {
-  const teams = GROUPS[letter].teams;
-  const tbl = Object.fromEntries(teams.map(t=>[t,{team:t,p:0,w:0,d:0,l:0,gf:0,ga:0,gd:0,pts:0}]));
-  results.forEach(r => { if(r.hg===""||r.ag==="")return; const hg=parseInt(r.hg),ag=parseInt(r.ag); if(isNaN(hg)||isNaN(ag))return; tbl[r.home].p++;tbl[r.away].p++;tbl[r.home].gf+=hg;tbl[r.home].ga+=ag;tbl[r.home].gd+=hg-ag;tbl[r.away].gf+=ag;tbl[r.away].ga+=hg;tbl[r.away].gd+=ag-hg; if(hg>ag){tbl[r.home].w++;tbl[r.home].pts+=3;tbl[r.away].l++;}else if(hg===ag){tbl[r.home].d++;tbl[r.home].pts++;tbl[r.away].d++;tbl[r.away].pts++;}else{tbl[r.away].w++;tbl[r.away].pts+=3;tbl[r.home].l++;} });
-  return [...teams].sort((a,b)=>tbl[b].pts-tbl[a].pts||tbl[b].gd-tbl[a].gd||tbl[b].gf-tbl[a].gf).map((t,i)=>({...tbl[t],pos:i+1}));
-};
-const runFullSim = () => {
-  const gr={};
-  Object.entries(GROUPS).forEach(([g,grp])=>{ const t=grp.teams,pts={},gd={},gf={}; t.forEach(x=>{pts[x]=0;gd[x]=0;gf[x]=0;}); [[0,1],[2,3],[0,2],[1,3],[0,3],[1,2]].forEach(([i,j])=>{ const r=simMatch(t[i],t[j]); gf[t[i]]+=r.hg;gf[t[j]]+=r.ag;gd[t[i]]+=r.hg-r.ag;gd[t[j]]+=r.ag-r.hg; if(r.res==="home")pts[t[i]]+=3;else if(r.res==="draw"){pts[t[i]]++;pts[t[j]]++;}else pts[t[j]]+=3; }); gr[g]=[...t].sort((a,b)=>pts[b]-pts[a]||gd[b]-gd[a]||gf[b]-gf[a]).map(x=>({team:x,pts:pts[x],gd:gd[x]})); });
-  let r32=[...Object.values(gr).flatMap(s=>[s[0].team,s[1].team])]; r32=[...r32,...Object.values(gr).map(s=>s[2]).sort((a,b)=>b.pts-a.pts||b.gd-a.gd).slice(0,8).map(x=>x.team)];
-  const ko=(arr)=>{const n=[];for(let i=0;i<arr.length;i+=2)n.push(simKO(arr[i],arr[i+1]));return n;};
-  const r16=ko(r32),qf=ko(r16),sf=ko(qf),champ=simKO(sf[0],sf[1]);
-  return {gr,r32,r16,qf,sf,champion:champ,runnerUp:sf.find(x=>x!==champ)};
-};
-
-// ── LIVE SCORES CONTEXT ───────────────────────────────────────────────────
-const LiveScoresCtx = createContext({scores:{},getScore:()=>null,isLive:()=>false,isFinished:()=>false,lastFetch:null});
-
-const statusIsLive = (s) => ["1H","HT","2H","ET","BT","P","LIVE","inprogress","first_half","halftime","second_half","extra_time","penalties"].includes(s);
-const statusIsFinished = (s) => ["FT","AET","PEN","finished","ended","after_extra_time","after_penalties"].includes(s);
-const statusLabel = (s,e) => {
-  if(!s||s==="NS"||s==="notstarted") return null;
-  if(s==="1H"||s==="first_half"||s==="inprogress"||s==="LIVE") return e?`${e}'`:"LIVE";
-  if(s==="HT"||s==="halftime") return "HT";
-  if(s==="2H"||s==="second_half") return e?`${e}'`:"LIVE";
-  if(s==="ET"||s==="extra_time") return e?`ET ${e}'`:"ET";
-  if(s==="BT") return "BT";
-  if(s==="P"||s==="penalties") return "Pens";
-  if(s==="FT"||s==="finished"||s==="ended") return "FT";
-  if(s==="AET"||s==="after_extra_time") return "AET";
-  if(s==="PEN"||s==="after_penalties") return "Pens";
-  return s;
-};
-
-const API_NAME_MAP = {
-  "USA":"United States","United States of America":"United States",
-  "Turkey":"Turkiye","Türkiye":"Turkiye",
-  "Czech Republic":"Czechia",
-  "Bosnia":"Bosnia & Herz.","Bosnia and Herzegovina":"Bosnia & Herz.","Bosnia & Herzegovina":"Bosnia & Herz.",
-  "Côte d'Ivoire":"Ivory Coast","Cote d'Ivoire":"Ivory Coast",
-  "DR Congo":"DR Congo","Congo DR":"DR Congo","Democratic Republic of Congo":"DR Congo","Congo (DRC)":"DR Congo",
-  "Korea Republic":"South Korea","Republic of Korea":"South Korea",
-  "IR Iran":"Iran","Islamic Republic of Iran":"Iran",
-  "Curaçao":"Curacao","Cabo Verde":"Cape Verde",,
+,
   "Panama":[
     {date:"Jun 6, 2026",  opp:"Bosnia & Herz.", score:"1-1", loc:"St. Louis",      comp:"Friendly", res:"D"},
     {date:"Jun 3, 2026",  opp:"Dominican Rep.", score:"4-2", loc:"Panama City",    comp:"Friendly", res:"W"},
@@ -583,6 +510,85 @@ const API_NAME_MAP = {
     {date:"Mar 2026",     opp:"Bahrain",          score:"2-1", loc:"Amman",          comp:"Friendly", res:"W"},
     {date:"Nov 2025",     opp:"Palestine",        score:"2-0", loc:"Amman",          comp:"Friendly", res:"W"},
   ]
+};
+
+const PREDS = [
+  {team:"France",poly:18.3,odds:"+451",trend:"📈"},{team:"Spain",poly:16.7,odds:"+501",trend:"📉"},
+  {team:"England",poly:11.3,odds:"+781",trend:"➡️"},{team:"Brazil",poly:9.0,odds:"+1010",trend:"📈"},
+  {team:"Argentina",poly:8.3,odds:"+1100",trend:"➡️"},{team:"Germany",poly:7.1,odds:"+1300",trend:"📈"},
+  {team:"Portugal",poly:5.4,odds:"+1750",trend:"➡️"},{team:"Netherlands",poly:4.8,odds:"+1950",trend:"📉"},
+  {team:"Belgium",poly:3.2,odds:"+3000",trend:"📉"},{team:"United States",poly:2.8,odds:"+3400",trend:"📈"},
+  {team:"Mexico",poly:2.1,odds:"+4500",trend:"📈"},{team:"Norway",poly:1.0,odds:"+9000",trend:"📈"},
+  {team:"Others",poly:10.0,odds:"—",trend:""},
+];
+
+// ── SIMULATOR ENGINE ──────────────────────────────────────────────────────
+const STR = {Spain:87,France:86,England:83,Brazil:82,Argentina:81,Germany:79,Portugal:77,Netherlands:76,Belgium:73,Uruguay:71,Colombia:70,Mexico:69,Morocco:68,"United States":67,Croatia:66,Japan:65,Senegal:64,Switzerland:63,Sweden:62,"South Korea":61,Ecuador:60,Norway:59,Australia:57,Austria:56,Czechia:55,"Bosnia & Herz.":54,"Ivory Coast":53,Paraguay:52,Ghana:51,Algeria:50,Iran:48,"DR Congo":46,Uzbekistan:41,"New Zealand":40,Jordan:39,Iraq:38,Panama:38,Curacao:37,Haiti:36,"South Africa":43,"Cape Verde":42,Qatar:44,Tunisia:50,Turkiye:60,Egypt:66,Scotland:58,"Saudi Arabia":49};
+const gs = (t) => STR[t] || 48;
+const HOME_VENUES = {"United States":["SoFi Stadium, Los Angeles","New York New Jersey Stadium, East Rutherford","Dallas Stadium, Dallas","San Francisco Bay Area Stadium, San Francisco","Seattle Stadium, Seattle","Kansas City Stadium, Kansas City","Philadelphia Stadium, Philadelphia","Boston Stadium, Boston","Atlanta Stadium, Atlanta","Miami Stadium, Miami","Houston Stadium, Houston"],"Canada":["Toronto Stadium, Toronto","BC Place, Vancouver"],"Mexico":["Mexico City Stadium, Mexico City","Estadio Guadalajara, Zapopan","Estadio Monterrey, Guadalupe"]};
+const FORM_DATA = {"Spain":["D","D","D","W","W"],"France":["L","W","W","D","W"],"England":["L","D","W","W","W"],"Brazil":["W","W","L","W","W"],"Argentina":["W","W","D","W","W"],"Germany":["W","L","W","W","W"],"Portugal":["W","D","W","W","D"],"Netherlands":["L","D","W","W","W"],"Belgium":["W","W","D","W","D"],"Norway":["W","L","W","W","W"],"Mexico":["W","D","D","D","W"],"United States":["W","L","L","W","W"],"Morocco":["W","W","D","W","L"],"Uruguay":["D","D","W","W","L"],"Croatia":["L","L","L","W","D"],"Japan":["W","W","W","D","W"],"Senegal":["L","W","D","W","D"],"Colombia":["W","W","W","D","D"],"Switzerland":["W","L","W","D","W"],"Austria":["W","W","W","D","W"],"Sweden":["D","W","W","D","W"],"South Korea":["W","W","D","L","W"],"Egypt":["D","W","D","W","L"],"Ecuador":["D","W","W","L","W"],"Turkiye":["W","W","D","W","L"],"Ivory Coast":["W","W","D","W","L"],"Iran":["W","D","W","D","W"],"Algeria":["W","D","W","L","W"],"Ghana":["W","D","L","W","D"],"Paraguay":["D","W","L","D","W"],"Scotland":["L","D","W","W","D"],"Australia":["W","D","W","W","L"],"Czechia":["W","W","D","L","W"],"Tunisia":["W","D","L","W","D"],"Saudi Arabia":["D","W","L","W","D"],"Canada":["W","D","W","L","W"],"Bosnia & Herz.":["W","D","L","W","D"],"DR Congo":["W","W","D","L","W"],"Uzbekistan":["L","W","D","W","W"],"Cape Verde":["W","D","W","L","W"],"South Africa":["D","W","L","D","W"],"Qatar":["L","D","W","L","W"],"Haiti":["W","L","D","L","W"],"New Zealand":["W","D","L","W","D"],"Jordan":["D","W","L","D","W"],"Iraq":["D","W","D","L","W"],"Panama":["D","W","D","W","L"],"Curacao":["W","L","D","W","L"]};
+const formScore = (team) => { const form = FORM_DATA[team] || ["D","D","D","D","D"]; const pts = form.slice(-5).reduce((s,r) => s+(r==="W"?1:r==="D"?0.5:0), 0); return 0.9+(pts/5)*0.2; };
+const poisson = (lambda) => { const L = Math.exp(-lambda); let k=0, p=1; do { k++; p*=Math.random(); } while(p>L); return k-1; };
+const xG = (rating) => 0.6 + ((rating-37)/(87-37))*1.5;
+const simMatch = (home, away, venue="") => {
+  const hr=gs(home), ar=gs(away);
+  const boost = Object.entries(HOME_VENUES).some(([n,v])=>n===home&&v.includes(venue)) ? 5 : 0;
+  const hxg = xG(hr+boost)*formScore(home), axg = xG(ar)*formScore(away);
+  const avg = (hxg+axg)/2;
+  const hF = Math.max(0.3, avg+(hxg-avg)*0.85), aF = Math.max(0.3, avg+(axg-avg)*0.85);
+  const hg = poisson(hF), ag = poisson(aF);
+  return { hg, ag, res: hg>ag?"home":hg<ag?"away":"draw" };
+};
+const simKO = (t1, t2) => { const r=simMatch(t1||"TBD",t2||"TBD"); if(r.res==="draw") return Math.random()<gs(t1||"TBD")/(gs(t1||"TBD")+gs(t2||"TBD"))?t1:t2; return r.res==="home"?t1:t2; };
+const calcStandings = (letter, results) => {
+  const teams = GROUPS[letter].teams;
+  const tbl = Object.fromEntries(teams.map(t=>[t,{team:t,p:0,w:0,d:0,l:0,gf:0,ga:0,gd:0,pts:0}]));
+  results.forEach(r => { if(r.hg===""||r.ag==="")return; const hg=parseInt(r.hg),ag=parseInt(r.ag); if(isNaN(hg)||isNaN(ag))return; tbl[r.home].p++;tbl[r.away].p++;tbl[r.home].gf+=hg;tbl[r.home].ga+=ag;tbl[r.home].gd+=hg-ag;tbl[r.away].gf+=ag;tbl[r.away].ga+=hg;tbl[r.away].gd+=ag-hg; if(hg>ag){tbl[r.home].w++;tbl[r.home].pts+=3;tbl[r.away].l++;}else if(hg===ag){tbl[r.home].d++;tbl[r.home].pts++;tbl[r.away].d++;tbl[r.away].pts++;}else{tbl[r.away].w++;tbl[r.away].pts+=3;tbl[r.home].l++;} });
+  return [...teams].sort((a,b)=>tbl[b].pts-tbl[a].pts||tbl[b].gd-tbl[a].gd||tbl[b].gf-tbl[a].gf).map((t,i)=>({...tbl[t],pos:i+1}));
+};
+const runFullSim = () => {
+  const gr={};
+  Object.entries(GROUPS).forEach(([g,grp])=>{ const t=grp.teams,pts={},gd={},gf={}; t.forEach(x=>{pts[x]=0;gd[x]=0;gf[x]=0;}); [[0,1],[2,3],[0,2],[1,3],[0,3],[1,2]].forEach(([i,j])=>{ const r=simMatch(t[i],t[j]); gf[t[i]]+=r.hg;gf[t[j]]+=r.ag;gd[t[i]]+=r.hg-r.ag;gd[t[j]]+=r.ag-r.hg; if(r.res==="home")pts[t[i]]+=3;else if(r.res==="draw"){pts[t[i]]++;pts[t[j]]++;}else pts[t[j]]+=3; }); gr[g]=[...t].sort((a,b)=>pts[b]-pts[a]||gd[b]-gd[a]||gf[b]-gf[a]).map(x=>({team:x,pts:pts[x],gd:gd[x]})); });
+  let r32=[...Object.values(gr).flatMap(s=>[s[0].team,s[1].team])]; r32=[...r32,...Object.values(gr).map(s=>s[2]).sort((a,b)=>b.pts-a.pts||b.gd-a.gd).slice(0,8).map(x=>x.team)];
+  const ko=(arr)=>{const n=[];for(let i=0;i<arr.length;i+=2)n.push(simKO(arr[i],arr[i+1]));return n;};
+  const r16=ko(r32),qf=ko(r16),sf=ko(qf),champ=simKO(sf[0],sf[1]);
+  return {gr,r32,r16,qf,sf,champion:champ,runnerUp:sf.find(x=>x!==champ)};
+};
+
+// ── LIVE SCORES CONTEXT ───────────────────────────────────────────────────
+const LiveScoresCtx = createContext({scores:{},getScore:()=>null,isLive:()=>false,isFinished:()=>false,lastFetch:null});
+
+const statusIsLive = (s) => ["1H","HT","2H","ET","BT","P","LIVE","inprogress","first_half","halftime","second_half","extra_time","penalties"].includes(s);
+const statusIsFinished = (s) => ["FT","AET","PEN","finished","ended","after_extra_time","after_penalties"].includes(s);
+const statusLabel = (s,e) => {
+  if(!s||s==="NS"||s==="notstarted") return null;
+  if(s==="1H"||s==="first_half"||s==="inprogress"||s==="LIVE") return e?`${e}'`:"LIVE";
+  if(s==="HT"||s==="halftime") return "HT";
+  if(s==="2H"||s==="second_half") return e?`${e}'`:"LIVE";
+  if(s==="ET"||s==="extra_time") return e?`ET ${e}'`:"ET";
+  if(s==="BT") return "BT";
+  if(s==="P"||s==="penalties") return "Pens";
+  if(s==="FT"||s==="finished"||s==="ended") return "FT";
+  if(s==="AET"||s==="after_extra_time") return "AET";
+  if(s==="PEN"||s==="after_penalties") return "Pens";
+  return s;
+};
+
+const API_NAME_MAP = {
+  "USA":"United States","United States of America":"United States",
+  "Turkey":"Turkiye","Türkiye":"Turkiye",
+  "Czech Republic":"Czechia",
+  "Bosnia":"Bosnia & Herz.","Bosnia and Herzegovina":"Bosnia & Herz.","Bosnia & Herzegovina":"Bosnia & Herz.",
+  "Côte d'Ivoire":"Ivory Coast","Cote d'Ivoire":"Ivory Coast",
+  "DR Congo":"DR Congo","Congo DR":"DR Congo","Democratic Republic of Congo":"DR Congo","Congo (DRC)":"DR Congo",
+  "Korea Republic":"South Korea","Republic of Korea":"South Korea",
+  "IR Iran":"Iran","Islamic Republic of Iran":"Iran",
+  "Curaçao":"Curacao","Cabo Verde":"Cape Verde",
+  "Bosnia-Herzegovina":"Bosnia & Herz.","Bosnia and Herz.":"Bosnia & Herz.",
+  "New Zealand":"New Zealand","Aotearoa New Zealand":"New Zealand",
+  "Congo DR":"DR Congo","Congo (DR)":"DR Congo","RD Congo":"DR Congo",
+  "Trinidad & Tobago":"Trinidad & Tobago","Trinidad and Tobago":"Trinidad & Tobago",
+  "Curacao":"Curacao",
 };
 const normTeam = (n) => API_NAME_MAP[n] || n;
 
