@@ -358,7 +358,6 @@ const RECENT4 = {
     {date:"Oct 2025",     opp:"Slovakia",score:"1-0", loc:"Glasgow", comp:"WC Qualifier", res:"W"},
     {date:"Sep 2025",     opp:"Lithuania",score:"3-0",loc:"Glasgow", comp:"WC Qualifier", res:"W"},
   ],
-,
   "Panama":[
     {date:"Jun 6, 2026",  opp:"Bosnia & Herz.", score:"1-1", loc:"St. Louis",      comp:"Friendly", res:"D"},
     {date:"Jun 3, 2026",  opp:"Dominican Rep.", score:"4-2", loc:"Panama City",    comp:"Friendly", res:"W"},
@@ -401,8 +400,7 @@ const RECENT4 = {
     {date:"Mar 2026",     opp:"New Zealand",     score:"2-0", loc:"Sydney",         comp:"Friendly", res:"W"},
     {date:"Mar 2026",     opp:"South Korea",     score:"1-0", loc:"Melbourne",      comp:"Friendly", res:"W"},
     {date:"Nov 2025",     opp:"Saudi Arabia",    score:"2-1", loc:"Sydney",         comp:"Friendly", res:"W"},
-  ]
-,
+  ],
   "Paraguay":[
     {date:"Jun 5, 2026",  opp:"Nicaragua",     score:"4-0", loc:"Asuncion",       comp:"Friendly", res:"W"},
     {date:"Mar 2026",     opp:"Venezuela",      score:"1-1", loc:"Asuncion",       comp:"Friendly", res:"D"},
@@ -428,8 +426,7 @@ const RECENT4 = {
     {date:"Mar 2026",     opp:"Bolivia",        score:"1-0", loc:"Lima",           comp:"Friendly", res:"W"},
     {date:"Mar 2026",     opp:"Chile",          score:"0-0", loc:"Santiago",       comp:"Friendly", res:"D"},
     {date:"Nov 2025",     opp:"Venezuela",      score:"1-1", loc:"Lima",           comp:"Friendly", res:"D"},
-  ]
-,
+  ],
   "Ghana":[
     {date:"Jun 2, 2026",  opp:"Wales",          score:"1-1", loc:"Cardiff",        comp:"Friendly", res:"D"},
     {date:"May 22, 2026", opp:"Mexico",      score:"0-2", loc:"Puebla",        comp:"Friendly", res:"L"},
