@@ -4114,7 +4114,15 @@ export default function App() {
   const [userAvatar, setUserAvatar] = useState(() => {
     try { return localStorage.getItem("wc2026_avatar") || null; } catch { return null; }
   });
-  const persistAvatar = (av) => { setUserAvatar(av); try { localStorage.setItem("wc2026_avatar", av||""); } catch {} };
+  const [avatarTs, setAvatarTs] = useState(() => {
+    try { return parseInt(localStorage.getItem("wc2026_avatar_ts") || "0"); } catch { return 0; }
+  });
+  const persistAvatar = (av) => {
+    setUserAvatar(av);
+    const ts = Date.now();
+    setAvatarTs(ts);
+    try { localStorage.setItem("wc2026_avatar", av||""); localStorage.setItem("wc2026_avatar_ts", String(ts)); } catch {}
+  };
   const [displayName, setDisplayName] = useState(() => {
     try { return localStorage.getItem("wc2026_displayname") || ""; } catch { return ""; }
   });
@@ -4169,7 +4177,10 @@ export default function App() {
       .then(data => {
         if (!data.ok || !data.profile) return;
         const p = data.profile;
-        if (p.avatar) persistAvatar(p.avatar);
+        const remoteAvatarTs = p.avatarTs || p.updatedAt || 0;
+        if (p.avatar && remoteAvatarTs > avatarTs) {
+          persistAvatar(p.avatar);
+        }
         if (p.displayName) persistDisplayName(p.displayName);
         if (p.favTeams?.length) setFavTeams(p.favTeams);
         if (p.dark !== undefined) setDark(p.dark);
@@ -4215,7 +4226,7 @@ export default function App() {
   useEffect(() => {
     if (!syncProfile?.uid) return;
     const t = setTimeout(() => {
-      fetch("/api/sync?action=push", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ uid:syncProfile.uid, saved, favTeams, dark, locationOverride, avatar:userAvatar, displayName }) }).catch(()=>{});
+      fetch("/api/sync?action=push", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ uid:syncProfile.uid, saved, favTeams, dark, locationOverride, avatar:userAvatar, avatarTs, displayName }) }).catch(()=>{});
     }, 1500);
     return () => clearTimeout(t);
   }, [saved, favTeams, dark, locationOverride, userAvatar, displayName, syncProfile]);
