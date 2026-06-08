@@ -910,7 +910,7 @@ function SchedTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=
         </div>
 
         {/* Filter mode buttons */}
-        <div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none",marginBottom:filterMode==="group"?8:0}}>
+        <div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none",marginBottom:(filterMode==="group"||filterMode==="team"||filterMode==="venue")?8:0}}>
           {favTeams?.length > 0 && <button style={ss(filterMode==="fav",C.gold)} onClick={()=>setFilterMode("fav")}>⭐ My Teams</button>}
           <button style={ss(filterMode==="group")} onClick={()=>setFilterMode("group")}>🗂 Group</button>
           <button style={ss(filterMode==="team")} onClick={()=>setFilterMode("team")}>👥 Team</button>
