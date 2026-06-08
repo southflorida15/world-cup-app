@@ -83,7 +83,8 @@ async function getWeather(venueName, dateStr) {
 }
 
 export default async function handler(req, res) {
-  const { home="Team A", away="Team B", hg, ag, group="", date="", venue="", stage="", p1, p2, format } = req.query;
+  const { home="Team A", away="Team B", hg, ag, group="", date="", venue="", stage="", p1, p2, predHg, predAg, format } = req.query;
+  const hasPred = predHg !== undefined && predAg !== undefined;
 
   const hasScore   = hg !== undefined && ag !== undefined;
   const stageLabel = stage || (group ? `Group ${group}` : "World Cup 2026");
@@ -141,7 +142,7 @@ export default async function handler(req, res) {
   const scoreBlock = hasScore
     ? `<text x="600" y="295" text-anchor="middle" font-size="100" font-weight="900" fill="#4ade80" font-family="monospace">${hg} - ${ag}</text>
        <text x="600" y="345" text-anchor="middle" font-size="26" font-weight="700" fill="#3d6a4d" letter-spacing="6">FULL TIME</text>`
-    : `<text x="600" y="300" text-anchor="middle" font-size="88" font-weight="900" fill="#234833" letter-spacing="8">VS</text>
+    : `<text x="600" y="300" text-anchor="middle" font-size="72" font-weight="900" fill="#2a5a38" letter-spacing="8">VS</text>
        <text x="600" y="345" text-anchor="middle" font-size="26" font-weight="700" fill="#3d6a4d" letter-spacing="6">UPCOMING</text>`;
 
   const oddsBlock = (!hasScore && p1 && p2)
@@ -171,15 +172,19 @@ export default async function handler(req, res) {
     '<text x="48" y="86" font-size="26" font-weight="900" fill="#d4ead9" font-family="system-ui">WORLD CUP</text>',
     '<text x="48" y="116" font-size="26" font-weight="900" fill="#4ade80" font-family="system-ui">2026</text>',
     `<rect x="${1200-48-sw}" y="40" width="${sw}" height="40" rx="20" fill="rgba(74,222,128,0.12)" stroke="rgba(74,222,128,0.3)" stroke-width="1"/>`,
-    `<text x="${1200-48-sw/2}" y="65" text-anchor="middle" font-size="18" font-weight="700" fill="#4ade80" font-family="system-ui">${stageLabel}</text>`,
-    date ? `<text x="${1200-48}" y="98" text-anchor="end" font-size="17" fill="#7aaa8a" font-family="system-ui">${date}</text>` : "",
+    `<text x="${1200-48-sw/2}" y="65" text-anchor="middle" font-size="22" font-weight="700" fill="#4ade80" font-family="system-ui">${stageLabel}</text>`,
+    date ? `<text x="${1200-48}" y="98" text-anchor="end" font-size="20" fill="#7aaa8a" font-family="system-ui">${date}</text>` : "",
     hf ? `<image href="${hf}" x="128" y="195" width="160" height="107" clip-path="url(#hfc)" preserveAspectRatio="xMidYMid slice"/>` : "",
-    `<text x="208" y="348" text-anchor="middle" font-size="34" font-weight="800" fill="#d4ead9" font-family="system-ui">${home}</text>`,
+    `<text x="208" y="348" text-anchor="middle" font-size="44" font-weight="900" fill="#d4ead9" font-family="system-ui">${home}</text>`,
     scoreBlock,
     oddsBlock,
     af ? `<image href="${af}" x="912" y="195" width="160" height="107" clip-path="url(#afc)" preserveAspectRatio="xMidYMid slice"/>` : "",
-    `<text x="992" y="348" text-anchor="middle" font-size="34" font-weight="800" fill="#d4ead9" font-family="system-ui">${away}</text>`,
-    venueShort ? `<text x="48" y="600" font-size="20" fill="#4ade80" font-family="system-ui">@ ${venueShort}</text>` : "",
+    `<text x="992" y="348" text-anchor="middle" font-size="44" font-weight="900" fill="#d4ead9" font-family="system-ui">${away}</text>`,
+    // User prediction on SVG
+    hasPred ? `<rect x="440" y="490" width="320" height="70" rx="10" fill="#0d2815" stroke="#4ade80" stroke-width="1.5"/>
+      <text x="600" y="512" text-anchor="middle" font-size="13" fill="#4ade80" font-family="system-ui" letter-spacing="2" font-weight="700">MY PREDICTION</text>
+      <text x="600" y="548" text-anchor="middle" font-size="36" font-weight="900" fill="#4ade80" font-family="monospace">${predHg} - ${predAg}</text>` : "",
+    venueShort ? `<text x="48" y="600" font-size="22" fill="#4ade80" font-family="system-ui">@ ${venueShort}</text>` : "",
     '<text x="1152" y="600" text-anchor="end" font-size="16" fill="#3d6a4d" font-family="system-ui">world-cup-app-iota.vercel.app</text>',
     '<rect x="0" y="627" width="1200" height="3" fill="url(#acc)"/>',
     '</svg>'
@@ -264,6 +269,20 @@ export default async function handler(req, res) {
     </div>
   </div>` : "";
 
+  // Prediction row
+  const predRowHtml = hasPred ? `
+  <div class="row" style="border-color:#4ade8044;background:#0d2815">
+    <div class="ri">🔮</div>
+    <div style="flex:1">
+      <div class="rl">MY PREDICTION</div>
+      <div style="display:flex;align-items:center;gap:12px;margin-top:4px">
+        <div style="font-size:11px;color:#7aaa8a;font-weight:600">${home}</div>
+        <div style="font-size:28px;font-weight:900;color:#4ade80;font-family:monospace">${predHg} - ${predAg}</div>
+        <div style="font-size:11px;color:#7aaa8a;font-weight:600">${away}</div>
+      </div>
+    </div>
+  </div>` : "";
+
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -328,12 +347,13 @@ body{display:flex;flex-direction:column;align-items:center;padding-bottom:env(sa
   ${weatherRowHtml}
   ${dateRowHtml}
   ${oddsRowHtml}
+  ${predRowHtml}
 </div>
 <div class="btns">
   <a href="${appUrl}" class="btn green">⚽ Open App</a>
   <button class="btn outline" onclick="if(navigator.share){navigator.share({title:document.title,url:location.href})}else{navigator.clipboard.writeText(location.href);this.textContent='Copied!'}">📤 Share</button>
 </div>
-<p class="hint"><strong style="color:#4ade80">New to the app?</strong> Safari → Share ↑ → Add to Home Screen</p>
+<p class="hint"><strong style="color:#4ade80">Don't have the app?</strong><br>iPhone: Safari → Share ↑ → Add to Home Screen<br>Android: Chrome → ⋯ → Add to Home Screen</p>
 </body>
 </html>`;
 

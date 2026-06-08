@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>WC 2026 · Admin</title>
+  <style>
+    :root {
+      --bg: #060e0a;
+      --s1: #0c1a12;
+      --s2: #112618;
+      --b1: #1a3828;
+      --b2: #234833;
+      --green: #4ade80;
+      --gold: #fbbf24;
+      --blue: #60a5fa;
+      --red: #f87171;
+      --text: #d4ead9;
+      --mid: #7aaa8a;
+      --dim: #3d6a4d;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; min-height: 100vh; }
+
+    /* Login */
+    #login { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+    .login-box { background: var(--s1); border: 1px solid var(--b2); border-radius: 16px; padding: 40px 32px; width: 100%; max-width: 360px; text-align: center; }
+    .login-box h1 { font-size: 22px; font-weight: 800; color: var(--green); margin-bottom: 6px; }
+    .login-box p { font-size: 13px; color: var(--mid); margin-bottom: 28px; }
+    .login-box input { width: 100%; padding: 12px 16px; background: var(--s2); border: 1px solid var(--b2); border-radius: 10px; color: var(--text); font-size: 16px; outline: none; margin-bottom: 12px; letter-spacing: 0.05em; }
+    .login-box button { width: 100%; padding: 13px; background: linear-gradient(135deg, var(--green), #22c55e); border: none; border-radius: 10px; color: #030a05; font-weight: 800; font-size: 15px; cursor: pointer; }
+    .error { color: var(--red); font-size: 12px; margin-top: 8px; }
+
+    /* Dashboard */
+    #dashboard { display: none; max-width: 900px; margin: 0 auto; padding: 24px 16px 60px; }
+    .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
+    .header h1 { font-size: 20px; font-weight: 800; color: var(--green); }
+    .header-meta { font-size: 11px; color: var(--dim); }
+    .logout { font-size: 12px; color: var(--mid); background: none; border: 1px solid var(--b2); border-radius: 8px; padding: 5px 12px; cursor: pointer; color: var(--dim); }
+
+    /* Stat cards */
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 28px; }
+    .stat-card { background: var(--s1); border: 1px solid var(--b1); border-radius: 12px; padding: 16px; }
+    .stat-card .val { font-size: 32px; font-weight: 900; color: var(--green); line-height: 1; }
+    .stat-card .lbl { font-size: 11px; color: var(--mid); margin-top: 4px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+
+    /* Section */
+    .section { margin-bottom: 28px; }
+    .section-title { font-size: 11px; font-weight: 700; color: var(--dim); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px; }
+
+    /* Daily chart */
+    .chart { background: var(--s1); border: 1px solid var(--b1); border-radius: 12px; padding: 16px; }
+    .bars { display: flex; align-items: flex-end; gap: 4px; height: 80px; margin-bottom: 8px; }
+    .bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; justify-content: flex-end; }
+    .bar { background: var(--green); border-radius: 3px 3px 0 0; width: 100%; min-height: 2px; transition: height .3s; }
+    .bar.today { background: var(--gold); }
+    .bar-label { font-size: 8px; color: var(--dim); white-space: nowrap; }
+
+    /* Tab usage */
+    .tabs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
+    .tab-bar { background: var(--s1); border: 1px solid var(--b1); border-radius: 10px; padding: 10px 12px; }
+    .tab-bar-name { font-size: 11px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+    .tab-bar-track { background: var(--b1); border-radius: 3px; height: 6px; overflow: hidden; }
+    .tab-bar-fill { background: var(--blue); height: 100%; border-radius: 3px; transition: width .4s; }
+    .tab-bar-count { font-size: 10px; color: var(--mid); margin-top: 4px; }
+
+    /* User table */
+    .user-table { background: var(--s1); border: 1px solid var(--b1); border-radius: 12px; overflow: hidden; }
+    .user-row { display: grid; grid-template-columns: 32px 1fr 120px 100px 80px; gap: 10px; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--b1); font-size: 12px; }
+    .user-row:last-child { border-bottom: none; }
+    .user-row.head { font-size: 10px; font-weight: 700; color: var(--dim); text-transform: uppercase; letter-spacing: 0.08em; padding: 8px 14px; background: var(--s2); }
+    .avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--s2); border: 1px solid var(--b2); display: flex; align-items: center; justify-content: center; font-size: 12px; overflow: hidden; flex-shrink: 0; }
+    .avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .device-badge { font-size: 9px; padding: 2px 7px; border-radius: 10px; font-weight: 600; display: inline-block; }
+    .device-ios { background: rgba(96,165,250,.15); color: var(--blue); }
+    .device-android { background: rgba(74,222,128,.15); color: var(--green); }
+    .device-desktop { background: rgba(251,191,36,.15); color: var(--gold); }
+    .device-unknown { background: var(--s2); color: var(--dim); }
+
+    /* Visitors table */
+    .vis-table { background: var(--s1); border: 1px solid var(--b1); border-radius: 12px; overflow: hidden; }
+    .vis-row { display: grid; grid-template-columns: 1fr 90px 80px 80px 80px; gap: 10px; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--b1); font-size: 12px; }
+    .vis-row:last-child { border-bottom: none; }
+    .vis-row.head { font-size: 10px; font-weight: 700; color: var(--dim); text-transform: uppercase; letter-spacing: 0.08em; padding: 8px 14px; background: var(--s2); }
+
+    .loading { text-align: center; padding: 60px 20px; color: var(--dim); font-size: 14px; }
+    .spinner { width: 24px; height: 24px; border: 3px solid var(--green); border-top-color: transparent; border-radius: 50%; animation: spin .7s linear infinite; margin: 0 auto 16px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<!-- Login -->
+<div id="login">
+  <div class="login-box">
+    <div style="font-size:36px;margin-bottom:12px">⚽</div>
+    <h1>WC 2026 Admin</h1>
+    <p>Enter your admin secret to continue</p>
+    <input type="password" id="secret-input" placeholder="Admin secret" onkeydown="if(event.key==='Enter')doLogin()"/>
+    <button onclick="doLogin()">Sign In</button>
+    <div class="error" id="login-error"></div>
+  </div>
+</div>
+
+<!-- Dashboard -->
+<div id="dashboard">
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    Loading analytics...
+  </div>
+  <div id="content" style="display:none">
+    <div class="header">
+      <div>
+        <h1>⚽ WC 2026 Analytics</h1>
+        <div class="header-meta" id="generated-at"></div>
+      </div>
+      <button class="logout" onclick="logout()">Sign out</button>
+    </div>
+
+    <!-- Top stats -->
+    <div class="stats-grid" id="stats-grid"></div>
+
+    <!-- Daily chart -->
+    <div class="section">
+      <div class="section-title">Daily Unique Visitors (last 14 days)</div>
+      <div class="chart">
+        <div class="bars" id="bars"></div>
+        <div style="font-size:10px;color:var(--dim);text-align:right">Today highlighted in gold</div>
+      </div>
+    </div>
+
+    <!-- Tab usage -->
+    <div class="section">
+      <div class="section-title">Tab Usage</div>
+      <div class="tabs-grid" id="tabs-grid"></div>
+    </div>
+
+    <!-- Registered users -->
+    <div class="section">
+      <div class="section-title">Predictor Users</div>
+      <div class="user-table">
+        <div class="user-row head">
+          <div></div><div>Name</div><div>Location</div><div>Joined</div><div>Device</div>
+        </div>
+        <div id="users-list"></div>
+      </div>
+    </div>
+
+    <!-- All visitors -->
+    <div class="section">
+      <div class="section-title">All Visitors</div>
+      <div class="vis-table">
+        <div class="vis-row head">
+          <div>Location</div><div>Device</div><div>Visits</div><div>First seen</div><div>Last seen</div>
+        </div>
+        <div id="visitors-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let SECRET = "";
+
+function doLogin() {
+  const val = document.getElementById("secret-input").value.trim();
+  if (!val) return;
+  SECRET = val;
+  document.getElementById("login").style.display = "none";
+  document.getElementById("dashboard").style.display = "block";
+  loadData();
+}
+
+function logout() {
+  SECRET = "";
+  document.getElementById("login").style.display = "flex";
+  document.getElementById("dashboard").style.display = "none";
+  document.getElementById("secret-input").value = "";
+  document.getElementById("content").style.display = "none";
+  document.getElementById("loading").style.display = "block";
+}
+
+async function loadData() {
+  try {
+    const r = await fetch("/api/admin", {
+      headers: { "Authorization": `Bearer ${SECRET}` }
+    });
+    if (r.status === 401) {
+      document.getElementById("login-error").textContent = "Incorrect secret.";
+      logout();
+      document.getElementById("login").style.display = "flex";
+      return;
+    }
+    const d = await r.json();
+    document.getElementById("loading").style.display = "none";
+    document.getElementById("content").style.display = "block";
+    renderDashboard(d);
+  } catch(e) {
+    document.getElementById("loading").innerHTML = `<div style="color:var(--red)">Error loading data: ${e.message}</div>`;
+  }
+}
+
+function renderDashboard(d) {
+  document.getElementById("generated-at").textContent = `Updated ${new Date(d.generatedAt).toLocaleString()}`;
+
+  // Top stats
+  const todayKey = new Date().toISOString().slice(0,10);
+  const todayCount = d.visitors.daily.find(x => x.date === todayKey)?.count || 0;
+  const totalPreds = d.predictions?.total || 0;
+  const stats = [
+    { val: d.visitors.total, lbl: "Unique Visitors" },
+    { val: todayCount, lbl: "Visitors Today" },
+    { val: d.users.total, lbl: "Registered Users" },
+    { val: d.pins.total, lbl: "PIN Accounts" },
+    { val: totalPreds, lbl: "Predictions Made" },
+  ];
+  document.getElementById("stats-grid").innerHTML = stats.map(s =>
+    `<div class="stat-card"><div class="val">${s.val}</div><div class="lbl">${s.lbl}</div></div>`
+  ).join("");
+
+  // Daily chart
+  const daily = d.visitors.daily;
+  const maxCount = Math.max(...daily.map(x => x.count), 1);
+  document.getElementById("bars").innerHTML = daily.map(x => {
+    const isToday = x.date === todayKey;
+    const h = Math.max((x.count / maxCount) * 72, x.count > 0 ? 4 : 2);
+    const label = x.date.slice(5); // MM-DD
+    return `<div class="bar-wrap">
+      <div class="bar${isToday?" today":""}" style="height:${h}px" title="${x.count} visitors"></div>
+      <div class="bar-label">${label}</div>
+    </div>`;
+  }).join("");
+
+  // Tab usage
+  const tabs = d.tabs || {};
+  const tabLabels = { live:"🔴 Live", schedule:"📋 Schedule", groups:"🗂️ Groups", scorers:"⚽ Scorers", stats:"📊 Stats", h2h:"⚔️ H2H", news:"📰 News", predict:"🎯 Odds", predictor:"🔮 Predictor", sim:"🎮 Simulator", bracket:"🏆 Bracket" };
+  const maxTab = Math.max(...Object.values(tabs), 1);
+  document.getElementById("tabs-grid").innerHTML = Object.entries(tabLabels).map(([id, label]) => {
+    const count = tabs[id] || 0;
+    const pct = Math.round((count / maxTab) * 100);
+    return `<div class="tab-bar">
+      <div class="tab-bar-name">${label}</div>
+      <div class="tab-bar-track"><div class="tab-bar-fill" style="width:${pct}%"></div></div>
+      <div class="tab-bar-count">${count.toLocaleString()} taps</div>
+    </div>`;
+  }).join("");
+
+  // Registered users
+  const users = (d.users.records || []).sort((a,b) => (b.registeredAt||0) - (a.registeredAt||0));
+  document.getElementById("users-list").innerHTML = users.length ? users.map(u => {
+    const joined = u.registeredAt ? new Date(u.registeredAt).toLocaleDateString() : "—";
+    const loc = [u.city, u.country].filter(Boolean).join(", ") || "—";
+    const deviceClass = (u.device||"").includes("iOS") ? "ios" : (u.device||"").includes("Android") ? "android" : (u.device||"").includes("Desktop") ? "desktop" : "unknown";
+    return `<div class="user-row">
+      <div class="avatar">👤</div>
+      <div style="font-weight:600;color:var(--text)">${escHtml(u.name || "—")}</div>
+      <div style="color:var(--mid)">${escHtml(loc)}</div>
+      <div style="color:var(--dim)">${joined}</div>
+      <div><span class="device-badge device-${deviceClass}">${escHtml(u.device||"—")}</span></div>
+    </div>`;
+  }).join("") : `<div style="padding:20px;text-align:center;color:var(--dim);font-size:13px">No registered users yet</div>`;
+
+  // Visitors
+  const visitors = (d.visitors.records || []).sort((a,b) => (b.lastSeen||0) - (a.lastSeen||0));
+  document.getElementById("visitors-list").innerHTML = visitors.length ? visitors.map(v => {
+    const loc = [v.city, v.country].filter(Boolean).join(", ") || "—";
+    const deviceClass = (v.device||"").includes("iOS") ? "ios" : (v.device||"").includes("Android") ? "android" : (v.device||"").includes("Desktop") ? "desktop" : "unknown";
+    const firstSeen = v.firstSeen ? new Date(v.firstSeen).toLocaleDateString() : "—";
+    const lastSeen = v.lastSeen ? new Date(v.lastSeen).toLocaleString() : "—";
+    return `<div class="vis-row">
+      <div style="color:var(--mid)">${escHtml(loc)}</div>
+      <div><span class="device-badge device-${deviceClass}">${escHtml(v.device||"—")}</span></div>
+      <div style="color:var(--text);font-weight:600">${v.visits||1}</div>
+      <div style="color:var(--dim);font-size:11px">${firstSeen}</div>
+      <div style="color:var(--dim);font-size:11px">${lastSeen}</div>
+    </div>`;
+  }).join("") : `<div style="padding:20px;text-align:center;color:var(--dim);font-size:13px">No visitor data yet</div>`;
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+</script>
+</body>
+</html>

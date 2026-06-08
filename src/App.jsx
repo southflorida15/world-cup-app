@@ -623,7 +623,7 @@ function LiveScoresProvider({ children }) {
   const getScore = (h,a) => scores[`${h}|${a}`]||null;
   const isLive = (h,a) => { const s=getScore(h,a); return s?statusIsLive(s.status):false; };
   const isFinished = (h,a) => { const s=getScore(h,a); return s?statusIsFinished(s.status):false; };
-  return <LiveScoresCtx.Provider value={{scores,allFixtures,getScore,isLive,isFinished,lastFetch}}>{children}</LiveScoresCtx.Provider>;
+  return <LiveScoresCtx.Provider value={{scores,allFixtures,getScore,isLive,isFinished,lastFetch,refresh:fetchAll}}>{children}</LiveScoresCtx.Provider>;
 }
 
 // ── BROADCAST DATA BY COUNTRY ─────────────────────────────────────────────
@@ -678,6 +678,13 @@ const VENUE_COORDS = {"Mexico City Stadium, Mexico City":"19.3029,-99.1505","Est
 const VENUE_TZ = {"Mexico City Stadium, Mexico City":"America/Mexico_City","Estadio Guadalajara, Zapopan":"America/Mexico_City","Estadio Monterrey, Guadalupe":"America/Monterrey","Toronto Stadium, Toronto":"America/Toronto","BC Place, Vancouver":"America/Vancouver","SoFi Stadium, Los Angeles":"America/Los_Angeles","San Francisco Bay Area Stadium, San Francisco":"America/Los_Angeles","Seattle Stadium, Seattle":"America/Los_Angeles","Dallas Stadium, Dallas":"America/Chicago","Houston Stadium, Houston":"America/Chicago","Kansas City Stadium, Kansas City":"America/Chicago","New York New Jersey Stadium, East Rutherford":"America/New_York","Boston Stadium, Boston":"America/New_York","Philadelphia Stadium, Philadelphia":"America/New_York","Atlanta Stadium, Atlanta":"America/New_York","Miami Stadium, Miami":"America/New_York"};
 const MATCH_UTC = {1:"2026-06-11T19:00:00Z",2:"2026-06-12T02:00:00Z",3:"2026-06-12T19:00:00Z",4:"2026-06-13T01:00:00Z",5:"2026-06-13T19:00:00Z",6:"2026-06-13T22:00:00Z",7:"2026-06-14T01:00:00Z",8:"2026-06-14T03:59:00Z",9:"2026-06-14T17:00:00Z",10:"2026-06-14T20:00:00Z",11:"2026-06-14T23:00:00Z",12:"2026-06-15T02:00:00Z",13:"2026-06-15T16:00:00Z",14:"2026-06-15T19:00:00Z",15:"2026-06-15T22:00:00Z",16:"2026-06-16T01:00:00Z",17:"2026-06-16T19:00:00Z",18:"2026-06-16T22:00:00Z",19:"2026-06-17T01:00:00Z",20:"2026-06-17T03:59:00Z",21:"2026-06-17T17:00:00Z",22:"2026-06-17T20:00:00Z",23:"2026-06-17T23:00:00Z",24:"2026-06-18T02:00:00Z",25:"2026-06-18T16:00:00Z",26:"2026-06-18T19:00:00Z",27:"2026-06-18T22:00:00Z",28:"2026-06-19T01:00:00Z",29:"2026-06-19T19:00:00Z",30:"2026-06-19T22:00:00Z",31:"2026-06-20T00:30:00Z",32:"2026-06-20T03:00:00Z",33:"2026-06-20T17:00:00Z",34:"2026-06-20T20:00:00Z",35:"2026-06-21T01:00:00Z",36:"2026-06-21T03:59:00Z",37:"2026-06-21T16:00:00Z",38:"2026-06-21T19:00:00Z",39:"2026-06-21T22:00:00Z",40:"2026-06-22T01:00:00Z",41:"2026-06-22T17:00:00Z",42:"2026-06-22T21:00:00Z",43:"2026-06-23T00:00:00Z",44:"2026-06-23T03:00:00Z",45:"2026-06-23T17:00:00Z",46:"2026-06-23T20:00:00Z",47:"2026-06-23T23:00:00Z",48:"2026-06-24T02:00:00Z",49:"2026-06-24T19:00:00Z",50:"2026-06-24T19:00:00Z",51:"2026-06-24T22:00:00Z",52:"2026-06-24T22:00:00Z",53:"2026-06-25T01:00:00Z",54:"2026-06-25T01:00:00Z",55:"2026-06-25T20:00:00Z",56:"2026-06-25T20:00:00Z",57:"2026-06-25T23:00:00Z",58:"2026-06-25T23:00:00Z",59:"2026-06-26T02:00:00Z",60:"2026-06-26T02:00:00Z",61:"2026-06-26T19:00:00Z",62:"2026-06-26T19:00:00Z",63:"2026-06-27T00:00:00Z",64:"2026-06-27T00:00:00Z",65:"2026-06-27T03:00:00Z",66:"2026-06-27T03:00:00Z",67:"2026-06-27T21:00:00Z",68:"2026-06-27T21:00:00Z",69:"2026-06-27T23:30:00Z",70:"2026-06-27T23:30:00Z",71:"2026-06-28T02:00:00Z",72:"2026-06-28T02:00:00Z"};
 const USER_TZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
+function getDeviceType() {
+  const ua = navigator.userAgent;
+  if (/iPad|iPhone|iPod/.test(ua)) return "iOS";
+  if (/Android/.test(ua)) return ua.includes("Mobile") ? "Android" : "Android Tablet";
+  if (/Macintosh|Windows|Linux/.test(ua)) return "Desktop";
+  return "Unknown";
+}
 const isEastern = USER_TZ==="America/New_York"||USER_TZ==="America/Detroit"||USER_TZ==="America/Indiana/Indianapolis"||USER_TZ==="America/Kentucky/Louisville";
 function fmtTime(isoStr,tz){return new Intl.DateTimeFormat("en-US",{hour:"numeric",minute:"2-digit",hour12:true,timeZone:tz}).format(new Date(isoStr));}
 function fmtDate(isoStr,tz){return new Intl.DateTimeFormat("en-US",{month:"short",day:"numeric",timeZone:tz}).format(new Date(isoStr));}
@@ -1642,7 +1649,7 @@ function OddsLineChart() {
   );
 }
 
-function PredTab({ tabTop=140 }) {
+function PredTab({ tabTop=140, geoData={} }) {
   const top = PREDS.filter(p=>p.team!=="Others");
   const others = PREDS.find(p=>p.team==="Others");
   const max = top[0].poly;
@@ -2143,7 +2150,7 @@ function H2HTab({ tabTop=116 }) {
     <div>
       {/* Fixed team selector */}
       <div ref={_h2hRef} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"8px 13px",maxWidth:700,margin:"0 auto"}}>
-        <div style={{fontWeight:700,color:C.green,fontSize:14,marginBottom:8}}>⚔️ COMPARE TEAMS HEAD TO HEAD</div>
+        <div style={{fontWeight:700,color:C.green,fontSize:15,marginBottom:8}}>⚔️ COMPARE TEAMS HEAD TO HEAD</div>
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:team1&&team2&&team1!==team2?8:0}}>
           <div style={{flex:1}}>
             <select value={team1} onChange={e=>{setTeam1(e.target.value);setD1(null);setFetched(false);}} style={{width:"100%",padding:"7px 10px",background:C.s2,border:`1px solid ${C.b2}`,borderRadius:8,color:C.text,fontSize:13,outline:"none"}}>
@@ -2554,11 +2561,28 @@ function SavedTab({ saved, onRemove, tabTop=116 }) {
   const [notifiedIds, setNotifiedIds] = useState(() => {
     try { return new Set(JSON.parse(localStorage.getItem("wc2026_push_set") || "[]")); } catch { return new Set(); }
   });
+  const [filterMode, setFilterMode] = useState("all"); // all | group | team | date
+  const [filterVal, setFilterVal] = useState("");
+
   const sorted = [...saved].sort((a,b) => {
     const ta = MATCH_UTC[a.match?.id] ? new Date(MATCH_UTC[a.match.id]).getTime() : 0;
     const tb = MATCH_UTC[b.match?.id] ? new Date(MATCH_UTC[b.match.id]).getTime() : 0;
     return ta - tb;
   });
+
+  // Filter options derived from saved matches
+  const groups = [...new Set(sorted.map(x=>x.match?.group).filter(Boolean))].sort();
+  const teams  = [...new Set(sorted.flatMap(x=>[x.match?.home,x.match?.away]).filter(Boolean))].sort();
+  const dates  = [...new Set(sorted.map(x=>x.match?.date).filter(Boolean))];
+
+  const filtered = sorted.filter(item => {
+    const m = item.match;
+    if (filterMode === "group") return !filterVal || m.group === filterVal;
+    if (filterMode === "team")  return !filterVal || m.home === filterVal || m.away === filterVal;
+    if (filterMode === "date")  return !filterVal || m.date === filterVal;
+    return true;
+  });
+
   const handleMasterCalendar = () => downloadICS(saved);
   const handleMasterPush = async () => {
     const isPWA = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
@@ -2572,7 +2596,6 @@ function SavedTab({ saved, onRemove, tabTop=116 }) {
       if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey:urlBase64ToUint8Array("BHlG2j1aEN_PheVmM_kw6eG5ho26LSMdtxSVEjiz9HnYqKTWWlOrdFdX-U3qUqR-VLxDrvOBik17FS7NJ1kJdr8") });
       await fetch("/api/push-subscribe", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ subscription:sub.toJSON(), matches:saved.map(x=>x.match), minsBefore:60 }) });
       setMasterPushDone(true);
-      // Mark all match IDs as notified in localStorage so individual cards update
       try {
         const ids = saved.map(x=>x.match?.id).filter(Boolean);
         const existing = JSON.parse(localStorage.getItem("wc2026_push_set") || "[]");
@@ -2582,6 +2605,13 @@ function SavedTab({ saved, onRemove, tabTop=116 }) {
       } catch {}
     } catch(e) { console.warn("Master push failed:", e); }
   };
+
+  const ss = (active) => ({
+    padding:"5px 12px", borderRadius:20, border:`1px solid ${active?C.green:C.b1}`,
+    background:active?`${C.green}18`:"transparent", color:active?C.green:C.mid,
+    fontSize:12, fontWeight:600, cursor:"pointer", whiteSpace:"nowrap",
+  });
+
   if (saved.length === 0) return (
     <div style={{textAlign:"center",padding:"50px 20px"}}>
       <div style={{fontSize:"2.8rem",marginBottom:10}}>⭐</div>
@@ -2589,20 +2619,45 @@ function SavedTab({ saved, onRemove, tabTop=116 }) {
       <div style={{fontSize:13,color:C.dim}}>Tap ☆ Add on any match to save it here.</div>
     </div>
   );
+
   return (
-    <div>
-      <div ref={_ref} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"8px 13px",maxWidth:700,margin:"0 auto"}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
-          <span style={{fontSize:12,fontWeight:700,color:C.mid,letterSpacing:"0.06em"}}>ALL MATCHES ({saved.length})</span>
+    <div style={{maxWidth:700,margin:"0 auto"}}>
+      {/* Sticky controls */}
+      <div ref={_ref} style={{position:"sticky",top:tabTop,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"8px 13px"}}>
+        {/* Master actions */}
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+          <span style={{fontSize:12,fontWeight:700,color:C.mid,letterSpacing:"0.06em"}}>ALL MATCHES ({saved.length}){filterMode!=="all"&&filtered.length!==saved.length?<span style={{color:C.dim,fontWeight:400}}> · {filtered.length} shown</span>:null}</span>
           <button onClick={()=>saved.forEach(it=>onRemove(it.id))} style={{background:"none",border:`1px solid ${C.b2}`,color:C.dim,fontSize:11,cursor:"pointer",padding:"2px 8px",borderRadius:6}}>Clear all</button>
         </div>
-        <div style={{display:"flex",gap:6}}>
+        <div style={{display:"flex",gap:6,marginBottom:8}}>
           <button onClick={handleMasterCalendar} style={{flex:1,padding:"6px 4px",borderRadius:8,cursor:"pointer",border:`1px solid ${C.green}44`,background:`${C.green}15`,color:C.green,fontSize:11,fontWeight:600}}>📅 Export all</button>
           <button onClick={handleMasterPush} style={{flex:1,padding:"6px 4px",borderRadius:8,cursor:"pointer",border:`1px solid ${masterPushDone?C.green:C.gold}44`,background:masterPushDone?`${C.green}15`:`${C.gold}15`,color:masterPushDone?C.green:C.gold,fontSize:11,fontWeight:600}}>{masterPushDone?"🔔 All set!":"🔔 Notify all"}</button>
         </div>
+        {/* Filter pills */}
+        <div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none"}}>
+          <button style={ss(filterMode==="all")} onClick={()=>{setFilterMode("all");setFilterVal("");}}>All</button>
+          <button style={ss(filterMode==="group")} onClick={()=>{setFilterMode("group");setFilterVal("");}}>🗂️ Group</button>
+          <button style={ss(filterMode==="team")} onClick={()=>{setFilterMode("team");setFilterVal("");}}>👥 Team</button>
+          <button style={ss(filterMode==="date")} onClick={()=>{setFilterMode("date");setFilterVal("");}}>📅 Date</button>
+        </div>
+        {/* Filter value selector */}
+        {filterMode !== "all" && (
+          <div style={{marginTop:8}}>
+            <select value={filterVal} onChange={e=>setFilterVal(e.target.value)}
+              style={{width:"100%",padding:"8px 12px",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:10,color:C.text,fontSize:13,outline:"none"}}>
+              <option value="">All {filterMode}s</option>
+              {filterMode==="group" && groups.map(g=><option key={g} value={g}>Group {g}</option>)}
+              {filterMode==="team"  && teams.map(t=><option key={t} value={t}>{t}</option>)}
+              {filterMode==="date"  && dates.map(d=><option key={d} value={d}>{d}</option>)}
+            </select>
+          </div>
+        )}
       </div>
-      <div style={{height:_h||80}}/>
-      {sorted.map(item=>(<SavedMatchCard key={item.id} item={item} onRemove={onRemove} notifiedIds={notifiedIds} onNotified={(id)=>setNotifiedIds(prev=>new Set([...prev,id]))}/>))}
+      <div style={{height:8}}/>
+      {filtered.length === 0
+        ? <div style={{textAlign:"center",padding:"32px 0",color:C.dim,fontSize:13}}>No matches match this filter.</div>
+        : filtered.map(item=>(<SavedMatchCard key={item.id} item={item} onRemove={onRemove} notifiedIds={notifiedIds} onNotified={(id)=>setNotifiedIds(prev=>new Set([...prev,id]))}/>))
+      }
     </div>
   );
 }
@@ -2857,7 +2912,7 @@ function PredictorTab() {
     if (!nameInput.trim()) return;
     setNS(true); setNameErr("");
     try {
-      const u = await apiPred("register", {}, { userId, name: nameInput.trim() });
+      const u = await apiPred("register", {}, { userId, name: nameInput.trim(), avatar: userAvatar || null, city: geoData?.city || "", country: geoData?.country || "" });
       setUser(u);
     } catch(e) { setNameErr(e.message || "Could not save name"); }
     finally { setNS(false); }
@@ -2943,7 +2998,7 @@ function PredictorTab() {
       <div style={{background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b2}`,borderRadius:12,padding:14,marginBottom:14}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
           <div>
-            <div style={{fontWeight:700,fontSize:18,color:C.green}}>🔮 MATCH PREDICTOR</div>
+            <div style={{fontWeight:700,fontSize:15,color:C.green}}>🔮 MATCH PREDICTOR</div>
             <div style={{fontSize:11,color:C.mid,marginTop:2}}>Playing as <strong style={{color:C.gold}}>{user.name}</strong></div>
           </div>
           <button onClick={()=>setShowInfo(v=>!v)} style={{background:"none",border:`1px solid ${C.b2}`,borderRadius:20,color:C.dim,fontSize:11,padding:"3px 10px",cursor:"pointer"}}>Scoring?</button>
@@ -2995,9 +3050,19 @@ function PredictorTab() {
               <Card key={entry.userId} style={{marginBottom:7,border:`1px solid ${isMe?C.gold:C.b1}`,background:isMe?`linear-gradient(135deg,${C.gold}0a,${C.s1})`:""}}>
                 <div style={{padding:"10px 13px",display:"flex",alignItems:"center",gap:10}}>
                   <div style={{fontWeight:700,color:C.dim,minWidth:26,fontSize:14,textAlign:"center"}}>{medal||`#${i+1}`}</div>
-                  <div style={{flex:1}}>
-                    <div style={{fontWeight:700,color:isMe?C.gold:C.text,fontSize:14}}>{entry.name}{isMe&&<span style={{fontSize:10,color:C.gold,marginLeft:6}}>(you)</span>}</div>
-                    <div style={{fontSize:11,color:C.dim,marginTop:2}}>{entry.predCount} predictions · {entry.exact} exact · {entry.correct} correct</div>
+                  {/* Avatar */}
+                  <div style={{width:34,height:34,borderRadius:"50%",background:isMe?`${C.gold}22`:C.s2,border:`1.5px solid ${isMe?C.gold:C.b2}`,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",flexShrink:0,fontSize:14}}>
+                    {entry.avatar?.startsWith("data:") ? <img src={entry.avatar} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>
+                    : entry.avatar?.startsWith("icon:") ? (()=>{const ic=FOOTBALL_ICONS?.find(i=>i.id===entry.avatar);return ic?ic.el(22):"⚽";})()
+                    : entry.avatar?.startsWith("flag:") ? <img src={`https://flagcdn.com/w40/${FLAG_CODES_MAP[entry.avatar.slice(5)]}.png`} crossOrigin="anonymous" style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>
+                    : isMe ? "⭐" : "👤"}
+                  </div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontWeight:700,color:isMe?C.gold:C.text,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{entry.name}{isMe&&<span style={{fontSize:10,color:C.gold,marginLeft:6}}>(you)</span>}</div>
+                    <div style={{display:"flex",alignItems:"center",gap:5,marginTop:2,flexWrap:"wrap"}}>
+                      {entry.country && <span style={{fontSize:10,color:C.dim}}>{entry.city ? `${entry.city}, ` : ""}{entry.country}</span>}
+                      <span style={{fontSize:10,color:C.dim}}>{entry.predCount} picks · {entry.exact} exact</span>
+                    </div>
                   </div>
                   <div style={{textAlign:"right"}}>
                     <div style={{fontWeight:900,fontSize:22,color:i===0?C.gold:i<3?C.green:C.mid}}>{entry.pts}</div>
@@ -3190,6 +3255,12 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set() }
     if (!hasScore && p1) params.set("p1", p1.poly);
     if (!hasScore && p2) params.set("p2", p2.poly);
     if (keyEvents.length > 0) params.set("events", encodeURIComponent(JSON.stringify(keyEvents)));
+    // Include user's prediction if they made one
+    const userPred = preds?.[match.id];
+    if (userPred?.hg !== undefined && userPred?.hg !== "" && userPred?.ag !== undefined && userPred?.ag !== "") {
+      params.set("predHg", userPred.hg);
+      params.set("predAg", userPred.ag);
+    }
     const shareUrl = base + "/api/og?" + params.toString();
     const title = hasScore
       ? match.home + " " + sc.hg + "-" + sc.ag + " " + match.away + " · World Cup 2026"
@@ -3451,7 +3522,7 @@ function TopScorersTab({ tabTop=116 }) {
   return (
     <div>
       <div ref={_tshRef} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"8px 13px",maxWidth:700,margin:"0 auto"}}>
-        <div style={{fontWeight:700,fontSize:16,color:C.green,marginBottom:!hasLive?4:0}}>⚽ TOP SCORERS <span style={{fontSize:11,color:C.dim,fontWeight:400}}>{hasLive?"· Live data":"· Pre-tournament"}</span></div>
+        <div style={{fontWeight:700,fontSize:15,color:C.green,marginBottom:!hasLive?4:0}}>⚽ TOP SCORERS <span style={{fontSize:11,color:C.dim,fontWeight:400}}>{hasLive?"· Live data":"· Pre-tournament"}</span></div>
         {!hasLive && (
           <div style={{display:"flex",gap:6}}>
             <Pill active={filter==="all"} onClick={()=>setFilter("all")}  color={C.green}>All</Pill>
@@ -3927,7 +3998,7 @@ function WCNewsTab({ tabTop=116 }) {
       {/* Sticky header */}
       <div ref={_ref} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"10px 13px 8px",maxWidth:700,margin:"0 auto"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-          <span style={{fontSize:13,fontWeight:700,color:C.green}}>📰 WC 2026 News</span>
+          <span style={{fontSize:15,fontWeight:700,color:C.green}}>📰 World Cup 2026 News</span>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
             {lastFetch && <span style={{fontSize:11,color:C.dim}}>Updated {timeAgo(new Date(lastFetch).toISOString())}</span>}
             <button onClick={fetchNews} disabled={loading} style={{padding:"4px 10px",borderRadius:8,border:`1px solid ${C.b2}`,background:C.s2,color:C.mid,fontSize:11,cursor:"pointer",opacity:loading?0.5:1}}>↻ Refresh</button>
@@ -3979,6 +4050,121 @@ function WCNewsTab({ tabTop=116 }) {
           </a>
         ))}
       </div>
+    </div>
+  );
+}
+
+
+// ── PULL TO REFRESH ────────────────────────────────────────────────────────
+function PullToRefresh({ onRefresh, children }) {
+  const [pulling, setPulling] = useState(false);
+  const [pullY, setPullY] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const startY = useRef(0);
+  const THRESHOLD = 72;
+
+  const onTouchStart = (e) => {
+    if (window.scrollY > 0) return;
+    startY.current = e.touches[0].clientY;
+  };
+
+  const onTouchMove = (e) => {
+    if (window.scrollY > 0) return;
+    const dy = e.touches[0].clientY - startY.current;
+    if (dy > 0) {
+      setPulling(true);
+      setPullY(Math.min(dy * 0.45, THRESHOLD + 20));
+    }
+  };
+
+  const onTouchEnd = async () => {
+    if (pullY >= THRESHOLD && !refreshing) {
+      setRefreshing(true);
+      setPullY(THRESHOLD);
+      await onRefresh();
+      setRefreshing(false);
+    }
+    setPulling(false);
+    setPullY(0);
+  };
+
+  return (
+    <div onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
+      {/* Pull indicator — fixed position, only visible when pulling */}
+      {(pulling || refreshing) && (
+        <div style={{
+          position:"fixed", top:130, left:"50%", transform:`translateX(-50%)`,
+          zIndex:500, pointerEvents:"none",
+        }}>
+          <div style={{
+            width:36, height:36, borderRadius:"50%",
+            background:C.s2, border:`1px solid ${C.b2}`,
+            display:"flex", alignItems:"center", justifyContent:"center",
+            boxShadow:"0 2px 12px rgba(0,0,0,.4)",
+            opacity: Math.min(pullY / 30, 1),
+          }}>
+            {refreshing
+              ? <div style={{width:16,height:16,border:`2px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .7s linear infinite"}}/>
+              : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={pullY>=THRESHOLD?C.green:C.mid} strokeWidth="2.5" strokeLinecap="round" style={{transform:`rotate(${(pullY/THRESHOLD)*180}deg)`,transition:"transform .1s"}}><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+            }
+          </div>
+        </div>
+      )}
+      {children}
+    </div>
+  );
+}
+
+
+// ── ONBOARDING ─────────────────────────────────────────────────────────────
+const ONBOARDING_SLIDES = [
+  {
+    icon: "⚽",
+    title: "Your World Cup companion",
+    sub: "Live scores, schedule, group standings, stats, predictions and more — everything about World Cup 2026 in one place.",
+    color: "#4ade80",
+  },
+  {
+    icon: "🏆",
+    title: "Compete with your friends",
+    sub: "Predict match scores, earn points and top the leaderboard. Create a PIN to sync your progress across all your devices.",
+    color: "#f59e0b",
+  },
+];
+
+function Onboarding({ onDone }) {
+  const [slide, setSlide] = useState(0);
+  const s = ONBOARDING_SLIDES[slide];
+  const isLast = slide === ONBOARDING_SLIDES.length - 1;
+
+  return (
+    <div style={{position:"fixed",inset:0,background:"#060e0a",zIndex:9000,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"0 32px"}}>
+      {/* Skip */}
+      {!isLast && (
+        <button onClick={onDone} style={{position:"absolute",top:24,right:20,background:"none",border:"none",color:"#3d6a4d",fontSize:13,cursor:"pointer",padding:"8px 12px"}}>
+          Skip
+        </button>
+      )}
+
+      {/* Slide content */}
+      <div key={slide} style={{textAlign:"center",maxWidth:340,animation:"splashIn .35s ease forwards",opacity:0}}>
+        <div style={{fontSize:64,marginBottom:24,lineHeight:1}}>{s.icon}</div>
+        <div style={{fontSize:24,fontWeight:800,color:"#d4ead9",marginBottom:12,lineHeight:1.2}}>{s.title}</div>
+        <div style={{fontSize:14,color:"#7aaa8a",lineHeight:1.6}}>{s.sub}</div>
+      </div>
+
+      {/* Dots */}
+      <div style={{display:"flex",gap:8,margin:"40px 0 32px"}}>
+        {ONBOARDING_SLIDES.map((_,i) => (
+          <div key={i} style={{width:i===slide?20:7,height:7,borderRadius:4,background:i===slide?s.color:"#1a3828",transition:"all .25s"}}/>
+        ))}
+      </div>
+
+      {/* Button */}
+      <button onClick={()=>{ if(isLast) onDone(); else setSlide(v=>v+1); }}
+        style={{padding:"14px 48px",borderRadius:14,border:"none",background:`linear-gradient(135deg,${s.color},${s.color}cc)`,color:"#030a05",fontWeight:800,fontSize:16,cursor:"pointer",width:"100%",maxWidth:340}}>
+        {isLast ? "Let's go ⚽" : "Next →"}
+      </button>
     </div>
   );
 }
@@ -4097,6 +4283,25 @@ function InstallBanner() {
 }
 
 export default function App() {
+  const [onboardingDone, setOnboardingDone] = useState(() => {
+    try { return localStorage.getItem("wc2026_onboarded") === "1"; } catch { return false; }
+  });
+  const completeOnboarding = () => {
+    setOnboardingDone(true);
+    try { localStorage.setItem("wc2026_onboarded", "1"); } catch {}
+  };
+  const [splashDone, setSplashDone] = useState(() => {
+    // Skip splash on return visits within the same session
+    try { return sessionStorage.getItem("wc2026_splash") === "1"; } catch { return false; }
+  });
+  useEffect(() => {
+    if (splashDone) return;
+    const t = setTimeout(() => {
+      setSplashDone(true);
+      try { sessionStorage.setItem("wc2026_splash", "1"); } catch {}
+    }, 1800);
+    return () => clearTimeout(t);
+  }, []);
   const [tab, setTab] = useState("live");
   const geoData = useCountry();
   const [locationOverride, setLocationOverride] = useState(() => {
@@ -4163,6 +4368,32 @@ export default function App() {
   });
   const [showFavPicker, setShowFavPicker] = useState(false);
   const favTeam = favTeams[0] || "";
+
+  // Analytics tracking — fire on mount
+  useEffect(() => {
+    const device = getDeviceType();
+    fetch("/api/analytics", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({
+        uid: syncUid,
+        event: "visit",
+        device,
+        city: geoData.city || "",
+        country: geoData.country || "",
+      })
+    }).catch(() => {});
+  }, [geoData.country]); // re-fire once geoData loads
+
+  // Track tab changes
+  useEffect(() => {
+    if (!tab) return;
+    fetch("/api/analytics", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ uid: syncUid, event: "tab", tab })
+    }).catch(() => {});
+  }, [tab]);
 
   // Auto-pull on startup — if already signed in, fetch latest profile from KV
   useEffect(() => {
@@ -4250,6 +4481,8 @@ export default function App() {
   };
 
   const onTeam=(t)=>{setStatsTeam(t);setTab("stats");};
+  const { isLive: isMatchLive, refresh: refreshScores } = useContext(LiveScoresCtx);
+  const hasLiveMatches = MATCHES.some(m => isMatchLive(m.home, m.away));
   const savedIds = new Set(saved.map(x=>x.match?.id));
   const onAction=(m)=>{
     if(savedIds.has(m.id)){ setSaved(s=>s.filter(x=>x.match?.id!==m.id)); setToast("Removed from saved"); }
@@ -4262,6 +4495,26 @@ export default function App() {
 
   const headerBg = dark ? `linear-gradient(180deg,#091510,${C.bg})` : `linear-gradient(180deg,#e8f5ec,${C.bg})`;
   const selectBg = dark ? "#0c1a12" : "#ffffff";
+
+  if (splashDone && !onboardingDone) return <Onboarding onDone={completeOnboarding}/>;
+
+  if (!splashDone) return (
+    <div style={{position:"fixed",inset:0,background:"#060e0a",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",zIndex:9999}}>
+      <div style={{animation:"splashIn .5s ease forwards",opacity:0}}>
+        {/* App icon */}
+        <div style={{width:100,height:100,margin:"0 auto 24px",borderRadius:22,overflow:"hidden",boxShadow:"0 8px 32px rgba(0,0,0,.5)"}}>
+          <img src="/icons/icon-512.png" alt="WC 2026" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+        </div>
+        <div style={{textAlign:"center",marginBottom:8}}>
+          <div style={{fontSize:11,color:"#4ade8088",fontWeight:700,letterSpacing:"0.15em",marginBottom:4}}>FIFA</div>
+          <div style={{fontSize:28,fontWeight:900,color:"#d4ead9",lineHeight:1.1,letterSpacing:"0.02em"}}>WORLD CUP</div>
+          <div style={{fontSize:28,fontWeight:900,color:"#4ade80",lineHeight:1.1,letterSpacing:"0.02em"}}>2026™</div>
+        </div>
+        <div style={{fontSize:12,color:"#3d6a4d",textAlign:"center",marginTop:8}}>Your tournament companion</div>
+      </div>
+      <style>{`@keyframes splashIn{to{opacity:1;transform:translateY(0)}from{opacity:0;transform:translateY(16px)}}`}</style>
+    </div>
+  );
 
   return (
     <LiveScoresProvider>
@@ -4300,13 +4553,17 @@ export default function App() {
 
           <div style={{display:"flex",overflowX:"auto",scrollbarWidth:"none",marginBottom:-1}}>
             {TABS.map(t=>(
-              <button key={t.id} onClick={()=>setTab(t.id)} style={{flex:"0 0 auto",padding:"8px 10px",background:"none",border:"none",borderBottom:`2px solid ${tab===t.id?C.green:"transparent"}`,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,color:tab===t.id?C.green:C.dim}}>
+              <button key={t.id} onClick={()=>setTab(t.id)} style={{flex:"0 0 auto",padding:"8px 10px",background:"none",border:"none",borderBottom:`2px solid ${tab===t.id?C.green:"transparent"}`,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,color:tab===t.id?C.green:C.dim,position:"relative"}}>
                 <span style={{fontSize:14}}>{t.icon}</span>
                 <span style={{fontSize:9,fontWeight:600,whiteSpace:"nowrap"}}>{t.label}</span>
+                {t.id==="live" && hasLiveMatches && tab!=="live" && (
+                  <span style={{position:"absolute",top:6,right:6,width:7,height:7,borderRadius:"50%",background:"#ef4444",boxShadow:"0 0 0 2px #ef444488",animation:"pulse 1.5s infinite"}}/>
+                )}
               </button>
             ))}
           </div>
         </div>
+        <PullToRefresh onRefresh={async()=>{ if(refreshScores) await refreshScores(); }}>
         <div style={{padding:"0 13px 100px"}}>
           {tab==="live"      && <LiveTab onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} tabTop={tabBarBottom} savedIds={savedIds}/>}
           {tab==="scorers"   && <TopScorersTab tabTop={tabBarBottom}/>}
@@ -4314,25 +4571,28 @@ export default function App() {
           {tab==="groups"    && <GrpTab onTeam={onTeam} onMatchTap={onMatchTap} tabTop={tabBarBottom}/>}
           {tab==="stats"     && <StatsTab initial={statsTeam} tabTop={tabBarBottom}/>}
           {tab==="h2h"       && <H2HTab tabTop={tabBarBottom}/>}
-          {tab==="predict"   && <PredTab tabTop={tabBarBottom}/>}
+          {tab==="predict"   && <PredTab tabTop={tabBarBottom} geoData={geoData}/>}
           {tab==="predictor" && <PredictorTab/>}
           {tab==="sim"       && <SimTab tabTop={tabBarBottom}/>}
           {tab==="bracket"   && <MyBracketTab tabTop={tabBarBottom}/>}
           {tab==="news"       && <WCNewsTab tabTop={tabBarBottom}/>}
           {tab==="saved"     && <div style={{paddingTop:14}}><SavedTab saved={saved} onRemove={onRemove}/></div>}
         </div>
+        </PullToRefresh>
         {/* Saved view overlay */}
         {showSavedView && (
           <div style={{position:"fixed",inset:0,background:C.bg,zIndex:200,display:"flex",flexDirection:"column"}}>
             {/* Back header */}
-            <div style={{display:"flex",alignItems:"center",gap:12,padding:"16px 16px 12px",borderBottom:`1px solid ${C.b1}`,background:C.s1,flexShrink:0}}>
+            <div style={{display:"flex",alignItems:"center",gap:12,padding:"16px 16px 12px",borderBottom:`1px solid ${C.b1}`,background:C.s1,flexShrink:0,maxWidth:700,width:"100%",alignSelf:"center",boxSizing:"border-box"}}>
               <button onClick={()=>setShowSavedView(false)} style={{background:"none",border:"none",color:C.mid,fontSize:28,cursor:"pointer",lineHeight:1,padding:"0 4px",fontWeight:300}}>‹</button>
               <span style={{fontWeight:700,fontSize:17,color:C.green}}>My Matches</span>
               <span style={{fontSize:13,color:C.dim,marginLeft:"auto"}}>{saved.length} saved</span>
             </div>
-            {/* Scrollable content — SavedTab sticky header sits at top of this div */}
-            <div style={{flex:1,overflowY:"auto",position:"relative"}}>
-              <SavedTab saved={saved} onRemove={onRemove} tabTop={0}/>
+            {/* Scrollable content */}
+            <div style={{flex:1,overflowY:"auto"}}>
+              <div style={{maxWidth:700,margin:"0 auto",padding:"0 13px 80px"}}>
+                <SavedTab saved={saved} onRemove={onRemove} tabTop={57}/>
+              </div>
             </div>
           </div>
         )}
