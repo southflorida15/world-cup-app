@@ -3504,6 +3504,7 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
         <div>
           <div style={{fontSize:12,color:C.dim,textAlign:"center",marginBottom:10}}>Your progress syncs automatically across all signed-in devices.</div>
           {syncProfile?.pin&&<button onClick={()=>{setPin("");setScreen("pin-change");setError("");}} style={{width:"100%",padding:"9px 0",borderRadius:10,border:`1px solid ${C.b2}`,background:C.s2,color:C.mid,fontSize:13,fontWeight:600,cursor:"pointer"}}>🔁 Change PIN</button>}
+          <div style={{height:16}}/>
         </div>
       )}
 
@@ -3550,6 +3551,7 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
         <div style={{fontSize:12,color:C.dim,marginBottom:20,lineHeight:1.5}}>Screenshot this. On another device, tap the profile icon → "I have a PIN".</div>
         <button onClick={onClose} style={btnPrimary}>Done</button>
         <button onClick={()=>{setPin("");setScreen("pin-change");setError("");}} style={{...btnSecondary,fontSize:13}}>🔁 Change PIN</button>
+        <div style={{height:16}}/>
       </div>}
       {screen==="pin-change"&&<div>
         {syncProfile?.pin&&<div style={{background:C.s2,border:`1px solid ${C.b1}`,borderRadius:10,padding:"12px 14px",marginBottom:16,display:"flex",alignItems:"center",justifyContent:"space-between"}}><div><div style={{fontSize:11,color:C.mid,fontWeight:600,marginBottom:2}}>CURRENT PIN</div><div style={{fontSize:24,fontWeight:900,color:C.dim,letterSpacing:"0.2em",fontFamily:"monospace"}}>{syncProfile.pin}</div></div><span style={{fontSize:11,color:C.dim}}>will be replaced</span></div>}
