@@ -4,17 +4,8 @@ import React, { useState, useEffect, useContext, createContext, useCallback, use
 const C = {
   bg:"#060e0a", s1:"#0c1a12", s2:"#112618", b1:"#1a3828", b2:"#234833",
   green:"#4ade80", greenS:"#4ade8055", gold:"#fbbf24", blue:"#60a5fa",
-  rival:"#38bdf8", red:"#f87171", text:"#d4ead9", mid:"#7aaa8a", dim:"#3d6a4d",
-};
-const DARK = {
-  bg:"#060e0a", s1:"#0c1a12", s2:"#112618", b1:"#1a3828", b2:"#234833",
-  green:"#4ade80", greenS:"#4ade8055", gold:"#fbbf24", blue:"#60a5fa",
-  rival:"#38bdf8", red:"#f87171", text:"#d4ead9", mid:"#7aaa8a", dim:"#3d6a4d",
-};
-const LIGHT = {
-  bg:"#e8f5ec", s1:"#d4ead9", s2:"#c0ddc9", b1:"#a0c8b0", b2:"#80b090",
-  green:"#166534", greenS:"#16653444", gold:"#92400e", blue:"#1d4ed8",
-  rival:"#0369a1", red:"#991b1b", text:"#0a1f10", mid:"#1a5c30", dim:"#2d7a4a",
+  rival:"#38bdf8", // sky blue — Team 2 color in H2H (neutral, not "loser" red)
+  red:"#f87171", text:"#d4ead9", mid:"#7aaa8a", dim:"#3d6a4d",
 };
 
 // ── GROUPS ────────────────────────────────────────────────────────────────
@@ -489,18 +480,14 @@ const BROADCAST = {
   DEFAULT: { primary:"FOX · FS1",        streaming:"Peacock · Tubi (free)",           note:"🌍" },
 };
 
-// Detect user country + city via IP geolocation (free, no key needed)
+// Detect user country via IP geolocation (free, no key needed)
 function useCountry() {
   const [geoData, setGeoData] = useState({ country: "US", city: "", region: "" });
   useEffect(() => {
     fetch("https://ipapi.co/json/")
       .then(r => r.json())
       .then(d => {
-        if (d?.country_code) setGeoData({
-          country: d.country_code,
-          city: d.city || "",
-          region: d.region || "",
-        });
+        if (d?.country_code) setGeoData({ country: d.country_code, city: d.city || "", region: d.region || "" });
       })
       .catch(() => {});
   }, []);
@@ -513,8 +500,6 @@ function getBroadcast(countryCode) {
 
 
 const CountryCtx = createContext("US");
-const ThemeCtx   = createContext({dark:true, toggle:()=>{}, headerDark:"#091510", cardDark:"#0a1810"});
-const FavCtx     = createContext({favTeam:"", favTeams:[], setFavTeam:()=>{}});
 const VENUE_COORDS = {"Mexico City Stadium, Mexico City":"19.3029,-99.1505","Estadio Guadalajara, Zapopan":"20.6867,-103.4079","Toronto Stadium, Toronto":"43.6333,-79.3891","SoFi Stadium, Los Angeles":"33.9535,-118.3392","San Francisco Bay Area Stadium, San Francisco":"37.4031,-121.9694","New York New Jersey Stadium, East Rutherford":"40.8135,-74.0745","Boston Stadium, Boston":"42.3467,-71.0972","BC Place, Vancouver":"49.2767,-123.1115","Houston Stadium, Houston":"29.6847,-95.4107","Dallas Stadium, Dallas":"32.7474,-97.0945","Philadelphia Stadium, Philadelphia":"39.9012,-75.1675","Estadio Monterrey, Guadalupe":"25.6694,-100.2436","Atlanta Stadium, Atlanta":"33.7553,-84.4006","Miami Stadium, Miami":"25.9580,-80.2389","Kansas City Stadium, Kansas City":"39.0489,-94.4839","Seattle Stadium, Seattle":"47.5952,-122.3316"};
 const VENUE_TZ = {"Mexico City Stadium, Mexico City":"America/Mexico_City","Estadio Guadalajara, Zapopan":"America/Mexico_City","Estadio Monterrey, Guadalupe":"America/Monterrey","Toronto Stadium, Toronto":"America/Toronto","BC Place, Vancouver":"America/Vancouver","SoFi Stadium, Los Angeles":"America/Los_Angeles","San Francisco Bay Area Stadium, San Francisco":"America/Los_Angeles","Seattle Stadium, Seattle":"America/Los_Angeles","Dallas Stadium, Dallas":"America/Chicago","Houston Stadium, Houston":"America/Chicago","Kansas City Stadium, Kansas City":"America/Chicago","New York New Jersey Stadium, East Rutherford":"America/New_York","Boston Stadium, Boston":"America/New_York","Philadelphia Stadium, Philadelphia":"America/New_York","Atlanta Stadium, Atlanta":"America/New_York","Miami Stadium, Miami":"America/New_York"};
 const MATCH_UTC = {1:"2026-06-11T19:00:00Z",2:"2026-06-12T02:00:00Z",3:"2026-06-12T19:00:00Z",4:"2026-06-13T01:00:00Z",5:"2026-06-13T19:00:00Z",6:"2026-06-13T22:00:00Z",7:"2026-06-14T01:00:00Z",8:"2026-06-14T03:59:00Z",9:"2026-06-14T17:00:00Z",10:"2026-06-14T20:00:00Z",11:"2026-06-14T23:00:00Z",12:"2026-06-15T02:00:00Z",13:"2026-06-15T16:00:00Z",14:"2026-06-15T19:00:00Z",15:"2026-06-15T22:00:00Z",16:"2026-06-16T01:00:00Z",17:"2026-06-16T19:00:00Z",18:"2026-06-16T22:00:00Z",19:"2026-06-17T01:00:00Z",20:"2026-06-17T03:59:00Z",21:"2026-06-17T17:00:00Z",22:"2026-06-17T20:00:00Z",23:"2026-06-17T23:00:00Z",24:"2026-06-18T02:00:00Z",25:"2026-06-18T16:00:00Z",26:"2026-06-18T19:00:00Z",27:"2026-06-18T22:00:00Z",28:"2026-06-19T01:00:00Z",29:"2026-06-19T19:00:00Z",30:"2026-06-19T22:00:00Z",31:"2026-06-20T00:30:00Z",32:"2026-06-20T03:00:00Z",33:"2026-06-20T17:00:00Z",34:"2026-06-20T20:00:00Z",35:"2026-06-21T01:00:00Z",36:"2026-06-21T03:59:00Z",37:"2026-06-21T16:00:00Z",38:"2026-06-21T19:00:00Z",39:"2026-06-21T22:00:00Z",40:"2026-06-22T01:00:00Z",41:"2026-06-22T17:00:00Z",42:"2026-06-22T21:00:00Z",43:"2026-06-23T00:00:00Z",44:"2026-06-23T03:00:00Z",45:"2026-06-23T17:00:00Z",46:"2026-06-23T20:00:00Z",47:"2026-06-23T23:00:00Z",48:"2026-06-24T02:00:00Z",49:"2026-06-24T19:00:00Z",50:"2026-06-24T19:00:00Z",51:"2026-06-24T22:00:00Z",52:"2026-06-24T22:00:00Z",53:"2026-06-25T01:00:00Z",54:"2026-06-25T01:00:00Z",55:"2026-06-25T20:00:00Z",56:"2026-06-25T20:00:00Z",57:"2026-06-25T23:00:00Z",58:"2026-06-25T23:00:00Z",59:"2026-06-26T02:00:00Z",60:"2026-06-26T02:00:00Z",61:"2026-06-26T19:00:00Z",62:"2026-06-26T19:00:00Z",63:"2026-06-27T00:00:00Z",64:"2026-06-27T00:00:00Z",65:"2026-06-27T03:00:00Z",66:"2026-06-27T03:00:00Z",67:"2026-06-27T21:00:00Z",68:"2026-06-27T21:00:00Z",69:"2026-06-27T23:30:00Z",70:"2026-06-27T23:30:00Z",71:"2026-06-28T02:00:00Z",72:"2026-06-28T02:00:00Z"};
@@ -563,20 +548,12 @@ function downloadICS(saved) {
 
 // ── ADD MODAL ─────────────────────────────────────────────────────────────
 // Star icon — outline when unsaved, gold filled when saved
-const RO = [{l:"15 min before",v:15},{l:"30 min before",v:30},{l:"1 hour before",v:60},{l:"2 hours before",v:120},{l:"1 day before",v:1440}];
-const Card = ({children,style={}}) => <div style={{background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b1}`,borderRadius:12,overflow:"hidden",...style}}>{children}</div>;
-const Badge = ({children,color=C.green}) => <span style={{display:"inline-flex",padding:"2px 8px",borderRadius:20,background:`${color}18`,color,fontSize:11,fontWeight:600}}>{children}</span>;
-const Pill = ({children,active,onClick,color=C.green}) => <button onClick={onClick} style={{padding:"5px 12px",borderRadius:20,border:`1px solid ${active?color:C.b1}`,background:active?`${color}18`:"transparent",color:active?color:C.mid,fontSize:12,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap"}}>{children}</button>;
-const Modal = ({open,onClose,title,children}) => { if(!open)return null; return <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.8)",zIndex:1000,display:"flex",alignItems:"flex-end",justifyContent:"center"}}><div onClick={e=>e.stopPropagation()} style={{background:C.s1,border:`1px solid ${C.b2}`,borderRadius:"18px 18px 0 0",width:"100%",maxWidth:620,maxHeight:"90vh",overflowY:"auto",paddingBottom:16}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 18px 12px",borderBottom:`1px solid ${C.b1}`,position:"sticky",top:0,background:C.s1}}><span style={{fontSize:17,fontWeight:700,color:C.green}}>{title}</span><button onClick={onClose} style={{background:"none",border:"none",color:C.mid,fontSize:22,cursor:"pointer"}}>×</button></div><div style={{padding:18}}>{children}</div></div></div>; };
-const Toast = ({msg,onDone}) => { useEffect(()=>{if(msg){const t=setTimeout(onDone,3000);return()=>clearTimeout(t);}},[msg]); if(!msg)return null; return <div style={{position:"fixed",bottom:80,left:"50%",transform:"translateX(-50%)",background:C.green,color:"#030a05",padding:"10px 20px",borderRadius:24,fontWeight:700,fontSize:13,zIndex:2000}}>{msg}</div>; };
-
 function StarIcon({ filled, size=16 }) {
   return filled
     ? <svg width={size} height={size} viewBox="0 0 24 24" fill={C.gold} stroke={C.gold} strokeWidth="1.5"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
     : <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>;
 }
 
-// Dummy placeholder so references to AddModal don't break — replaced below
 function AddModal({ match, open, onClose, onCal, onRem }) {
   const [tab, setTab] = useState("cal");
   const [avail, setAvail] = useState("busy");
@@ -770,9 +747,9 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="",
         </div>
         <div style={{display:"flex",gap:5,alignItems:"center",flexShrink:0}}>
           {onMatchTap && (live||finished) && <button onClick={()=>onMatchTap(m)} style={{background:`${C.blue}18`,border:`1px solid ${C.blue}33`,color:C.blue,padding:"3px 8px",borderRadius:20,fontSize:11,fontWeight:600,cursor:"pointer"}}>Match Events</button>}
-          {!finished && !live && (() => { const isSaved = savedIds.has(m.id); return (
+          {!finished && !live && (()=>{ const isSaved=savedIds.has(m.id); return (
             <button onClick={()=>onAction(m)} style={{background:isSaved?`${C.gold}22`:`${C.green}22`,border:`1px solid ${isSaved?C.gold:C.greenS}`,color:isSaved?C.gold:C.green,padding:"3px 9px",borderRadius:20,fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
-              <StarIcon filled={isSaved} size={12}/> {isSaved?"Saved":"Add"}
+              <StarIcon filled={isSaved} size={12}/>{isSaved?"Saved":"Add"}
             </button>
           ); })()}
         </div>
@@ -988,14 +965,6 @@ async function requestPushPermission() {
   const result = await Notification.requestPermission();
   return result;
 }
-  if (!("Notification" in window)) return "unsupported";
-  if (Notification.permission === "granted") return "granted";
-  if (Notification.permission === "denied") return "denied";
-  const result = await Notification.requestPermission();
-  return result;
-}
-function scheduleNotification(match, minsBeforeKO) {
-
 function scheduleNotification(match, minsBeforeKO) {
   const iso = MATCH_UTC[match.id];
   if (!iso) return false;
@@ -2359,6 +2328,115 @@ function MyBracketTab({ tabTop=116 }) {
   );
 }
 
+// ── SAVED TAB ──────────────────────────────────────────────────────────────
+// ── SAVED TAB ──────────────────────────────────────────────────────────────
+function SavedMatchCard({ item, onRemove }) {
+  const isPWA = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+  const [pushState, setPushState] = useState(() => {
+    if (!("Notification" in window)) return "unsupported";
+    if (!isPWA) return "needs-install";
+    return Notification.permission;
+  });
+  const [notified, setNotified] = useState(false);
+  const [showInstallTip, setShowInstallTip] = useState(false);
+  const m = item.match;
+  const notifyText = `⚽ ${m.home} vs ${m.away} · ${m.date} · ${m.time} · ${m.venue?.split(",")[0]||""}`;
+  const handleWhatsApp = () => window.open(`https://wa.me/?text=${encodeURIComponent(notifyText)}`, "_blank");
+  const handleSMS = () => window.open(`sms:&body=${encodeURIComponent(notifyText)}`, "_blank");
+  const handleCalendar = () => downloadICS([item]);
+  const handlePush = async () => {
+    if (pushState === "needs-install") { setShowInstallTip(v=>!v); return; }
+    let state = pushState;
+    if (state !== "granted") { state = await requestPushPermission(); setPushState(state); if (state !== "granted") return; }
+    scheduleNotification(m, 60);
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      let sub = await reg.pushManager.getSubscription();
+      if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array("BHlG2j1aEN_PheVmM_kw6eG5ho26LSMdtxSVEjiz9HnYqKTWWlOrdFdX-U3qUqR-VLxDrvOBik17FS7NJ1kJdr8") });
+      await fetch("/api/push-subscribe", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ subscription: sub.toJSON(), matches:[m], minsBefore:60 }) });
+    } catch(e) { console.warn("Push subscribe failed:", e); }
+    setNotified(true);
+  };
+  return (
+    <div style={{background:C.s2,border:`1px solid ${C.b1}`,borderRadius:12,marginBottom:6,overflow:"hidden"}}>
+      <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px"}}>
+        <Crest team={m.home} size={22}/>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontWeight:700,color:C.text,fontSize:13,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{m.home} vs {m.away}</div>
+          <div style={{fontSize:11,color:C.dim,marginTop:1}}>{m.date} · {m.time} · {m.venue?.split(",")[0]||""}</div>
+        </div>
+        <div style={{display:"flex",gap:4,alignItems:"center",flexShrink:0}}>
+          <button onClick={handleCalendar} title="Add to Calendar" style={{padding:"5px 7px",borderRadius:7,border:`1px solid ${C.green}44`,background:`${C.green}15`,color:C.green,fontSize:13,cursor:"pointer",lineHeight:1}}>📅</button>
+          <button onClick={handleWhatsApp} title="WhatsApp" style={{padding:"5px 7px",borderRadius:7,border:"1px solid #25d36644",background:"#25d36615",color:"#25d366",fontSize:13,cursor:"pointer",lineHeight:1}}>💬</button>
+          <button onClick={handleSMS} title="SMS" style={{padding:"5px 7px",borderRadius:7,border:`1px solid ${C.blue}44`,background:`${C.blue}15`,color:C.blue,fontSize:13,cursor:"pointer",lineHeight:1}}>📱</button>
+          <button onClick={handlePush} disabled={pushState==="denied"} style={{padding:"5px 7px",borderRadius:7,border:`1px solid ${notified?C.green:pushState==="needs-install"?C.blue:C.gold}44`,background:notified?`${C.green}15`:pushState==="needs-install"?`${C.blue}15`:`${C.gold}15`,color:notified?C.green:pushState==="needs-install"?C.blue:C.gold,fontSize:13,cursor:pushState==="denied"?"not-allowed":"pointer",lineHeight:1,opacity:pushState==="denied"?0.4:1}}>
+            {notified?"✓":"🔔"}
+          </button>
+          <button onClick={()=>onRemove(item.id)} style={{padding:"5px 7px",borderRadius:7,border:`1px solid ${C.b2}`,background:"none",color:C.dim,fontSize:15,cursor:"pointer",lineHeight:1}}>×</button>
+        </div>
+      </div>
+      {pushState==="needs-install" && showInstallTip && (
+        <div style={{padding:"8px 12px 10px",borderTop:`1px solid ${C.b1}`,fontSize:11,color:C.blue,lineHeight:1.5,background:`${C.blue}08`}}>
+          Install the app first: <strong>⋯ → Install app</strong> (Chrome) or <strong>Share → Add to Home Screen</strong> (Safari).
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SavedTab({ saved, onRemove, tabTop=116 }) {
+  const _ref = useRef(null);
+  const _h = useElemHeight(_ref);
+  const [masterPushDone, setMasterPushDone] = useState(false);
+  const sorted = [...saved].sort((a,b) => {
+    const ta = MATCH_UTC[a.match?.id] ? new Date(MATCH_UTC[a.match.id]).getTime() : 0;
+    const tb = MATCH_UTC[b.match?.id] ? new Date(MATCH_UTC[b.match.id]).getTime() : 0;
+    return ta - tb;
+  });
+  const handleMasterCalendar = () => downloadICS(saved);
+  const handleMasterWhatsApp = () => { const lines = sorted.map(it=>`⚽ ${it.match.home} vs ${it.match.away} · ${it.match.date} · ${it.match.time}`).join("\n"); window.open(`https://wa.me/?text=${encodeURIComponent(lines)}`,"_blank"); };
+  const handleMasterSMS = () => { const lines = sorted.map(it=>`⚽ ${it.match.home} vs ${it.match.away} · ${it.match.date} · ${it.match.time}`).join("\n"); window.open(`sms:&body=${encodeURIComponent(lines)}`,"_blank"); };
+  const handleMasterPush = async () => {
+    const isPWA = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+    if (!isPWA) { alert("Install the app first to enable push notifications"); return; }
+    let state = "Notification" in window ? Notification.permission : "unsupported";
+    if (state !== "granted") { state = await requestPushPermission(); if (state !== "granted") return; }
+    saved.forEach(it => scheduleNotification(it.match, 60));
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      let sub = await reg.pushManager.getSubscription();
+      if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey:urlBase64ToUint8Array("BHlG2j1aEN_PheVmM_kw6eG5ho26LSMdtxSVEjiz9HnYqKTWWlOrdFdX-U3qUqR-VLxDrvOBik17FS7NJ1kJdr8") });
+      await fetch("/api/push-subscribe", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ subscription:sub.toJSON(), matches:saved.map(x=>x.match), minsBefore:60 }) });
+      setMasterPushDone(true);
+    } catch(e) { console.warn("Master push failed:", e); }
+  };
+  if (saved.length === 0) return (
+    <div style={{textAlign:"center",padding:"50px 20px"}}>
+      <div style={{fontSize:"2.8rem",marginBottom:10}}>⭐</div>
+      <div style={{fontWeight:700,fontSize:18,color:C.mid,marginBottom:6}}>No matches saved yet</div>
+      <div style={{fontSize:13,color:C.dim}}>Tap ☆ Add on any match to save it here.</div>
+    </div>
+  );
+  return (
+    <div>
+      <div ref={_ref} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"8px 13px",maxWidth:700,margin:"0 auto"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
+          <span style={{fontSize:12,fontWeight:700,color:C.mid,letterSpacing:"0.06em"}}>ALL MATCHES ({saved.length})</span>
+          <button onClick={()=>saved.forEach(it=>onRemove(it.id))} style={{background:"none",border:`1px solid ${C.b2}`,color:C.dim,fontSize:11,cursor:"pointer",padding:"2px 8px",borderRadius:6}}>Clear all</button>
+        </div>
+        <div style={{display:"flex",gap:6}}>
+          <button onClick={handleMasterCalendar} style={{flex:1,padding:"6px 4px",borderRadius:8,cursor:"pointer",border:`1px solid ${C.green}44`,background:`${C.green}15`,color:C.green,fontSize:11,fontWeight:600}}>📅 Calendar</button>
+          <button onClick={handleMasterWhatsApp} style={{flex:1,padding:"6px 4px",borderRadius:8,cursor:"pointer",border:"1px solid #25d36644",background:"#25d36615",color:"#25d366",fontSize:11,fontWeight:600}}>💬 WhatsApp</button>
+          <button onClick={handleMasterSMS} style={{flex:1,padding:"6px 4px",borderRadius:8,cursor:"pointer",border:`1px solid ${C.blue}44`,background:`${C.blue}15`,color:C.blue,fontSize:11,fontWeight:600}}>📱 SMS</button>
+          <button onClick={handleMasterPush} style={{flex:1,padding:"6px 4px",borderRadius:8,cursor:"pointer",border:`1px solid ${masterPushDone?C.green:C.gold}44`,background:masterPushDone?`${C.green}15`:`${C.gold}15`,color:masterPushDone?C.green:C.gold,fontSize:11,fontWeight:600}}>{masterPushDone?"🔔 Set!":"🔔 Push"}</button>
+        </div>
+      </div>
+      <div style={{height:_h||80}}/>
+      {sorted.map(item=>(<SavedMatchCard key={item.id} item={item} onRemove={onRemove}/>))}
+    </div>
+  );
+}
+
 function useWeather(lat, lon, enabled) {
   const [wx, setWx] = useState(null);
   useEffect(() => {
@@ -2377,7 +2455,458 @@ function useWeather(lat, lon, enabled) {
   return wx;
 }
 
+function MatchdayCard({ m, onAction, favTeam }) {
+  const { favTeams=[] } = useContext(FavCtx);
+  const { getScore } = useContext(LiveScoresCtx);
+  const sc = getScore(m.home, m.away);
+  const cityKey = VENUE_TO_CITY[m.venue];
+  const city = cityKey ? HOST_CITIES[cityKey] : null;
+  const wx = useWeather(city?.lat, city?.lon, !!city);
+  const now = Date.now();
+  const iso = MATCH_UTC[m.id];
+  const msToKO = iso ? new Date(iso).getTime() - now : null;
+  const hoursToKO = msToKO ? msToKO / 3600000 : null;
+  const isMatchday = hoursToKO !== null && hoursToKO > 0 && hoursToKO < 24;
+  const isFav = favTeams?.length && (favTeams.includes(m.home) || favTeams.includes(m.away));
+  const { localTime } = matchTimes(m);
+  const live = sc ? statusIsLive(sc.status) : false;
+  const finished = sc ? statusIsFinished(sc.status) : false;
+  const hasScore = sc && sc.hg !== null && sc.ag !== null;
 
+  // Countdown
+  const [countdown, setCountdown] = useState("");
+  useEffect(() => {
+    if (!isMatchday) return;
+    const tick = () => {
+      const diff = new Date(iso).getTime() - Date.now();
+      if (diff <= 0) { setCountdown("KICK OFF!"); return; }
+      const h = Math.floor(diff / 3600000);
+      const min = Math.floor((diff % 3600000) / 60000);
+      const sec = Math.floor((diff % 60000) / 1000);
+      setCountdown(h > 0 ? `${h}h ${min}m` : `${min}m ${sec}s`);
+    };
+    tick();
+    const t = setInterval(tick, 1000);
+    return () => clearInterval(t);
+  }, [isMatchday, iso]);
+
+  const cardBorder = isFav ? C.gold : live ? C.greenS : C.b1;
+  const cardBg = live ? `linear-gradient(135deg,#0a1f10,#0d2815)` : `linear-gradient(135deg,${C.s1},${C.s2})`;
+
+  return (
+    <Card style={{marginBottom:8, border:`1px solid ${cardBorder}`, background:cardBg, opacity:finished?0.75:1}}>
+      <div style={{padding:"11px 13px"}}>
+        {/* Fav banner */}
+        {isFav && !live && !finished && (
+          <div style={{fontSize:10,color:C.gold,fontWeight:700,marginBottom:6,letterSpacing:"0.05em"}}>⭐ YOUR TEAM</div>
+        )}
+        {/* Header row */}
+        <div style={{display:"flex",justifyContent:"space-between",marginBottom:7}}>
+          {m.group ? <Badge>Group {m.group}</Badge> : <Badge color={C.gold}>{m.stage||"Knockout"}</Badge>}
+          <div style={{display:"flex",alignItems:"center",gap:6}}>
+            {isMatchday && countdown && !live && <span style={{fontSize:11,fontWeight:700,color:C.gold}}>⏱ {countdown}</span>}
+            {wx && <span style={{fontSize:11,color:C.mid}}>{wx.icon} {wx.temp}°F</span>}
+            <span style={{fontSize:11,color:C.dim}}>{localTime}</span>
+          </div>
+        </div>
+        {/* Teams + score */}
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:7}}>
+          <Crest team={m.home} size={24}/>
+          <span style={{fontWeight:700,color:favTeams?.includes(m.home)?C.gold:C.text,flex:1,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.home}</span>
+          {hasScore ? (
+            <div style={{textAlign:"center",minWidth:64}}>
+              <div style={{fontWeight:900,fontSize:22,color:live?C.green:C.text,fontFamily:"monospace",lineHeight:1}}>{sc.hg} – {sc.ag}</div>
+              {statusLabel(sc.status,sc.elapsed) && <div style={{fontSize:10,fontWeight:700,marginTop:2,color:live?C.green:C.dim}}>{live?"🔴 ":""}{statusLabel(sc.status,sc.elapsed)}</div>}
+            </div>
+          ) : (
+            <span style={{fontSize:11,color:C.dim,fontWeight:700,minWidth:40,textAlign:"center"}}>VS</span>
+          )}
+          <span style={{fontWeight:700,color:favTeams?.includes(m.away)?C.gold:C.text,flex:1,fontSize:14,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.away}</span>
+          <Crest team={m.away} size={24}/>
+        </div>
+        {/* Venue */}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:m.tv?4:0}}>
+          <span onClick={()=>openMaps(m.venue)} style={{fontSize:11,color:C.blue,cursor:"pointer"}}>📍 <span style={{textDecoration:"underline",textDecorationStyle:"dotted"}}>{m.venue}</span></span>
+          {!finished && (()=>{ const isSaved=savedIds.has(m.id); return (
+            <button onClick={()=>onAction(m)} style={{background:isSaved?`${C.gold}22`:`${C.green}22`,border:`1px solid ${isSaved?C.gold:C.greenS}`,color:isSaved?C.gold:C.green,padding:"3px 9px",borderRadius:20,fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
+              <StarIcon filled={isSaved} size={12}/>{isSaved?"Saved":"Add"}
+            </button>
+          ); })()}
+          {finished && <span style={{fontSize:10,color:C.dim,fontStyle:"italic"}}>Final</span>}
+        </div>
+        {m.tv && <div style={{fontSize:11,color:finished?C.dim:C.gold,marginBottom: isMatchday&&city?4:0}}>📺 {m.tv}</div>}
+        {/* Matchday extra info */}
+        {isMatchday && city && (
+          <div style={{marginTop:8,padding:"8px 10px",background:C.bg,borderRadius:8,border:`1px solid ${C.b1}`}}>
+            <div style={{fontSize:10,color:C.gold,fontWeight:700,marginBottom:5}}>🏟️ MATCHDAY INFO · {cityKey?.toUpperCase()}</div>
+            <div style={{fontSize:11,color:C.mid,marginBottom:3}}>🚇 {city.transit}</div>
+            <div style={{fontSize:11,color:C.mid,marginBottom:3}}>🅿️ {city.parking}</div>
+            {wx && <div style={{fontSize:11,color:C.mid}}>🌡️ Currently {wx.icon} {wx.temp}°F · Wind {wx.wind} mph</div>}
+          </div>
+        )}
+      </div>
+    </Card>
+  );
+}
+
+// ── FAVORITE TEAM CONTEXT ─────────────────────────────────────────────────
+const FavCtx = createContext({ favTeam:"", favTeams:[], setFavTeam:()=>{} });
+
+// ── PREDICTOR — KV-backed multi-user ─────────────────────────────────────
+
+// Stable userId — just a device key, not sensitive data
+function getUserId() {
+  try {
+    let id = localStorage.getItem("wc2026_uid");
+    if (!id) { id = crypto.randomUUID(); localStorage.setItem("wc2026_uid", id); }
+    return id;
+  } catch { return "anon"; }
+}
+
+function scoreOnePred(pred, actual) {
+  if (!pred || actual.hg === null || actual.ag === null) return null;
+  const ph = parseInt(pred.hg), pa = parseInt(pred.ag);
+  const ah = parseInt(actual.hg), aa = parseInt(actual.ag);
+  if (isNaN(ph)||isNaN(pa)) return null;
+  if (ph===ah && pa===aa) return 3;
+  const pr = ph>pa?"H":ph<pa?"A":"D";
+  const ar = ah>aa?"H":ah<aa?"A":"D";
+  return pr===ar ? 1 : 0;
+}
+
+async function apiPred(action, params={}, body=null) {
+  const qs = new URLSearchParams({ action, ...params }).toString();
+  const opts = body
+    ? { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body) }
+    : { method:"GET" };
+  const res = await fetch(`/api/predictor?${qs}`, opts);
+  if (!res.ok) { const e = await res.json().catch(()=>({error:res.statusText})); throw new Error(e.error||res.statusText); }
+  return res.json();
+}
+
+// Debounce helper — saves prediction 800ms after last keystroke
+function useDebounce(fn, ms) {
+  const t = useRef(null);
+  return useCallback((...args) => {
+    clearTimeout(t.current);
+    t.current = setTimeout(() => fn(...args), ms);
+  }, [fn, ms]);
+}
+
+function PredictorTab() {
+  const { getScore, isFinished } = useContext(LiveScoresCtx);
+  const { favTeam, favTeams=[] } = useContext(FavCtx);
+  const userId = useMemo(getUserId, []);
+
+  // User registration state
+  const [user, setUser]         = useState(null);   // { userId, name } or null
+  const [userLoading, setUL]    = useState(true);
+  const [nameInput, setNameInput] = useState("");
+  const [nameErr, setNameErr]   = useState("");
+  const [nameSaving, setNS]     = useState(false);
+
+  // Predictions: { [matchId]: { hg, ag } }
+  const [preds, setPreds]       = useState({});
+  const [predSaving, setPSaving]= useState({});  // { [matchId]: bool }
+
+  // Leaderboard
+  const [board, setBoard]       = useState(null);
+  const [boardLoading, setBL]   = useState(false);
+  const [filter, setFilter]     = useState("upcoming");
+  const [showInfo, setShowInfo] = useState(false);
+
+  // ── Load user + their predictions on mount ──────────────────────────────
+  useEffect(() => {
+    (async () => {
+      setUL(true);
+      try {
+        const u = await apiPred("getUser", { userId });
+        setUser(u);
+        if (u) {
+          const p = await apiPred("getPreds", { userId });
+          // Normalise keys to numbers
+          const normalised = {};
+          Object.entries(p||{}).forEach(([k,v]) => { normalised[Number(k)] = v; });
+          setPreds(normalised);
+        }
+      } catch(e) { console.error("predictor init", e); }
+      finally { setUL(false); }
+    })();
+  }, [userId]);
+
+  // ── Load leaderboard when that tab is active ────────────────────────────
+  useEffect(() => {
+    if (filter !== "board") return;
+    setBL(true);
+    apiPred("leaderboard")
+      .then(b => setBoard(b))
+      .catch(() => setBoard([]))
+      .finally(() => setBL(false));
+  }, [filter]);
+
+  // ── Register ────────────────────────────────────────────────────────────
+  const handleRegister = async () => {
+    if (!nameInput.trim()) return;
+    setNS(true); setNameErr("");
+    try {
+      const u = await apiPred("register", {}, { userId, name: nameInput.trim() });
+      setUser(u);
+    } catch(e) { setNameErr(e.message || "Could not save name"); }
+    finally { setNS(false); }
+  };
+
+  // ── Save a single prediction to KV (debounced) ──────────────────────────
+  const savePredToKV = useCallback(async (matchId, hg, ag) => {
+    if (!user) return;
+    setPSaving(p => ({...p, [matchId]: true}));
+    try {
+      await apiPred("savePred", {}, { userId, matchId, hg, ag });
+    } catch(e) { console.error("savePred", e); }
+    finally { setPSaving(p => ({...p, [matchId]: false})); }
+  }, [userId, user]);
+
+  const debouncedSave = useDebounce(savePredToKV, 800);
+
+  const upd = (id, field, val) => {
+    const clean = val.replace(/\D/,"");
+    const next = { ...preds, [id]: { ...(preds[id]||{}), [field]: clean }};
+    setPreds(next);
+    const updated = next[id];
+    if (updated?.hg !== undefined && updated?.ag !== undefined && updated.hg !== "" && updated.ag !== "") {
+      debouncedSave(id, parseInt(updated.hg), parseInt(updated.ag));
+    }
+  };
+
+  // ── Score totals ────────────────────────────────────────────────────────
+  const upcoming  = MATCHES.filter(m => m.group && !isFinished(m.home, m.away));
+  const finished  = MATCHES.filter(m => m.group &&  isFinished(m.home, m.away));
+  let totalPts = 0, totalPossible = 0, exact = 0, correct = 0;
+  finished.forEach(m => {
+    const sc = getScore(m.home, m.away);
+    if (!sc) return;
+    const pts = scoreOnePred(preds[m.id], sc);
+    if (pts !== null) { totalPts += pts; totalPossible += 3; if(pts===3)exact++; if(pts>=1)correct++; }
+  });
+
+  const shownMatches = filter==="fav"
+    ? MATCHES.filter(m=>m.group&&(favTeams?.includes(m.home)||favTeams?.includes(m.away)))
+    : filter==="finished" ? finished : upcoming;
+
+  // ── Registration gate ───────────────────────────────────────────────────
+  if (userLoading) return (
+    <div style={{textAlign:"center",padding:"48px 20px"}}>
+      <div style={{width:28,height:28,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto 12px"}}/>
+      <div style={{fontSize:13,color:C.mid}}>Loading predictor...</div>
+    </div>
+  );
+
+  if (!user) return (
+    <div style={{paddingTop:12}}>
+      <div style={{background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b2}`,borderRadius:12,padding:14,marginBottom:14,textAlign:"center"}}>
+        <div style={{fontSize:"1.6rem",marginBottom:4}}>🔮</div>
+        <div style={{fontWeight:700,fontSize:17,color:C.green,marginBottom:4}}>Match Predictor</div>
+        <div style={{fontSize:12,color:C.mid,lineHeight:1.5}}>Pick scores for every group match. Compete with friends on the leaderboard.</div>
+      </div>
+      <Card style={{padding:18}}>
+        <div style={{fontWeight:700,color:C.text,fontSize:15,marginBottom:4}}>Choose your display name</div>
+        <div style={{fontSize:12,color:C.dim,marginBottom:14}}>This is how you'll appear on the leaderboard — pick something your friends will recognise.</div>
+        <input
+          value={nameInput}
+          onChange={e=>{setNameInput(e.target.value.slice(0,20));setNameErr("");}}
+          onKeyDown={e=>e.key==="Enter"&&handleRegister()}
+          placeholder="e.g. Pablo, FootballFan99..."
+          maxLength={20}
+          style={{width:"100%",padding:"12px 14px",background:C.s2,border:`1px solid ${nameErr?C.red:C.b2}`,borderRadius:10,color:C.text,fontSize:15,outline:"none",marginBottom:8}}
+        />
+        {nameErr && <div style={{fontSize:12,color:C.red,marginBottom:8}}>{nameErr}</div>}
+        <div style={{fontSize:11,color:C.dim,marginBottom:14}}>{20-nameInput.length} characters remaining</div>
+        <button
+          onClick={handleRegister}
+          disabled={nameSaving||!nameInput.trim()}
+          style={{width:"100%",padding:"12px 0",borderRadius:12,background:nameInput.trim()?`linear-gradient(135deg,${C.green},#22c55e)`:C.b2,border:"none",color:nameInput.trim()?"#030a05":C.dim,fontWeight:700,fontSize:15,cursor:nameInput.trim()?"pointer":"default",opacity:nameSaving?0.6:1}}
+        >{nameSaving?"Saving...":"Join the Predictor →"}</button>
+      </Card>
+    </div>
+  );
+
+  // ── Main predictor UI ───────────────────────────────────────────────────
+  return (
+    <div style={{paddingTop:12}}>
+      <div style={{background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b2}`,borderRadius:12,padding:14,marginBottom:14}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+          <div>
+            <div style={{fontWeight:700,fontSize:18,color:C.green}}>🔮 MATCH PREDICTOR</div>
+            <div style={{fontSize:11,color:C.mid,marginTop:2}}>Playing as <strong style={{color:C.gold}}>{user.name}</strong></div>
+          </div>
+          <button onClick={()=>setShowInfo(v=>!v)} style={{background:"none",border:`1px solid ${C.b2}`,borderRadius:20,color:C.dim,fontSize:11,padding:"3px 10px",cursor:"pointer"}}>Scoring?</button>
+        </div>
+        {showInfo && (
+          <div style={{marginTop:10,padding:10,background:C.bg,borderRadius:8,fontSize:12,color:C.mid,lineHeight:1.8}}>
+            <div>⚽⚽⚽ <strong style={{color:C.green}}>3 pts</strong> — Exact score</div>
+            <div>⚽ <strong style={{color:C.gold}}>1 pt</strong> — Correct result (Win / Draw / Loss)</div>
+            <div>❌ <strong style={{color:C.red}}>0 pts</strong> — Wrong result</div>
+            <div style={{marginTop:6,fontSize:11,color:C.dim}}>Predictions auto-save as you type. Lock-in before kick-off — no changes after!</div>
+          </div>
+        )}
+        {totalPossible > 0 && (
+          <div style={{display:"flex",gap:8,marginTop:12}}>
+            {[
+              [totalPts,       "POINTS",   C.green],
+              [exact,          "EXACT",    C.gold],
+              [correct,        "CORRECT",  C.blue],
+              [totalPossible>0?Math.round((totalPts/totalPossible)*100):0, "ACCURACY %", C.mid],
+            ].map(([v,l,col])=>(
+              <div key={l} style={{flex:1,textAlign:"center",background:`${col}18`,border:`1px solid ${col}33`,borderRadius:10,padding:"8px 4px"}}>
+                <div style={{fontWeight:900,fontSize:22,color:col}}>{v}{l==="ACCURACY %"?"%":""}</div>
+                <div style={{fontSize:9,color:C.dim}}>{l}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Filter tabs */}
+      <div style={{display:"flex",gap:6,marginBottom:14,overflowX:"auto",scrollbarWidth:"none"}}>
+        <Pill active={filter==="upcoming"} onClick={()=>setFilter("upcoming")} color={C.green}>Upcoming ({upcoming.length})</Pill>
+        <Pill active={filter==="finished"} onClick={()=>setFilter("finished")} color={C.gold}>Finished ({finished.length})</Pill>
+        {favTeams?.length > 0 && <Pill active={filter==="fav"} onClick={()=>setFilter("fav")} color={C.gold}>⭐ My Teams</Pill>}
+        <Pill active={filter==="board"} onClick={()=>setFilter("board")} color={C.rival}>🏅 Leaderboard</Pill>
+      </div>
+
+      {/* ── LEADERBOARD ── */}
+      {filter==="board" && (
+        <div>
+          {boardLoading && <div style={{textAlign:"center",padding:"32px 0"}}><div style={{width:24,height:24,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto"}}/></div>}
+          {!boardLoading && board && board.length === 0 && (
+            <div style={{textAlign:"center",padding:"32px 20px",color:C.dim,fontSize:13}}>No predictions scored yet. Check back after June 11!</div>
+          )}
+          {!boardLoading && board && board.map((entry, i) => {
+            const isMe = entry.userId === userId;
+            const medal = i===0?"🥇":i===1?"🥈":i===2?"🥉":null;
+            return (
+              <Card key={entry.userId} style={{marginBottom:7,border:`1px solid ${isMe?C.gold:C.b1}`,background:isMe?`linear-gradient(135deg,${C.gold}0a,${C.s1})`:""}}>
+                <div style={{padding:"10px 13px",display:"flex",alignItems:"center",gap:10}}>
+                  <div style={{fontWeight:700,color:C.dim,minWidth:26,fontSize:14,textAlign:"center"}}>{medal||`#${i+1}`}</div>
+                  <div style={{flex:1}}>
+                    <div style={{fontWeight:700,color:isMe?C.gold:C.text,fontSize:14}}>{entry.name}{isMe&&<span style={{fontSize:10,color:C.gold,marginLeft:6}}>(you)</span>}</div>
+                    <div style={{fontSize:11,color:C.dim,marginTop:2}}>{entry.predCount} predictions · {entry.exact} exact · {entry.correct} correct</div>
+                  </div>
+                  <div style={{textAlign:"right"}}>
+                    <div style={{fontWeight:900,fontSize:22,color:i===0?C.gold:i<3?C.green:C.mid}}>{entry.pts}</div>
+                    <div style={{fontSize:9,color:C.dim}}>pts</div>
+                  </div>
+                </div>
+                {i===0&&entry.pts>0&&<div style={{height:2,background:`linear-gradient(90deg,${C.gold},transparent)`}}/>}
+              </Card>
+            );
+          })}
+          <div style={{textAlign:"center",marginTop:12}}>
+            <button onClick={()=>{setBL(true);apiPred("leaderboard").then(b=>setBoard(b)).finally(()=>setBL(false));}} style={{fontSize:12,color:C.dim,background:"none",border:`1px solid ${C.b2}`,borderRadius:20,padding:"5px 14px",cursor:"pointer"}}>↻ Refresh</button>
+          </div>
+        </div>
+      )}
+
+      {/* ── MATCH LIST ── */}
+      {filter !== "board" && (
+        <>
+          {shownMatches.length===0 && (
+            <div style={{textAlign:"center",padding:"32px 20px",color:C.dim}}>
+              <div style={{fontSize:"2rem",marginBottom:8}}>⏳</div>
+              <div style={{fontSize:13}}>{filter==="upcoming"?"No upcoming matches yet — check back June 11!":"No finished matches yet."}</div>
+            </div>
+          )}
+          {shownMatches.map(m => {
+            const sc = getScore(m.home, m.away);
+            const done = isFinished(m.home, m.away);
+            const pred = preds[m.id] || {};
+            const pts = done && sc ? scoreOnePred(pred, sc) : null;
+            const ptColor = pts===3?C.green:pts===1?C.gold:pts===0?C.red:C.dim;
+            const hasPred = pred.hg!==undefined && pred.ag!==undefined && pred.hg!=="" && pred.ag!=="";
+            const saving = predSaving[m.id];
+            return (
+              <Card key={m.id} style={{marginBottom:8,border:`1px solid ${pts===3?C.green:pts===1?C.gold:pts===0?C.red:hasPred?`${C.green}44`:C.b1}`}}>
+                <div style={{padding:"10px 13px"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+                    <Badge>Group {m.group} · {m.date}</Badge>
+                    <div style={{display:"flex",alignItems:"center",gap:6}}>
+                      {saving && <span style={{fontSize:10,color:C.dim}}>saving...</span>}
+                      {!saving && hasPred && !done && <span style={{fontSize:10,color:C.green}}>✓ saved</span>}
+                      {pts !== null && <div style={{fontWeight:700,color:ptColor,fontSize:12}}>{pts===3?"⚽⚽⚽ +3":pts===1?"⚽ +1":"❌ 0"}pts</div>}
+                    </div>
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <Crest team={m.home} size={22}/>
+                    <span style={{fontWeight:700,color:C.text,flex:1,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.home}</span>
+                    <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
+                      {done && sc && (
+                        <div style={{textAlign:"center",minWidth:48}}>
+                          <div style={{fontSize:9,color:C.dim,marginBottom:1}}>Result</div>
+                          <div style={{fontWeight:800,fontSize:18,color:C.text,fontFamily:"monospace"}}>{sc.hg}–{sc.ag}</div>
+                        </div>
+                      )}
+                      {!done && (
+                        <>
+                          <input value={pred.hg||""} onChange={e=>upd(m.id,"hg",e.target.value)} placeholder="?" maxLength={2}
+                            style={{width:34,textAlign:"center",background:C.s2,border:`1px solid ${hasPred?C.green:C.b2}`,borderRadius:8,color:C.green,fontSize:16,fontWeight:700,padding:"4px 0",outline:"none"}}/>
+                          <span style={{color:C.dim,fontWeight:700}}>–</span>
+                          <input value={pred.ag||""} onChange={e=>upd(m.id,"ag",e.target.value)} placeholder="?" maxLength={2}
+                            style={{width:34,textAlign:"center",background:C.s2,border:`1px solid ${hasPred?C.green:C.b2}`,borderRadius:8,color:C.green,fontSize:16,fontWeight:700,padding:"4px 0",outline:"none"}}/>
+                        </>
+                      )}
+                      {done && hasPred && (
+                        <div style={{textAlign:"center",minWidth:48}}>
+                          <div style={{fontSize:9,color:C.dim,marginBottom:1}}>Your pick</div>
+                          <div style={{fontWeight:800,fontSize:18,color:ptColor,fontFamily:"monospace"}}>{pred.hg}–{pred.ag}</div>
+                        </div>
+                      )}
+                    </div>
+                    <span style={{fontWeight:700,color:C.text,flex:1,fontSize:13,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.away}</span>
+                    <Crest team={m.away} size={22}/>
+                  </div>
+                </div>
+              </Card>
+            );
+          })}
+        </>
+      )}
+    </div>
+  );
+}
+
+
+// ── THEME CONTEXT (dark/light) ────────────────────────────────────────────
+const ThemeCtx = createContext({ dark:true });
+const DARK = {
+  bg:"#060e0a", s1:"#0c1a12", s2:"#112618", b1:"#1a3828", b2:"#234833",
+  green:"#4ade80", greenS:"#4ade8055", gold:"#fbbf24", blue:"#60a5fa",
+  rival:"#38bdf8", red:"#f87171", text:"#d4ead9", mid:"#7aaa8a", dim:"#3d6a4d",
+};
+const LIGHT = {
+  bg:"#f0faf3", s1:"#ffffff", s2:"#e8f5ec", b1:"#c5e0cc", b2:"#a8d4b0",
+  green:"#16a34a", greenS:"#16a34a55", gold:"#d97706", blue:"#2563eb",
+  rival:"#0284c7", red:"#dc2626", text:"#0f2d1a", mid:"#2d6a3f", dim:"#6b9e79",
+};
+
+// ── MATCH EVENTS API ──────────────────────────────────────────────────────
+const eventsCache = {};
+async function fetchMatchEvents(fixtureId) {
+  if (eventsCache[fixtureId]) return eventsCache[fixtureId];
+  try {
+    const res = await fetch(`/api/matchevents?fixtureId=${fixtureId}`);
+    if (!res.ok) throw new Error(res.statusText);
+    const data = await res.json();
+    // Handle both old format (array) and new format ({events, stats})
+    const result = Array.isArray(data) ? { events: data, stats: null } : data;
+    eventsCache[fixtureId] = result;
+    return result;
+  } catch(e) {
+    console.error("[matchevents]", e.message);
+    return null;
+  }
+}
+
+// ── MATCH EVENTS MODAL ────────────────────────────────────────────────────
+// ── WEATHER BADGE ─────────────────────────────────────────────────────────
 function WeatherBadge({ lat, lon }) {
   const wx = useWeather(lat, lon, true);
   if (!wx) return null;
@@ -2389,422 +2918,6 @@ function WeatherBadge({ lat, lon }) {
     </div>
   );
 }
-
-
-// ── SAVED TAB ──────────────────────────────────────────────────────────────
-function SavedMatchCard({ item, onRemove }) {
-  const isPWA = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
-  const [pushState, setPushState] = useState(() => {
-    if (!("Notification" in window)) return "unsupported";
-    if (!isPWA) return "needs-install";
-    return Notification.permission;
-  });
-  const [notified, setNotified] = useState(false);
-  const [expanded, setExpanded] = useState(false);
-  const m = item.match;
-
-  const notifyText = `⚽ ${m.home} vs ${m.away} · ${m.date} · ${m.time} · ${m.venue?.split(",")[0]||""}`;
-  const handleWhatsApp = () => window.open(`https://wa.me/?text=${encodeURIComponent(notifyText)}`, "_blank");
-  const handleSMS      = () => window.open(`sms:&body=${encodeURIComponent(notifyText)}`, "_blank");
-  const handleCalendar = () => downloadICS([item]);
-
-  const handlePush = async () => {
-    if (pushState === "needs-install") { setExpanded(true); return; }
-    let state = pushState;
-    if (state !== "granted") {
-      state = await requestPushPermission();
-      setPushState(state);
-      if (state !== "granted") return;
-    }
-    scheduleNotification(m, 60);
-    try {
-      const reg = await navigator.serviceWorker.ready;
-      let sub = await reg.pushManager.getSubscription();
-      if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array("BHlG2j1aEN_PheVmM_kw6eG5ho26LSMdtxSVEjiz9HnYqKTWWlOrdFdX-U3qUqR-VLxDrvOBik17FS7NJ1kJdr8") });
-      await fetch("/api/push-subscribe", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ subscription: sub.toJSON(), matches:[m], minsBefore:60 }) });
-    } catch(e) { console.warn("Push subscribe failed:", e); }
-    setNotified(true);
-  };
-
-  return (
-    <div style={{background:C.s2,border:`1px solid ${C.b1}`,borderRadius:12,marginBottom:6,overflow:"hidden"}}>
-      {/* Single compact row */}
-      <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px"}}>
-        <Crest team={m.home} size={22}/>
-        <div style={{flex:1,minWidth:0}}>
-          <div style={{fontWeight:700,color:C.text,fontSize:13,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{m.home} vs {m.away}</div>
-          <div style={{fontSize:11,color:C.dim,marginTop:1}}>{m.date} · {m.time} · {m.venue?.split(",")[0]||""}</div>
-        </div>
-        {/* Inline action icons */}
-        <div style={{display:"flex",gap:4,alignItems:"center",flexShrink:0}}>
-          <button onClick={handleCalendar} title="Add to Calendar" style={{padding:"5px 7px",borderRadius:7,border:`1px solid ${C.green}44`,background:`${C.green}15`,color:C.green,fontSize:13,cursor:"pointer",lineHeight:1}}>📅</button>
-          <button onClick={handleWhatsApp} title="WhatsApp" style={{padding:"5px 7px",borderRadius:7,border:"1px solid #25d36644",background:"#25d36615",color:"#25d366",fontSize:13,cursor:"pointer",lineHeight:1}}>💬</button>
-          <button onClick={handleSMS} title="SMS" style={{padding:"5px 7px",borderRadius:7,border:`1px solid ${C.blue}44`,background:`${C.blue}15`,color:C.blue,fontSize:13,cursor:"pointer",lineHeight:1}}>📱</button>
-          <button onClick={handlePush} title="Push notification" disabled={pushState==="denied"} style={{padding:"5px 7px",borderRadius:7,border:`1px solid ${notified?C.green:pushState==="needs-install"?C.blue:C.gold}44`,background:notified?`${C.green}15`:pushState==="needs-install"?`${C.blue}15`:`${C.gold}15`,color:notified?C.green:pushState==="needs-install"?C.blue:C.gold,fontSize:13,cursor:pushState==="denied"?"not-allowed":"pointer",lineHeight:1,opacity:pushState==="denied"?0.4:1}}>
-            {notified?"✓":"🔔"}
-          </button>
-          <button onClick={()=>onRemove(item.id)} style={{padding:"5px 7px",borderRadius:7,border:`1px solid ${C.b2}`,background:"none",color:C.dim,fontSize:15,cursor:"pointer",lineHeight:1}}>×</button>
-        </div>
-      </div>
-      {/* Install tip — only shown if push tapped on non-PWA */}
-      {pushState==="needs-install" && expanded && (
-        <div style={{padding:"8px 12px 10px",borderTop:`1px solid ${C.b1}`,fontSize:11,color:C.blue,lineHeight:1.5,background:`${C.blue}08`}}>
-          Install the app first: <strong>⋯ → Install app</strong> (Chrome) or <strong>Share → Add to Home Screen</strong> (Safari).
-        </div>
-      )}
-    </div>
-  );
-}
-
-function SavedTab({ saved, onRemove, tabTop=116 }) {
-  const _ref = useRef(null);
-  const _h   = useElemHeight(_ref);
-  const [masterPushDone, setMasterPushDone] = useState(false);
-
-  // Sort by match date/time using MATCH_UTC
-  const sorted = [...saved].sort((a, b) => {
-    const ta = MATCH_UTC[a.match?.id] ? new Date(MATCH_UTC[a.match.id]).getTime() : 0;
-    const tb = MATCH_UTC[b.match?.id] ? new Date(MATCH_UTC[b.match.id]).getTime() : 0;
-    return ta - tb;
-  });
-
-  const handleMasterCalendar = () => downloadICS(saved);
-  const handleMasterWhatsApp = () => {
-    const lines = sorted.map(it => `⚽ ${it.match.home} vs ${it.match.away} · ${it.match.date} · ${it.match.time}`).join("\n");
-    window.open(`https://wa.me/?text=${encodeURIComponent(lines)}`, "_blank");
-  };
-  const handleMasterSMS = () => {
-    const lines = sorted.map(it => `⚽ ${it.match.home} vs ${it.match.away} · ${it.match.date} · ${it.match.time}`).join("\n");
-    window.open(`sms:&body=${encodeURIComponent(lines)}`, "_blank");
-  };
-  const handleMasterPush = async () => {
-    const isPWA = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
-    if (!isPWA) { alert("Install the app first to enable push notifications"); return; }
-    let state = "Notification" in window ? Notification.permission : "unsupported";
-    if (state !== "granted") { state = await requestPushPermission(); if (state !== "granted") return; }
-    saved.forEach(it => scheduleNotification(it.match, 60));
-    try {
-      const reg = await navigator.serviceWorker.ready;
-      let sub = await reg.pushManager.getSubscription();
-      if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array("BHlG2j1aEN_PheVmM_kw6eG5ho26LSMdtxSVEjiz9HnYqKTWWlOrdFdX-U3qUqR-VLxDrvOBik17FS7NJ1kJdr8") });
-      await fetch("/api/push-subscribe", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ subscription: sub.toJSON(), matches: saved.map(x=>x.match), minsBefore:60 }) });
-      setMasterPushDone(true);
-    } catch(e) { console.warn("Master push failed:", e); }
-  };
-
-  if (saved.length === 0) return (
-    <div style={{textAlign:"center",padding:"50px 20px"}}>
-      <div style={{fontSize:"2.8rem",marginBottom:10}}>⭐</div>
-      <div style={{fontWeight:700,fontSize:18,color:C.mid,marginBottom:6}}>No matches saved yet</div>
-      <div style={{fontSize:13,color:C.dim}}>Tap the ☆ Add on any match to save it here.</div>
-    </div>
-  );
-
-  return (
-    <div>
-      {/* ── Sticky master control header ── */}
-      <div ref={_ref} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"8px 13px",maxWidth:700,margin:"0 auto"}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
-          <span style={{fontSize:12,fontWeight:700,color:C.mid,letterSpacing:"0.06em"}}>ALL MATCHES ({saved.length})</span>
-          <button onClick={()=>saved.forEach(it=>onRemove(it.id))} style={{background:"none",border:`1px solid ${C.b2}`,color:C.dim,fontSize:11,cursor:"pointer",padding:"2px 8px",borderRadius:6}}>Clear all</button>
-        </div>
-        <div style={{display:"flex",gap:6}}>
-          <button onClick={handleMasterCalendar} style={{flex:1,padding:"6px 4px",borderRadius:8,cursor:"pointer",border:`1px solid ${C.green}44`,background:`${C.green}15`,color:C.green,fontSize:11,fontWeight:600}}>📅 Calendar</button>
-          <button onClick={handleMasterWhatsApp} style={{flex:1,padding:"6px 4px",borderRadius:8,cursor:"pointer",border:"1px solid #25d36644",background:"#25d36615",color:"#25d366",fontSize:11,fontWeight:600}}>💬 WhatsApp</button>
-          <button onClick={handleMasterSMS}      style={{flex:1,padding:"6px 4px",borderRadius:8,cursor:"pointer",border:`1px solid ${C.blue}44`,background:`${C.blue}15`,color:C.blue,fontSize:11,fontWeight:600}}>📱 SMS</button>
-          <button onClick={handleMasterPush}     style={{flex:1,padding:"6px 4px",borderRadius:8,cursor:"pointer",border:`1px solid ${masterPushDone?C.green:C.gold}44`,background:masterPushDone?`${C.green}15`:`${C.gold}15`,color:masterPushDone?C.green:C.gold,fontSize:11,fontWeight:600}}>{masterPushDone?"🔔 Set!":"🔔 Push"}</button>
-        </div>
-      </div>
-      <div style={{height:_h||80}}/>
-
-      {/* Matches sorted by date/time */}
-      {sorted.map(item=>(
-        <SavedMatchCard key={item.id} item={item} onRemove={onRemove}/>
-      ))}
-    </div>
-  );
-}
-
-  const [events, setEvents] = useState(null);
-  const [matchStats, setMatchStats] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const { getScore } = useContext(LiveScoresCtx);
-  const { favTeams=[] } = useContext(FavCtx);
-  const country = useContext(CountryCtx);
-  const bc = getBroadcast(country);
-  const isUS = country === "US" || !BROADCAST[country];
-
-  useEffect(() => {
-    if (!open || !match) return;
-    setEvents(null); setLoading(true);
-    fetchMatchEvents(`${match.home}|${match.away}`)
-      .then(d => {
-        setEvents(d?.events || []);
-        setMatchStats(d?.stats || null);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, [open, match]);
-
-  const sc = match ? getScore(match.home, match.away) : null;
-  const hasScore = sc && sc.hg !== null && sc.ag !== null;
-  const live = sc ? statusIsLive(sc.status) : false;
-  const finished = sc ? statusIsFinished(sc.status) : false;
-  const { localTime } = match ? matchTimes(match) : {};
-
-  // Polymarket odds
-  const p1 = match ? PREDS.find(x=>x.team===match.home) : null;
-  const p2 = match ? PREDS.find(x=>x.team===match.away) : null;
-
-  // Simulated odds for draw probability
-  const simOdds = useMemo(() => {
-    if (!match) return null;
-    const N = 5000; let w1=0, w2=0, d=0;
-    for(let i=0;i<N;i++){const r=simMatch(match.home,match.away);if(r.res==="home")w1++;else if(r.res==="away")w2++;else d++;}
-    return {
-      win1: ((w1/N)*100).toFixed(0),
-      draw: ((d/N)*100).toFixed(0),
-      win2: ((w2/N)*100).toFixed(0),
-    };
-  }, [match?.home, match?.away]);
-
-  if (!match) return null;
-
-  const shareMatch = () => {
-    const base = window.location.origin;
-    const keyEvents = events && events.length > 0
-      ? events.filter(ev=>ev.type==="Goal"||ev.type==="Card").slice(0,5)
-          .map(ev=>({type:ev.type==="Goal"?"goal":ev.detail?.includes("Yellow")?"yellow":"red",name:ev.player?.name?.split(" ").pop()||"",min:ev.time?.elapsed||"",side:normTeam(ev.team?.name||"")===match.home?"home":"away"}))
-      : [];
-    const params = new URLSearchParams();
-    params.set("home", match.home);
-    params.set("away", match.away);
-    if (hasScore) { params.set("hg", sc.hg); params.set("ag", sc.ag); }
-    if (match.group) params.set("group", match.group);
-    else params.set("stage", match.stage||"World Cup 2026");
-    if (match.date) params.set("date", match.date);
-    if (match.venue) params.set("venue", match.venue.split(",")[0]);
-    if (!hasScore && p1) params.set("p1", p1.poly);
-    if (!hasScore && p2) params.set("p2", p2.poly);
-    if (keyEvents.length > 0) params.set("events", encodeURIComponent(JSON.stringify(keyEvents)));
-    const shareUrl = base + "/api/og?" + params.toString();
-    const title = hasScore
-      ? match.home + " " + sc.hg + "-" + sc.ag + " " + match.away + " · World Cup 2026"
-      : match.home + " vs " + match.away + " · World Cup 2026";
-    if (navigator.share) {
-      navigator.share({ title, url: shareUrl }).catch(()=>{});
-    } else {
-      navigator.clipboard?.writeText(shareUrl);
-    }
-  };
-
-  return (
-    <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",zIndex:1000,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
-      <div onClick={e=>e.stopPropagation()} style={{background:C.bg,border:`1px solid ${C.b2}`,borderRadius:"18px 18px 0 0",width:"100%",maxWidth:620,maxHeight:"92vh",overflowY:"auto",paddingBottom:20}}>
-
-        {/* ── HERO HEADER ── */}
-        <div style={{background:`linear-gradient(135deg,${C.s1},${C.s2})`,padding:"16px 18px 20px",position:"relative"}}>
-          <button onClick={onClose} style={{position:"absolute",top:14,right:14,background:"none",border:"none",color:C.mid,fontSize:22,cursor:"pointer"}}>×</button>
-
-          {/* Stage + match info */}
-          <div style={{textAlign:"center",marginBottom:16}}>
-            <div style={{fontSize:12,color:C.dim,fontWeight:700,letterSpacing:"0.1em"}}>{match.group?`GROUP ${match.group}`:(match.stage||"WORLD CUP 2026").toUpperCase()}</div>
-            {match.date && <div style={{fontSize:13,color:C.mid,marginTop:2}}>{match.date} · {localTime}</div>}
-          </div>
-
-          {/* Teams hero */}
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
-            {/* Home */}
-            <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:8}}>
-              <Crest team={match.home} size={64}/>
-              <span style={{fontWeight:700,fontSize:16,color:favTeams.includes(match.home)?C.gold:C.text,textAlign:"center"}}>{match.home}</span>
-            </div>
-            {/* Score / vs */}
-            <div style={{textAlign:"center",minWidth:80}}>
-              {hasScore ? (
-                <>
-                  <div style={{fontWeight:900,fontSize:44,color:live?C.green:C.text,fontFamily:"monospace",lineHeight:1}}>{sc.hg}–{sc.ag}</div>
-                  <div style={{fontSize:11,fontWeight:700,color:live?C.green:C.dim,marginTop:4}}>
-                    {live?"🔴 ":""}{statusLabel(sc.status,sc.elapsed)||"FT"}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div style={{fontSize:13,fontWeight:700,color:C.dim}}>VS</div>
-                  <div style={{fontSize:11,color:C.dim,marginTop:4}}>Upcoming</div>
-                </>
-              )}
-            </div>
-            {/* Away */}
-            <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:8}}>
-              <Crest team={match.away} size={64}/>
-              <span style={{fontWeight:700,fontSize:16,color:favTeams.includes(match.away)?C.gold:C.text,textAlign:"center"}}>{match.away}</span>
-            </div>
-          </div>
-        </div>
-
-        <div style={{padding:"14px 18px"}}>
-
-          {/* ── VENUE ── */}
-          <div onClick={()=>openMaps(match.venue)} style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",background:C.s1,border:`1px solid ${C.b1}`,borderRadius:10,marginBottom:12,cursor:"pointer"}}>
-            <span style={{fontSize:20}}>📍</span>
-            <div style={{flex:1}}>
-              <div style={{fontSize:13,fontWeight:600,color:C.blue,textDecoration:"underline",textDecorationStyle:"dotted"}}>{match.venue.split(",")[0]}</div>
-              <div style={{fontSize:11,color:C.dim,marginTop:2}}>{match.venue.split(",").slice(1).join(",").trim()} · Tap for directions</div>
-            </div>
-            {(() => { const city = VENUE_TO_CITY[match.venue]; const cityData = city ? HOST_CITIES[city] : null; return cityData ? <WeatherBadge lat={cityData.lat} lon={cityData.lon}/> : null; })()}
-          </div>
-
-          {/* ── TV ── */}
-          {match.tv && (
-            <div style={{padding:"10px 14px",background:C.s1,border:`1px solid ${C.b1}`,borderRadius:10,marginBottom:12}}>
-              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:bc.streaming?6:0}}>
-                <span style={{fontSize:16}}>📺</span>
-                <div style={{fontSize:13,color:C.gold,fontWeight:600}}>{isUS ? match.tv : `${bc.note} ${bc.primary}`}</div>
-              </div>
-              {bc.streaming && (
-                <div style={{display:"flex",alignItems:"center",gap:8}}>
-                  <span style={{fontSize:16}}>💻</span>
-                  <div style={{fontSize:12,color:C.mid}}>{bc.streaming}</div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ── ODDS ── */}
-          {!finished && simOdds && (
-            <div style={{marginBottom:12}}>
-              <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",marginBottom:8}}>WIN PROBABILITY</div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
-                {[
-                  {label:match.home, sim:simOdds.win1, poly:p1?.poly, color:C.green},
-                  {label:"Draw",     sim:simOdds.draw,  poly:null,     color:C.gold},
-                  {label:match.away, sim:simOdds.win2, poly:p2?.poly, color:C.rival},
-                ].map(({label,sim,poly,color})=>(
-                  <div key={label} style={{background:C.s1,border:`1px solid ${color}33`,borderRadius:10,padding:"10px 6px",textAlign:"center"}}>
-                    {/* Polymarket odds — only if available */}
-                    {poly ? (
-                      <>
-                        <div style={{fontSize:22,fontWeight:900,color,lineHeight:1}}>{poly}%</div>
-                        <div style={{fontSize:9,color:C.dim,marginTop:2,marginBottom:4}}>Polymarket</div>
-                        <div style={{borderTop:`1px solid ${color}22`,paddingTop:4,fontSize:11,color:C.dim}}>{sim}% sim</div>
-                      </>
-                    ) : (
-                      <>
-                        <div style={{fontSize:22,fontWeight:900,color,lineHeight:1}}>{sim}%</div>
-                        <div style={{fontSize:9,color:C.dim,marginTop:2}}>Simulator</div>
-                      </>
-                    )}
-                    <div style={{fontSize:10,color:C.mid,marginTop:4,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{label}</div>
-                  </div>
-                ))}
-              </div>
-              {(p1||p2) && <div style={{fontSize:10,color:C.dim,marginTop:6,textAlign:"right"}}>Polymarket odds where available · Simulator: {(5000).toLocaleString()} runs</div>}
-              {(!p1&&!p2) && <div style={{fontSize:10,color:C.dim,marginTop:6,textAlign:"right"}}>Based on {(5000).toLocaleString()} simulated tournaments</div>}
-            </div>
-          )}
-
-          {/* ── MATCH STATS ── */}
-          {matchStats && (live || finished) && (
-            <div style={{marginBottom:12}}>
-              <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",marginBottom:8}}>MATCH STATS</div>
-              {[
-                ["Possession", matchStats.home.possession, matchStats.away.possession, true, "%"],
-                ["Shots", matchStats.home.shots, matchStats.away.shots, false, ""],
-                ["Shots on Target", matchStats.home.shotsOn, matchStats.away.shotsOn, false, ""],
-                ["Corners", matchStats.home.corners, matchStats.away.corners, false, ""],
-                ["Fouls", matchStats.home.fouls, matchStats.away.fouls, true, ""],
-                ["Pass Accuracy", matchStats.home.passAcc, matchStats.away.passAcc, true, "%"],
-              ].filter(([,h,a]) => h!==null && a!==null).map(([label, hv, av, lowerBetter, unit]) => {
-                const total = hv + av || 1;
-                const hPct = Math.round((hv/total)*100);
-                return (
-                  <div key={label} style={{marginBottom:8}}>
-                    <div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:3}}>
-                      <span style={{fontWeight:700,color:C.green}}>{hv}{unit}</span>
-                      <span style={{color:C.dim,fontSize:11}}>{label}</span>
-                      <span style={{fontWeight:700,color:C.rival}}>{av}{unit}</span>
-                    </div>
-                    <div style={{height:4,background:C.s2,borderRadius:2,overflow:"hidden",display:"flex"}}>
-                      <div style={{width:`${hPct}%`,background:C.green,borderRadius:"2px 0 0 2px"}}/>
-                      <div style={{flex:1,background:C.rival}}/>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* ── MATCH EVENTS ── */}
-          {(live || finished) && (
-            <div style={{marginBottom:12}}>
-              <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",marginBottom:8}}>MATCH TIMELINE</div>
-              {loading && (
-                <div style={{textAlign:"center",padding:"20px 0"}}>
-                  <div style={{width:22,height:22,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto 8px"}}/>
-                  <div style={{fontSize:12,color:C.mid}}>Loading events…</div>
-                </div>
-              )}
-              {!loading && events && events.length > 0 && events.map((ev,i)=>{
-                const isHome = normTeam(ev.team?.name||"")=== match.home;
-                const icon = ev.type==="Goal"?(ev.detail==="Own Goal"?"⚽🔴":ev.detail==="Penalty"?"⚽🎯":"⚽"):ev.type==="Card"?(ev.detail==="Yellow Card"?"🟨":"🟥"):ev.type==="subst"?"🔄":"•";
-                return (
-                  <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 0",borderBottom:`1px solid ${C.b1}`}}>
-                    <div style={{flex:1,textAlign:"right"}}>
-                      {isHome && <span style={{fontSize:13,color:C.text,fontWeight:ev.type==="Goal"?700:400}}>{ev.player?.name||""}</span>}
-                      {isHome && ev.type==="subst" && <div style={{fontSize:10,color:C.dim}}>↑ {ev.assist?.name||""}</div>}
-                    </div>
-                    <div style={{display:"flex",flexDirection:"column",alignItems:"center",minWidth:52,flexShrink:0}}>
-                      <div style={{fontSize:11,fontWeight:700,color:C.gold}}>{ev.time?.elapsed}{ev.time?.extra?`+${ev.time.extra}`:""}'</div>
-                      <div style={{fontSize:16}}>{icon}</div>
-                    </div>
-                    <div style={{flex:1}}>
-                      {!isHome && <span style={{fontSize:13,color:C.text,fontWeight:ev.type==="Goal"?700:400}}>{ev.player?.name||""}</span>}
-                      {!isHome && ev.type==="subst" && <div style={{fontSize:10,color:C.dim}}>↑ {ev.assist?.name||""}</div>}
-                    </div>
-                  </div>
-                );
-              })}
-              {!loading && events && events.length === 0 && <div style={{fontSize:12,color:C.dim,textAlign:"center",padding:"16px 0"}}>No events yet.</div>}
-            </div>
-          )}
-
-          {/* ── ACTIONS ── */}
-          <div style={{display:"flex",gap:8,marginTop:8}}>
-            {!finished && <button onClick={()=>{onAction(match);onClose();}} style={{flex:1,padding:"11px 0",borderRadius:12,background:`linear-gradient(135deg,${C.green},#22c55e)`,border:"none",color:"#030a05",fontWeight:700,fontSize:14,cursor:"pointer"}}>📅 Add to Calendar</button>}
-            <button onClick={shareMatch} style={{flex:1,padding:"11px 0",borderRadius:12,background:`${C.blue}22`,border:`1px solid ${C.blue}44`,color:C.blue,fontWeight:700,fontSize:14,cursor:"pointer"}}>📤 Share</button>
-          </div>
-
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── TOP SCORERS TAB ───────────────────────────────────────────────────────
-// Pre-tournament "ones to watch" — will be replaced by live data after Jun 11
-const ONES_TO_WATCH = [
-  {name:"Kylian Mbappé",    team:"France",       flag:"🇫🇷", pos:"FW", club:"Real Madrid",   note:"Golden Boot favourite"},
-  {name:"Erling Haaland",   team:"Norway",        flag:"🇳🇴", pos:"FW", club:"Man City",       note:"Most prolific striker alive"},
-  {name:"Vinicius Jr.",     team:"Brazil",        flag:"🇧🇷", pos:"FW", club:"Real Madrid",   note:"Ballon d'Or contender"},
-  {name:"Harry Kane",       team:"England",       flag:"🏴󠁧󠁢󠁥󠁮󠁧󠁿", pos:"FW", club:"Bayern Munich",  note:"England all-time top scorer"},
-  {name:"Lamine Yamal",     team:"Spain",         flag:"🇪🇸", pos:"FW", club:"Barcelona",     note:"Euro 2024 breakout star"},
-  {name:"Mohamed Salah",    team:"Egypt",         flag:"🇪🇬", pos:"FW", club:"Liverpool",     note:"World's best right now"},
-  {name:"Lionel Messi",     team:"Argentina",     flag:"🇦🇷", pos:"FW", club:"Inter Miami",   note:"The GOAT · last hurrah"},
-  {name:"Cristiano Ronaldo",team:"Portugal",      flag:"🇵🇹", pos:"FW", club:"Al Nassr",      note:"Final World Cup at 41"},
-  {name:"Jamal Musiala",    team:"Germany",       flag:"🇩🇪", pos:"MF", club:"Bayern Munich",  note:"Silky dribbler"},
-  {name:"Florian Wirtz",    team:"Germany",       flag:"🇩🇪", pos:"MF", club:"Bayer Leverkusen",note:"Bundesliga's best"},
-  {name:"Pedri",            team:"Spain",         flag:"🇪🇸", pos:"MF", club:"Barcelona",     note:"Generational talent"},
-  {name:"Martin Ødegaard",  team:"Norway",        flag:"🇳🇴", pos:"MF", club:"Arsenal",       note:"Arsenal captain"},
-  {name:"Jude Bellingham",  team:"England",       flag:"🏴󠁧󠁢󠁥󠁮󠁧󠁿", pos:"MF", club:"Real Madrid",   note:"World-class at 21"},
-  {name:"Kevin De Bruyne",  team:"Belgium",       flag:"🇧🇪", pos:"MF", club:"Napoli",        note:"World's best midfielder"},
-  {name:"Rodri",            team:"Spain",         flag:"🇪🇸", pos:"MF", club:"Man City",       note:"2024 Ballon d'Or"},
-  {name:"Darwin Núñez",     team:"Uruguay",       flag:"🇺🇾", pos:"FW", club:"Liverpool",     note:"Powerful & explosive"},
-  {name:"Luis Díaz",        team:"Colombia",      flag:"🇨🇴", pos:"FW", club:"Liverpool",     note:"PL class winger"},
-  {name:"Son Heung-min",    team:"South Korea",   flag:"🇰🇷", pos:"FW", club:"Tottenham",     note:"Carries entire nation"},
-  {name:"Takefusa Kubo",    team:"Japan",         flag:"🇯🇵", pos:"MF", club:"Real Sociedad",  note:"Japan's golden boy"},
-  {name:"Achraf Hakimi",    team:"Morocco",       flag:"🇲🇦", pos:"DF", club:"PSG",           note:"World's best RB"},
-];
 
 function MatchEventsModal({ match, open, onClose, onAction }) {
   const [events, setEvents] = useState(null);
@@ -3053,7 +3166,11 @@ function MatchEventsModal({ match, open, onClose, onAction }) {
 
           {/* ── ACTIONS ── */}
           <div style={{display:"flex",gap:8,marginTop:8}}>
-            {!finished && <button onClick={()=>{onAction(match);onClose();}} style={{flex:1,padding:"11px 0",borderRadius:12,background:`linear-gradient(135deg,${C.green},#22c55e)`,border:"none",color:"#030a05",fontWeight:700,fontSize:14,cursor:"pointer"}}>📅 Add to Calendar</button>}
+            {!finished && (()=>{ const isSaved=savedIds.has(match.id); return (
+              <button onClick={()=>{onAction(match);onClose();}} style={{flex:1,padding:"11px 0",borderRadius:12,background:isSaved?`${C.gold}22`:`linear-gradient(135deg,${C.green},#22c55e)`,border:isSaved?`1px solid ${C.gold}`:"none",color:isSaved?"#f59e0b":"#030a05",fontWeight:700,fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+                <StarIcon filled={isSaved} size={15}/>{isSaved?"Saved":"Save Match"}
+              </button>
+            ); })()}
             <button onClick={shareMatch} style={{flex:1,padding:"11px 0",borderRadius:12,background:`${C.blue}22`,border:`1px solid ${C.blue}44`,color:C.blue,fontWeight:700,fontSize:14,cursor:"pointer"}}>📤 Share</button>
           </div>
 
@@ -3088,9 +3205,7 @@ const ONES_TO_WATCH = [
   {name:"Achraf Hakimi",    team:"Morocco",       flag:"🇲🇦", pos:"DF", club:"PSG",           note:"World's best RB"},
 ];
 
-
 function TopScorersTab({ tabTop=116 }) {
-
   const { allFixtures } = useContext(LiveScoresCtx);
   const [filter, setFilter] = useState("all");
 
@@ -3192,23 +3307,25 @@ function TopScorersTab({ tabTop=116 }) {
   );
 }
 
-// ── APP ────────────────────────────────────────────────────────────────────
-const TABS = [
-  {id:"live",      icon:"🔴", label:"Live"},
-  {id:"schedule",  icon:"📋", label:"Schedule"},
-  {id:"groups",    icon:"🗂️", label:"Groups"},
-  {id:"scorers",   icon:"⚽", label:"Scorers"},
-  {id:"stats",     icon:"📊", label:"Stats"},
-  {id:"h2h",       icon:"⚔️", label:"H2H"},
-  {id:"predict",   icon:"🎯", label:"Odds"},
-  {id:"predictor", icon:"🔮", label:"Predictor"},
-  {id:"sim",       icon:"🎮", label:"Simulator"},
-  {id:"bracket",   icon:"🏆", label:"My Bracket"},
-  {id:"saved",     icon:"⭐", label:"Saved"},
-];
 
-// ── PWA INSTALL BANNER ────────────────────────────────────────────────────
-function InstallBanner() {
+// ── FOOTBALL ICONS ─────────────────────────────────────────────────────────
+const FLAG_CODES_MAP = {"Mexico":"mx","South Africa":"za","South Korea":"kr","Czechia":"cz","Canada":"ca","Bosnia & Herz.":"ba","Qatar":"qa","Switzerland":"ch","Brazil":"br","Morocco":"ma","Haiti":"ht","Scotland":"gb-sct","United States":"us","Paraguay":"py","Australia":"au","Turkiye":"tr","Germany":"de","Curacao":"cw","Ivory Coast":"ci","Ecuador":"ec","Netherlands":"nl","Japan":"jp","Sweden":"se","Tunisia":"tn","Belgium":"be","Egypt":"eg","Iran":"ir","New Zealand":"nz","Spain":"es","Cape Verde":"cv","Saudi Arabia":"sa","Uruguay":"uy","France":"fr","Senegal":"sn","Iraq":"iq","Norway":"no","Argentina":"ar","Algeria":"dz","Austria":"at","Jordan":"jo","Portugal":"pt","DR Congo":"cd","Uzbekistan":"uz","Colombia":"co","England":"gb-eng","Croatia":"hr","Ghana":"gh","Panama":"pa"};
+
+const G_COL = "#4ade80", GO_COL = "#f59e0b";
+const FOOTBALL_ICONS = [
+  { id:"icon:ball",    label:"Ball",        el:(s)=><svg width={s} height={s} viewBox="0 0 76 76"><circle cx="32" cy="32" r="22" fill="none" stroke={G_COL} strokeWidth="2.5"/><circle cx="32" cy="32" r="7" fill={G_COL}/></svg> },
+  { id:"icon:trophy",  label:"Trophy",      el:(s)=><svg width={s} height={s} viewBox="0 0 76 76"><path d="M20 10 L20 36 Q20 46 32 46 L44 46 Q56 46 56 36 L56 10 Z" fill="none" stroke={GO_COL} strokeWidth="2.2" strokeLinejoin="round"/><path d="M20 18 Q8 18 8 28 Q8 38 20 38" fill="none" stroke={GO_COL} strokeWidth="2.2"/><path d="M56 18 Q68 18 68 28 Q68 38 56 38" fill="none" stroke={GO_COL} strokeWidth="2.2"/><rect x="29" y="46" width="6" height="10" fill={GO_COL}/><rect x="22" y="56" width="20" height="4" rx="2" fill={GO_COL}/></svg> },
+  { id:"icon:boot",    label:"Boot",        el:(s)=><svg width={s} height={s} viewBox="0 0 76 76"><path d="M22 52 L22 20 Q22 13 29 13 L42 13 Q49 13 49 20 L49 32 L58 32 Q65 32 65 39 L65 52 Q65 58 58 58 L29 58 Q22 58 22 52 Z" fill="none" stroke={G_COL} strokeWidth="2.2" strokeLinejoin="round"/></svg> },
+  { id:"icon:goal",    label:"Goal",        el:(s)=><svg width={s} height={s} viewBox="0 0 76 76"><rect x="10" y="18" width="60" height="38" rx="2" fill="none" stroke={G_COL} strokeWidth="2.2"/><line x1="10" y1="56" x2="37" y2="24" stroke={G_COL} strokeWidth="1" opacity="0.35"/><line x1="37" y1="56" x2="64" y2="24" stroke={G_COL} strokeWidth="1" opacity="0.35"/><line x1="28" y1="18" x2="28" y2="56" stroke={G_COL} strokeWidth="1" opacity="0.35"/><line x1="46" y1="18" x2="46" y2="56" stroke={G_COL} strokeWidth="1" opacity="0.35"/></svg> },
+  { id:"icon:whistle", label:"Whistle",     el:(s)=><svg width={s} height={s} viewBox="0 0 76 76"><circle cx="34" cy="36" r="18" fill="none" stroke={GO_COL} strokeWidth="2.2"/><circle cx="34" cy="36" r="7" fill={GO_COL}/><path d="M52 36 L66 29 L70 34 L56 41 Z" fill={GO_COL}/></svg> },
+  { id:"icon:gloves",  label:"Gloves",      el:(s)=><svg width={s} height={s} viewBox="0 0 76 76"><path d="M24 54 L24 24 Q24 16 32 16 L34 16 Q40 16 40 22 L40 30 Q44 25 50 25 Q56 25 56 31 L56 36 Q60 31 66 33 Q72 36 70 42 L60 58 Q55 64 48 64 L34 64 Q24 64 24 54 Z" fill="none" stroke={G_COL} strokeWidth="2.2" strokeLinejoin="round"/></svg> },
+  { id:"icon:jersey",  label:"Jersey",      el:(s)=><svg width={s} height={s} viewBox="0 0 76 76"><path d="M18 18 L8 38 L22 42 L22 68 L54 68 L54 42 L68 38 L58 18 Q50 26 38 26 Q26 26 18 18 Z" fill="none" stroke={G_COL} strokeWidth="2.2" strokeLinejoin="round"/></svg> },
+  { id:"icon:var",     label:"VAR",         el:(s)=><svg width={s} height={s} viewBox="0 0 76 76"><rect x="10" y="20" width="56" height="34" rx="4" fill="none" stroke={GO_COL} strokeWidth="2.2"/><text x="38" y="43" textAnchor="middle" fontSize="14" fontWeight="700" fill={GO_COL} fontFamily="system-ui">VAR</text></svg> },
+  { id:"icon:captain", label:"Captain",     el:(s)=><svg width={s} height={s} viewBox="0 0 76 76"><rect x="14" y="24" width="48" height="26" rx="13" fill="none" stroke={GO_COL} strokeWidth="2.2"/><text x="38" y="43" textAnchor="middle" fontSize="22" fontWeight="700" fill={GO_COL} fontFamily="system-ui">C</text></svg> },
+  { id:"icon:flag",    label:"Corner flag", el:(s)=><svg width={s} height={s} viewBox="0 0 76 76"><line x1="32" y1="65" x2="32" y2="14" stroke={G_COL} strokeWidth="3" strokeLinecap="round"/><path d="M32 14 L60 24 L32 34 Z" fill={G_COL}/><circle cx="32" cy="68" r="5" fill={G_COL}/></svg> },
+  { id:"icon:golden",  label:"Golden Boot", el:(s)=><svg width={s} height={s} viewBox="0 0 76 76"><path d="M22 50 L22 22 Q22 15 29 15 L44 15 Q51 15 51 22 L51 34 L62 34 Q69 34 69 41 L69 50 Q69 56 62 56 L29 56 Q22 56 22 50 Z" fill={GO_COL} opacity="0.9"/><circle cx="24" cy="10" r="5" fill={GO_COL}/><circle cx="36" cy="7" r="5" fill={GO_COL}/><circle cx="48" cy="10" r="5" fill={GO_COL}/></svg> },
+  { id:"icon:tactics", label:"Tactics",     el:(s)=><svg width={s} height={s} viewBox="0 0 76 76"><rect x="8" y="14" width="60" height="44" rx="4" fill="#1a3828" stroke={G_COL} strokeWidth="2"/><circle cx="38" cy="26" r="5" fill={G_COL}/><circle cx="20" cy="36" r="5" fill={G_COL} opacity="0.7"/><circle cx="56" cy="36" r="5" fill={G_COL} opacity="0.7"/><circle cx="28" cy="47" r="5" fill={GO_COL}/><circle cx="48" cy="47" r="5" fill={GO_COL}/></svg> },
+];
 
 // ── SYNC MODAL ─────────────────────────────────────────────────────────────
 function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved, favTeams, setToast, setSaved, setFavTeams, dark, setDark, geoData, locationOverride, setLocationOverride, onShowSaved, userAvatar, persistAvatar, displayName, persistDisplayName }) {
@@ -3218,91 +3335,79 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
   const [email, setEmail] = useState(syncProfile?.email || "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [showLocPicker, setShowLocPicker] = useState(false);
-  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const [teamsExpanded, setTeamsExpanded] = useState(false);
-  const [nameInput, setNameInput] = useState(displayName || "");
-  const [nameFocused, setNameFocused] = useState(false);
-  const [avatarTab, setAvatarTab] = useState("icons"); // icons | crests | flags | confs | upload
-  const [avatarSearch, setAvatarSearch] = useState("");
+  const [showLocPicker, setShowLocPicker] = useState(false);
   const [locSearch, setLocSearch] = useState("");
-  const [userPreds, setUserPreds] = useState(null);
-  const [predsLoading, setPredsLoading] = useState(false);
+  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
+  const [avatarTab, setAvatarTab] = useState("icons");
+  const [avatarSearch, setAvatarSearch] = useState("");
+  const [nameInput, setNameInput] = useState(displayName || "");
 
-  // Reset to home when modal opens
   useEffect(() => { if (open) { setScreen("home"); setError(""); } }, [open]);
-
-  // Load predictions when showing them
-  useEffect(() => {
-    if (screen !== "predictions" || userPreds !== null) return;
-    setPredsLoading(true);
-    fetch(`/api/predictor?action=getPreds&userId=${syncUid}`)
-      .then(r => r.json()).then(d => setUserPreds(d || {}))
-      .catch(() => setUserPreds({}))
-      .finally(() => setPredsLoading(false));
-  }, [screen, syncUid, userPreds]);
-
   if (!open) return null;
 
-  const persistProfile = (p) => {
-    setSyncProfile(p);
-    try { localStorage.setItem("wc2026_syncprofile", JSON.stringify(p)); } catch {}
+  const isDesktop = typeof window !== "undefined" && window.innerWidth >= 640;
+  const isSynced = !!syncProfile;
+  const persistProfile = (p) => { setSyncProfile(p); try { localStorage.setItem("wc2026_syncprofile", JSON.stringify(p)); } catch {} };
+
+  const HOST_CITIES_PICK = [
+    {label:"New York / NJ",country:"US"},{label:"Los Angeles",country:"US"},{label:"Dallas",country:"US"},
+    {label:"San Francisco",country:"US"},{label:"Miami",country:"US"},{label:"Atlanta",country:"US"},
+    {label:"Seattle",country:"US"},{label:"Boston",country:"US"},{label:"Philadelphia",country:"US"},
+    {label:"Kansas City",country:"US"},{label:"Houston",country:"US"},{label:"Toronto",country:"CA"},
+    {label:"Vancouver",country:"CA"},{label:"Mexico City",country:"MX"},{label:"Guadalajara",country:"MX"},{label:"Monterrey",country:"MX"},
+  ];
+  const filteredCities = locSearch ? HOST_CITIES_PICK.filter(c=>c.label.toLowerCase().includes(locSearch.toLowerCase())) : HOST_CITIES_PICK;
+  const ALL_TEAMS_LIST = Object.values(GROUPS).flatMap(g=>g.teams).sort();
+  const filteredTeams = avatarSearch ? ALL_TEAMS_LIST.filter(t=>t.toLowerCase().includes(avatarSearch.toLowerCase())) : ALL_TEAMS_LIST;
+  const displayLocation = locationOverride ? locationOverride.label : (geoData.city ? `${geoData.city}${geoData.region?", "+geoData.region:""}` : "Auto-detected");
+
+  const selectPresetAvatar = (id) => { persistAvatar(id); setShowAvatarPicker(false); setToast("Avatar updated!"); };
+
+  const handlePhotoUpload = (e) => {
+    const file = e.target.files?.[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image(); img.onload = () => {
+        const canvas = document.createElement("canvas"); canvas.width = 160; canvas.height = 160;
+        const ctx = canvas.getContext("2d");
+        const size = Math.min(img.width, img.height);
+        ctx.drawImage(img, (img.width-size)/2, (img.height-size)/2, size, size, 0, 0, 160, 160);
+        persistAvatar(canvas.toDataURL("image/jpeg", 0.7));
+        setShowAvatarPicker(false); setToast("Avatar updated!");
+      }; img.src = ev.target.result;
+    }; reader.readAsDataURL(file);
   };
 
   const handleCreatePIN = async () => {
     if (pin.length < 6) { setError("Please enter a 6-digit PIN."); return; }
     setLoading(true); setError("");
     try {
-      const r = await fetch("/api/sync?action=pin-create", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ uid: syncUid, saved, favTeams, dark, locationOverride, displayName, avatar: userAvatar, chosenPin: pin }),
-      });
+      const r = await fetch("/api/sync?action=pin-create", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ uid:syncUid, saved, favTeams, dark, locationOverride, displayName, avatar:userAvatar, chosenPin:pin }) });
       const d = await r.json();
       if (!d.ok) throw new Error(d.error);
-      persistProfile({ uid: syncUid, pin: d.pin, method: "pin" });
-      setScreen("pin-created");
-    } catch(e) { setError(e.message); }
-    setLoading(false);
-  };
-
-  const handleChangePIN = async () => {
-    if (pin.length < 6) { setError("Please enter a 6-digit PIN."); return; }
-    if (pin === syncProfile?.pin) { setError("That's already your current PIN."); return; }
-    setLoading(true); setError("");
-    try {
-      // Delete old PIN key then create new one
-      const r = await fetch("/api/sync?action=pin-change", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ uid: syncUid, oldPin: syncProfile?.pin, newPin: pin, saved, favTeams, dark, locationOverride, displayName, avatar: userAvatar }),
-      });
-      const d = await r.json();
-      if (!d.ok) throw new Error(d.error);
-      persistProfile({ ...syncProfile, pin });
+      persistProfile({ uid:syncUid, pin:d.pin, method:"pin" });
       setScreen("pin-created");
     } catch(e) { setError(e.message); }
     setLoading(false);
   };
 
   const handleJoinPIN = async () => {
-    if (pinInput.length < 4) return;
+    if (pinInput.length < 6) return;
     setLoading(true); setError("");
     try {
-      const r = await fetch("/api/sync?action=pin-join", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pin: pinInput }),
-      });
+      const r = await fetch("/api/sync?action=pin-join", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ pin:pinInput }) });
       const d = await r.json();
-      if (!d.ok) throw new Error(d.error || "PIN not found. Check and try again.");
+      if (!d.ok) throw new Error(d.error || "PIN not found.");
       const p = d.profile;
-      if (p.saved?.length)      setSaved(p.saved);
-      if (p.favTeams?.length)   setFavTeams(p.favTeams);
+      if (p.saved?.length) setSaved(p.saved);
+      if (p.favTeams?.length) setFavTeams(p.favTeams);
       if (p.dark !== undefined) setDark(p.dark);
-      if (p.locationOverride)   { setLocationOverride(p.locationOverride); try { localStorage.setItem("wc2026_location", JSON.stringify(p.locationOverride)); } catch {} }
+      if (p.locationOverride) { setLocationOverride(p.locationOverride); try { localStorage.setItem("wc2026_location", JSON.stringify(p.locationOverride)); } catch {} }
       if (p.avatar) persistAvatar(p.avatar);
       if (p.displayName) persistDisplayName(p.displayName);
-      persistProfile({ uid: p.uid, pin: p.pin, email: p.email, method: "pin" });
-      setToast("✅ Synced! Your progress has been restored.");
-      onClose();
+      persistProfile({ uid:p.uid, pin:p.pin, email:p.email, method:"pin" });
+      setToast("✅ Synced! Your progress has been restored."); onClose();
     } catch(e) { setError(e.message); }
     setLoading(false);
   };
@@ -3311,10 +3416,7 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
     if (!email.includes("@")) { setError("Enter a valid email address."); return; }
     setLoading(true); setError("");
     try {
-      const r = await fetch("/api/sync?action=magic-send", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, uid: syncUid, saved, favTeams, dark, locationOverride }),
-      });
+      const r = await fetch("/api/sync?action=magic-send", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ email, uid:syncUid, saved, favTeams, dark, locationOverride, displayName, avatar:userAvatar }) });
       const d = await r.json();
       if (!d.ok && !d.dev) throw new Error(d.error);
       setScreen("email-sent");
@@ -3322,760 +3424,205 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
     setLoading(false);
   };
 
-  // Avatar helpers
-  const CONF_OPTIONS = [
-    { id:"conf:UEFA",     label:"UEFA",     emoji:"🇪🇺", sub:"Europe" },
-    { id:"conf:CONMEBOL", label:"CONMEBOL", emoji:"🌎", sub:"South America" },
-    { id:"conf:CONCACAF", label:"CONCACAF", emoji:"🌍", sub:"N/C America" },
-    { id:"conf:CAF",      label:"CAF",      emoji:"🌍", sub:"Africa" },
-    { id:"conf:AFC",      label:"AFC",      emoji:"🌏", sub:"Asia" },
-    { id:"conf:OFC",      label:"OFC",      emoji:"🌊", sub:"Oceania" },
-  ];
-  // Federation crest URLs from Wikimedia Commons — stable, official sources
-  const TEAM_CRESTS = {
-    "Argentina":    "https://upload.wikimedia.org/wikipedia/en/thumb/c/c1/Argentina_national_football_team_badge.svg/200px-Argentina_national_football_team_badge.svg.png",
-    "France":       "https://upload.wikimedia.org/wikipedia/en/thumb/4/43/Logo_FFF.svg/200px-Logo_FFF.svg.png",
-    "Brazil":       "https://upload.wikimedia.org/wikipedia/en/thumb/0/09/CBF_logo.svg/200px-CBF_logo.svg.png",
-    "England":      "https://upload.wikimedia.org/wikipedia/en/thumb/b/be/Flag_of_England.svg/200px-Flag_of_England.svg.png",
-    "Spain":        "https://upload.wikimedia.org/wikipedia/en/thumb/4/44/Spain_national_football_team_badge_or_crest.png/200px-Spain_national_football_team_badge_or_crest.png",
-    "Germany":      "https://upload.wikimedia.org/wikipedia/en/thumb/7/7a/Logo_des_Deutschen_Fu%C3%9Fball-Bundes.svg/200px-Logo_des_Deutschen_Fu%C3%9Fball-Bundes.svg.png",
-    "Portugal":     "https://upload.wikimedia.org/wikipedia/en/thumb/f/fd/FPF-2016.svg/200px-FPF-2016.svg.png",
-    "Netherlands":  "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/KNVB_-_Logo.png/200px-KNVB_-_Logo.png",
-    "Belgium":      "https://upload.wikimedia.org/wikipedia/commons/thumb/0/09/RBFA.svg/200px-RBFA.svg.png",
-    "Norway":       "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fd/Nff.svg/200px-Nff.svg.png",
-    "Mexico":       "https://upload.wikimedia.org/wikipedia/en/thumb/0/0e/Mexico_men%27s_national_football_team_crest.svg/200px-Mexico_men%27s_national_football_team_crest.svg.png",
-    "United States":"https://upload.wikimedia.org/wikipedia/en/thumb/a/a6/US_Soccer_logo_2022.svg/200px-US_Soccer_logo_2022.svg.png",
-    "Morocco":      "https://upload.wikimedia.org/wikipedia/en/thumb/0/0b/FRMF_%28logo%29.png/200px-FRMF_%28logo%29.png",
-    "Uruguay":      "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/Logo_AUF.svg/200px-Logo_AUF.svg.png",
-    "Croatia":      "https://upload.wikimedia.org/wikipedia/en/thumb/6/60/Croatian_Football_Federation_logo.svg/200px-Croatian_Football_Federation_logo.svg.png",
-    "Japan":        "https://upload.wikimedia.org/wikipedia/en/thumb/6/6d/JFA.svg/200px-JFA.svg.png",
-    "Senegal":      "https://upload.wikimedia.org/wikipedia/en/thumb/0/0a/Federation_Senegalaise_de_Football.png/200px-Federation_Senegalaise_de_Football.png",
-    "Egypt":        "https://upload.wikimedia.org/wikipedia/en/thumb/f/fc/Egyptian_Football_Association_logo.png/200px-Egyptian_Football_Association_logo.png",
-    "Colombia":     "https://upload.wikimedia.org/wikipedia/en/thumb/3/36/Football_Federation_of_Colombia.svg/200px-Football_Federation_of_Colombia.svg.png",
-    "South Korea":  "https://upload.wikimedia.org/wikipedia/en/thumb/5/5c/KFA_logo.svg/200px-KFA_logo.svg.png",
-    "Canada":       "https://upload.wikimedia.org/wikipedia/en/thumb/b/bf/Canada_Soccer_Logo.svg/200px-Canada_Soccer_Logo.svg.png",
-    "Switzerland":  "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d1/SFV-ASF.svg/200px-SFV-ASF.svg.png",
-    "Austria":      "https://upload.wikimedia.org/wikipedia/en/thumb/5/58/OFB-Logo.svg/200px-OFB-Logo.svg.png",
-    "Sweden":       "https://upload.wikimedia.org/wikipedia/en/thumb/3/3e/Swedish_Football_Association_logo.svg/200px-Swedish_Football_Association_logo.svg.png",
-    "Iran":         "https://upload.wikimedia.org/wikipedia/en/thumb/3/37/Football_Federation_Islamic_Republic_of_Iran_logo.svg/200px-Football_Federation_Islamic_Republic_of_Iran_logo.svg.png",
-    "Algeria":      "https://upload.wikimedia.org/wikipedia/en/thumb/5/54/Federation_Algerienne_de_Football.png/200px-Federation_Algerienne_de_Football.png",
-    "Ecuador":      "https://upload.wikimedia.org/wikipedia/en/thumb/e/e0/Ecuador_F%C3%BAtbol_Federation_logo.png/200px-Ecuador_F%C3%BAtbol_Federation_logo.png",
-    "Paraguay":     "https://upload.wikimedia.org/wikipedia/en/thumb/0/0a/APF-logo.svg/200px-APF-logo.svg.png",
-    "Scotland":     "https://upload.wikimedia.org/wikipedia/en/thumb/5/5c/Scottish_Football_Association_new_crest.png/200px-Scottish_Football_Association_new_crest.png",
-    "Australia":    "https://upload.wikimedia.org/wikipedia/en/thumb/8/8d/Socceroos_crest.svg/200px-Socceroos_crest.svg.png",
-    "Turkiye":      "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5d/TFF.svg/200px-TFF.svg.png",
-    "Ivory Coast":  "https://upload.wikimedia.org/wikipedia/en/thumb/5/5e/FIF_%28logo%29.png/200px-FIF_%28logo%29.png",
-    "Tunisia":      "https://upload.wikimedia.org/wikipedia/en/thumb/3/3e/FTF_Logo.png/200px-FTF_Logo.png",
-    "Saudi Arabia": "https://upload.wikimedia.org/wikipedia/en/thumb/4/46/Saudi_Arabian_Football_Federation_%28logo%29.png/200px-Saudi_Arabian_Football_Federation_%28logo%29.png",
-    "Ghana":        "https://upload.wikimedia.org/wikipedia/en/thumb/4/40/Ghana_Football_Association_logo.png/200px-Ghana_Football_Association_logo.png",
-    "DR Congo":     "https://upload.wikimedia.org/wikipedia/en/thumb/7/72/FECOFA.png/200px-FECOFA.png",
-    "Uzbekistan":   "https://upload.wikimedia.org/wikipedia/en/thumb/3/35/Uzbekistan_Football_Association_logo.svg/200px-Uzbekistan_Football_Association_logo.svg.png",
-    "Cape Verde":   "https://upload.wikimedia.org/wikipedia/en/thumb/3/3d/FFCV-logo.svg/200px-FFCV-logo.svg.png",
-    "Qatar":        "https://upload.wikimedia.org/wikipedia/en/thumb/1/18/Qatar_Football_Association_Logo.png/200px-Qatar_Football_Association_Logo.png",
-    "Bosnia & Herz.":"https://upload.wikimedia.org/wikipedia/en/thumb/6/6d/Logo_of_the_Football_Federation_of_Bosnia_and_Herzegovina.png/200px-Logo_of_the_Football_Federation_of_Bosnia_and_Herzegovina.png",
-    "South Africa": "https://upload.wikimedia.org/wikipedia/en/thumb/e/e8/SAFA.png/200px-SAFA.png",
-    "Haiti":        "https://upload.wikimedia.org/wikipedia/en/thumb/c/cf/Haiti_Football_Federation_logo.png/200px-Haiti_Football_Federation_logo.png",
-    "New Zealand":  "https://upload.wikimedia.org/wikipedia/en/thumb/4/46/New_Zealand_Football_logo.svg/200px-New_Zealand_Football_logo.svg.png",
-    "Jordan":       "https://upload.wikimedia.org/wikipedia/en/thumb/8/83/Jordan_Football_Association_logo.png/200px-Jordan_Football_Association_logo.png",
-    "Iraq":         "https://upload.wikimedia.org/wikipedia/en/thumb/e/e3/IFA_logo.png/200px-IFA_logo.png",
-    "Panama":       "https://upload.wikimedia.org/wikipedia/en/thumb/d/df/FEPAFUT.png/200px-FEPAFUT.png",
-    "Curacao":      "https://upload.wikimedia.org/wikipedia/en/thumb/7/79/Curacao_football_federation.png/200px-Curacao_football_federation.png",
-    "Czechia":      "https://upload.wikimedia.org/wikipedia/en/thumb/7/72/FACR_%28logo%29.svg/200px-FACR_%28logo%29.svg.png",
-  };
-  const G = "#4ade80", GO = "#f59e0b";
-  const FOOTBALL_ICONS = [
-    { id:"icon:ball",    label:"Ball",
-      el: (s) => <svg width={s} height={s} viewBox="0 0 76 76"><circle cx="32" cy="32" r="22" fill="none" stroke={G} strokeWidth="2.5"/><path d="M32 10 L32 54 M10 32 L54 32" stroke={G} strokeWidth="1.5" fill="none" opacity="0.4"/><path d="M16 16 L48 16 M16 48 L48 48" stroke={G} strokeWidth="1.5" fill="none" opacity="0.4"/><circle cx="32" cy="32" r="7" fill={G}/></svg> },
-    { id:"icon:trophy",  label:"Trophy",
-      el: (s) => <svg width={s} height={s} viewBox="0 0 76 76"><path d="M20 10 L20 36 Q20 46 32 46 L44 46 Q56 46 56 36 L56 10 Z" fill="none" stroke={GO} strokeWidth="2.2" strokeLinejoin="round"/><path d="M20 18 Q8 18 8 28 Q8 38 20 38" fill="none" stroke={GO} strokeWidth="2.2"/><path d="M56 18 Q68 18 68 28 Q68 38 56 38" fill="none" stroke={GO} strokeWidth="2.2"/><rect x="29" y="46" width="6" height="10" fill={GO}/><rect x="22" y="56" width="20" height="4" rx="2" fill={GO}/></svg> },
-    { id:"icon:boot",    label:"Boot",
-      el: (s) => <svg width={s} height={s} viewBox="0 0 76 76"><path d="M22 52 L22 20 Q22 13 29 13 L42 13 Q49 13 49 20 L49 32 L58 32 Q65 32 65 39 L65 52 Q65 58 58 58 L29 58 Q22 58 22 52 Z" fill="none" stroke={G} strokeWidth="2.2" strokeLinejoin="round"/><line x1="34" y1="13" x2="34" y2="32" stroke={G} strokeWidth="1.5" opacity="0.5"/><line x1="30" y1="58" x2="30" y2="64" stroke={G} strokeWidth="3" strokeLinecap="round"/><line x1="41" y1="58" x2="41" y2="64" stroke={G} strokeWidth="3" strokeLinecap="round"/><line x1="52" y1="58" x2="52" y2="64" stroke={G} strokeWidth="3" strokeLinecap="round"/></svg> },
-    { id:"icon:goal",    label:"Goal",
-      el: (s) => <svg width={s} height={s} viewBox="0 0 76 76"><rect x="10" y="18" width="60" height="38" rx="2" fill="none" stroke={G} strokeWidth="2.2"/><line x1="10" y1="56" x2="37" y2="24" stroke={G} strokeWidth="1" opacity="0.35"/><line x1="37" y1="56" x2="64" y2="24" stroke={G} strokeWidth="1" opacity="0.35"/><line x1="10" y1="30" x2="70" y2="30" stroke={G} strokeWidth="1" opacity="0.35"/><line x1="10" y1="43" x2="70" y2="43" stroke={G} strokeWidth="1" opacity="0.35"/><line x1="28" y1="18" x2="28" y2="56" stroke={G} strokeWidth="1" opacity="0.35"/><line x1="46" y1="18" x2="46" y2="56" stroke={G} strokeWidth="1" opacity="0.35"/></svg> },
-    { id:"icon:whistle", label:"Whistle",
-      el: (s) => <svg width={s} height={s} viewBox="0 0 76 76"><circle cx="34" cy="36" r="18" fill="none" stroke={GO} strokeWidth="2.2"/><circle cx="34" cy="36" r="7" fill={GO}/><path d="M52 36 L66 29 L70 34 L56 41 Z" fill={GO}/><line x1="70" y1="29" x2="76" y2="24" stroke={GO} strokeWidth="2.5" strokeLinecap="round"/></svg> },
-    { id:"icon:gloves",  label:"Gloves",
-      el: (s) => <svg width={s} height={s} viewBox="0 0 76 76"><path d="M24 54 L24 24 Q24 16 32 16 L34 16 Q40 16 40 22 L40 30 Q44 25 50 25 Q56 25 56 31 L56 36 Q60 31 66 33 Q72 36 70 42 L60 58 Q55 64 48 64 L34 64 Q24 64 24 54 Z" fill="none" stroke={G} strokeWidth="2.2" strokeLinejoin="round"/></svg> },
-    { id:"icon:jersey",  label:"Jersey",
-      el: (s) => <svg width={s} height={s} viewBox="0 0 76 76"><path d="M18 18 L8 38 L22 42 L22 68 L54 68 L54 42 L68 38 L58 18 Q50 26 38 26 Q26 26 18 18 Z" fill="none" stroke={G} strokeWidth="2.2" strokeLinejoin="round"/><line x1="22" y1="42" x2="54" y2="42" stroke={G} strokeWidth="1.2" opacity="0.4"/></svg> },
-    { id:"icon:var",     label:"VAR",
-      el: (s) => <svg width={s} height={s} viewBox="0 0 76 76"><rect x="10" y="20" width="56" height="34" rx="4" fill="none" stroke={GO} strokeWidth="2.2"/><line x1="10" y1="37" x2="66" y2="37" stroke={GO} strokeWidth="1" opacity="0.4"/><line x1="38" y1="20" x2="38" y2="54" stroke={GO} strokeWidth="1" opacity="0.4"/><text x="38" y="43" textAnchor="middle" fontSize="14" fontWeight="700" fill={GO} fontFamily="system-ui">VAR</text><circle cx="38" cy="62" r="4" fill={GO}/></svg> },
-    { id:"icon:captain", label:"Captain",
-      el: (s) => <svg width={s} height={s} viewBox="0 0 76 76"><rect x="14" y="24" width="48" height="26" rx="13" fill="none" stroke={GO} strokeWidth="2.2"/><text x="38" y="43" textAnchor="middle" fontSize="22" fontWeight="700" fill={GO} fontFamily="system-ui">C</text></svg> },
-    { id:"icon:flag",    label:"Corner flag",
-      el: (s) => <svg width={s} height={s} viewBox="0 0 76 76"><line x1="32" y1="65" x2="32" y2="14" stroke={G} strokeWidth="3" strokeLinecap="round"/><path d="M32 14 L60 24 L32 34 Z" fill={G}/><circle cx="32" cy="68" r="5" fill={G}/></svg> },
-    { id:"icon:golden",  label:"Golden Boot",
-      el: (s) => <svg width={s} height={s} viewBox="0 0 76 76"><path d="M22 50 L22 22 Q22 15 29 15 L44 15 Q51 15 51 22 L51 34 L62 34 Q69 34 69 41 L69 50 Q69 56 62 56 L29 56 Q22 56 22 50 Z" fill={GO} opacity="0.9"/><circle cx="24" cy="10" r="5" fill={GO}/><circle cx="36" cy="7" r="5" fill={GO}/><circle cx="48" cy="10" r="5" fill={GO}/></svg> },
-    { id:"icon:tactics", label:"Tactics",
-      el: (s) => <svg width={s} height={s} viewBox="0 0 76 76"><rect x="8" y="14" width="60" height="44" rx="4" fill="#1a3828" stroke={G} strokeWidth="2"/><circle cx="38" cy="26" r="5" fill={G}/><circle cx="20" cy="36" r="5" fill={G} opacity="0.7"/><circle cx="56" cy="36" r="5" fill={G} opacity="0.7"/><circle cx="28" cy="47" r="5" fill={GO}/><circle cx="48" cy="47" r="5" fill={GO}/><path d="M38 31 Q28 38 28 47" stroke={G} strokeWidth="1.2" fill="none" strokeDasharray="3,2"/></svg> },
-  ];
-
-  const ALL_TEAMS = ["Argentina","France","Brazil","England","Spain","Germany","Portugal","Netherlands","Belgium","Norway","Mexico","United States","Morocco","Uruguay","Croatia","Japan","Senegal","Egypt","Colombia","South Korea","Canada","Switzerland","Austria","Sweden","Iran","Algeria","Ecuador","Paraguay","Scotland","Australia","Turkiye","Ivory Coast","Tunisia","Saudi Arabia","Ghana","DR Congo","Uzbekistan","Cape Verde","Qatar","Bosnia & Herz.","South Africa","Haiti","New Zealand","Jordan","Iraq","Panama","Curacao","Czechia"];
-  const FLAG_CODES_MAP = {"Mexico":"mx","South Africa":"za","South Korea":"kr","Czechia":"cz","Canada":"ca","Bosnia & Herz.":"ba","Qatar":"qa","Switzerland":"ch","Brazil":"br","Morocco":"ma","Haiti":"ht","Scotland":"gb-sct","United States":"us","Paraguay":"py","Australia":"au","Turkiye":"tr","Germany":"de","Curacao":"cw","Ivory Coast":"ci","Ecuador":"ec","Netherlands":"nl","Japan":"jp","Sweden":"se","Tunisia":"tn","Belgium":"be","Egypt":"eg","Iran":"ir","New Zealand":"nz","Spain":"es","Cape Verde":"cv","Saudi Arabia":"sa","Uruguay":"uy","France":"fr","Senegal":"sn","Iraq":"iq","Norway":"no","Argentina":"ar","Algeria":"dz","Austria":"at","Jordan":"jo","Portugal":"pt","DR Congo":"cd","Uzbekistan":"uz","Colombia":"co","England":"gb-eng","Croatia":"hr","Ghana":"gh","Panama":"pa"};
-  const filteredTeams = avatarSearch
-    ? ALL_TEAMS.filter(t => t.toLowerCase().includes(avatarSearch.toLowerCase()))
-    : ALL_TEAMS;
-
-  const handlePhotoUpload = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        canvas.width = 160; canvas.height = 160;
-        const ctx = canvas.getContext("2d");
-        // Crop to square from center
-        const size = Math.min(img.width, img.height);
-        const sx = (img.width - size) / 2;
-        const sy = (img.height - size) / 2;
-        ctx.drawImage(img, sx, sy, size, size, 0, 0, 160, 160);
-        const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
-        persistAvatar(dataUrl);
-        setShowAvatarPicker(false);
-        setToast("Avatar updated!");
-      };
-      img.src = ev.target.result;
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const selectPresetAvatar = (id) => {
-    persistAvatar(id);
-    setShowAvatarPicker(false);
-    setToast("Avatar updated!");
-  };
-
-  const getCrestUrl = (av) => {
-    if (!av?.startsWith("crest:")) return null;
-    const team = av.slice(6);
-    return TEAM_CRESTS[team] || null;
-  };
-
-  const renderAvatarPreview = () => {
-    if (!userAvatar) return <span style={{fontSize:32}}>👤</span>;
-    if (userAvatar.startsWith("data:")) return <img src={userAvatar} style={{width:60,height:60,borderRadius:"50%",objectFit:"cover"}} alt="avatar"/>;
-    if (userAvatar.startsWith("icon:")) {
-      const icon = FOOTBALL_ICONS.find(i=>i.id===userAvatar);
-      return icon ? icon.el(52) : <span style={{fontSize:32}}>⚽</span>;
-    }
-    if (userAvatar.startsWith("crest:")) {
-      const url = getCrestUrl(userAvatar);
-      return url ? <img src={url} style={{width:50,height:50,objectFit:"contain"}} alt="crest"/> : <span style={{fontSize:32}}>🛡️</span>;
-    }
-    if (userAvatar.startsWith("flag:")) {
-      const code = FLAG_CODES_MAP[userAvatar.slice(5)];
-      return code ? <img src={`https://flagcdn.com/w80/${code}.png`} style={{width:60,height:40,objectFit:"cover",borderRadius:4}} alt="flag"/> : <span style={{fontSize:32}}>🏳️</span>;
-    }
-    return <span style={{fontSize:32}}>👤</span>;
-  };
-
-    const isSynced = !!syncProfile;
-  const displayLocation = locationOverride
-    ? locationOverride.label
-    : (geoData.city ? `${geoData.city}${geoData.region ? ", " + geoData.region : ""}` : "Auto-detected");
-
-  // World Cup host cities for location picker
-  const HOST_CITIES_PICK = [
-    { label: "New York / NJ", country: "US" }, { label: "Los Angeles", country: "US" },
-    { label: "Dallas", country: "US" }, { label: "San Francisco", country: "US" },
-    { label: "Miami", country: "US" }, { label: "Atlanta", country: "US" },
-    { label: "Seattle", country: "US" }, { label: "Boston", country: "US" },
-    { label: "Philadelphia", country: "US" }, { label: "Kansas City", country: "US" },
-    { label: "Houston", country: "US" }, { label: "Toronto", country: "CA" },
-    { label: "Vancouver", country: "CA" }, { label: "Mexico City", country: "MX" },
-    { label: "Guadalajara", country: "MX" }, { label: "Monterrey", country: "MX" },
-  ];
-  const filteredCities = locSearch
-    ? HOST_CITIES_PICK.filter(c => c.label.toLowerCase().includes(locSearch.toLowerCase()))
-    : HOST_CITIES_PICK;
-
   const inputStyle = { width:"100%", padding:"11px 14px", background:C.s2, border:`1px solid ${C.b2}`, borderRadius:10, color:C.text, fontSize:15, outline:"none", boxSizing:"border-box" };
   const btnPrimary = { width:"100%", padding:"13px 0", borderRadius:12, border:"none", background:`linear-gradient(135deg,${C.green},#22c55e)`, color:"#030a05", fontWeight:700, fontSize:15, cursor:"pointer" };
   const btnSecondary = { width:"100%", padding:"11px 0", borderRadius:12, border:`1px solid ${C.b2}`, background:C.s2, color:C.text, fontWeight:600, fontSize:14, cursor:"pointer", marginTop:8 };
 
-  const screenTitle = {
-    home: "My Account",
-    "pin-create": "Create PIN", "pin-created": "Your PIN",
-    "pin-change": "Change PIN",
-    "pin-join": "Enter PIN", email: "Sign in with Email",
-    "email-sent": "Check Your Email", predictions: "My Predictions",
-    teams: "My Teams", location: "Location", sync: "Sync",
-  }[screen] || "My Account";
+  const screenTitle = { home:"My Account","pin-create":"Create PIN","pin-created":"Your PIN","pin-join":"Enter PIN",email:"Sign in with Email","email-sent":"Check Your Email",predictions:"My Predictions",teams:"My Teams",location:"Location","pin-change":"Change PIN" }[screen] || "My Account";
 
-  const isDesktop = typeof window !== "undefined" && window.innerWidth >= 640;
+  const renderAvatarImg = (size) => {
+    if (!userAvatar) return <span style={{fontSize:size*0.6}}>👤</span>;
+    if (userAvatar.startsWith("data:")) return <img src={userAvatar} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="avatar"/>;
+    if (userAvatar.startsWith("icon:")) { const ic=FOOTBALL_ICONS.find(i=>i.id===userAvatar); return ic?ic.el(size):<span style={{fontSize:size*0.6}}>⚽</span>; }
+    if (userAvatar.startsWith("flag:")) { const code=FLAG_CODES_MAP[userAvatar.slice(5)]; return code?<img src={`https://flagcdn.com/w80/${code}.png`} crossOrigin="anonymous" style={{width:"100%",height:"100%",objectFit:"cover"}} alt="flag"/>:<span style={{fontSize:size*0.6}}>🏳️</span>; }
+    return <span style={{fontSize:size*0.6}}>👤</span>;
+  };
 
-  const innerContent = (
-    <>
-        {/* Header */}
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:isDesktop?"14px 18px 12px":"18px 20px 14px",borderBottom:`1px solid ${C.b1}`,position:"sticky",top:0,background:C.s1,zIndex:1,borderRadius:isDesktop?"12px 12px 0 0":undefined}}>
-          <div style={{display:"flex",alignItems:"center",gap:10}}>
-            {screen !== "home" && <button onClick={()=>{setScreen("home");setError("");}} style={{background:"none",border:"none",color:C.mid,fontSize:22,cursor:"pointer",padding:"0 4px 0 0",lineHeight:1}}>‹</button>}
-            <span style={{fontSize:isDesktop?15:17,fontWeight:700,color:C.green}}>{screenTitle}</span>
+  const homeContent = (
+    <div style={{padding:"16px 20px 0"}}>
+      {/* Avatar */}
+      <div style={{display:"flex",alignItems:"center",gap:14,padding:"12px 14px",background:C.s2,borderRadius:14,marginBottom:14,border:`1px solid ${isSynced?C.green+"44":C.b1}`}}>
+        <div onClick={()=>setShowAvatarPicker(true)} style={{position:"relative",width:52,height:52,borderRadius:"50%",flexShrink:0,background:isSynced?`${C.green}22`:C.bg,border:`2.5px solid ${isSynced?C.green:C.b2}`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",overflow:"hidden"}}>
+          {renderAvatarImg(36)}
+          <div style={{position:"absolute",bottom:0,left:0,right:0,background:"rgba(0,0,0,.45)",fontSize:9,color:"#fff",textAlign:"center",padding:"2px 0",lineHeight:1.4}}>edit</div>
+        </div>
+        <div style={{flex:1,minWidth:0}}>
+          {isSynced ? <>
+            {displayName && <div style={{fontWeight:800,color:C.text,fontSize:16}}>{displayName}</div>}
+            <div style={{fontSize:displayName?11:14,fontWeight:displayName?400:700,color:displayName?C.dim:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{syncProfile.email||"PIN User"}</div>
+            {syncProfile.pin && <div style={{fontSize:11,color:C.mid}}>PIN: <strong style={{color:C.gold,letterSpacing:"0.1em"}}>{syncProfile.pin}</strong></div>}
+            <div style={{fontSize:11,color:C.green,fontWeight:600}}>✅ Syncing</div>
+          </> : <>
+            <div style={{fontWeight:700,color:C.text,fontSize:14}}>{displayName||"Not signed in"}</div>
+            <div style={{fontSize:11,color:C.dim,marginTop:2}}>{displayName?"Sign in to sync across devices":"Sign in to keep your progress on every device"}</div>
+          </>}
+        </div>
+        {isSynced && <button onClick={()=>{persistProfile(null);setToast("Signed out.");onClose();}} style={{fontSize:11,color:C.dim,background:"none",border:`1px solid ${C.b2}`,borderRadius:8,padding:"4px 8px",cursor:"pointer"}}>Sign out</button>}
+      </div>
+
+      {/* Name field */}
+      <div style={{marginBottom:14}}>
+        <div style={{fontSize:11,color:C.mid,fontWeight:700,letterSpacing:"0.08em",marginBottom:6}}>👤 YOUR NAME</div>
+        <div style={{display:"flex",gap:8,alignItems:"center"}}>
+          <input value={nameInput} onChange={e=>setNameInput(e.target.value)} onBlur={()=>{if(nameInput.trim()!==displayName)persistDisplayName(nameInput.trim());}} placeholder="How should we call you?" maxLength={24} style={{...inputStyle,fontSize:14,padding:"9px 12px"}}/>
+          {nameInput.trim()&&nameInput.trim()!==displayName&&<button onClick={()=>persistDisplayName(nameInput.trim())} style={{padding:"9px 12px",borderRadius:10,background:C.green,border:"none",color:"#030a05",fontWeight:700,fontSize:13,cursor:"pointer",flexShrink:0}}>Save</button>}
+        </div>
+      </div>
+
+      {/* My Teams — collapsible */}
+      <div style={{marginBottom:10}}>
+        <button onClick={()=>setTeamsExpanded(v=>!v)} style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"11px 13px",background:C.s2,border:`1px solid ${teamsExpanded?C.gold+"44":C.b1}`,borderRadius:teamsExpanded?"10px 10px 0 0":10,cursor:"pointer"}}>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <span style={{fontSize:16}}>⭐</span>
+            <div style={{textAlign:"left"}}>
+              <div style={{fontSize:13,fontWeight:700,color:C.text}}>My Teams</div>
+              <div style={{fontSize:11,color:favTeams.length?C.gold:C.dim}}>{favTeams.length?favTeams.join(", "):"Tap to select up to 4 teams"}</div>
+            </div>
           </div>
-          <button onClick={onClose} style={{background:"none",border:"none",color:C.mid,fontSize:24,cursor:"pointer"}}>×</button>
-        </div>
-
-        <div style={{padding:"16px 20px 0"}}>
-
-          {/* ── HOME ── */}
-          {screen === "home" && (
-            <div>
-              {/* Avatar + sync status */}
-              <div style={{display:"flex",alignItems:"center",gap:14,padding:"12px 14px",background:C.s2,borderRadius:14,marginBottom:16,border:`1px solid ${isSynced?C.green+"44":C.b1}`}}>
-                <div onClick={()=>setShowAvatarPicker(true)} style={{position:"relative",width:52,height:52,borderRadius:"50%",flexShrink:0,background:isSynced?`${C.green}22`:C.bg,border:`2.5px solid ${isSynced?C.green:C.b2}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,cursor:"pointer",overflow:"hidden"}}>
-                  {userAvatar && userAvatar.startsWith("data:")
-                    ? <img src={userAvatar} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="avatar"/>
-                    : userAvatar && userAvatar.startsWith("icon:")
-                      ? (() => { const ic = FOOTBALL_ICONS.find(i=>i.id===userAvatar); return ic ? ic.el(36) : "⚽"; })()
-                      : userAvatar && userAvatar.startsWith("crest:")
-                        ? <img src={getCrestUrl(userAvatar)} style={{width:"80%",height:"80%",objectFit:"contain"}} alt="crest"/>
-                        : userAvatar && userAvatar.startsWith("flag:")
-                        ? <img src={`https://flagcdn.com/w80/${FLAG_CODES_MAP[userAvatar.slice(5)]}.png`} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="avatar"/>
-                        : userAvatar && userAvatar.startsWith("conf:")
-                          ? <span style={{fontSize:26}}>{ {"UEFA":"🇪🇺","CONMEBOL":"🌎","CONCACAF":"🌍","CAF":"🌍","AFC":"🌏","OFC":"🌊"}[userAvatar.slice(5)]||"⚽"}</span>
-                          : isSynced ? "⚽" : "👤"
-                  }
-                  <div style={{position:"absolute",bottom:0,left:0,right:0,background:"rgba(0,0,0,.45)",fontSize:9,color:"#fff",textAlign:"center",padding:"2px 0",lineHeight:1.4}}>edit</div>
-                </div>
-                <div style={{flex:1,minWidth:0}}>
-                  {isSynced ? <>
-                    {displayName && <div style={{fontWeight:800,color:C.text,fontSize:16,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{displayName}</div>}
-                    <div style={{fontWeight:displayName?400:700,color:displayName?C.dim:C.text,fontSize:displayName?11:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{syncProfile.email || "PIN User"}</div>
-                    {syncProfile.pin && <div style={{fontSize:11,color:C.mid,marginTop:1}}>PIN: <strong style={{color:C.gold,letterSpacing:"0.1em"}}>{syncProfile.pin}</strong></div>}
-                    <div style={{fontSize:11,color:C.green,marginTop:3,fontWeight:600}}>✅ Syncing across devices</div>
-                  </> : <>
-                    <div style={{fontWeight:700,color:C.text,fontSize:14}}>{displayName || "Not signed in"}</div>
-                    <div style={{fontSize:11,color:C.dim,marginTop:2,lineHeight:1.4}}>{displayName ? "Sign in to sync across devices" : "Sign in to keep your progress on every device"}</div>
-                  </>}
-                </div>
-                {isSynced && <button onClick={()=>{persistProfile(null);setToast("Signed out.");onClose();}} style={{fontSize:11,color:C.dim,background:"none",border:`1px solid ${C.b2}`,borderRadius:8,padding:"4px 8px",cursor:"pointer",flexShrink:0}}>Sign out</button>}
-              </div>
-
-              {/* ── Display Name ── */}
-              <div style={{marginBottom:14}}>
-                <div style={{fontSize:11,color:C.mid,fontWeight:700,letterSpacing:"0.08em",marginBottom:6}}>👤 YOUR NAME</div>
-                <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                  <input
-                    value={nameInput}
-                    onChange={e=>setNameInput(e.target.value)}
-                    onFocus={()=>setNameFocused(true)}
-                    onBlur={()=>{setNameFocused(false);if(nameInput.trim()!==displayName){persistDisplayName(nameInput.trim());}}}
-                    placeholder="How should we call you?"
-                    maxLength={24}
-                    style={{flex:1,padding:"9px 12px",background:C.s2,border:`1px solid ${nameFocused?C.green:C.b2}`,borderRadius:10,color:C.text,fontSize:14,outline:"none",transition:"border-color .15s"}}
-                  />
-                  {nameInput.trim() && nameInput.trim()!==displayName && (
-                    <button onClick={()=>persistDisplayName(nameInput.trim())} style={{padding:"9px 12px",borderRadius:10,background:C.green,border:"none",color:"#030a05",fontWeight:700,fontSize:13,cursor:"pointer",flexShrink:0}}>Save</button>
-                  )}
-                </div>
-                {displayName && <div style={{fontSize:11,color:C.dim,marginTop:4}}>Shown on the leaderboard and across the app.</div>}
-              </div>
-
-              {/* ── My Teams ── */}
-              <div style={{marginBottom:14}}>
-                {/* Header row — always visible, tappable to expand */}
-                <button onClick={()=>setTeamsExpanded(v=>!v)} style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"11px 13px",background:C.s2,border:`1px solid ${teamsExpanded?C.gold+"44":C.b1}`,borderRadius:teamsExpanded?"10px 10px 0 0":10,cursor:"pointer"}}>
-                  <div style={{display:"flex",alignItems:"center",gap:8}}>
-                    <span style={{fontSize:16}}>⭐</span>
-                    <div style={{textAlign:"left"}}>
-                      <div style={{fontSize:13,fontWeight:700,color:C.text}}>My Teams</div>
-                      <div style={{fontSize:11,color:favTeams.length?C.gold:C.dim}}>
-                        {favTeams.length ? favTeams.join(", ") : "Tap to select up to 4 teams"}
-                      </div>
-                    </div>
-                  </div>
-                  <span style={{color:C.dim,fontSize:16,transition:"transform .2s",transform:teamsExpanded?"rotate(90deg)":"none"}}>›</span>
-                </button>
-
-                {/* Expanded picker */}
-                {teamsExpanded && (
-                  <div style={{background:C.s2,border:`1px solid ${C.gold}44`,borderTop:`1px solid ${C.b1}`,borderRadius:"0 0 10px 10px",padding:"10px 12px"}}>
-                    {/* Selected chips */}
-                    {favTeams.length > 0 && (
-                      <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
-                        {favTeams.map(t => (
-                          <div key={t} style={{display:"flex",alignItems:"center",gap:5,padding:"4px 8px",background:C.bg,border:`1px solid ${C.gold}44`,borderRadius:16}}>
-                            <Crest team={t} size={16}/>
-                            <span style={{fontSize:11,color:C.gold,fontWeight:600}}>{t}</span>
-                            <button onClick={()=>setFavTeams(prev=>{const n=prev.filter(x=>x!==t);try{localStorage.setItem("wc2026_favs",JSON.stringify(n))}catch{};return n;})} style={{background:"none",border:"none",color:C.dim,fontSize:13,cursor:"pointer",padding:0,lineHeight:1}}>×</button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {/* Team picker — auto-collapse when 4 selected */}
-                    {favTeams.length < 4 ? (
-                      <div style={{display:"flex",gap:5,flexWrap:"wrap",maxHeight:150,overflowY:"auto"}}>
-                        {Object.keys(TEAMS).filter(t=>!favTeams.includes(t)).sort().map(t=>(
-                          <button key={t} onClick={()=>{setFavTeams(prev=>{if(prev.length>=4)return prev;const n=[...prev,t];try{localStorage.setItem("wc2026_favs",JSON.stringify(n))}catch{};if(n.length===4)setTeamsExpanded(false);return n;});}} style={{display:"flex",alignItems:"center",gap:4,padding:"4px 8px",borderRadius:14,border:`1px solid ${C.b2}`,background:C.bg,color:C.mid,fontSize:11,cursor:"pointer"}}>
-                            <Crest team={t} size={13}/>{t}
-                          </button>
-                        ))}
-                      </div>
-                    ) : (
-                      <div style={{fontSize:11,color:C.gold,textAlign:"center",padding:"6px 0"}}>
-                        4/4 teams selected ✓
-                        <button onClick={()=>setTeamsExpanded(false)} style={{display:"block",margin:"6px auto 0",padding:"5px 14px",borderRadius:8,border:`1px solid ${C.b2}`,background:"none",color:C.mid,fontSize:11,cursor:"pointer"}}>Done</button>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              <div style={{borderTop:`1px solid ${C.b1}`,margin:"4px 0 14px"}}/>
-
-              {/* ── My Matches ── */}
-              <button onClick={()=>{onClose();onShowSaved();}} style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"13px 14px",background:C.s2,border:`1px solid ${C.b1}`,borderRadius:12,cursor:"pointer",marginBottom:8}}>
-                <div style={{display:"flex",alignItems:"center",gap:10}}>
-                  <span style={{fontSize:18}}>⭐</span>
-                  <div style={{textAlign:"left"}}>
-                    <div style={{fontWeight:700,color:C.text,fontSize:14}}>My Matches</div>
-                    <div style={{fontSize:11,color:C.dim}}>{saved.length} match{saved.length!==1?"es":""} saved</div>
-                  </div>
-                </div>
-                <span style={{color:C.mid,fontSize:18}}>›</span>
-              </button>
-
-              {/* ── My Predictions ── */}
-              <button onClick={()=>setScreen("predictions")} style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"13px 14px",background:C.s2,border:`1px solid ${C.b1}`,borderRadius:12,cursor:"pointer",marginBottom:8}}>
-                <div style={{display:"flex",alignItems:"center",gap:10}}>
-                  <span style={{fontSize:18}}>🔮</span>
-                  <div style={{textAlign:"left"}}>
-                    <div style={{fontWeight:700,color:C.text,fontSize:14}}>My Predictions</div>
-                    <div style={{fontSize:11,color:C.dim}}>Tap to see your picks</div>
-                  </div>
-                </div>
-                <span style={{color:C.mid,fontSize:18}}>›</span>
-              </button>
-
-              {/* ── Location ── */}
-              <button onClick={()=>setShowLocPicker(v=>!v)} style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"13px 14px",background:C.s2,border:`1px solid ${C.b1}`,borderRadius:12,cursor:"pointer",marginBottom:8}}>
-                <div style={{display:"flex",alignItems:"center",gap:10}}>
-                  <span style={{fontSize:18}}>📍</span>
-                  <div style={{textAlign:"left"}}>
-                    <div style={{fontWeight:700,color:C.text,fontSize:14}}>Location</div>
-                    <div style={{fontSize:11,color:locationOverride?C.gold:C.dim}}>{locationOverride?"Custom: ":"Auto: "}{displayLocation}</div>
-                  </div>
-                </div>
-                <span style={{color:C.mid,fontSize:18}}>{showLocPicker?"∨":"›"}</span>
-              </button>
-
-              {showLocPicker && (
-                <div style={{background:C.s2,border:`1px solid ${C.b1}`,borderRadius:12,padding:12,marginBottom:8,marginTop:-6}}>
-                  <input value={locSearch} onChange={e=>setLocSearch(e.target.value)} placeholder="Search city..." style={{...inputStyle,fontSize:13,padding:"8px 12px",marginBottom:8}}/>
-                  {locationOverride && (
-                    <button onClick={()=>{setLocationOverride(null);try{localStorage.removeItem("wc2026_location")}catch{};setLocSearch("");setShowLocPicker(false);}} style={{width:"100%",padding:"7px 0",borderRadius:8,background:`${C.red||"#f87171"}18`,border:`1px solid ${C.red||"#f87171"}44`,color:C.red||"#f87171",fontSize:12,fontWeight:600,cursor:"pointer",marginBottom:8}}>✕ Reset to auto-detected</button>
-                  )}
-                  <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
-                    {filteredCities.map(c=>(
-                      <button key={c.label} onClick={()=>{const loc={label:c.label,country:c.country};setLocationOverride(loc);try{localStorage.setItem("wc2026_location",JSON.stringify(loc))}catch{};setLocSearch("");setShowLocPicker(false);setToast(`📍 Location set to ${c.label}`);}} style={{padding:"5px 10px",borderRadius:16,fontSize:12,cursor:"pointer",border:`1px solid ${locationOverride?.label===c.label?C.green:C.b2}`,background:locationOverride?.label===c.label?`${C.green}22`:C.bg,color:locationOverride?.label===c.label?C.green:C.mid,fontWeight:locationOverride?.label===c.label?700:400}}>
-                        {c.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div style={{borderTop:`1px solid ${C.b1}`,margin:"4px 0 14px"}}/>
-
-              {/* ── Sync options ── */}
-              {!isSynced ? (
-                <div>
-                  <div style={{fontSize:11,color:C.mid,fontWeight:700,letterSpacing:"0.08em",marginBottom:10}}>🔗 SYNC ACROSS DEVICES</div>
-                  <div style={{display:"flex",gap:8,marginBottom:8}}>
-                    <button onClick={()=>setScreen("pin-create")} style={{flex:1,padding:"11px 8px",borderRadius:12,border:`1px solid ${C.green}44`,background:`${C.green}15`,color:C.green,fontWeight:700,fontSize:13,cursor:"pointer"}}>🔢 Create PIN</button>
-                    <button onClick={()=>setScreen("pin-join")}   style={{flex:1,padding:"11px 8px",borderRadius:12,border:`1px solid ${C.b2}`,background:C.bg,color:C.mid,fontWeight:600,fontSize:13,cursor:"pointer"}}>I have a PIN</button>
-                  </div>
-                  <button onClick={()=>setScreen("email")} style={{...btnSecondary,marginTop:0,fontSize:13}}>✉️ Continue with Email</button>
-                </div>
-              ) : (
-                <div>
-                  <div style={{fontSize:12,color:C.dim,textAlign:"center",lineHeight:1.5,marginBottom:10}}>Your progress syncs automatically across all signed-in devices.</div>
-                  {syncProfile?.pin && (
-                    <button onClick={()=>{setPin("");setScreen("pin-change");setError("");}} style={{width:"100%",padding:"9px 0",borderRadius:10,border:`1px solid ${C.b2}`,background:C.s2,color:C.mid,fontSize:13,fontWeight:600,cursor:"pointer"}}>🔁 Change PIN</button>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ── TEAMS ── */}
-          {screen === "teams" && (
-            <div>
-              <div style={{fontSize:11,color:C.mid,fontWeight:700,letterSpacing:"0.08em",marginBottom:8}}>⭐ MY TEAMS <span style={{color:favTeams.length===4?C.red:C.gold}}>({favTeams.length}/4)</span></div>
-              <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:10}}>
-                {favTeams.length > 0
-                  ? favTeams.map(t => (
-                      <div key={t} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 10px",background:C.s2,border:`1px solid ${C.gold}44`,borderRadius:20}}>
-                        <Crest team={t} size={18}/><span style={{fontSize:12,color:C.gold,fontWeight:600}}>{t}</span>
-                        <button onClick={()=>setFavTeams(prev=>{const n=prev.filter(x=>x!==t);try{localStorage.setItem("wc2026_favs",JSON.stringify(n))}catch{};return n;})} style={{background:"none",border:"none",color:C.dim,fontSize:14,cursor:"pointer",padding:0,lineHeight:1}}>×</button>
-                      </div>
-                    ))
-                  : <div style={{fontSize:12,color:C.dim}}>No teams selected yet</div>
-                }
-              </div>
-              {favTeams.length < 4 && (
-                <div style={{display:"flex",gap:5,flexWrap:"wrap",maxHeight:140,overflowY:"auto"}}>
-                  {Object.keys(TEAMS).filter(t=>!favTeams.includes(t)).sort().map(t=>(
-                    <button key={t} onClick={()=>setFavTeams(prev=>{if(prev.length>=4)return prev;const n=[...prev,t];try{localStorage.setItem("wc2026_favs",JSON.stringify(n))}catch{};return n;})} style={{display:"flex",alignItems:"center",gap:4,padding:"4px 8px",borderRadius:14,border:`1px solid ${C.b2}`,background:C.bg,color:C.mid,fontSize:11,cursor:"pointer"}}>
-                      <Crest team={t} size={13}/>{t}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ── LOCATION ── */}
-          {screen === "location" && (
-            <div>
-              <div style={{fontSize:12,color:C.dim,marginBottom:12,lineHeight:1.5}}>Choose a city to see broadcast info and weather as if you were there.</div>
-              {locationOverride && (
-                <button onClick={()=>{setLocationOverride(null);try{localStorage.removeItem("wc2026_location")}catch{};}} style={{width:"100%",padding:"8px 0",borderRadius:8,background:`rgba(248,113,113,0.1)`,border:"1px solid rgba(248,113,113,0.3)",color:"#f87171",fontSize:12,fontWeight:600,cursor:"pointer",marginBottom:10}}>✕ Reset to auto-detected ({geoData.city || "your location"})</button>
-              )}
-              <input value={locSearch} onChange={e=>setLocSearch(e.target.value)} placeholder="Search city..." style={{width:"100%",padding:"8px 12px",background:C.s2,border:`1px solid ${C.b2}`,borderRadius:8,color:C.text,fontSize:13,outline:"none",marginBottom:10,boxSizing:"border-box"}}/>
-              <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
-                {filteredCities.map(c=>(
-                  <button key={c.label} onClick={()=>{const loc={label:c.label,country:c.country};setLocationOverride(loc);try{localStorage.setItem("wc2026_location",JSON.stringify(loc))}catch{};setLocSearch("");setToast(`📍 Location set to ${c.label}`);setScreen("home");}} style={{padding:"5px 10px",borderRadius:14,fontSize:12,cursor:"pointer",border:`1px solid ${locationOverride?.label===c.label?C.green:C.b2}`,background:locationOverride?.label===c.label?`${C.green}22`:C.bg,color:locationOverride?.label===c.label?C.green:C.mid,fontWeight:locationOverride?.label===c.label?700:400}}>
-                    {c.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* ── PREDICTIONS ── */}
-          {screen === "predictions" && (
-            <div>
-              {predsLoading && <div style={{textAlign:"center",padding:"30px 0",color:C.mid,fontSize:14}}>Loading your predictions…</div>}
-              {!predsLoading && userPreds !== null && Object.keys(userPreds).length === 0 && (
-                <div style={{textAlign:"center",padding:"30px 0"}}>
-                  <div style={{fontSize:"2rem",marginBottom:8}}>🔮</div>
-                  <div style={{color:C.mid,fontSize:14}}>No predictions yet.</div>
-                  <div style={{fontSize:12,color:C.dim,marginTop:4}}>Head to the Predictor tab to make your picks.</div>
-                </div>
-              )}
-              {!predsLoading && userPreds && Object.keys(userPreds).length > 0 && (
-                <div>
-                  {MATCHES.filter(m=>userPreds[m.id]).map(m=>{
-                    const p = userPreds[m.id];
-                    return (
-                      <div key={m.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 12px",background:C.s2,borderRadius:10,marginBottom:6,border:`1px solid ${C.b1}`}}>
-                        <div style={{flex:1,minWidth:0}}>
-                          <div style={{fontSize:12,fontWeight:700,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.home} vs {m.away}</div>
-                          <div style={{fontSize:10,color:C.dim}}>{m.date}</div>
-                        </div>
-                        <div style={{fontWeight:900,fontSize:18,color:C.green,fontFamily:"monospace",marginLeft:8}}>{p.hg ?? "?"} – {p.ag ?? "?"}</div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ── PIN CREATE ── */}
-          {screen === "pin-create" && (
-            <div>
-              <div style={{fontSize:13,color:C.dim,lineHeight:1.5,marginBottom:16}}>Choose a 6-digit PIN you'll remember. You'll use it to sign in on any other device.</div>
-              <input
-                value={pin}
-                onChange={e=>setPin(e.target.value.replace(/[^0-9]/g,"").slice(0,6))}
-                placeholder="Choose a 6-digit PIN"
-                inputMode="numeric"
-                maxLength={6}
-                style={{...inputStyle,fontSize:24,textAlign:"center",fontFamily:"monospace",letterSpacing:"0.2em",marginBottom:12}}
-              />
-              {error && <div style={{color:"#f87171",fontSize:13,marginBottom:12,padding:"10px 12px",background:"rgba(248,113,113,0.1)",borderRadius:8}}>{error}</div>}
-              <button onClick={handleCreatePIN} disabled={loading||pin.length<6} style={{...btnPrimary,opacity:loading||pin.length<6?0.5:1,marginBottom:8}}>{loading?"Saving...":"Set My PIN"}</button>
-              <div style={{textAlign:"center",margin:"8px 0 4px",fontSize:12,color:C.dim}}>or</div>
-              <button onClick={()=>setScreen("email")} style={{...btnSecondary,marginTop:0,fontSize:13}}>✉️ Sign in with Email instead</button>
-            </div>
-          )}
-
-          {/* ── PIN CREATED ── */}
-          {screen === "pin-created" && (
-            <div style={{textAlign:"center"}}>
-              <div style={{fontSize:13,color:C.dim,marginBottom:16,lineHeight:1.5}}>Here's your sync PIN. Use it on any device to restore your saved matches, predictions and favorite teams.</div>
-              <div style={{background:C.s2,border:`1px solid ${C.green}44`,borderRadius:14,padding:"20px 16px",marginBottom:20}}>
-                <div style={{fontSize:11,color:C.mid,fontWeight:600,letterSpacing:"0.1em",marginBottom:8}}>YOUR PIN</div>
-                <div style={{fontSize:40,fontWeight:900,color:C.green,letterSpacing:"0.2em",fontFamily:"monospace"}}>{syncProfile?.pin || pin}</div>
-              </div>
-              <div style={{fontSize:12,color:C.dim,marginBottom:20,lineHeight:1.5}}>Screenshot this. On another device, tap the profile icon → "I have a PIN".</div>
-              <button onClick={onClose} style={btnPrimary}>Done</button>
-              <button onClick={()=>{setPin("");setScreen("pin-change");setError("");}} style={{...btnSecondary,marginTop:8,fontSize:13}}>🔁 Change PIN</button>
-            </div>
-          )}
-
-          {/* ── PIN CHANGE ── */}
-          {screen === "pin-change" && (
-            <div>
-              {syncProfile?.pin && (
-                <div style={{background:C.s2,border:`1px solid ${C.b1}`,borderRadius:10,padding:"12px 14px",marginBottom:16,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                  <div>
-                    <div style={{fontSize:11,color:C.mid,fontWeight:600,marginBottom:2}}>CURRENT PIN</div>
-                    <div style={{fontSize:24,fontWeight:900,color:C.dim,letterSpacing:"0.2em",fontFamily:"monospace"}}>{syncProfile.pin}</div>
-                  </div>
-                  <span style={{fontSize:11,color:C.dim}}>will be replaced</span>
-                </div>
-              )}
-              <div style={{fontSize:13,color:C.dim,lineHeight:1.5,marginBottom:12}}>Enter a new 6-digit PIN.</div>
-              <input
-                value={pin}
-                onChange={e=>setPin(e.target.value.replace(/[^0-9]/g,"").slice(0,6))}
-                placeholder="New 6-digit PIN"
-                inputMode="numeric"
-                maxLength={6}
-                style={{...inputStyle,fontSize:24,textAlign:"center",fontFamily:"monospace",letterSpacing:"0.2em",marginBottom:12}}
-              />
-              {error && <div style={{color:"#f87171",fontSize:13,marginBottom:12,padding:"10px 12px",background:"rgba(248,113,113,0.1)",borderRadius:8}}>{error}</div>}
-              <button onClick={handleChangePIN} disabled={loading||pin.length<6} style={{...btnPrimary,opacity:loading||pin.length<6?0.5:1}}>{loading?"Saving...":"Update PIN"}</button>
-            </div>
-          )}
-
-          {/* ── PIN JOIN ── */}
-          {screen === "pin-join" && (
-            <div>
-              <div style={{fontSize:13,color:C.dim,lineHeight:1.6,marginBottom:20}}>Enter the PIN from your other device to restore your progress here.</div>
-              <input value={pinInput} onChange={e=>setPinInput(e.target.value.replace(/[^0-9]/g,"").slice(0,6))} placeholder="Enter 6-digit PIN" inputMode="numeric" maxLength={6} style={{...inputStyle,fontSize:24,textAlign:"center",fontFamily:"monospace",letterSpacing:"0.2em",marginBottom:12}}/>
-              {error && <div style={{color:"#f87171",fontSize:13,marginBottom:12,padding:"10px 12px",background:"rgba(248,113,113,0.1)",borderRadius:8}}>{error}</div>}
-              <button onClick={handleJoinPIN} disabled={loading||pinInput.length<6} style={{...btnPrimary,opacity:loading||pinInput.length<6?0.5:1}}>{loading?"Looking up...":"Restore My Progress"}</button>
-            </div>
-          )}
-
-          {/* ── EMAIL ── */}
-          {screen === "email" && (
-            <div>
-              <div style={{fontSize:13,color:C.dim,lineHeight:1.6,marginBottom:20}}>Enter your email and we'll send a one-tap sign-in link. No password, no app to install.</div>
-              <input value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" type="email" inputMode="email" style={{...inputStyle,marginBottom:12}}/>
-              {error && <div style={{color:"#f87171",fontSize:13,marginBottom:12,padding:"10px 12px",background:"rgba(248,113,113,0.1)",borderRadius:8}}>{error}</div>}
-              <button onClick={handleSendMagic} disabled={loading} style={{...btnPrimary,opacity:loading?0.6:1}}>{loading?"Sending...":"Send Sign-in Link"}</button>
-            </div>
-          )}
-
-          {/* ── EMAIL SENT ── */}
-          {screen === "email-sent" && (
-            <div style={{textAlign:"center",padding:"10px 0"}}>
-              <div style={{fontSize:48,marginBottom:16}}>📬</div>
-              <div style={{fontWeight:700,color:C.text,fontSize:17,marginBottom:8}}>Check your inbox</div>
-              <div style={{fontSize:13,color:C.dim,lineHeight:1.6,marginBottom:20}}>We sent a sign-in link to <strong style={{color:C.text}}>{email}</strong>. Tap it on any device to sync your progress. The link expires in 15 minutes.</div>
-              <div style={{fontSize:12,color:C.mid,background:C.s2,borderRadius:10,padding:"10px 14px",lineHeight:1.5}}>Didn't get it? Check spam, or <button onClick={()=>setScreen("email")} style={{background:"none",border:"none",color:C.green,cursor:"pointer",fontSize:12,fontWeight:600,padding:0}}>try again</button>.</div>
-            </div>
-          )}
-
-        </div>
-
-        {/* ── AVATAR PICKER OVERLAY ── */}
-        {showAvatarPicker && (
-          <div onClick={()=>setShowAvatarPicker(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.7)",zIndex:1100,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
-            <div onClick={e=>e.stopPropagation()} style={{background:C.s1,border:`1px solid ${C.b2}`,borderRadius:"20px 20px 0 0",width:"100%",maxWidth:520,maxHeight:"80vh",display:"flex",flexDirection:"column"}}>
-              {/* Picker header */}
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 18px 12px",borderBottom:`1px solid ${C.b1}`,flexShrink:0}}>
-                <div style={{display:"flex",alignItems:"center",gap:10}}>
-                  {/* Current avatar preview */}
-                  <div style={{width:40,height:40,borderRadius:"50%",border:`2px solid ${C.green}`,background:C.s2,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",flexShrink:0}}>
-                    {renderAvatarPreview()}
-                  </div>
-                  <span style={{fontWeight:700,fontSize:16,color:C.green}}>Choose Avatar</span>
-                </div>
-                <button onClick={()=>setShowAvatarPicker(false)} style={{background:"none",border:"none",color:C.mid,fontSize:22,cursor:"pointer"}}>×</button>
-              </div>
-
-              {/* Tabs */}
-              <div style={{display:"flex",borderBottom:`1px solid ${C.b1}`,flexShrink:0}}>
-                {[["icons","⚽ Icons"],["crests","🛡️ Crests"],["flags","🏳️ Flags"],["upload","📷 Photo"]].map(([id,label])=>(
-                  <button key={id} onClick={()=>{setAvatarTab(id);setAvatarSearch("");}} style={{flex:1,padding:"10px 2px",background:"none",border:"none",borderBottom:`2px solid ${avatarTab===id?C.green:"transparent"}`,color:avatarTab===id?C.green:C.dim,fontWeight:avatarTab===id?700:400,fontSize:11,cursor:"pointer"}}>
-                    {label}
-                  </button>
-                ))}
-              </div>
-
-              {/* Content */}
-              <div style={{overflowY:"auto",padding:12,flex:1}}>
-
-                {/* Football Icons */}
-                {avatarTab === "icons" && (
-                  <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8}}>
-                    {FOOTBALL_ICONS.map(icon => {
-                      const active = userAvatar === icon.id;
-                      return (
-                        <button key={icon.id} onClick={()=>selectPresetAvatar(icon.id)} title={icon.label} style={{padding:"10px 4px",border:`2px solid ${active?C.green:C.b2}`,borderRadius:10,background:active?`${C.green}22`:C.s2,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:4,position:"relative"}}>
-                          {icon.el(48)}
-                          <span style={{fontSize:9,color:active?C.green:C.dim,textAlign:"center",lineHeight:1.2,fontWeight:active?700:400}}>{icon.label}</span>
-                          {active && <div style={{position:"absolute",top:2,right:2,width:12,height:12,borderRadius:"50%",background:C.green,display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,color:"#030a05",fontWeight:900}}>✓</div>}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {/* Federation Crests */}
-                {avatarTab === "crests" && (
-                  <div>
-                    <input value={avatarSearch} onChange={e=>setAvatarSearch(e.target.value)} placeholder="Search team..." style={{width:"100%",padding:"8px 12px",background:C.s2,border:`1px solid ${C.b2}`,borderRadius:8,color:C.text,fontSize:13,outline:"none",marginBottom:10,boxSizing:"border-box"}}/>
-                    <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8}}>
-                      {filteredTeams.map(team => {
-                        const crestSrc = TEAM_CRESTS[team];
-                        const id = `crest:${team}`;
-                        const active = userAvatar === id;
-                        if (!crestSrc) return null;
-                        return (
-                          <button key={team} onClick={()=>selectPresetAvatar(id)} title={team} style={{padding:"8px 4px",border:`2px solid ${active?C.green:"transparent"}`,borderRadius:10,background:active?`${C.green}22`:C.s2,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:4,position:"relative"}}>
-                            <img src={crestSrc} crossOrigin="anonymous" style={{width:44,height:44,objectFit:"contain"}} alt={team} onError={e=>{e.target.style.display="none";e.target.nextSibling&&(e.target.nextSibling.style.display="flex");}}/>
-                            <span style={{display:"none",width:44,height:44,alignItems:"center",justifyContent:"center",fontSize:20}}>🛡️</span>
-                            <span style={{fontSize:9,color:active?C.green:C.dim,textAlign:"center",lineHeight:1.2,fontWeight:active?700:400}}>{team}</span>
-                            {active && <div style={{position:"absolute",top:2,right:2,width:12,height:12,borderRadius:"50%",background:C.green,display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,color:"#030a05",fontWeight:900}}>✓</div>}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Team Flags */}
-                {avatarTab === "flags" && (
-                  <div>
-                    <input value={avatarSearch} onChange={e=>setAvatarSearch(e.target.value)} placeholder="Search team..." style={{width:"100%",padding:"8px 12px",background:C.s2,border:`1px solid ${C.b2}`,borderRadius:8,color:C.text,fontSize:13,outline:"none",marginBottom:10,boxSizing:"border-box"}}/>
-                    <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:6}}>
-                      {filteredTeams.map(team => {
-                        const code = FLAG_CODES_MAP[team];
-                        const id = `flag:${team}`;
-                        const active = userAvatar === id;
-                        return code ? (
-                          <button key={team} onClick={()=>selectPresetAvatar(id)} title={team} style={{padding:0,border:`2px solid ${active?C.green:"transparent"}`,borderRadius:8,background:active?`${C.green}22`:"transparent",cursor:"pointer",overflow:"hidden",aspectRatio:"3/2",position:"relative"}}>
-                            <img src={`https://flagcdn.com/w80/${code}.png`} crossOrigin="anonymous" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} alt={team} onError={e=>{e.target.style.display="none";e.target.nextSibling&&(e.target.nextSibling.style.display="flex");}}/>
-                            <span style={{display:"none",width:"100%",height:"100%",alignItems:"center",justifyContent:"center",fontSize:10,color:C.dim,textAlign:"center",padding:"2px"}}>🏳️</span>
-                            {active && <div style={{position:"absolute",top:2,right:2,width:12,height:12,borderRadius:"50%",background:C.green,display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,color:"#030a05",fontWeight:900,zIndex:1}}>✓</div>}
-                          </button>
-                        ) : null;
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Confederations */}
-                {avatarTab === "confs" && (
-                  <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
-                    {CONF_OPTIONS.map(c => {
-                      const active = userAvatar === c.id;
-                      return (
-                        <button key={c.id} onClick={()=>selectPresetAvatar(c.id)} style={{padding:"14px 8px",border:`2px solid ${active?C.green:C.b2}`,borderRadius:12,background:active?`${C.green}22`:C.s2,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
-                          <span style={{fontSize:32}}>{c.emoji}</span>
-                          <span style={{fontSize:11,fontWeight:700,color:active?C.green:C.text}}>{c.label}</span>
-                          <span style={{fontSize:9,color:C.dim}}>{c.sub}</span>
-                          {active && <span style={{fontSize:10,color:C.green,fontWeight:700}}>✓ Selected</span>}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {/* Upload Photo */}
-                {avatarTab === "upload" && (
-                  <div style={{textAlign:"center",padding:"20px 0"}}>
-                    <div style={{width:80,height:80,borderRadius:"50%",margin:"0 auto 16px",border:`2px dashed ${C.b2}`,background:C.s2,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}>
-                      {userAvatar?.startsWith("data:") ? <img src={userAvatar} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="avatar"/> : <span style={{fontSize:32}}>📷</span>}
-                    </div>
-                    <div style={{fontSize:13,color:C.dim,marginBottom:16,lineHeight:1.5}}>Upload a photo from your device. It'll be cropped to a circle and stored securely.</div>
-                    <label style={{display:"inline-block",padding:"12px 24px",borderRadius:12,background:`linear-gradient(135deg,${C.green},#22c55e)`,color:"#030a05",fontWeight:700,fontSize:15,cursor:"pointer"}}>
-                      Choose Photo
-                      <input type="file" accept="image/*" onChange={handlePhotoUpload} style={{display:"none"}}/>
-                    </label>
-                    {userAvatar?.startsWith("data:") && (
-                      <button onClick={()=>{persistAvatar(null);setToast("Photo removed.");}} style={{display:"block",margin:"12px auto 0",background:"none",border:"none",color:C.dim,fontSize:12,cursor:"pointer",textDecoration:"underline"}}>Remove photo</button>
-                    )}
-                  </div>
-                )}
-
-              </div>
-            </div>
+          <span style={{color:C.dim,fontSize:16,transition:"transform .2s",transform:teamsExpanded?"rotate(90deg)":"none"}}>›</span>
+        </button>
+        {teamsExpanded && (
+          <div style={{background:C.s2,border:`1px solid ${C.gold}44`,borderTop:`1px solid ${C.b1}`,borderRadius:"0 0 10px 10px",padding:"10px 12px"}}>
+            {favTeams.length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>{favTeams.map(t=><div key={t} style={{display:"flex",alignItems:"center",gap:5,padding:"4px 8px",background:C.bg,border:`1px solid ${C.gold}44`,borderRadius:16}}><Crest team={t} size={16}/><span style={{fontSize:11,color:C.gold,fontWeight:600}}>{t}</span><button onClick={()=>setFavTeams(prev=>{const n=prev.filter(x=>x!==t);try{localStorage.setItem("wc2026_favs",JSON.stringify(n))}catch{};return n;})} style={{background:"none",border:"none",color:C.dim,fontSize:13,cursor:"pointer",padding:0}}>×</button></div>)}</div>}
+            {favTeams.length<4
+              ? <div style={{display:"flex",gap:5,flexWrap:"wrap",maxHeight:150,overflowY:"auto"}}>{Object.values(GROUPS).flatMap(g=>g.teams).sort().filter(t=>!favTeams.includes(t)).map(t=><button key={t} onClick={()=>{setFavTeams(prev=>{if(prev.length>=4)return prev;const n=[...prev,t];try{localStorage.setItem("wc2026_favs",JSON.stringify(n))}catch{};if(n.length===4)setTeamsExpanded(false);return n;});}} style={{display:"flex",alignItems:"center",gap:4,padding:"4px 8px",borderRadius:14,border:`1px solid ${C.b2}`,background:C.bg,color:C.mid,fontSize:11,cursor:"pointer"}}><Crest team={t} size={13}/>{t}</button>)}</div>
+              : <div style={{fontSize:11,color:C.gold,textAlign:"center",padding:"6px 0"}}>4/4 teams selected ✓<button onClick={()=>setTeamsExpanded(false)} style={{display:"block",margin:"6px auto 0",padding:"5px 14px",borderRadius:8,border:`1px solid ${C.b2}`,background:"none",color:C.mid,fontSize:11,cursor:"pointer"}}>Done</button></div>
+            }
           </div>
         )}
+      </div>
 
-    </>
+      {/* My Matches */}
+      <button onClick={()=>{onClose();onShowSaved();}} style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"13px 14px",background:C.s2,border:`1px solid ${C.b1}`,borderRadius:12,cursor:"pointer",marginBottom:8}}>
+        <div style={{display:"flex",alignItems:"center",gap:10}}><span style={{fontSize:18}}>⭐</span><div style={{textAlign:"left"}}><div style={{fontWeight:700,color:C.text,fontSize:14}}>My Matches</div><div style={{fontSize:11,color:C.dim}}>{saved.length} match{saved.length!==1?"es":""} saved</div></div></div>
+        <span style={{color:C.mid,fontSize:18}}>›</span>
+      </button>
+
+      {/* Location */}
+      <button onClick={()=>setShowLocPicker(v=>!v)} style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"13px 14px",background:C.s2,border:`1px solid ${C.b1}`,borderRadius:12,cursor:"pointer",marginBottom:showLocPicker?0:8}}>
+        <div style={{display:"flex",alignItems:"center",gap:10}}><span style={{fontSize:18}}>📍</span><div style={{textAlign:"left"}}><div style={{fontWeight:700,color:C.text,fontSize:14}}>Location</div><div style={{fontSize:11,color:locationOverride?C.gold:C.dim}}>{locationOverride?"Custom: ":"Auto: "}{displayLocation}</div></div></div>
+        <span style={{color:C.mid,fontSize:18}}>{showLocPicker?"∨":"›"}</span>
+      </button>
+      {showLocPicker&&<div style={{background:C.s2,border:`1px solid ${C.b1}`,borderRadius:"0 0 12px 12px",padding:12,marginBottom:8}}>
+        <input value={locSearch} onChange={e=>setLocSearch(e.target.value)} placeholder="Search city..." style={{...inputStyle,fontSize:13,padding:"8px 12px",marginBottom:8}}/>
+        {locationOverride&&<button onClick={()=>{setLocationOverride(null);try{localStorage.removeItem("wc2026_location")}catch{};setShowLocPicker(false);}} style={{width:"100%",padding:"7px 0",borderRadius:8,background:"rgba(248,113,113,0.1)",border:"1px solid rgba(248,113,113,0.3)",color:"#f87171",fontSize:12,fontWeight:600,cursor:"pointer",marginBottom:8}}>✕ Reset to auto-detected</button>}
+        <div style={{display:"flex",flexWrap:"wrap",gap:6}}>{filteredCities.map(c=><button key={c.label} onClick={()=>{const loc={label:c.label,country:c.country};setLocationOverride(loc);try{localStorage.setItem("wc2026_location",JSON.stringify(loc))}catch{};setLocSearch("");setShowLocPicker(false);setToast(`📍 Location set to ${c.label}`);}} style={{padding:"5px 10px",borderRadius:14,fontSize:12,cursor:"pointer",border:`1px solid ${locationOverride?.label===c.label?C.green:C.b2}`,background:locationOverride?.label===c.label?`${C.green}22`:C.bg,color:locationOverride?.label===c.label?C.green:C.mid}}>{c.label}</button>)}</div>
+      </div>}
+
+      <div style={{borderTop:`1px solid ${C.b1}`,margin:"4px 0 14px"}}/>
+
+      {/* Sync section */}
+      {!isSynced ? (
+        <div>
+          <div style={{fontSize:11,color:C.mid,fontWeight:700,letterSpacing:"0.08em",marginBottom:10}}>🔗 SYNC ACROSS DEVICES</div>
+          <div style={{display:"flex",gap:8,marginBottom:8}}>
+            <button onClick={()=>setScreen("pin-create")} style={{flex:1,padding:"11px 8px",borderRadius:12,border:`1px solid ${C.green}44`,background:`${C.green}15`,color:C.green,fontWeight:700,fontSize:13,cursor:"pointer"}}>🔢 Create PIN</button>
+            <button onClick={()=>setScreen("pin-join")} style={{flex:1,padding:"11px 8px",borderRadius:12,border:`1px solid ${C.b2}`,background:C.bg,color:C.mid,fontWeight:600,fontSize:13,cursor:"pointer"}}>I have a PIN</button>
+          </div>
+          <button onClick={()=>setScreen("email")} style={{...btnSecondary,marginTop:0,fontSize:13}}>✉️ Continue with Email</button>
+        </div>
+      ) : (
+        <div>
+          <div style={{fontSize:12,color:C.dim,textAlign:"center",marginBottom:10}}>Your progress syncs automatically across all signed-in devices.</div>
+          {syncProfile?.pin&&<button onClick={()=>{setPin("");setScreen("pin-change");setError("");}} style={{width:"100%",padding:"9px 0",borderRadius:10,border:`1px solid ${C.b2}`,background:C.s2,color:C.mid,fontSize:13,fontWeight:600,cursor:"pointer"}}>🔁 Change PIN</button>}
+        </div>
+      )}
+
+      {/* Avatar picker overlay */}
+      {showAvatarPicker&&(
+        <div onClick={()=>setShowAvatarPicker(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.7)",zIndex:1100,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
+          <div onClick={e=>e.stopPropagation()} style={{background:C.s1,border:`1px solid ${C.b2}`,borderRadius:"20px 20px 0 0",width:"100%",maxWidth:520,maxHeight:"80vh",display:"flex",flexDirection:"column"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 18px 12px",borderBottom:`1px solid ${C.b1}`,flexShrink:0}}>
+              <span style={{fontWeight:700,fontSize:16,color:C.green}}>Choose Avatar</span>
+              <button onClick={()=>setShowAvatarPicker(false)} style={{background:"none",border:"none",color:C.mid,fontSize:22,cursor:"pointer"}}>×</button>
+            </div>
+            <div style={{display:"flex",borderBottom:`1px solid ${C.b1}`,flexShrink:0}}>
+              {[["icons","⚽ Icons"],["flags","🏳️ Flags"],["upload","📷 Photo"]].map(([id,label])=>(
+                <button key={id} onClick={()=>{setAvatarTab(id);setAvatarSearch("");}} style={{flex:1,padding:"10px 4px",background:"none",border:"none",borderBottom:`2px solid ${avatarTab===id?C.green:"transparent"}`,color:avatarTab===id?C.green:C.dim,fontWeight:avatarTab===id?700:400,fontSize:12,cursor:"pointer"}}>{label}</button>
+              ))}
+            </div>
+            <div style={{overflowY:"auto",padding:12,flex:1}}>
+              {avatarTab==="icons"&&<div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8}}>{FOOTBALL_ICONS.map(icon=>{const active=userAvatar===icon.id;return(<button key={icon.id} onClick={()=>selectPresetAvatar(icon.id)} title={icon.label} style={{padding:"10px 4px",border:`2px solid ${active?C.green:C.b2}`,borderRadius:10,background:active?`${C.green}22`:C.s2,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>{icon.el(44)}<span style={{fontSize:9,color:active?C.green:C.dim,textAlign:"center"}}>{icon.label}</span></button>);})}</div>}
+              {avatarTab==="flags"&&(<div><input value={avatarSearch} onChange={e=>setAvatarSearch(e.target.value)} placeholder="Search team..." style={{width:"100%",padding:"8px 12px",background:C.s2,border:`1px solid ${C.b2}`,borderRadius:8,color:C.text,fontSize:13,outline:"none",marginBottom:10,boxSizing:"border-box"}}/><div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:6}}>{filteredTeams.map(team=>{const code=FLAG_CODES_MAP[team];const id=`flag:${team}`;const active=userAvatar===id;return code?(<button key={team} onClick={()=>selectPresetAvatar(id)} title={team} style={{padding:0,border:`2px solid ${active?C.green:"transparent"}`,borderRadius:8,background:"transparent",cursor:"pointer",overflow:"hidden",aspectRatio:"3/2",position:"relative"}}><img src={`https://flagcdn.com/w80/${code}.png`} crossOrigin="anonymous" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} alt={team} onError={e=>{e.target.style.display="none";}}/>{active&&<div style={{position:"absolute",top:2,right:2,width:12,height:12,borderRadius:"50%",background:C.green,fontSize:8,color:"#030a05",fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center"}}>✓</div>}</button>):null;})}</div></div>)}
+              {avatarTab==="upload"&&<div style={{textAlign:"center",padding:"20px 0"}}><div style={{width:80,height:80,borderRadius:"50%",margin:"0 auto 16px",border:`2px dashed ${C.b2}`,background:C.s2,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}>{userAvatar?.startsWith("data:")?<img src={userAvatar} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="avatar"/>:<span style={{fontSize:32}}>📷</span>}</div><label style={{display:"inline-block",padding:"12px 24px",borderRadius:12,background:`linear-gradient(135deg,${C.green},#22c55e)`,color:"#030a05",fontWeight:700,fontSize:15,cursor:"pointer"}}>Choose Photo<input type="file" accept="image/*" onChange={handlePhotoUpload} style={{display:"none"}}/></label>{userAvatar?.startsWith("data:")&&<button onClick={()=>{persistAvatar(null);setToast("Photo removed.");}} style={{display:"block",margin:"12px auto 0",background:"none",border:"none",color:C.dim,fontSize:12,cursor:"pointer",textDecoration:"underline"}}>Remove photo</button>}</div>}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 
+  const subScreenContent = (
+    <div style={{padding:"16px 20px 0"}}>
+      {error&&<div style={{color:"#f87171",fontSize:13,marginBottom:12,padding:"10px 12px",background:"rgba(248,113,113,0.1)",borderRadius:8}}>{error}</div>}
+      {screen==="pin-create"&&<div>
+        <div style={{fontSize:13,color:C.dim,lineHeight:1.5,marginBottom:16}}>Choose a 6-digit PIN you'll remember. Enter it on any other device to sync your progress.</div>
+        <input value={pin} onChange={e=>setPin(e.target.value.replace(/[^0-9]/g,"").slice(0,6))} placeholder="Choose a 6-digit PIN" inputMode="numeric" maxLength={6} style={{...inputStyle,fontSize:24,textAlign:"center",fontFamily:"monospace",letterSpacing:"0.2em",marginBottom:12}}/>
+        <button onClick={handleCreatePIN} disabled={loading||pin.length<6} style={{...btnPrimary,opacity:loading||pin.length<6?0.5:1,marginBottom:8}}>{loading?"Saving...":"Set My PIN"}</button>
+        <div style={{textAlign:"center",margin:"8px 0 4px",fontSize:12,color:C.dim}}>or</div>
+        <button onClick={()=>setScreen("email")} style={{...btnSecondary,marginTop:0,fontSize:13}}>✉️ Sign in with Email instead</button>
+      </div>}
+      {screen==="pin-created"&&<div style={{textAlign:"center"}}>
+        <div style={{fontSize:13,color:C.dim,marginBottom:16,lineHeight:1.5}}>Your sync PIN is set. Use it on any device to restore your progress.</div>
+        <div style={{background:C.s2,border:`1px solid ${C.green}44`,borderRadius:14,padding:"20px 16px",marginBottom:20}}>
+          <div style={{fontSize:11,color:C.mid,fontWeight:600,letterSpacing:"0.1em",marginBottom:8}}>YOUR PIN</div>
+          <div style={{fontSize:40,fontWeight:900,color:C.green,letterSpacing:"0.2em",fontFamily:"monospace"}}>{syncProfile?.pin||pin}</div>
+        </div>
+        <div style={{fontSize:12,color:C.dim,marginBottom:20,lineHeight:1.5}}>Screenshot this. On another device, tap the profile icon → "I have a PIN".</div>
+        <button onClick={onClose} style={btnPrimary}>Done</button>
+        <button onClick={()=>{setPin("");setScreen("pin-change");setError("");}} style={{...btnSecondary,fontSize:13}}>🔁 Change PIN</button>
+      </div>}
+      {screen==="pin-change"&&<div>
+        {syncProfile?.pin&&<div style={{background:C.s2,border:`1px solid ${C.b1}`,borderRadius:10,padding:"12px 14px",marginBottom:16,display:"flex",alignItems:"center",justifyContent:"space-between"}}><div><div style={{fontSize:11,color:C.mid,fontWeight:600,marginBottom:2}}>CURRENT PIN</div><div style={{fontSize:24,fontWeight:900,color:C.dim,letterSpacing:"0.2em",fontFamily:"monospace"}}>{syncProfile.pin}</div></div><span style={{fontSize:11,color:C.dim}}>will be replaced</span></div>}
+        <div style={{fontSize:13,color:C.dim,lineHeight:1.5,marginBottom:12}}>Enter a new 6-digit PIN.</div>
+        <input value={pin} onChange={e=>setPin(e.target.value.replace(/[^0-9]/g,"").slice(0,6))} placeholder="New 6-digit PIN" inputMode="numeric" maxLength={6} style={{...inputStyle,fontSize:24,textAlign:"center",fontFamily:"monospace",letterSpacing:"0.2em",marginBottom:12}}/>
+        <button onClick={async()=>{
+          if(pin.length<6){setError("Please enter a 6-digit PIN.");return;}
+          if(pin===syncProfile?.pin){setError("That's already your current PIN.");return;}
+          setLoading(true);setError("");
+          try{const r=await fetch("/api/sync?action=pin-change",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({uid:syncUid,oldPin:syncProfile?.pin,newPin:pin,saved,favTeams,dark,locationOverride,displayName,avatar:userAvatar})});const d=await r.json();if(!d.ok)throw new Error(d.error);persistProfile({...syncProfile,pin});setScreen("pin-created");}
+          catch(e){setError(e.message);}
+          setLoading(false);
+        }} disabled={loading||pin.length<6} style={{...btnPrimary,opacity:loading||pin.length<6?0.5:1}}>{loading?"Saving...":"Update PIN"}</button>
+      </div>}
+      {screen==="pin-join"&&<div>
+        <div style={{fontSize:13,color:C.dim,lineHeight:1.6,marginBottom:20}}>Enter the PIN from your other device to restore your progress here.</div>
+        <input value={pinInput} onChange={e=>setPinInput(e.target.value.replace(/[^0-9]/g,"").slice(0,6))} placeholder="Enter 6-digit PIN" inputMode="numeric" maxLength={6} style={{...inputStyle,fontSize:24,textAlign:"center",fontFamily:"monospace",letterSpacing:"0.2em",marginBottom:12}}/>
+        <button onClick={handleJoinPIN} disabled={loading||pinInput.length<6} style={{...btnPrimary,opacity:loading||pinInput.length<6?0.5:1}}>{loading?"Looking up...":"Restore My Progress"}</button>
+      </div>}
+      {screen==="email"&&<div>
+        <div style={{fontSize:13,color:C.dim,lineHeight:1.6,marginBottom:20}}>Enter your email and we'll send a one-tap sign-in link. No password, no app to install.</div>
+        <input value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" type="email" inputMode="email" style={{...inputStyle,marginBottom:12}}/>
+        <button onClick={handleSendMagic} disabled={loading} style={{...btnPrimary,opacity:loading?0.6:1}}>{loading?"Sending...":"Send Sign-in Link"}</button>
+      </div>}
+      {screen==="email-sent"&&<div style={{textAlign:"center",padding:"10px 0"}}>
+        <div style={{fontSize:48,marginBottom:16}}>📬</div>
+        <div style={{fontWeight:700,color:C.text,fontSize:17,marginBottom:8}}>Check your inbox</div>
+        <div style={{fontSize:13,color:C.dim,lineHeight:1.6,marginBottom:20}}>We sent a sign-in link to <strong style={{color:C.text}}>{email}</strong>. The link expires in 15 minutes.</div>
+        <div style={{fontSize:12,color:C.mid,background:C.s2,borderRadius:10,padding:"10px 14px"}}>Didn't get it? Check spam, or <button onClick={()=>setScreen("email")} style={{background:"none",border:"none",color:C.green,cursor:"pointer",fontSize:12,fontWeight:600,padding:0}}>try again</button>.</div>
+      </div>}
+    </div>
+  );
+
+  const header = (back) => (
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"18px 20px 14px",borderBottom:`1px solid ${C.b1}`,position:"sticky",top:0,background:C.s1,zIndex:1}}>
+      <div style={{display:"flex",alignItems:"center",gap:10}}>
+        {back&&<button onClick={()=>{setScreen("home");setError("");}} style={{background:"none",border:"none",color:C.mid,fontSize:22,cursor:"pointer",padding:"0 4px 0 0",lineHeight:1}}>‹</button>}
+        <span style={{fontSize:17,fontWeight:700,color:C.green}}>{screenTitle}</span>
+      </div>
+      <button onClick={onClose} style={{background:"none",border:"none",color:C.mid,fontSize:24,cursor:"pointer"}}>×</button>
+    </div>
+  );
+
+  const isHome = screen === "home";
+
   if (isDesktop) {
-    // Desktop: compact dropdown with name/email header + menu rows
     return (
       <>
         <div onClick={onClose} style={{position:"fixed",inset:0,zIndex:999}}/>
-        <div onClick={e=>e.stopPropagation()} style={{position:"fixed",top:58,right:14,width:280,background:C.s1,border:`1px solid ${C.b2}`,borderRadius:14,boxShadow:"0 8px 32px rgba(0,0,0,0.4)",zIndex:1000,overflow:"hidden",maxHeight:"85vh",overflowY:"auto"}}>
-
-          {screen === "home" ? (
-            <>
-              {/* Profile header */}
-              <div style={{padding:"16px 16px 12px",borderBottom:`1px solid ${C.b1}`,textAlign:"center"}}>
-                <div style={{width:52,height:52,borderRadius:"50%",margin:"0 auto 10px",background:syncProfile?`${C.green}22`:C.s2,border:`2px solid ${syncProfile?C.green:C.b2}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,overflow:"hidden",cursor:"pointer"}} onClick={()=>setShowAvatarPicker(true)}>
-                  {userAvatar && userAvatar.startsWith("data:") ? <img src={userAvatar} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="avatar"/>
-                  : userAvatar && userAvatar.startsWith("icon:") ? (()=>{const ic=FOOTBALL_ICONS.find(i=>i.id===userAvatar);return ic?ic.el(34):"⚽";})()
-                  : userAvatar && userAvatar.startsWith("flag:") ? <img src={`https://flagcdn.com/w80/${FLAG_CODES_MAP[userAvatar.slice(5)]}.png`} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="flag"/>
-                  : userAvatar && userAvatar.startsWith("crest:") ? <img src={getCrestUrl(userAvatar)} style={{width:"85%",height:"85%",objectFit:"contain"}} alt="crest"/>
-                  : syncProfile ? "⚽" : "👤"}
-                </div>
-                <div style={{fontWeight:700,fontSize:15,color:C.text}}>{displayName || syncProfile?.email?.split("@")[0] || "My Account"}</div>
-                {syncProfile?.email && <div style={{fontSize:12,color:C.dim,marginTop:2}}>{syncProfile.email}</div>}
-                {syncProfile?.pin && <div style={{fontSize:11,color:C.mid,marginTop:2}}>PIN: <strong style={{color:C.gold}}>{syncProfile.pin}</strong></div>}
-                {syncProfile && <div style={{fontSize:10,color:C.green,fontWeight:600,marginTop:4}}>✅ Syncing</div>}
-              </div>
-
-              {/* Menu rows */}
-              <div style={{padding:"6px 0"}}>
-                {[
-                  { icon:"⭐", label:"My Matches", sub:`${saved.length} saved`, action:()=>{onClose();onShowSaved();} },
-                  { icon:"🔮", label:"My Predictions", sub:"View your picks", action:()=>setScreen("predictions") },
-                  { icon:"⭐", label:"My Teams", sub:favTeams.length?favTeams.slice(0,2).join(", ")+(favTeams.length>2?` +${favTeams.length-2}`:""):"None selected", action:()=>setScreen("teams") },
-                  { icon:"📍", label:"Location", sub:locationOverride?`Custom: ${locationOverride.label}`:`Auto: ${geoData.city||"Detected"}`, action:()=>setScreen("location") },
-                  { icon:"🔗", label:syncProfile?"Sync settings":"Sign in / Sync", sub:syncProfile?"Manage sync":"Keep progress across devices", action:()=>setScreen("pin-create") },
-                ].map(row => (
-                  <button key={row.label} onClick={row.action} style={{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"10px 16px",background:"none",border:"none",cursor:"pointer",textAlign:"left",borderRadius:0}} onMouseEnter={e=>e.currentTarget.style.background=C.s2} onMouseLeave={e=>e.currentTarget.style.background="none"}>
-                    <span style={{fontSize:18,width:22,textAlign:"center",flexShrink:0}}>{row.icon}</span>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:13,fontWeight:600,color:C.text}}>{row.label}</div>
-                      <div style={{fontSize:11,color:C.dim,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{row.sub}</div>
-                    </div>
-                    <span style={{color:C.dim,fontSize:14}}>›</span>
-                  </button>
-                ))}
-              </div>
-
-              {/* Sign out */}
-              {syncProfile && (
-                <div style={{borderTop:`1px solid ${C.b1}`,padding:"6px 0"}}>
-                  <button onClick={()=>{persistProfile(null);setToast("Signed out.");onClose();}} style={{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"10px 16px",background:"none",border:"none",cursor:"pointer",color:C.dim,fontSize:13}} onMouseEnter={e=>e.currentTarget.style.background=C.s2} onMouseLeave={e=>e.currentTarget.style.background="none"}>
-                    <span style={{fontSize:18,width:22,textAlign:"center"}}>↩</span> Sign out
-                  </button>
-                </div>
-              )}
-
-              {/* Avatar picker trigger */}
-              {showAvatarPicker && (
-                <div style={{position:"absolute",inset:0,background:C.s1,borderRadius:14,overflowY:"auto",zIndex:10}}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"14px 16px 10px",borderBottom:`1px solid ${C.b1}`}}>
-                    <span style={{fontWeight:700,fontSize:14,color:C.green}}>Choose Avatar</span>
-                    <button onClick={()=>setShowAvatarPicker(false)} style={{background:"none",border:"none",color:C.mid,fontSize:20,cursor:"pointer"}}>×</button>
-                  </div>
-                  <div style={{display:"flex",borderBottom:`1px solid ${C.b1}`}}>
-                    {[["icons","⚽"],["crests","🛡️"],["flags","🏳️"],["upload","📷"]].map(([id,icon])=>(
-                      <button key={id} onClick={()=>{setAvatarTab(id);setAvatarSearch("");}} style={{flex:1,padding:"8px 2px",background:"none",border:"none",borderBottom:`2px solid ${avatarTab===id?C.green:"transparent"}`,color:avatarTab===id?C.green:C.dim,fontSize:13,cursor:"pointer"}}>{icon}</button>
-                    ))}
-                  </div>
-                  <div style={{padding:10,maxHeight:300,overflowY:"auto"}}>
-                    {avatarTab==="icons" && <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6}}>{FOOTBALL_ICONS.map(icon=>{const active=userAvatar===icon.id;return(<button key={icon.id} onClick={()=>selectPresetAvatar(icon.id)} style={{padding:"8px 2px",border:`2px solid ${active?C.green:C.b2}`,borderRadius:8,background:active?`${C.green}22`:C.s2,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>{icon.el(36)}<span style={{fontSize:8,color:active?C.green:C.dim}}>{icon.label}</span></button>);})}</div>}
-                    {avatarTab==="flags" && <><input value={avatarSearch} onChange={e=>setAvatarSearch(e.target.value)} placeholder="Search..." style={{width:"100%",padding:"6px 10px",background:C.s2,border:`1px solid ${C.b2}`,borderRadius:7,color:C.text,fontSize:12,outline:"none",marginBottom:8,boxSizing:"border-box"}}/><div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:5}}>{filteredTeams.map(team=>{const code=FLAG_CODES_MAP[team];const id=`flag:${team}`;const active=userAvatar===id;return code?(<button key={team} onClick={()=>selectPresetAvatar(id)} title={team} style={{padding:0,border:`2px solid ${active?C.green:"transparent"}`,borderRadius:6,background:"transparent",cursor:"pointer",overflow:"hidden",aspectRatio:"3/2"}}><img src={`https://flagcdn.com/w80/${code}.png`} style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} alt={team}/></button>):null;})}</div></>}
-                    {avatarTab==="crests" && <><input value={avatarSearch} onChange={e=>setAvatarSearch(e.target.value)} placeholder="Search..." style={{width:"100%",padding:"6px 10px",background:C.s2,border:`1px solid ${C.b2}`,borderRadius:7,color:C.text,fontSize:12,outline:"none",marginBottom:8,boxSizing:"border-box"}}/><div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6}}>{filteredTeams.map(team=>{const url=TEAM_CRESTS[team];const id=`crest:${team}`;const active=userAvatar===id;return url?(<button key={team} onClick={()=>selectPresetAvatar(id)} title={team} style={{padding:"6px 2px",border:`2px solid ${active?C.green:C.b2}`,borderRadius:8,background:active?`${C.green}22`:C.s2,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:3}}><img src={url} style={{width:36,height:36,objectFit:"contain"}} alt={team} onError={e=>{e.target.style.display="none"}}/><span style={{fontSize:8,color:active?C.green:C.dim,textAlign:"center"}}>{team}</span></button>):null;})}</div></>}
-                    {avatarTab==="upload" && <div style={{textAlign:"center",padding:"16px 0"}}><div style={{width:60,height:60,borderRadius:"50%",margin:"0 auto 12px",border:`2px dashed ${C.b2}`,background:C.s2,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}>{userAvatar?.startsWith("data:")?<img src={userAvatar} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="avatar"/>:<span style={{fontSize:24}}>📷</span>}</div><label style={{display:"inline-block",padding:"9px 18px",borderRadius:10,background:`linear-gradient(135deg,${C.green},#22c55e)`,color:"#030a05",fontWeight:700,fontSize:13,cursor:"pointer"}}>Choose Photo<input type="file" accept="image/*" onChange={handlePhotoUpload} style={{display:"none"}}/></label>{userAvatar?.startsWith("data:")&&<button onClick={()=>{persistAvatar(null);setToast("Photo removed.");}} style={{display:"block",margin:"8px auto 0",background:"none",border:"none",color:C.dim,fontSize:11,cursor:"pointer",textDecoration:"underline"}}>Remove</button>}</div>}
-                  </div>
-                </div>
-              )}
-            </>
-          ) : (
-            /* Sub-screens — full innerContent for non-home screens */
-            <div style={{maxHeight:"80vh",overflowY:"auto"}}>
-              {innerContent}
-            </div>
-          )}
+        <div onClick={e=>e.stopPropagation()} style={{position:"fixed",top:58,right:14,width:300,background:C.s1,border:`1px solid ${C.b2}`,borderRadius:14,boxShadow:"0 8px 32px rgba(0,0,0,0.4)",zIndex:1000,overflow:"hidden",maxHeight:"88vh",overflowY:"auto"}}>
+          {header(!isHome)}
+          {isHome ? homeContent : subScreenContent}
         </div>
       </>
     );
@@ -4084,12 +3631,12 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
   return (
     <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",zIndex:1000,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
       <div onClick={e=>e.stopPropagation()} style={{background:C.s1,border:`1px solid ${C.b2}`,borderRadius:"20px 20px 0 0",width:"100%",maxWidth:520,maxHeight:"92vh",overflowY:"auto",paddingBottom:32}}>
-        {innerContent}
+        {header(!isHome)}
+        {isHome ? homeContent : subScreenContent}
       </div>
     </div>
   );
 }
-
 
 // ── APP ────────────────────────────────────────────────────────────────────
 const TABS = [
@@ -4211,6 +3758,21 @@ export default function App() {
   });
   const country = locationOverride?.country || geoData.country;
   const [showSavedView, setShowSavedView] = useState(false);
+  const [showSyncModal, setShowSyncModal] = useState(false);
+  const [syncProfile, setSyncProfile] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("wc2026_syncprofile") || "null"); } catch { return null; }
+  });
+  const [syncUid] = useState(() => {
+    try { let id=localStorage.getItem("wc2026_uid"); if(!id){id=crypto.randomUUID();localStorage.setItem("wc2026_uid",id);} return id; } catch { return crypto.randomUUID(); }
+  });
+  const [userAvatar, setUserAvatar] = useState(() => {
+    try { return localStorage.getItem("wc2026_avatar") || null; } catch { return null; }
+  });
+  const persistAvatar = (av) => { setUserAvatar(av); try { localStorage.setItem("wc2026_avatar", av||""); } catch {} };
+  const [displayName, setDisplayName] = useState(() => {
+    try { return localStorage.getItem("wc2026_displayname") || ""; } catch { return ""; }
+  });
+  const persistDisplayName = (n) => { setDisplayName(n); try { localStorage.setItem("wc2026_displayname", n); } catch {} };
 
   const tabBarRef = useRef(null);
   const [tabBarBottom, setTabBarBottom] = useState(140);
@@ -4239,10 +3801,7 @@ export default function App() {
   const [saved, setSaved] = useState(() => {
     try { return JSON.parse(localStorage.getItem("wc2026_saved") || "[]"); } catch { return []; }
   });
-  // Keep saved in localStorage whenever it changes
-  useEffect(() => {
-    try { localStorage.setItem("wc2026_saved", JSON.stringify(saved)); } catch {}
-  }, [saved]);
+  useEffect(() => { try { localStorage.setItem("wc2026_saved", JSON.stringify(saved)); } catch {} }, [saved]);
   const [toast, setToast] = useState("");
   const [dark, setDark] = useState(() => { try { return localStorage.getItem("wc2026_dark") !== "false"; } catch { return true; }});
   const [favTeams, setFavTeams] = useState(() => {
@@ -4251,34 +3810,7 @@ export default function App() {
   const [showFavPicker, setShowFavPicker] = useState(false);
   const favTeam = favTeams[0] || "";
 
-  // ── Sync / profile state ──────────────────────────────────────────────────
-  const [showSyncModal, setShowSyncModal] = useState(false);
-  const [syncProfile, setSyncProfile] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("wc2026_syncprofile") || "null"); } catch { return null; }
-  });
-  const [userAvatar, setUserAvatar] = useState(() => {
-    try { return localStorage.getItem("wc2026_avatar") || null; } catch { return null; }
-  });
-  const persistAvatar = (av) => {
-    setUserAvatar(av);
-    try { localStorage.setItem("wc2026_avatar", av || ""); } catch {}
-  };
-  const [displayName, setDisplayName] = useState(() => {
-    try { return localStorage.getItem("wc2026_displayname") || ""; } catch { return ""; }
-  });
-  const persistDisplayName = (n) => {
-    setDisplayName(n);
-    try { localStorage.setItem("wc2026_displayname", n); } catch {}
-  };
-  const [syncUid] = useState(() => {
-    try {
-      let id = localStorage.getItem("wc2026_uid");
-      if (!id) { id = crypto.randomUUID(); localStorage.setItem("wc2026_uid", id); }
-      return id;
-    } catch { return crypto.randomUUID(); }
-  });
-
-  // Auto-handle magic link redirect on load
+  // Magic link redirect handler
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const syncStatus = params.get("sync");
@@ -4286,28 +3818,23 @@ export default function App() {
       try {
         const profile = JSON.parse(decodeURIComponent(params.get("profile") || "null"));
         if (profile?.uid) {
-          // Pull full profile from KV
-          fetch("/api/sync?action=pull", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ uid: profile.uid }),
-          }).then(r => r.json()).then(data => {
-            if (data.ok && data.profile) {
-              const p = data.profile;
-              if (p.saved?.length)    setSaved(p.saved);
-              if (p.favTeams?.length) setFavTeams(p.favTeams);
-              if (p.dark !== undefined) setDark(p.dark);
-              if (p.locationOverride) { setLocationOverride(p.locationOverride); try { localStorage.setItem("wc2026_location", JSON.stringify(p.locationOverride)); } catch {} }
-              if (p.avatar) persistAvatar(p.avatar);
-              if (p.displayName) persistDisplayName(p.displayName);
-              setSyncProfile({ uid: p.uid, email: p.email, pin: p.pin, method: "email" });
-              try { localStorage.setItem("wc2026_syncprofile", JSON.stringify({ uid: p.uid, email: p.email, pin: p.pin, method: "email" })); } catch {}
-              setToast("✅ Synced! Your progress has been restored.");
-            }
-          }).catch(() => {});
+          fetch("/api/sync?action=pull", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ uid: profile.uid }) })
+            .then(r=>r.json()).then(data=>{
+              if (data.ok && data.profile) {
+                const p = data.profile;
+                if (p.saved?.length) setSaved(p.saved);
+                if (p.favTeams?.length) setFavTeams(p.favTeams);
+                if (p.dark !== undefined) setDark(p.dark);
+                if (p.locationOverride) { setLocationOverride(p.locationOverride); try{localStorage.setItem("wc2026_location",JSON.stringify(p.locationOverride))}catch{} }
+                if (p.avatar) persistAvatar(p.avatar);
+                if (p.displayName) persistDisplayName(p.displayName);
+                const prof = { uid:p.uid, email:p.email, pin:p.pin, method:"email" };
+                setSyncProfile(prof); try{localStorage.setItem("wc2026_syncprofile",JSON.stringify(prof))}catch{}
+                setToast("✅ Synced! Your progress has been restored.");
+              }
+            }).catch(()=>{});
         }
       } catch {}
-      // Clean up URL
       window.history.replaceState({}, "", window.location.pathname);
     } else if (syncStatus === "expired") {
       setToast("⚠️ Sign-in link expired. Please try again.");
@@ -4315,15 +3842,11 @@ export default function App() {
     }
   }, []);
 
-  // Push state to KV whenever saved/favTeams/dark/location changes (if synced)
+  // Auto-push state to KV when synced
   useEffect(() => {
     if (!syncProfile?.uid) return;
     const t = setTimeout(() => {
-      fetch("/api/sync?action=push", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ uid: syncProfile.uid, saved, favTeams, dark, locationOverride, avatar: userAvatar, displayName }),
-      }).catch(() => {});
+      fetch("/api/sync?action=push", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ uid:syncProfile.uid, saved, favTeams, dark, locationOverride, avatar:userAvatar, displayName }) }).catch(()=>{});
     }, 1500);
     return () => clearTimeout(t);
   }, [saved, favTeams, dark, locationOverride, userAvatar, displayName, syncProfile]);
@@ -4349,14 +3872,8 @@ export default function App() {
   const onTeam=(t)=>{setStatsTeam(t);setTab("stats");};
   const savedIds = new Set(saved.map(x=>x.match?.id));
   const onAction=(m)=>{
-    const id=`s${m.id}`;
-    if(savedIds.has(m.id)){
-      setSaved(s=>s.filter(x=>x.match?.id!==m.id));
-      setToast("Removed from saved");
-    } else {
-      setSaved(s=>[...s,{id,type:"saved",match:m}]);
-      setToast("Match saved ⭐");
-    }
+    if(savedIds.has(m.id)){ setSaved(s=>s.filter(x=>x.match?.id!==m.id)); setToast("Removed from saved"); }
+    else { setSaved(s=>[...s,{id:`s${m.id}`,type:"saved",match:m}]); setToast("Match saved ⭐"); }
   };
   const onMatchTap=(m)=>setEventsModal({open:true,match:m});
   const onCal=(m,avail)=>{const id=`c${m.id}`;setSaved(s=>[...s.filter(x=>x.id!==id),{id,type:"cal",match:m,avail}]);setToast("Added to calendar");};
@@ -4383,35 +3900,20 @@ export default function App() {
               </div>
             </div>
             <div style={{display:"flex",alignItems:"center",gap:8}}>
-              {/* Dark/light toggle — sun/moon pill */}
+              {/* Dark/light toggle */}
               <button onClick={toggleDark} title={dark?"Switch to light mode":"Switch to dark mode"} style={{position:"relative",width:56,height:28,borderRadius:14,border:"none",background:dark?"#4ade80":"#1a3828",cursor:"pointer",flexShrink:0,padding:0,transition:"background .25s"}}>
-                {/* Sliding knob */}
                 <span style={{position:"absolute",top:4,left:dark?32:4,width:20,height:20,borderRadius:"50%",background:"#e5e5ea",boxShadow:"0 1px 4px rgba(0,0,0,.35)",transition:"left .22s cubic-bezier(.4,0,.2,1)",display:"block"}}/>
-                {/* Sun — visible in dark mode, sits in left exposed area */}
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(5,50,20,0.8)" strokeWidth="2.5" strokeLinecap="round" style={{position:"absolute",left:7,top:7,opacity:dark?1:0,transition:"opacity .2s",pointerEvents:"none"}}>
-                  <circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.22" y1="19.78" x2="6.34" y2="17.66"/><line x1="17.66" y1="6.34" x2="19.78" y2="4.22"/>
-                </svg>
-                {/* Moon — visible in light mode, sits in right exposed area */}
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="rgba(255,255,255,0.9)" stroke="none" style={{position:"absolute",right:7,top:8,opacity:dark?0:1,transition:"opacity .2s",pointerEvents:"none"}}>
-                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-                </svg>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(5,50,20,0.8)" strokeWidth="2.5" strokeLinecap="round" style={{position:"absolute",left:7,top:7,opacity:dark?1:0,transition:"opacity .2s",pointerEvents:"none"}}><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.22" y1="19.78" x2="6.34" y2="17.66"/><line x1="17.66" y1="6.34" x2="19.78" y2="4.22"/></svg>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="rgba(255,255,255,0.9)" stroke="none" style={{position:"absolute",right:7,top:8,opacity:dark?0:1,transition:"opacity .2s",pointerEvents:"none"}}><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
               </button>
               {/* Profile / sync avatar */}
-              <button onClick={()=>setShowSyncModal(true)} title="My Account" style={{position:"relative",width:36,height:36,borderRadius:"50%",border:`2px solid ${syncProfile?C.green:dark?"#2a4f38":"#1a3828"}`,background:syncProfile?`${C.green}18`:dark?"#0c1a12":"#1a3828",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,flexShrink:0,transition:"border-color .2s,background .2s",overflow:"hidden",padding:0}}>
-                {userAvatar && userAvatar.startsWith("data:")
-                  ? <img src={userAvatar} style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:"50%"}} alt="avatar"/>
-                  : userAvatar && userAvatar.startsWith("icon:")
-                    ? (() => { const ic = FOOTBALL_ICONS.find(i=>i.id===userAvatar); return ic ? ic.el(22) : "⚽"; })()
-                    : userAvatar && userAvatar.startsWith("flag:")
-                      ? <img src={`https://flagcdn.com/w80/${FLAG_CODES[userAvatar.slice(5)]}.png`} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="avatar"/>
-                      : userAvatar && userAvatar.startsWith("crest:")
-                      ? <img src={(()=>{const u=userAvatar.slice(6);return {"Argentina":"https://upload.wikimedia.org/wikipedia/en/thumb/c/c1/Argentina_national_football_team_badge.svg/200px-Argentina_national_football_team_badge.svg.png","Brazil":"https://upload.wikimedia.org/wikipedia/en/thumb/0/09/CBF_logo.svg/200px-CBF_logo.svg.png","France":"https://upload.wikimedia.org/wikipedia/en/thumb/4/43/Logo_FFF.svg/200px-Logo_FFF.svg.png","England":"https://upload.wikimedia.org/wikipedia/en/thumb/b/be/Flag_of_England.svg/200px-Flag_of_England.svg.png","Spain":"https://upload.wikimedia.org/wikipedia/en/thumb/4/44/Spain_national_football_team_badge_or_crest.png/200px-Spain_national_football_team_badge_or_crest.png","Germany":"https://upload.wikimedia.org/wikipedia/en/thumb/7/7a/Logo_des_Deutschen_Fu%C3%9Fball-Bundes.svg/200px-Logo_des_Deutschen_Fu%C3%9Fball-Bundes.svg.png","Portugal":"https://upload.wikimedia.org/wikipedia/en/thumb/f/fd/FPF-2016.svg/200px-FPF-2016.svg.png","Mexico":"https://upload.wikimedia.org/wikipedia/en/thumb/0/0e/Mexico_men%27s_national_football_team_crest.svg/200px-Mexico_men%27s_national_football_team_crest.svg.png","United States":"https://upload.wikimedia.org/wikipedia/en/thumb/a/a6/US_Soccer_logo_2022.svg/200px-US_Soccer_logo_2022.svg.png","Uruguay":"https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/Logo_AUF.svg/200px-Logo_AUF.svg.png","Japan":"https://upload.wikimedia.org/wikipedia/en/thumb/6/6d/JFA.svg/200px-JFA.svg.png","South Korea":"https://upload.wikimedia.org/wikipedia/en/thumb/5/5c/KFA_logo.svg/200px-KFA_logo.svg.png","Canada":"https://upload.wikimedia.org/wikipedia/en/thumb/b/bf/Canada_Soccer_Logo.svg/200px-Canada_Soccer_Logo.svg.png"}[u]||null})()}  style={{width:"100%",height:"100%",objectFit:"contain"}} alt="crest"/>
-                      : userAvatar && userAvatar.startsWith("conf:")
-                        ? <span style={{fontSize:20,lineHeight:1}}>{{"UEFA":"🇪🇺","CONMEBOL":"🌎","CONCACAF":"🌍","CAF":"🌍","AFC":"🌏","OFC":"🌊"}[userAvatar.slice(5)]||"⚽"}</span>
-                        : syncProfile ? "⚽" : "👤"
-                }
+              <button onClick={()=>setShowSyncModal(true)} title="My Account" style={{position:"relative",width:36,height:36,borderRadius:"50%",border:`2px solid ${syncProfile?C.green:dark?"#2a4f38":"#1a3828"}`,background:syncProfile?`${C.green}18`:dark?"#0c1a12":"#1a3828",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,flexShrink:0,overflow:"hidden",padding:0}}>
+                {userAvatar?.startsWith("data:") ? <img src={userAvatar} style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:"50%"}} alt="avatar"/>
+                : userAvatar?.startsWith("icon:") ? (()=>{const ic=FOOTBALL_ICONS?.find(i=>i.id===userAvatar);return ic?ic.el(22):"⚽";})()
+                : userAvatar?.startsWith("flag:") ? <img src={`https://flagcdn.com/w80/${FLAG_CODES_MAP[userAvatar.slice(5)]}.png`} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="avatar"/>
+                : syncProfile?"⚽":"👤"}
                 {syncProfile && <span style={{position:"absolute",bottom:1,right:1,width:9,height:9,borderRadius:"50%",background:C.green,border:`1.5px solid ${C.bg}`,zIndex:1}}/>}
-                {!syncProfile && favTeams.length > 0 && <span style={{position:"absolute",bottom:1,right:1,width:9,height:9,borderRadius:"50%",background:C.gold,border:`1.5px solid ${C.bg}`,zIndex:1}}/>}
+                {!syncProfile && favTeams.length>0 && <span style={{position:"absolute",bottom:1,right:1,width:9,height:9,borderRadius:"50%",background:C.gold,border:`1.5px solid ${C.bg}`,zIndex:1}}/>}
               </button>
             </div>
           </div>
@@ -4436,10 +3938,9 @@ export default function App() {
           {tab==="predictor" && <PredictorTab/>}
           {tab==="sim"       && <SimTab tabTop={tabBarBottom}/>}
           {tab==="bracket"   && <MyBracketTab tabTop={tabBarBottom}/>}
+          {tab==="saved"     && <div style={{paddingTop:14}}><SavedTab saved={saved} onRemove={onRemove}/></div>}
         </div>
-        {/* AddModal removed — saving is now instant via star button */}
-
-        {/* Saved view — full overlay triggered from avatar modal */}
+        {/* Saved view overlay */}
         {showSavedView && (
           <div style={{position:"fixed",inset:0,background:C.bg,zIndex:200,overflowY:"auto",display:"flex",flexDirection:"column"}}>
             <div style={{display:"flex",alignItems:"center",gap:12,padding:"16px 16px 12px",borderBottom:`1px solid ${C.b1}`,background:C.s1,position:"sticky",top:0,zIndex:1}}>
@@ -4452,28 +3953,16 @@ export default function App() {
             </div>
           </div>
         )}
-
         <SyncModal
-          open={showSyncModal}
-          onClose={()=>setShowSyncModal(false)}
-          syncProfile={syncProfile}
-          setSyncProfile={setSyncProfile}
-          syncUid={syncUid}
-          saved={saved}
-          favTeams={favTeams}
-          setToast={setToast}
-          setSaved={setSaved}
-          setFavTeams={setFavTeams}
-          dark={dark}
-          setDark={setDark}
-          geoData={geoData}
-          locationOverride={locationOverride}
-          setLocationOverride={setLocationOverride}
+          open={showSyncModal} onClose={()=>setShowSyncModal(false)}
+          syncProfile={syncProfile} setSyncProfile={setSyncProfile}
+          syncUid={syncUid} saved={saved} favTeams={favTeams}
+          setToast={setToast} setSaved={setSaved} setFavTeams={setFavTeams}
+          dark={dark} setDark={setDark}
+          geoData={geoData} locationOverride={locationOverride} setLocationOverride={setLocationOverride}
           onShowSaved={()=>setShowSavedView(true)}
-          userAvatar={userAvatar}
-          persistAvatar={persistAvatar}
-          displayName={displayName}
-          persistDisplayName={persistDisplayName}
+          userAvatar={userAvatar} persistAvatar={persistAvatar}
+          displayName={displayName} persistDisplayName={persistDisplayName}
         />
         <MatchEventsModal match={eventsModal.match} open={eventsModal.open} onClose={()=>setEventsModal({open:false,match:null})} onAction={onAction}/>
         <Toast msg={toast} onDone={()=>setToast("")}/>
