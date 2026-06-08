@@ -221,6 +221,7 @@ const RECENT4 = {
   ],
   "Germany":[
     {date:"Jun 6, 2026",  opp:"United States", score:"2-1", loc:"Chicago",    comp:"Friendly", res:"W"},
+    {date:"May 31, 2026", opp:"Finland",       score:"4-0", loc:"Hamburg",       comp:"Friendly", res:"W"},
     {date:"May 26, 2026", opp:"Ghana",       score:"2-1", loc:"Nuremberg", comp:"Friendly", res:"W"},
     {date:"Mar 28, 2026", opp:"Switzerland", score:"4-3", loc:"Basel",     comp:"Friendly", res:"W"},
     {date:"Mar 31, 2026", opp:"Brazil",      score:"1-3", loc:"Orlando",   comp:"Friendly", res:"L"},
@@ -254,6 +255,7 @@ const RECENT4 = {
   ],
   "Mexico":[
     {date:"Jun 4, 2026",  opp:"Serbia",    score:"5-1", loc:"Toluca",       comp:"Friendly", res:"W"},
+    {date:"May 30, 2026", opp:"Australia",  score:"1-0", loc:"Toluca",        comp:"Friendly", res:"W"},
     {date:"May 23, 2026", opp:"Ghana",    score:"2-0", loc:"Toluca",      comp:"Friendly",     res:"W"},
     {date:"Mar 31, 2026", opp:"Belgium",  score:"1-1", loc:"Chicago",     comp:"Friendly",     res:"D"},
     {date:"Mar 28, 2026", opp:"Portugal", score:"0-0", loc:"Mexico City", comp:"Friendly",     res:"D"},
@@ -268,6 +270,7 @@ const RECENT4 = {
   ],
   "Morocco":[
     {date:"Jun 7, 2026",  opp:"Norway",    score:"1-1", loc:"Harrison, NJ", comp:"Friendly", res:"D"},
+    {date:"Jun 2, 2026",  opp:"Madagascar",    score:"4-0", loc:"Rabat",         comp:"Friendly", res:"W"},
     {date:"May 26, 2026", opp:"Burundi",  score:"5-0", loc:"Rabat",       comp:"Friendly",     res:"W"},
     {date:"Mar 2026",     opp:"Cameroon", score:"3-0", loc:"Rabat",       comp:"Friendly",     res:"W"},
     {date:"Nov 2025",     opp:"Angola",   score:"1-0", loc:"Casablanca",  comp:"WC Qualifier", res:"W"},
@@ -287,7 +290,7 @@ const RECENT4 = {
     {date:"Nov 2025",     opp:"Greece",   score:"2-1", loc:"Split",    comp:"WC Qualifier", res:"W"},
   ],
   "Japan":[
-    {date:"Jun 7, 2026",  opp:"Iceland",  score:"1-0", loc:"Toyota",       comp:"Friendly", res:"W"},
+    {date:"May 31, 2026", opp:"Iceland",  score:"1-0", loc:"Tokyo",        comp:"Friendly", res:"W"},
     {date:"Mar 31, 2026", opp:"England",  score:"1-0", loc:"Wembley",  comp:"Friendly",     res:"W"},
     {date:"May 2026",     opp:"Iceland",  score:"1-0", loc:"Tokyo",    comp:"Friendly",     res:"W"},
     {date:"Nov 2025",     opp:"Vietnam",  score:"2-0", loc:"Tokyo",    comp:"WC Qualifier", res:"W"},
@@ -301,6 +304,7 @@ const RECENT4 = {
   ],
   "Ecuador":[
     {date:"Jun 7, 2026",  opp:"Guatemala", score:"3-0", loc:"Columbus",     comp:"Friendly", res:"W"},
+    {date:"May 30, 2026", opp:"Saudi Arabia","score":"2-1", loc:"Harrison, NJ",  comp:"Friendly", res:"W"},
     {date:"Mar 31, 2026", opp:"Netherlands",  score:"1-1", loc:"Amsterdam", comp:"Friendly",     res:"D"},
     {date:"Mar 27, 2026", opp:"Saudi Arabia", score:"2-1", loc:"Quito",     comp:"Friendly",     res:"W"},
     {date:"Nov 2025",     opp:"Bolivia",      score:"1-0", loc:"Quito",     comp:"WC Qualifier", res:"W"},
@@ -339,7 +343,8 @@ const RECENT4 = {
     {date:"Oct 2025",     opp:"Uganda",     score:"3-0", loc:"Abidjan", comp:"WC Qualifier", res:"W"},
   ],
   "South Korea":[
-    {date:"Jun 7, 2026",  opp:"Trinidad & Tobago", score:"5-0", loc:"Seoul",       comp:"Friendly", res:"W"},
+    {date:"May 30, 2026", opp:"Trinidad & Tobago", score:"5-0", loc:"Seoul",       comp:"Friendly", res:"W"},
+    {date:"Jun 3, 2026",  opp:"El Salvador",       score:"1-0", loc:"Seoul",       comp:"Friendly", res:"W"},
     {date:"May 2026",     opp:"Trinidad & Tobago", score:"5-0", loc:"Seoul",    comp:"Friendly",     res:"W"},
     {date:"Mar 2026",     opp:"Japan",             score:"1-0", loc:"Tokyo",    comp:"Friendly",     res:"W"},
     {date:"Nov 2025",     opp:"Oman",              score:"2-0", loc:"Seoul",    comp:"WC Qualifier", res:"W"},
@@ -347,6 +352,7 @@ const RECENT4 = {
   ],
   "Scotland":[
     {date:"Jun 6, 2026",  opp:"Bolivia",  score:"4-0", loc:"Harrison, NJ",  comp:"Friendly", res:"W"},
+    {date:"May 30, 2026", opp:"Curacao",   score:"4-1", loc:"Edinburgh",     comp:"Friendly", res:"W"},
     {date:"Mar 2026",     opp:"Denmark", score:"1-2", loc:"Glasgow", comp:"Friendly",     res:"L"},
     {date:"Nov 2025",     opp:"Poland",  score:"2-1", loc:"Glasgow", comp:"WC Qualifier", res:"W"},
     {date:"Oct 2025",     opp:"Slovakia",score:"1-0", loc:"Glasgow", comp:"WC Qualifier", res:"W"},
@@ -425,7 +431,158 @@ const API_NAME_MAP = {
   "DR Congo":"DR Congo","Congo DR":"DR Congo","Democratic Republic of Congo":"DR Congo","Congo (DRC)":"DR Congo",
   "Korea Republic":"South Korea","Republic of Korea":"South Korea",
   "IR Iran":"Iran","Islamic Republic of Iran":"Iran",
-  "Curaçao":"Curacao","Cabo Verde":"Cape Verde",
+  "Curaçao":"Curacao","Cabo Verde":"Cape Verde",,
+  "Panama":[
+    {date:"Jun 6, 2026",  opp:"Bosnia & Herz.", score:"1-1", loc:"St. Louis",      comp:"Friendly", res:"D"},
+    {date:"Jun 3, 2026",  opp:"Dominican Rep.", score:"4-2", loc:"Panama City",    comp:"Friendly", res:"W"},
+    {date:"May 31, 2026", opp:"Brazil",         score:"2-6", loc:"Miami",          comp:"Friendly", res:"L"},
+    {date:"Mar 2026",     opp:"Colombia",       score:"0-3", loc:"Barranquilla",    comp:"WCQ",      res:"L"},
+    {date:"Mar 2026",     opp:"Honduras",       score:"1-0", loc:"Panama City",     comp:"WCQ",      res:"W"},
+    {date:"Nov 2025",     opp:"Costa Rica",     score:"1-1", loc:"Panama City",     comp:"WCQ",      res:"D"},
+  ],
+  "Bosnia & Herz.":[
+    {date:"Jun 6, 2026",  opp:"Panama",         score:"1-1", loc:"St. Louis",      comp:"Friendly", res:"D"},
+    {date:"May 29, 2026", opp:"North Macedonia","score":"0-0", loc:"Sarajevo",      comp:"Friendly", res:"D"},
+    {date:"Mar 2026",     opp:"Finland",         score:"2-1", loc:"Sarajevo",       comp:"Friendly", res:"W"},
+    {date:"Mar 2026",     opp:"Greece",          score:"1-0", loc:"Sarajevo",       comp:"Friendly", res:"W"},
+    {date:"Nov 2025",     opp:"Bulgaria",        score:"3-0", loc:"Sarajevo",       comp:"Friendly", res:"W"},
+  ],
+  "Turkiye":[
+    {date:"Jun 6, 2026",  opp:"Venezuela",      score:"2-1", loc:"Fort Lauderdale", comp:"Friendly", res:"W"},
+    {date:"Jun 1, 2026",  opp:"North Macedonia", score:"4-0", loc:"Istanbul",      comp:"Friendly", res:"W"},
+    {date:"Mar 2026",     opp:"Denmark",         score:"0-1", loc:"Copenhagen",     comp:"Friendly", res:"L"},
+    {date:"Mar 2026",     opp:"Norway",          score:"2-1", loc:"Istanbul",       comp:"Friendly", res:"W"},
+    {date:"Nov 2025",     opp:"Wales",           score:"1-0", loc:"Istanbul",       comp:"Friendly", res:"W"},
+  ],
+  "Qatar":[
+    {date:"Jun 6, 2026",  opp:"El Salvador",    score:"0-0", loc:"Los Angeles",    comp:"Friendly", res:"D"},
+    {date:"May 28, 2026", opp:"Rep. of Ireland","score":"0-1", loc:"Dublin",        comp:"Friendly", res:"L"},
+    {date:"Mar 2026",     opp:"Bahrain",         score:"1-0", loc:"Doha",           comp:"Friendly", res:"W"},
+    {date:"Mar 2026",     opp:"Iraq",            score:"2-1", loc:"Doha",           comp:"Friendly", res:"W"},
+    {date:"Nov 2025",     opp:"Kuwait",          score:"2-0", loc:"Doha",           comp:"Friendly", res:"W"},
+  ],
+  "South Africa":[
+    {date:"Jun 6, 2026",  opp:"Jamaica",        score:"1-0", loc:"Pachuca",        comp:"Friendly", res:"W"},
+    {date:"May 29, 2026", opp:"Nicaragua",   score:"0-0", loc:"Johannesburg",  comp:"Friendly", res:"D"},
+    {date:"Mar 2026",     opp:"Namibia",         score:"2-0", loc:"Pretoria",       comp:"Friendly", res:"W"},
+    {date:"Mar 2026",     opp:"Algeria",         score:"1-0", loc:"Algiers",        comp:"Friendly", res:"W"},
+    {date:"Nov 2025",     opp:"Morocco",         score:"0-1", loc:"Rabat",          comp:"Friendly", res:"L"},
+  ],
+  "Australia":[
+    {date:"Jun 6, 2026",  opp:"Switzerland",    score:"1-1", loc:"Geneva",         comp:"Friendly", res:"D"},
+    {date:"May 30, 2026", opp:"Mexico",      score:"0-1", loc:"Toluca",        comp:"Friendly", res:"L"},
+    {date:"Mar 2026",     opp:"New Zealand",     score:"2-0", loc:"Sydney",         comp:"Friendly", res:"W"},
+    {date:"Mar 2026",     opp:"South Korea",     score:"1-0", loc:"Melbourne",      comp:"Friendly", res:"W"},
+    {date:"Nov 2025",     opp:"Saudi Arabia",    score:"2-1", loc:"Sydney",         comp:"Friendly", res:"W"},
+  ]
+,
+  "Paraguay":[
+    {date:"Jun 5, 2026",  opp:"Nicaragua",     score:"4-0", loc:"Asuncion",       comp:"Friendly", res:"W"},
+    {date:"Mar 2026",     opp:"Venezuela",      score:"1-1", loc:"Asuncion",       comp:"Friendly", res:"D"},
+    {date:"Mar 2026",     opp:"Chile",          score:"2-0", loc:"Santiago",       comp:"Friendly", res:"W"},
+    {date:"Nov 2025",     opp:"Bolivia",        score:"2-1", loc:"Asuncion",       comp:"Friendly", res:"W"},
+  ],
+  "Saudi Arabia":[
+    {date:"Jun 5, 2026",  opp:"Puerto Rico",   score:"3-0", loc:"Austin, TX",     comp:"Friendly", res:"W"},
+    {date:"May 30, 2026", opp:"Ecuador",     score:"1-2", loc:"Harrison, NJ",  comp:"Friendly", res:"L"},
+    {date:"Mar 2026",     opp:"Uzbekistan",     score:"1-1", loc:"Jeddah",         comp:"Friendly", res:"D"},
+    {date:"Mar 2026",     opp:"Iraq",           score:"2-0", loc:"Riyadh",         comp:"Friendly", res:"W"},
+    {date:"Nov 2025",     opp:"Jordan",         score:"2-1", loc:"Riyadh",         comp:"Friendly", res:"W"},
+  ],
+  "Haiti":[
+    {date:"Jun 5, 2026",  opp:"Peru",          score:"1-2", loc:"Miami",          comp:"Friendly", res:"L"},
+    {date:"Jun 2, 2026",  opp:"New Zealand",   score:"4-0", loc:"Fort Lauderdale", comp:"Friendly", res:"W"},
+    {date:"Mar 2026",     opp:"Grenada",        score:"3-1", loc:"Port-au-Prince", comp:"Friendly", res:"W"},
+    {date:"Mar 2026",     opp:"Cuba",           score:"2-0", loc:"Port-au-Prince", comp:"Friendly", res:"W"},
+    {date:"Nov 2025",     opp:"Guatemala",      score:"1-1", loc:"Guatemala City", comp:"Friendly", res:"D"},
+  ],
+  "Peru":[
+    {date:"Jun 5, 2026",  opp:"Haiti",         score:"2-1", loc:"Miami",          comp:"Friendly", res:"W"},
+    {date:"Mar 2026",     opp:"Bolivia",        score:"1-0", loc:"Lima",           comp:"Friendly", res:"W"},
+    {date:"Mar 2026",     opp:"Chile",          score:"0-0", loc:"Santiago",       comp:"Friendly", res:"D"},
+    {date:"Nov 2025",     opp:"Venezuela",      score:"1-1", loc:"Lima",           comp:"Friendly", res:"D"},
+  ]
+,
+  "Ghana":[
+    {date:"Jun 2, 2026",  opp:"Wales",          score:"1-1", loc:"Cardiff",        comp:"Friendly", res:"D"},
+    {date:"May 22, 2026", opp:"Mexico",      score:"0-2", loc:"Puebla",        comp:"Friendly", res:"L"},
+    {date:"Mar 2026",     opp:"Sudan",           score:"2-0", loc:"Accra",          comp:"Friendly", res:"W"},
+    {date:"Mar 2026",     opp:"Namibia",         score:"3-1", loc:"Accra",          comp:"Friendly", res:"W"},
+    {date:"Nov 2025",     opp:"Kenya",           score:"2-0", loc:"Nairobi",        comp:"Friendly", res:"W"},
+  ],
+  "Austria":[
+    {date:"Jun 1, 2026",  opp:"Tunisia",         score:"1-0", loc:"Vienna",         comp:"Friendly", res:"W"},
+    {date:"Mar 2026",     opp:"Ghana",           score:"3-0", loc:"Vienna",         comp:"Friendly", res:"W"},
+    {date:"Mar 2026",     opp:"Sweden",          score:"2-1", loc:"Malmö",          comp:"Friendly", res:"W"},
+    {date:"Nov 2025",     opp:"Slovakia",        score:"2-0", loc:"Vienna",         comp:"Friendly", res:"W"},
+  ],
+  "DR Congo":[
+    {date:"Jun 3, 2026",  opp:"Denmark",         score:"0-0", loc:"Liege",          comp:"Friendly", res:"D"},
+    {date:"Mar 2026",     opp:"Zambia",          score:"2-1", loc:"Kinshasa",       comp:"Friendly", res:"W"},
+    {date:"Mar 2026",     opp:"Guinea",          score:"1-0", loc:"Kinshasa",       comp:"Friendly", res:"W"},
+    {date:"Nov 2025",     opp:"Cameroon",        score:"0-1", loc:"Kinshasa",       comp:"AFCON Q",  res:"L"},
+  ],
+  "Cape Verde":[
+    {date:"May 31, 2026", opp:"Serbia",          score:"3-0", loc:"Lisbon",         comp:"Friendly", res:"W"},
+    {date:"Mar 2026",     opp:"Mauritania",      score:"2-0", loc:"Praia",          comp:"Friendly", res:"W"},
+    {date:"Mar 2026",     opp:"Senegal",         score:"1-1", loc:"Praia",          comp:"Friendly", res:"D"},
+    {date:"Nov 2025",     opp:"Guinea-Bissau",   score:"2-0", loc:"Praia",          comp:"Friendly", res:"W"},
+  ],
+  "Iran":[
+    {date:"Jun 4, 2026",  opp:"Mali",            score:"2-0", loc:"Antalya",        comp:"Friendly", res:"W"},
+    {date:"May 29, 2026", opp:"Gambia",      score:"0-0", loc:"Antalya",       comp:"Friendly", res:"D"},
+    {date:"Mar 2026",     opp:"Iraq",            score:"1-0", loc:"Tehran",         comp:"Friendly", res:"W"},
+    {date:"Mar 2026",     opp:"Oman",            score:"2-1", loc:"Tehran",         comp:"Friendly", res:"W"},
+    {date:"Nov 2025",     opp:"UAE",             score:"0-0", loc:"Tehran",         comp:"Friendly", res:"D"},
+  ],
+  "Czechia":[
+    {date:"Jun 4, 2026",  opp:"Guatemala",       score:"3-1", loc:"Harrison, NJ",   comp:"Friendly", res:"W"},
+    {date:"May 31, 2026", opp:"Kosovo",          score:"2-1", loc:"Prague",         comp:"Friendly", res:"W"},
+    {date:"Mar 2026",     opp:"Slovakia",        score:"2-0", loc:"Bratislava",     comp:"Friendly", res:"W"},
+    {date:"Mar 2026",     opp:"Austria",         score:"1-2", loc:"Vienna",         comp:"Friendly", res:"L"},
+  ],
+  "Sweden":[
+    {date:"Jun 4, 2026",  opp:"Greece",          score:"2-2", loc:"Stockholm",      comp:"Friendly", res:"D"},
+    {date:"Jun 1, 2026",  opp:"Norway",          score:"1-3", loc:"Oslo",           comp:"Friendly", res:"L"},
+    {date:"Mar 2026",     opp:"Finland",         score:"2-0", loc:"Stockholm",      comp:"Friendly", res:"W"},
+    {date:"Mar 2026",     opp:"Denmark",         score:"1-1", loc:"Malmö",          comp:"Friendly", res:"D"},
+  ],
+  "Iraq":[
+    {date:"Jun 4, 2026",  opp:"Spain",           score:"1-1", loc:"La Coruña",      comp:"Friendly", res:"D"},
+    {date:"May 29, 2026", opp:"Andorra",          score:"1-0", loc:"Girona",         comp:"Friendly", res:"W"},
+    {date:"Mar 2026",     opp:"UAE",              score:"2-0", loc:"Baghdad",        comp:"Friendly", res:"W"},
+    {date:"Mar 2026",     opp:"Kuwait",           score:"1-0", loc:"Baghdad",        comp:"Friendly", res:"W"},
+  ],
+  "Egypt":[
+    {date:"Jun 6, 2026",  opp:"Brazil",           score:"1-2", loc:"Tampa",          comp:"Friendly", res:"L"},
+    {date:"May 28, 2026", opp:"Russia",           score:"1-0", loc:"Cairo",          comp:"Friendly", res:"W"},
+    {date:"Mar 2026",     opp:"Congo",            score:"2-1", loc:"Cairo",          comp:"Friendly", res:"W"},
+    {date:"Mar 2026",     opp:"Zambia",           score:"3-0", loc:"Cairo",          comp:"Friendly", res:"W"},
+  ],
+  "Nigeria":[
+    {date:"May 30, 2026", opp:"Jamaica",          score:"3-0", loc:"London",         comp:"Friendly", res:"W"},
+    {date:"May 26, 2026", opp:"Zimbabwe",         score:"2-0", loc:"London",         comp:"Friendly", res:"W"},
+    {date:"Jun 3, 2026",  opp:"Poland",           score:"2-2", loc:"Warsaw",         comp:"Friendly", res:"D"},
+    {date:"Mar 2026",     opp:"Ivory Coast",      score:"1-1", loc:"London",         comp:"Friendly", res:"D"},
+  ],
+  "New Zealand":[
+    {date:"Jun 6, 2026",  opp:"England",          score:"0-1", loc:"Tampa",          comp:"Friendly", res:"L"},
+    {date:"Jun 2, 2026",  opp:"Haiti",            score:"0-4", loc:"Fort Lauderdale", comp:"Friendly", res:"L"},
+    {date:"Mar 2026",     opp:"Australia",        score:"1-2", loc:"Auckland",       comp:"Friendly", res:"L"},
+    {date:"Mar 2026",     opp:"South Korea",      score:"0-2", loc:"Wellington",     comp:"Friendly", res:"L"},
+  ],
+  "Curacao":[
+    {date:"Jun 7, 2026",  opp:"Aruba",           score:"4-0", loc:"Willemstad",     comp:"Friendly", res:"W"},
+    {date:"May 30, 2026", opp:"Scotland",         score:"1-4", loc:"Edinburgh",     comp:"Friendly", res:"L"},
+    {date:"Mar 2026",     opp:"Honduras",         score:"2-1", loc:"Willemstad",    comp:"Friendly", res:"W"},
+    {date:"Mar 2026",     opp:"El Salvador",      score:"1-1", loc:"Willemstad",    comp:"Friendly", res:"D"},
+  ],
+  "Jordan":[
+    {date:"May 31, 2026", opp:"Switzerland",     score:"1-4", loc:"St. Gallen",     comp:"Friendly", res:"L"},
+    {date:"Mar 2026",     opp:"Iraq",             score:"1-2", loc:"Amman",          comp:"Friendly", res:"L"},
+    {date:"Mar 2026",     opp:"Bahrain",          score:"2-1", loc:"Amman",          comp:"Friendly", res:"W"},
+    {date:"Nov 2025",     opp:"Palestine",        score:"2-0", loc:"Amman",          comp:"Friendly", res:"W"},
+  ]
 };
 const normTeam = (n) => API_NAME_MAP[n] || n;
 
@@ -2929,7 +3086,7 @@ function WeatherBadge({ lat, lon }) {
   );
 }
 
-function MatchEventsModal({ match, open, onClose, onAction }) {
+function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set() }) {
   const [events, setEvents] = useState(null);
   const [matchStats, setMatchStats] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -3338,7 +3495,7 @@ const FOOTBALL_ICONS = [
 ];
 
 // ── SYNC MODAL ─────────────────────────────────────────────────────────────
-function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved, favTeams, setToast, setSaved, setFavTeams, dark, setDark, geoData, locationOverride, setLocationOverride, onShowSaved, userAvatar, persistAvatar, displayName, persistDisplayName }) {
+function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved, favTeams, setToast, setSaved, setFavTeams, dark, setDark, geoData, locationOverride, setLocationOverride, onShowSaved, userAvatar, persistAvatar, displayName, persistDisplayName, onSignOut=()=>{} }) {
   const [screen, setScreen] = useState("home");
   const [pin, setPin] = useState("");
   const [pinInput, setPinInput] = useState("");
@@ -3469,7 +3626,7 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
             <div style={{fontSize:11,color:C.dim,marginTop:2}}>{displayName?"Sign in to sync across devices":"Sign in to keep your progress on every device"}</div>
           </>}
         </div>
-        {isSynced && <button onClick={()=>{persistProfile(null);setToast("Signed out.");onClose();}} style={{fontSize:11,color:C.dim,background:"none",border:`1px solid ${C.b2}`,borderRadius:8,padding:"4px 8px",cursor:"pointer"}}>Sign out</button>}
+        {isSynced && <button onClick={()=>{persistProfile(null);onSignOut();setToast("Signed out.");onClose();}} style={{fontSize:11,color:C.dim,background:"none",border:`1px solid ${C.b2}`,borderRadius:8,padding:"4px 8px",cursor:"pointer"}}>Sign out</button>}
       </div>
 
       {/* My Teams — collapsible */}
@@ -3547,7 +3704,7 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
   );
 
   const subScreenContent = (
-    <div style={{padding:"16px 20px 0"}}>
+    <div style={{padding:"16px 20px 24px"}}>
       {error&&<div style={{color:"#f87171",fontSize:13,marginBottom:12,padding:"10px 12px",background:"rgba(248,113,113,0.1)",borderRadius:8}}>{error}</div>}
       {screen==="pin-create"&&<div>
         <div style={{fontSize:13,color:C.dim,lineHeight:1.5,marginBottom:16}}>Choose a 6-digit PIN you'll remember. Enter it on any other device to sync your progress.</div>
@@ -4114,8 +4271,14 @@ export default function App() {
           onShowSaved={()=>setShowSavedView(true)}
           userAvatar={userAvatar} persistAvatar={persistAvatar}
           displayName={displayName} persistDisplayName={persistDisplayName}
+          onSignOut={()=>{
+            persistAvatar(null);
+            persistDisplayName("");
+            setFavTeams([]);
+            try{localStorage.removeItem("wc2026_favs")}catch{}
+          }}
         />
-        <MatchEventsModal match={eventsModal.match} open={eventsModal.open} onClose={()=>setEventsModal({open:false,match:null})} onAction={onAction}/>
+        <MatchEventsModal match={eventsModal.match} open={eventsModal.open} onClose={()=>setEventsModal({open:false,match:null})} onAction={onAction} savedIds={savedIds}/>
         <Toast msg={toast} onDone={()=>setToast("")}/>
         <InstallBanner/>
       </div>

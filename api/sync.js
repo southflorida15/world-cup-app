@@ -166,7 +166,7 @@ export default async function handler(req, res) {
   // ── PUSH (save state to KV) ───────────────────────────────────────────────
   if (action === "push" && req.method === "POST") {
     try {
-      const { uid, saved, favTeams, dark, locationOverride, avatar } = req.body;
+      const { uid, saved, favTeams, dark, locationOverride, avatar, displayName } = req.body;
       if (!uid) return res.status(400).json({ error: "uid required" });
 
       const existing = await kv.get(`uid:${uid}`) || {};
