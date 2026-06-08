@@ -695,7 +695,7 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="",
   let winner = null;
   if(isKO && finished && hasScore) { if(sc.hg>sc.ag) winner=m.home; else if(sc.ag>sc.hg) winner=m.away; }
   const isFav = favTeams?.length && (favTeams.includes(m.home) || favTeams.includes(m.away));
-  const { localTime, venueTime } = matchTimes(m);
+  const { localTime, venueTime, dateLabel } = matchTimes(m);
   const venueTz = VENUE_TZ[m.venue];
   const venueTzShort = venueTz ? new Intl.DateTimeFormat("en-US",{timeZoneName:"short",timeZone:venueTz}).formatToParts(new Date()).find(p=>p.type==="timeZoneName")?.value : "";
   const userTzShort = new Intl.DateTimeFormat("en-US",{timeZoneName:"short"}).formatToParts(new Date()).find(p=>p.type==="timeZoneName")?.value || "";
@@ -3336,12 +3336,11 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [teamsExpanded, setTeamsExpanded] = useState(false);
-  const [showLocPicker, setShowLocPicker] = useState(false);
-  const [locSearch, setLocSearch] = useState("");
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const [avatarTab, setAvatarTab] = useState("icons");
   const [avatarSearch, setAvatarSearch] = useState("");
   const [nameInput, setNameInput] = useState(displayName || "");
+  const [nameEditing, setNameEditing] = useState(false);
 
   useEffect(() => { if (open) { setScreen("home"); setError(""); } }, [open]);
   if (!open) return null;
@@ -3447,26 +3446,29 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
           <div style={{position:"absolute",bottom:0,left:0,right:0,background:"rgba(0,0,0,.45)",fontSize:9,color:"#fff",textAlign:"center",padding:"2px 0",lineHeight:1.4}}>edit</div>
         </div>
         <div style={{flex:1,minWidth:0}}>
+          {/* Tappable name — click to edit inline */}
+          {nameEditing
+            ? <input autoFocus value={nameInput} onChange={e=>setNameInput(e.target.value)}
+                onBlur={()=>{persistDisplayName(nameInput.trim());setNameEditing(false);}}
+                onKeyDown={e=>{if(e.key==="Enter"){persistDisplayName(nameInput.trim());setNameEditing(false);}}}
+                maxLength={24}
+                style={{background:"none",border:"none",borderBottom:`1px solid ${C.green}`,outline:"none",color:C.text,fontSize:15,fontWeight:700,width:"100%",padding:"2px 0"}}/>
+            : <div onClick={()=>{setNameInput(displayName||"");setNameEditing(true);}} style={{cursor:"text"}}>
+                <div style={{fontWeight:displayName?800:700,color:displayName?C.text:C.dim,fontSize:displayName?15:13}}>
+                  {displayName||<span style={{color:C.dim,fontStyle:"italic"}}>Tap to add your name</span>}
+                  {displayName && <span style={{fontSize:10,color:C.dim,marginLeft:6,fontWeight:400}}>✏️</span>}
+                </div>
+              </div>
+          }
           {isSynced ? <>
-            {displayName && <div style={{fontWeight:800,color:C.text,fontSize:16}}>{displayName}</div>}
-            <div style={{fontSize:displayName?11:14,fontWeight:displayName?400:700,color:displayName?C.dim:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{syncProfile.email||"PIN User"}</div>
+            <div style={{fontSize:11,color:C.dim,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginTop:2}}>{syncProfile.email||"PIN User"}</div>
             {syncProfile.pin && <div style={{fontSize:11,color:C.mid}}>PIN: <strong style={{color:C.gold,letterSpacing:"0.1em"}}>{syncProfile.pin}</strong></div>}
             <div style={{fontSize:11,color:C.green,fontWeight:600}}>✅ Syncing</div>
           </> : <>
-            <div style={{fontWeight:700,color:C.text,fontSize:14}}>{displayName||"Not signed in"}</div>
             <div style={{fontSize:11,color:C.dim,marginTop:2}}>{displayName?"Sign in to sync across devices":"Sign in to keep your progress on every device"}</div>
           </>}
         </div>
         {isSynced && <button onClick={()=>{persistProfile(null);setToast("Signed out.");onClose();}} style={{fontSize:11,color:C.dim,background:"none",border:`1px solid ${C.b2}`,borderRadius:8,padding:"4px 8px",cursor:"pointer"}}>Sign out</button>}
-      </div>
-
-      {/* Name field */}
-      <div style={{marginBottom:14}}>
-        <div style={{fontSize:11,color:C.mid,fontWeight:700,letterSpacing:"0.08em",marginBottom:6}}>👤 YOUR NAME</div>
-        <div style={{display:"flex",gap:8,alignItems:"center"}}>
-          <input value={nameInput} onChange={e=>setNameInput(e.target.value)} onBlur={()=>{if(nameInput.trim()!==displayName)persistDisplayName(nameInput.trim());}} placeholder="How should we call you?" maxLength={24} style={{...inputStyle,fontSize:14,padding:"9px 12px"}}/>
-          {nameInput.trim()&&nameInput.trim()!==displayName&&<button onClick={()=>persistDisplayName(nameInput.trim())} style={{padding:"9px 12px",borderRadius:10,background:C.green,border:"none",color:"#030a05",fontWeight:700,fontSize:13,cursor:"pointer",flexShrink:0}}>Save</button>}
-        </div>
       </div>
 
       {/* My Teams — collapsible */}
@@ -3497,17 +3499,6 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
         <div style={{display:"flex",alignItems:"center",gap:10}}><span style={{fontSize:18}}>⭐</span><div style={{textAlign:"left"}}><div style={{fontWeight:700,color:C.text,fontSize:14}}>My Matches</div><div style={{fontSize:11,color:C.dim}}>{saved.length} match{saved.length!==1?"es":""} saved</div></div></div>
         <span style={{color:C.mid,fontSize:18}}>›</span>
       </button>
-
-      {/* Location */}
-      <button onClick={()=>setShowLocPicker(v=>!v)} style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"13px 14px",background:C.s2,border:`1px solid ${C.b1}`,borderRadius:12,cursor:"pointer",marginBottom:showLocPicker?0:8}}>
-        <div style={{display:"flex",alignItems:"center",gap:10}}><span style={{fontSize:18}}>📍</span><div style={{textAlign:"left"}}><div style={{fontWeight:700,color:C.text,fontSize:14}}>Location</div><div style={{fontSize:11,color:locationOverride?C.gold:C.dim}}>{locationOverride?"Custom: ":"Auto: "}{displayLocation}</div></div></div>
-        <span style={{color:C.mid,fontSize:18}}>{showLocPicker?"∨":"›"}</span>
-      </button>
-      {showLocPicker&&<div style={{background:C.s2,border:`1px solid ${C.b1}`,borderRadius:"0 0 12px 12px",padding:12,marginBottom:8}}>
-        <input value={locSearch} onChange={e=>setLocSearch(e.target.value)} placeholder="Search city..." style={{...inputStyle,fontSize:13,padding:"8px 12px",marginBottom:8}}/>
-        {locationOverride&&<button onClick={()=>{setLocationOverride(null);try{localStorage.removeItem("wc2026_location")}catch{};setShowLocPicker(false);}} style={{width:"100%",padding:"7px 0",borderRadius:8,background:"rgba(248,113,113,0.1)",border:"1px solid rgba(248,113,113,0.3)",color:"#f87171",fontSize:12,fontWeight:600,cursor:"pointer",marginBottom:8}}>✕ Reset to auto-detected</button>}
-        <div style={{display:"flex",flexWrap:"wrap",gap:6}}>{filteredCities.map(c=><button key={c.label} onClick={()=>{const loc={label:c.label,country:c.country};setLocationOverride(loc);try{localStorage.setItem("wc2026_location",JSON.stringify(loc))}catch{};setLocSearch("");setShowLocPicker(false);setToast(`📍 Location set to ${c.label}`);}} style={{padding:"5px 10px",borderRadius:14,fontSize:12,cursor:"pointer",border:`1px solid ${locationOverride?.label===c.label?C.green:C.b2}`,background:locationOverride?.label===c.label?`${C.green}22`:C.bg,color:locationOverride?.label===c.label?C.green:C.mid}}>{c.label}</button>)}</div>
-      </div>}
 
       <div style={{borderTop:`1px solid ${C.b1}`,margin:"4px 0 14px"}}/>
 
