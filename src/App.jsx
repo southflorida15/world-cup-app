@@ -510,13 +510,13 @@ const RECENT4 = {
 };
 
 const PREDS = [
-  {team:"France",poly:18.3,odds:"+451",trend:"📈"},{team:"Spain",poly:16.7,odds:"+501",trend:"📉"},
-  {team:"England",poly:11.3,odds:"+781",trend:"➡️"},{team:"Brazil",poly:9.0,odds:"+1010",trend:"📈"},
-  {team:"Argentina",poly:8.3,odds:"+1100",trend:"➡️"},{team:"Germany",poly:7.1,odds:"+1300",trend:"📈"},
-  {team:"Portugal",poly:5.4,odds:"+1750",trend:"➡️"},{team:"Netherlands",poly:4.8,odds:"+1950",trend:"📉"},
-  {team:"Belgium",poly:3.2,odds:"+3000",trend:"📉"},{team:"United States",poly:2.8,odds:"+3400",trend:"📈"},
-  {team:"Mexico",poly:2.1,odds:"+4500",trend:"📈"},{team:"Norway",poly:1.0,odds:"+9000",trend:"📈"},
-  {team:"Others",poly:10.0,odds:"—",trend:""},
+  {team:"France",poly:16.0,odds:"+525",trend:"📉"},{team:"Spain",poly:16.0,odds:"+525",trend:"➡️"},
+  {team:"England",poly:11.0,odds:"+809",trend:"📉"},{team:"Brazil",poly:9.0,odds:"+1010",trend:"➡️"},
+  {team:"Argentina",poly:8.0,odds:"+1150",trend:"➡️"},{team:"Germany",poly:7.0,odds:"+1325",trend:"📈"},
+  {team:"Portugal",poly:5.0,odds:"+1900",trend:"➡️"},{team:"Netherlands",poly:4.5,odds:"+2120",trend:"📉"},
+  {team:"Belgium",poly:3.0,odds:"+3230",trend:"📉"},{team:"United States",poly:2.5,odds:"+3900",trend:"📈"},
+  {team:"Mexico",poly:2.1,odds:"+4650",trend:"➡️"},{team:"Norway",poly:1.0,odds:"+9000",trend:"📈"},
+  {team:"Others",poly:15.0,odds:"—",trend:""},
 ];
 
 // ── SIMULATOR ENGINE ──────────────────────────────────────────────────────
@@ -2840,7 +2840,9 @@ function useWeather(lat, lon, enabled) {
         if (!c) return;
         const code = c.weathercode;
         const icon = code <= 1 ? "☀️" : code <= 3 ? "⛅" : code <= 48 ? "🌫️" : code <= 67 ? "🌧️" : code <= 77 ? "🌨️" : code <= 82 ? "🌦️" : "⛈️";
-        setWx({ temp: Math.round(c.temperature_2m), icon, wind: Math.round(c.windspeed_10m) });
+        const tempF = Math.round(c.temperature_2m);
+        const tempC = Math.round((tempF - 32) * 5/9);
+        setWx({ temp: tempF, tempC, icon, wind: Math.round(c.windspeed_10m) });
       })
       .catch(() => {});
   }, [lat, lon, enabled]);
@@ -2897,7 +2899,7 @@ function MatchdayCard({ m, onAction, favTeam }) {
           {m.group ? <Badge>Group {m.group}</Badge> : <Badge color={C.gold}>{m.stage||"Knockout"}</Badge>}
           <div style={{display:"flex",alignItems:"center",gap:6}}>
             {isMatchday && countdown && !live && <span style={{fontSize:11,fontWeight:700,color:C.gold}}>⏱ {countdown}</span>}
-            {wx && <span style={{fontSize:11,color:C.mid}}>{wx.icon} {wx.temp}°F</span>}
+            {wx && <span style={{fontSize:11,color:C.mid}}>{wx.icon} {wx.temp}°F / {wx.tempC}°C</span>}
             <span style={{fontSize:11,color:C.dim}}>{localTime}</span>
           </div>
         </div>
@@ -2933,7 +2935,7 @@ function MatchdayCard({ m, onAction, favTeam }) {
             <div style={{fontSize:10,color:C.gold,fontWeight:700,marginBottom:5}}>🏟️ MATCHDAY INFO · {cityKey?.toUpperCase()}</div>
             <div style={{fontSize:11,color:C.mid,marginBottom:3}}>🚇 {city.transit}</div>
             <div style={{fontSize:11,color:C.mid,marginBottom:3}}>🅿️ {city.parking}</div>
-            {wx && <div style={{fontSize:11,color:C.mid}}>🌡️ Currently {wx.icon} {wx.temp}°F · Wind {wx.wind} mph</div>}
+            {wx && <div style={{fontSize:11,color:C.mid}}>🌡️ {wx.icon} {wx.temp}°F / {wx.tempC}°C · Wind {wx.wind} mph</div>}
           </div>
         )}
       </div>
@@ -3360,7 +3362,7 @@ function WeatherBadge({ lat, lon }) {
   return (
     <div style={{textAlign:"center",flexShrink:0}}>
       <div style={{fontSize:18,lineHeight:1}}>{wx.icon}</div>
-      <div style={{fontSize:11,fontWeight:700,color:C.text}}>{wx.temp}°F</div>
+      <div style={{fontSize:11,fontWeight:700,color:C.text}}>{wx.temp}°F<span style={{color:C.dim}}> / {wx.tempC}°C</span></div>
       <div style={{fontSize:9,color:C.dim}}>at venue</div>
     </div>
   );
@@ -3555,24 +3557,19 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
                   {label:match.away, sim:simOdds.win2, poly:p2?.poly, color:C.rival},
                 ].map(({label,sim,poly,color})=>(
                   <div key={label} style={{background:C.s1,border:`1px solid ${color}33`,borderRadius:10,padding:"10px 6px",textAlign:"center"}}>
-                    {/* Polymarket odds — only if available */}
-                    {poly ? (
-                      <>
-                        <div style={{fontSize:22,fontWeight:900,color,lineHeight:1}}>{poly}%</div>
-                        <div style={{fontSize:9,color:C.dim,marginTop:2,marginBottom:4}}>Polymarket</div>
-                        <div style={{borderTop:`1px solid ${color}22`,paddingTop:4,fontSize:11,color:C.dim}}>{sim}% sim</div>
-                      </>
-                    ) : (
-                      <>
-                        <div style={{fontSize:22,fontWeight:900,color,lineHeight:1}}>{sim}%</div>
-                        <div style={{fontSize:9,color:C.dim,marginTop:2}}>Simulator</div>
-                      </>
+                    {/* Simulator always primary, Polymarket as secondary if available */}
+                    <div style={{fontSize:22,fontWeight:900,color,lineHeight:1}}>{sim}%</div>
+                    <div style={{fontSize:9,color:C.dim,marginTop:2,marginBottom:poly?4:0}}>Simulator</div>
+                    {poly && (
+                      <div style={{borderTop:`1px solid ${color}22`,paddingTop:4,fontSize:11,color:C.dim}}>
+                        {poly}% <span style={{fontSize:9}}>🏆 to lift trophy</span>
+                      </div>
                     )}
                     <div style={{fontSize:10,color:C.mid,marginTop:4,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{label}</div>
                   </div>
                 ))}
               </div>
-              {(p1||p2) && <div style={{fontSize:10,color:C.dim,marginTop:6,textAlign:"right"}}>Polymarket odds where available · Simulator: {(5000).toLocaleString()} runs</div>}
+              {(p1||p2) && <div style={{fontSize:10,color:C.dim,marginTop:6,textAlign:"right"}}>Polymarket: chance to win the tournament · Simulator: match odds from {(5000).toLocaleString()} runs</div>}
               {(!p1&&!p2) && <div style={{fontSize:10,color:C.dim,marginTop:6,textAlign:"right"}}>Based on {(5000).toLocaleString()} simulated tournaments</div>}
             </div>
           )}
