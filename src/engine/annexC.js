@@ -2,12 +2,13 @@
 // Source basis: FIFA World Cup 26™ Regulations, Annexe C, "Combinations for eight best third-placed teams".
 // The rendered 495-row table is mirrored on Wikipedia's 2026 FIFA World Cup knockout-stage/template pages.
 //
-// This version does not guess or use fallback placement. It loads the official 495-row matrix
-// through a same-origin Vercel proxy (/api/annexc) and validates the expected row count before accepting it.
+// This version intentionally does NOT guess. It loads/parses the published 495-row matrix and
+// validates the expected row count before accepting it. The parser is token-based rather than
+// line-based because browser HTML text extraction may collapse table rows without reliable newlines.
 
 export const THIRD_PLACE_TARGET_COLUMNS = ["1A", "1B", "1D", "1E", "1G", "1I", "1K", "1L"];
 
-// Same-origin Vercel proxy. Avoids browser CORS/runtime fetch issues from Wikipedia/Wikimedia.
+// Vercel proxy. Avoid direct browser fetches to Wikipedia.
 export const ANNEX_C_SOURCE_URL = "/api/annexc";
 
 let annexCStore = {};
@@ -32,15 +33,25 @@ export function normalizeThirdToken(token) {
   return `3${group}`;
 }
 
-function rowToMapping(row) {
-  const parts = String(row).trim().split(/\s+/);
+function stripHtml(value) {
+  return String(value || "")
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&#160;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function rowToMappingFromTokens(tokens) {
   // Format: rowNo + 8 qualifying group letters + 8 assigned third-place tokens.
   // Example: 1 E F G H I J K L 3E 3J 3I 3F 3H 3G 3L 3K
-  if (parts.length !== 17) return null;
+  if (!tokens || tokens.length !== 17) return null;
 
-  const [, ...rest] = parts;
-  const qualifiedGroups = rest.slice(0, 8);
-  const assignments = rest.slice(8, 16).map(normalizeThirdToken);
+  const qualifiedGroups = tokens.slice(1, 9);
+  const assignments = tokens.slice(9, 17).map(normalizeThirdToken);
 
   if (!qualifiedGroups.every(g => /^[A-L]$/.test(g))) return null;
   if (!assignments.every(t => /^3[A-L]$/.test(t))) return null;
@@ -53,15 +64,22 @@ function rowToMapping(row) {
   return { key, mapping };
 }
 
-export function parseAnnexCRows(text) {
-  const rows = String(text)
-    .split(/\r?\n/)
-    .map(line => line.trim().replace(/\s+/g, " "))
-    .filter(line => /^\d+\s+(?:[A-L]\s+){8}(?:3[A-L]\s+){7}3[A-L]$/.test(line));
+export function parseAnnexCRows(input) {
+  const text = stripHtml(input);
+
+  // Match every row anywhere in the text, not just at line starts. This survives HTML/table
+  // rendering where newlines are lost. Each row contains:
+  // rowNumber, 8 group letters, then 8 third-place assignments.
+  const rowPattern = /\b(\d{1,3})\s+([A-L])\s+([A-L])\s+([A-L])\s+([A-L])\s+([A-L])\s+([A-L])\s+([A-L])\s+([A-L])\s+(3[A-L])\s+(3[A-L])\s+(3[A-L])\s+(3[A-L])\s+(3[A-L])\s+(3[A-L])\s+(3[A-L])\s+(3[A-L])\b/g;
 
   const table = {};
-  for (const row of rows) {
-    const parsed = rowToMapping(row);
+  let match;
+  while ((match = rowPattern.exec(text)) !== null) {
+    const tokens = match.slice(1);
+    const rowNumber = Number(tokens[0]);
+    if (!Number.isInteger(rowNumber) || rowNumber < 1 || rowNumber > 495) continue;
+
+    const parsed = rowToMappingFromTokens(tokens);
     if (parsed) table[parsed.key] = parsed.mapping;
   }
 
@@ -86,25 +104,31 @@ export function setAnnexCMapping(table) {
   return annexCStore;
 }
 
-function htmlToText(html) {
-  if (typeof DOMParser !== "undefined") {
-    const doc = new DOMParser().parseFromString(html, "text/html");
-    return doc.body?.textContent || html;
-  }
-  return String(html).replace(/<[^>]+>/g, "\n");
-}
-
 export async function loadAnnexCFromRemote(fetchImpl = fetch) {
-  const res = await fetchImpl(ANNEX_C_SOURCE_URL);
+  const res = await fetchImpl(ANNEX_C_SOURCE_URL, { cache: "no-store" });
   if (!res.ok) throw new Error(`Unable to load Annex C source: HTTP ${res.status}`);
 
-  const source = await res.text();
-  const text = htmlToText(source);
-  const parsed = parseAnnexCRows(text);
+  const contentType = res.headers?.get?.("content-type") || "";
+
+  // Support either raw HTML/text or a future JSON proxy response.
+  if (contentType.includes("application/json")) {
+    const json = await res.json();
+    if (json?.annexC && typeof json.annexC === "object") {
+      return setAnnexCMapping(json.annexC);
+    }
+    if (typeof json?.text === "string" || typeof json?.html === "string") {
+      const parsed = parseAnnexCRows(json.text || json.html);
+      return setAnnexCMapping(parsed);
+    }
+    throw new Error("Annex C JSON response did not include annexC, text, or html.");
+  }
+
+  const raw = await res.text();
+  const parsed = parseAnnexCRows(raw);
   return setAnnexCMapping(parsed);
 }
 
-// Synchronous getter used by the bracket engine.
+// Synchronous getter used by the bracket engine after loadAnnexCFromRemote() succeeds.
 export const ANNEX_C = annexCStore;
 
 export function getAnnexCMapping(qualifiedThirds) {
@@ -119,4 +143,8 @@ export function getAnnexCMapping(qualifiedThirds) {
   }
 
   return mapping;
+}
+
+export function getLoadedAnnexCCount() {
+  return Object.keys(annexCStore).length;
 }
