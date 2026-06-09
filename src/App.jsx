@@ -4189,7 +4189,7 @@ function Onboarding({ onDone }) {
       )}
 
       {/* Slide content */}
-      <div key={slide} style={{textAlign:"center",maxWidth:340,animation:"splashIn .35s ease forwards",opacity:0}}>
+      <div key={slide} style={{textAlign:"center",maxWidth:340,animation:"onboardIn .35s ease forwards",opacity:0}}>
         <div style={{fontSize:64,marginBottom:24,lineHeight:1}}>{s.icon}</div>
         <div style={{fontSize:24,fontWeight:800,color:"#d4ead9",marginBottom:12,lineHeight:1.2}}>{s.title}</div>
         <div style={{fontSize:14,color:"#7aaa8a",lineHeight:1.6}}>{s.sub}</div>
@@ -4202,6 +4202,7 @@ function Onboarding({ onDone }) {
         ))}
       </div>
 
+      <style>{`@keyframes onboardIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}`}</style>
       {/* Button */}
       <button onClick={()=>{ if(isLast) onDone(); else setSlide(v=>v+1); }}
         style={{padding:"14px 48px",borderRadius:14,border:"none",background:`linear-gradient(135deg,${s.color},${s.color}cc)`,color:"#030a05",fontWeight:800,fontSize:16,cursor:"pointer",width:"100%",maxWidth:340}}>
