@@ -2459,7 +2459,44 @@ function MyBracketTab({ tabTop=116 }) {
   const allThirds=Object.entries(groups).map(([g,teams])=>({group:g,team:teams[2]}));
   const toggleThird=(t)=>{setThirds(p=>p.includes(t)?p.filter(x=>x!==t):[...p,t].slice(0,8));};
   const _mbhRef = useRef(null); const _mbhH = useElemHeight(_mbhRef);
-  const runBracket=()=>{setRunning(true);setTimeout(()=>{const qualifiers=[];Object.entries(groups).forEach(([,teams])=>{qualifiers.push(teams[0],teams[1]);});const r32=[...qualifiers,...thirds.slice(0,8)];const ko=(arr)=>{const n=[];for(let i=0;i<arr.length;i+=2)n.push(simKO(arr[i],arr[i+1]));return n;};const r16=ko(r32),qf=ko(r16),sf=ko(qf),champ=simKO(sf[0],sf[1]);setResult({r32,r16,qf,sf,champion:champ,runnerUp:sf.find(x=>x!==champ)});setStage("bracket");setRunning(false);},80);};
+  const runBracket=()=>{
+    setRunning(true);
+    setTimeout(()=>{
+      const qualifiedThirds = thirds
+        .map(team => allThirds.find(x => x.team === team))
+        .filter(Boolean);
+
+      console.log("Qualified third-place teams:", qualifiedThirds);
+
+      const qualifiers=[];
+      Object.entries(groups).forEach(([,teams])=>{
+        qualifiers.push(teams[0],teams[1]);
+      });
+
+      const r32=[...qualifiers,...qualifiedThirds.map(x=>x.team)];
+
+      const ko=(arr)=>{
+        const n=[];
+        for(let i=0;i<arr.length;i+=2)n.push(simKO(arr[i],arr[i+1]));
+        return n;
+      };
+
+      const r16=ko(r32),qf=ko(r16),sf=ko(qf),champ=simKO(sf[0],sf[1]);
+
+      setResult({
+        r32,
+        r16,
+        qf,
+        sf,
+        champion:champ,
+        runnerUp:sf.find(x=>x!==champ),
+        qualifiedThirds
+      });
+
+      setStage("bracket");
+      setRunning(false);
+    },80);
+  };
   return (
     <div>
       <div ref={_mbhRef} style={{position:"fixed",top:tabTop,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:700,willChange:"transform",zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
