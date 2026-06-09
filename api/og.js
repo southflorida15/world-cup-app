@@ -296,6 +296,7 @@ export default async function handler(req, res) {
 <meta property="og:image" content="${ogImg}"/>
 <meta property="og:image:width" content="1200"/>
 <meta property="og:image:height" content="630"/>
+<meta property="og:image:alt" content="${titleSafe}"/>
 <meta property="og:url" content="${base + "/api/og?" + imgParams.toString().replace("&format=image","").replace("format=image&","").replace("format=image","") }"/>
 <meta property="og:type" content="website"/>
 <meta property="og:site_name" content="FIFA World Cup 2026"/>
@@ -303,6 +304,10 @@ export default async function handler(req, res) {
 <meta name="twitter:image" content="${ogImg}"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <link rel="apple-touch-icon" href="${appUrl}/icons/icon-192.png"/>
+<link rel="apple-touch-icon" sizes="512x512" href="${appUrl}/icons/icon-512.png"/>
+<link rel="shortcut icon" href="${appUrl}/icons/icon-192.png"/>
+<meta name="apple-mobile-web-app-title" content="WC 2026"/>
+<meta property="og:image:type" content="image/png"/>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{background:#060e0a;font-family:system-ui,sans-serif;color:#d4ead9}
