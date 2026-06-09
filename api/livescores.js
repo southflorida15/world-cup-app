@@ -1,11 +1,13 @@
 // /api/livescores.js
 // Live scores via Highlightly API (football-highlights-api.p.rapidapi.com)
-// Cache stored in Vercel KV so all serverless instances share it
+// League ID 1635 = FIFA World Cup 2026
+// KV-backed cache (Upstash Redis) so ALL serverless instances share one cache.
+// This keeps API calls well under 100/day on the free tier.
 
 import { Redis } from "@upstash/redis";
 
 const kv = new Redis({
-  url: process.env.KV_REST_API_URL,
+  url:   process.env.KV_REST_API_URL,
   token: process.env.KV_REST_API_TOKEN,
 });
 
@@ -14,12 +16,13 @@ const RAPIDAPI_HOST = process.env.RAPIDAPI_HOST || "football-highlights-api.p.ra
 const BASE          = `https://${RAPIDAPI_HOST}`;
 const LEAGUE_ID     = "1635";
 const SEASON        = "2026";
+const CACHE_KEY     = "wc2026:livescores";
+const CACHE_TS_KEY  = "wc2026:livescores:ts";
 
-const CACHE_KEY_DATA = "livescores:data";
-const CACHE_KEY_TS   = "livescores:ts";
-const TTL_LIVE       = 45;          // seconds — when matches are live
-const TTL_NORMAL     = 90;          // seconds — otherwise
-const TTL_FINISHED   = 10 * 60;    // seconds — all done for the day
+// TTLs in seconds (for KV expiry) and ms (for freshness check)
+const TTL_LIVE     = 4 * 60;             // 4min live — ~24 calls/match
+const TTL_NORMAL   = 15 * 60;       // 15min off-peak — minimal quota use
+const TTL_FINISHED = 30 * 60;    // 30min when all done for the day
 
 const LIVE_STATUSES     = ["LIVE","1H","HT","2H","ET","BT","P","INT","inprogress","first_half","halftime","second_half","extra_time","penalties"];
 const FINISHED_STATUSES = ["FT","AET","PEN","AWD","WO","finished","ended","after_extra_time","after_penalties"];
@@ -48,12 +51,12 @@ function mapMatch(m) {
   const awayGoals = m.awayScore ?? m.awayGoals ?? m.score?.away ?? null;
   return {
     fixture: {
-      id:      m.id || m.matchId,
-      date:    m.date || m.startTime || m.kickoff,
-      status:  { short, elapsed: m.elapsed ?? m.minute ?? null },
-      venue:   { name: m.venue || m.stadium || "", city: m.city || "" },
+      id:     m.id || m.matchId,
+      date:   m.date || m.startTime || m.kickoff,
+      status: { short, elapsed: m.elapsed ?? m.minute ?? null },
+      venue:  { name: m.venue || m.stadium || "", city: m.city || "" },
     },
-    league: { id: parseInt(LEAGUE_ID), season: parseInt(SEASON) },
+    league:  { id: parseInt(LEAGUE_ID), season: parseInt(SEASON) },
     teams: {
       home: { id: m.homeTeam?.id, name: m.homeTeam?.name || m.home || "" },
       away: { id: m.awayTeam?.id, name: m.awayTeam?.name || m.away || "" },
@@ -71,28 +74,37 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   if (req.method === "OPTIONS") return res.status(200).end();
 
-  const now = Date.now();
-
+  // ── Read shared KV cache ──────────────────────────────────────────────────
+  let cached = null;
+  let cachedTs = 0;
   try {
-    // Load cache from KV
-    const [cachedData, cachedTs] = await Promise.all([
-      kv.get(CACHE_KEY_DATA),
-      kv.get(CACHE_KEY_TS),
+    const [raw, ts] = await Promise.all([
+      kv.get(CACHE_KEY),
+      kv.get(CACHE_TS_KEY),
     ]);
+    if (raw) { cached = raw; cachedTs = parseInt(ts || "0"); }
+  } catch (e) {
+    console.warn("[livescores] KV read error:", e.message);
+  }
 
-    if (cachedData && cachedTs) {
-      const age = (now - Number(cachedTs)) / 1000;
-      let ttl = TTL_NORMAL;
-      if (isAnyLive(cachedData))          ttl = TTL_LIVE;
-      else if (allFinishedToday(cachedData)) ttl = TTL_FINISHED;
+  // ── Check freshness ───────────────────────────────────────────────────────
+  if (cached) {
+    let ttlMs = TTL_NORMAL * 1000;
+    if (isAnyLive(cached))              ttlMs = TTL_LIVE * 1000;
+    else if (allFinishedToday(cached))  ttlMs = TTL_FINISHED * 1000;
 
-      if (age < ttl) {
-        res.setHeader("Cache-Control", "no-cache");
-        return res.status(200).json({ response: cachedData, cached: true, age: Math.round(age) });
-      }
+    if (Date.now() - cachedTs < ttlMs) {
+      res.setHeader("Cache-Control", "no-cache");
+      return res.status(200).json({
+        response: cached,
+        cached: true,
+        age: Math.round((Date.now() - cachedTs) / 1000),
+      });
     }
+  }
 
-    // Fetch fresh from Highlightly
+  // ── Fetch from Highlightly ────────────────────────────────────────────────
+  try {
     const url = `${BASE}/matches?leagueId=${LEAGUE_ID}&season=${SEASON}&limit=200`;
     const r = await fetch(url, {
       headers: {
@@ -101,39 +113,42 @@ export default async function handler(req, res) {
       },
     });
 
-    if (r.status === 429) {
-      // Rate limited — serve stale cache if available
-      if (cachedData) {
-        console.warn("[livescores] Rate limited, serving stale cache");
-        return res.status(200).json({ response: cachedData, cached: true, stale: true });
-      }
-      return res.status(429).json({ error: "Rate limited, no cache available", response: [] });
-    }
-
     if (!r.ok) {
-      if (cachedData) {
-        console.warn(`[livescores] Highlightly ${r.status}, serving stale cache`);
-        return res.status(200).json({ response: cachedData, cached: true, stale: true });
+      if (cached) {
+        console.warn(`[livescores] API ${r.status}, serving stale cache`);
+        return res.status(200).json({ response: cached, cached: true, stale: true });
       }
       const body = await r.text().catch(() => "");
-      throw new Error(`Highlightly API ${r.status}: ${body.slice(0, 100)}`);
+      throw new Error(`Highlightly API ${r.status}: ${body.slice(0, 200)}`);
     }
 
-    const data = await r.json();
-    const raw = Array.isArray(data) ? data : (data.data || data.matches || data.response || []);
+    const data     = await r.json();
+    const raw      = Array.isArray(data) ? data : (data.data || data.matches || data.response || []);
     const fixtures = raw.map(mapMatch);
 
-    // Store in KV with generous TTL (1 hour — the TTL above controls actual freshness)
-    await Promise.all([
-      kv.set(CACHE_KEY_DATA, fixtures, { ex: 3600 }),
-      kv.set(CACHE_KEY_TS, now, { ex: 3600 }),
-    ]);
+    // ── Write to KV cache ─────────────────────────────────────────────────
+    // Pick TTL for KV expiry based on match state
+    let kvTtl = TTL_NORMAL;
+    if (isAnyLive(fixtures))              kvTtl = TTL_LIVE;
+    else if (allFinishedToday(fixtures))  kvTtl = TTL_FINISHED;
+
+    try {
+      await Promise.all([
+        kv.set(CACHE_KEY,    fixtures,             { ex: kvTtl * 2 }), // keep 2x TTL so stale fallback works
+        kv.set(CACHE_TS_KEY, String(Date.now()),   { ex: kvTtl * 2 }),
+      ]);
+    } catch (e) {
+      console.warn("[livescores] KV write error:", e.message);
+    }
 
     res.setHeader("Cache-Control", "no-cache");
     return res.status(200).json({ response: fixtures, cached: false });
 
   } catch (err) {
     console.error("[livescores] error:", err.message);
+    if (cached) {
+      return res.status(200).json({ response: cached, cached: true, stale: true, error: err.message });
+    }
     return res.status(500).json({ error: err.message, response: [] });
   }
 }

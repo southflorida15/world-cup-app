@@ -1,17 +1,16 @@
 // /api/cron/score.js
 // Auto-scores predictions for finished WC matches.
 // Called by cron-job.org every 15 minutes.
-// Uses Highlightly API (same as livescores.js) — League ID 1635 = WC 2026.
+// Uses Highlightly API (same as livescores.js)
 
 const RAPIDAPI_KEY  = process.env.RAPIDAPI_KEY;
 const RAPIDAPI_HOST = process.env.RAPIDAPI_HOST || "football-highlights-api.p.rapidapi.com";
-const ADMIN_SECRET  = process.env.PREDICTOR_ADMIN_SECRET || process.env.CRON_SECRET;
-const LEAGUE_ID     = "1635";
+const BASE          = `https://${RAPIDAPI_HOST}`;
+const LEAGUE_ID     = "1635";  // World Cup 2026 on Highlightly
 const SEASON        = "2026";
+const ADMIN_SECRET  = process.env.PREDICTOR_ADMIN_SECRET || process.env.CRON_SECRET;
 
-const FINISHED_STATUSES = ["FT","AET","PEN","AWD","WO","finished","ended","after_extra_time","after_penalties"];
-
-// Map "home|away" → internal match ID (same as before)
+// Map "home|away" team names to our internal match IDs
 const MATCH_ID_MAP = {
   "Mexico|South Africa":1,"South Korea|Czechia":2,"Canada|Bosnia & Herz.":3,
   "United States|Paraguay":4,"Qatar|Switzerland":5,"Brazil|Morocco":6,
@@ -40,7 +39,7 @@ const MATCH_ID_MAP = {
   "Jordan|Argentina":72,
 };
 
-// Normalise team names from Highlightly → our internal names
+// Normalize team names from Highlightly to our internal names
 const API_NAME_MAP = {
   "USA":"United States","United States of America":"United States",
   "Turkey":"Turkiye","Türkiye":"Turkiye","Czech Republic":"Czechia",
@@ -52,56 +51,55 @@ const API_NAME_MAP = {
 };
 const norm = n => API_NAME_MAP[n] || n;
 
+const FINISHED_STATUSES = ["FT","AET","PEN","AWD","WO","finished","ended","after_extra_time","after_penalties"];
+
 export default async function handler(req, res) {
+  // Verify auth
   const auth = req.headers["authorization"];
   if (auth !== `Bearer ${ADMIN_SECRET}`) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
   try {
-    // Fetch all WC 2026 matches from Highlightly
-    const url = `https://${RAPIDAPI_HOST}/matches?leagueId=${LEAGUE_ID}&season=${SEASON}&limit=200`;
+    // Fetch all WC matches from Highlightly
+    const url = `${BASE}/matches?leagueId=${LEAGUE_ID}&season=${SEASON}&limit=200`;
     const r = await fetch(url, {
       headers: {
-        "X-RapidAPI-Key":  RAPIDAPI_KEY,
+        "X-RapidAPI-Key": RAPIDAPI_KEY,
         "X-RapidAPI-Host": RAPIDAPI_HOST,
-      },
+      }
     });
 
-    if (r.status === 429) {
-      console.warn("[cron/score] Rate limited by Highlightly API — skipping this run");
-      return res.status(200).json({ ok: true, skipped: true, reason: "rate_limited" });
-    }
     if (!r.ok) {
-      const body = await r.text().catch(() => "");
-      throw new Error(`Fixtures API ${r.status}: ${body.slice(0, 120)}`);
+      const body = await r.text();
+      throw new Error(`Fixtures API ${r.status}: ${body}`);
     }
 
     const data = await r.json();
-    const raw = Array.isArray(data) ? data : (data.data || data.matches || data.response || []);
+    const matches = data.data || data.response || [];
 
-    // Filter to finished matches only
-    const finished = raw.filter(m => {
-      const status = m.status || m.matchStatus || "";
+    const finished = matches.filter(m => {
+      const status = m.status || m.fixture?.status?.short || "";
       return FINISHED_STATUSES.includes(status);
     });
 
     let newMatches = 0, scored = 0, skipped = 0;
+    const host = req.headers.host;
     const proto = req.headers["x-forwarded-proto"] || "https";
-    const base  = proto + "://" + req.headers.host;
+    const base = proto + "://" + host;
 
-    for (const m of finished) {
-      // Resolve team names — Highlightly stores them in homeTeam.name / awayTeam.name
-      const home = norm(m.homeTeam?.name || m.home || "");
-      const away = norm(m.awayTeam?.name || m.away || "");
-      const matchId = MATCH_ID_MAP[home + "|" + away];
+    for (const match of finished) {
+      // Handle both Highlightly and API-Football response shapes
+      const homeName = norm(match.homeTeam?.name || match.teams?.home?.name || "");
+      const awayName = norm(match.awayTeam?.name || match.teams?.away?.name || "");
+      const matchId = MATCH_ID_MAP[homeName + "|" + awayName];
       if (!matchId) { skipped++; continue; }
 
-      const hg = m.homeScore ?? m.homeGoals ?? m.score?.home ?? null;
-      const ag = m.awayScore ?? m.awayGoals ?? m.score?.away ?? null;
+      const hg = match.homeScore ?? match.goals?.home;
+      const ag = match.awayScore ?? match.goals?.away;
       if (hg === null || hg === undefined || ag === null || ag === undefined) { skipped++; continue; }
 
-      // Call predictor to score this match
+      // Call predictor API to score this match
       const scoreRes = await fetch(base + "/api/predictor?action=score", {
         method: "POST",
         headers: {
@@ -126,8 +124,8 @@ export default async function handler(req, res) {
       }
     }
 
-    console.log(`[cron/score] total=${raw.length} finished=${finished.length} new=${newMatches} scored=${scored} skipped=${skipped}`);
-    return res.status(200).json({ ok: true, total: raw.length, finished: finished.length, newMatches, scored, skipped });
+    console.log(`[cron/score] total=${matches.length} finished=${finished.length} new=${newMatches} scored=${scored} skipped=${skipped}`);
+    return res.status(200).json({ ok: true, finished: finished.length, newMatches, scored, skipped });
 
   } catch (err) {
     console.error("[cron/score] error:", err.message);
