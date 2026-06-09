@@ -1,4 +1,4 @@
-import { getAnnexCMapping, THIRD_PLACE_TARGET_COLUMNS } from "./annexC";
+import { getAnnexCMapping, THIRD_PLACE_TARGET_COLUMNS, thirdGroupsKey } from "./annexC";
 
 // Fixed FIFA World Cup 26™ Round-of-32 match structure.
 // Third-place opponents are assigned through Annexe C to the target columns:
@@ -47,6 +47,42 @@ export const SEMI_FINAL_TEMPLATE = [
 
 export const FINAL_TEMPLATE = [{ match: 104, home: "W101", away: "W102" }];
 
+/**
+ * Returns all 12 third-place teams from the current manual group order.
+ * Expected groups shape: { A: [team1, team2, team3, team4], ... }
+ */
+export function getAllThirdPlaceTeams(groups) {
+  if (!groups || typeof groups !== "object") return [];
+
+  return Object.entries(groups).map(([group, teams]) => ({
+    group: String(group).toUpperCase(),
+    team: teams?.[2] || null,
+  })).filter(item => item.team);
+}
+
+/**
+ * Converts the current UI state format:
+ *   selectedThirdTeams = ["Mexico", "Japan", ...]
+ * into the FIFA engine format:
+ *   [{ group: "A", team: "Mexico" }, ...]
+ */
+export function buildQualifiedThirdsFromSelectedTeams(groups, selectedThirdTeams) {
+  const allThirds = getAllThirdPlaceTeams(groups);
+  const selected = Array.isArray(selectedThirdTeams) ? selectedThirdTeams : [];
+
+  return selected
+    .map(team => allThirds.find(item => item.team === team))
+    .filter(Boolean);
+}
+
+/**
+ * Convenience helper for debugging Annex C input.
+ * Example output: "ABDEHIKL"
+ */
+export function buildThirdGroupsKey(groups, selectedThirdTeams) {
+  return thirdGroupsKey(buildQualifiedThirdsFromSelectedTeams(groups, selectedThirdTeams));
+}
+
 export function resolveSlot(slot, groups, thirdTeamByGroup = {}) {
   if (!slot || slot === "TBD") return "TBD";
 
@@ -64,7 +100,9 @@ export function buildFifa2026RoundOf32({ groups, qualifiedThirds }) {
   }
 
   const annex = getAnnexCMapping(qualifiedThirds);
-  const thirdTeamByGroup = Object.fromEntries(qualifiedThirds.map(t => [String(t.group).toUpperCase(), t.team]));
+  const thirdTeamByGroup = Object.fromEntries(
+    qualifiedThirds.map(t => [String(t.group).toUpperCase(), t.team])
+  );
 
   return ROUND_OF_32_TEMPLATE.map(match => {
     let awaySlot = match.away;
