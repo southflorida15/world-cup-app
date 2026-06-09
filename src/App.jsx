@@ -185,7 +185,7 @@ const TEAMS = {
   "Czechia":{flag:"🇨🇿",conf:"UEFA",rank:36,ss:6.7,titles:0,coach:"Miroslav Koubek",base:"Mansfield, TX",form:["W","W","D","L","W"],stats:{ATT:6.6,MID:6.8,DEF:6.9,FIT:7.1},players:[{name:"Patrik Schick",pos:"FW",club:"Bayer Leverkusen",caps:53,goals:27,ss:7.6,note:"Clinical"},{name:"Tomas Soucek",pos:"MF",club:"West Ham",caps:79,goals:18,ss:7.3,note:"Box-to-box"},{name:"Vladimir Coufal",pos:"DF",club:"West Ham",caps:44,goals:2,ss:6.8,note:"RB"},{name:"Jiri Stanek",pos:"GK",club:"Atletico Madrid",caps:22,goals:0,ss:7.1,note:"Keeper"}],note:"First World Cup in 20 years. Schick and Soucek are genuine top-level players."},
 };
 
-// ── RECENT4 — verified as of Jun 10, 2026 ────────────────────────────────
+// ── RECENT4 — verified as of Jun 8, 2026 ────────────────────────────────
 // Once WC starts (Jun 11), RecentForm component auto-upgrades to live API data.
 const RECENT4 = {
   "Argentina":[
