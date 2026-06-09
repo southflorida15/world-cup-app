@@ -679,6 +679,7 @@ const VENUE_TZ = {"Mexico City Stadium, Mexico City":"America/Mexico_City","Esta
 const MATCH_UTC = {1:"2026-06-11T19:00:00Z",2:"2026-06-12T02:00:00Z",3:"2026-06-12T19:00:00Z",4:"2026-06-13T01:00:00Z",5:"2026-06-13T19:00:00Z",6:"2026-06-13T22:00:00Z",7:"2026-06-14T01:00:00Z",8:"2026-06-14T03:59:00Z",9:"2026-06-14T17:00:00Z",10:"2026-06-14T20:00:00Z",11:"2026-06-14T23:00:00Z",12:"2026-06-15T02:00:00Z",13:"2026-06-15T16:00:00Z",14:"2026-06-15T19:00:00Z",15:"2026-06-15T22:00:00Z",16:"2026-06-16T01:00:00Z",17:"2026-06-16T19:00:00Z",18:"2026-06-16T22:00:00Z",19:"2026-06-17T01:00:00Z",20:"2026-06-17T03:59:00Z",21:"2026-06-17T17:00:00Z",22:"2026-06-17T20:00:00Z",23:"2026-06-17T23:00:00Z",24:"2026-06-18T02:00:00Z",25:"2026-06-18T16:00:00Z",26:"2026-06-18T19:00:00Z",27:"2026-06-18T22:00:00Z",28:"2026-06-19T01:00:00Z",29:"2026-06-19T19:00:00Z",30:"2026-06-19T22:00:00Z",31:"2026-06-20T00:30:00Z",32:"2026-06-20T03:00:00Z",33:"2026-06-20T17:00:00Z",34:"2026-06-20T20:00:00Z",35:"2026-06-21T01:00:00Z",36:"2026-06-21T03:59:00Z",37:"2026-06-21T16:00:00Z",38:"2026-06-21T19:00:00Z",39:"2026-06-21T22:00:00Z",40:"2026-06-22T01:00:00Z",41:"2026-06-22T17:00:00Z",42:"2026-06-22T21:00:00Z",43:"2026-06-23T00:00:00Z",44:"2026-06-23T03:00:00Z",45:"2026-06-23T17:00:00Z",46:"2026-06-23T20:00:00Z",47:"2026-06-23T23:00:00Z",48:"2026-06-24T02:00:00Z",49:"2026-06-24T19:00:00Z",50:"2026-06-24T19:00:00Z",51:"2026-06-24T22:00:00Z",52:"2026-06-24T22:00:00Z",53:"2026-06-25T01:00:00Z",54:"2026-06-25T01:00:00Z",55:"2026-06-25T20:00:00Z",56:"2026-06-25T20:00:00Z",57:"2026-06-25T23:00:00Z",58:"2026-06-25T23:00:00Z",59:"2026-06-26T02:00:00Z",60:"2026-06-26T02:00:00Z",61:"2026-06-26T19:00:00Z",62:"2026-06-26T19:00:00Z",63:"2026-06-27T00:00:00Z",64:"2026-06-27T00:00:00Z",65:"2026-06-27T03:00:00Z",66:"2026-06-27T03:00:00Z",67:"2026-06-27T21:00:00Z",68:"2026-06-27T21:00:00Z",69:"2026-06-27T23:30:00Z",70:"2026-06-27T23:30:00Z",71:"2026-06-28T02:00:00Z",72:"2026-06-28T02:00:00Z",73:"2026-06-28T23:00:00Z",74:"2026-06-29T17:00:00Z",75:"2026-06-29T20:30:00Z",76:"2026-06-30T01:00:00Z",77:"2026-06-30T17:00:00Z",78:"2026-06-30T21:00:00Z",79:"2026-07-01T01:00:00Z",80:"2026-07-01T16:00:00Z",81:"2026-07-01T20:00:00Z",82:"2026-07-02T00:00:00Z",83:"2026-07-02T19:00:00Z",84:"2026-07-02T23:00:00Z",85:"2026-07-03T03:00:00Z",86:"2026-07-03T18:00:00Z",87:"2026-07-03T22:00:00Z",88:"2026-07-04T01:30:00Z",89:"2026-07-04T17:00:00Z",90:"2026-07-04T21:00:00Z",91:"2026-07-05T20:00:00Z",92:"2026-07-06T00:00:00Z",93:"2026-07-06T19:00:00Z",94:"2026-07-07T00:00:00Z",95:"2026-07-07T16:00:00Z",96:"2026-07-07T20:00:00Z",97:"2026-07-09T20:00:00Z",98:"2026-07-10T19:00:00Z",99:"2026-07-11T21:00:00Z",100:"2026-07-12T01:00:00Z",101:"2026-07-14T19:00:00Z",102:"2026-07-15T19:00:00Z",103:"2026-07-18T21:00:00Z",104:"2026-07-19T19:00:00Z"};
 const USER_TZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
 const APP_VERSION = "1.0.0";
+const APP_DATE = "Jun 9, 2026";
 
 function getDeviceType() {
   const ua = navigator.userAgent;
@@ -2984,7 +2985,7 @@ function useDebounce(fn, ms) {
   }, [fn, ms]);
 }
 
-function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{} }) {
+function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, userAvatar=null }) {
   const { getScore, isFinished } = useContext(LiveScoresCtx);
   const { favTeam, favTeams=[] } = useContext(FavCtx);
   const userId = useMemo(getUserId, []);
@@ -2992,7 +2993,7 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{} }) {
   // User registration state
   const [user, setUser]         = useState(null);   // { userId, name } or null
   const [userLoading, setUL]    = useState(true);
-  const [nameInput, setNameInput] = useState(syncProfile?.name || "");
+  const [nameInput, setNameInput] = useState(displayName || "");
   const [nameErr, setNameErr]   = useState("");
   const [nameSaving, setNS]     = useState(false);
 
@@ -3013,12 +3014,12 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{} }) {
       try {
         let u = await apiPred("getUser", { userId });
         // Auto-register if signed in via sync but not yet in predictor
-        if (!u && syncProfile?.name) {
+        if (!u && displayName) {
           // Try with exact name first, then with suffix if taken
           const namesToTry = [
-            syncProfile.name,
-            syncProfile.name.slice(0, 18) + "2",
-            syncProfile.name.slice(0, 17) + " FC",
+            displayName,
+            displayName.slice(0, 18) + "2",
+            displayName.slice(0, 17) + " FC",
           ];
           for (const name of namesToTry) {
             try {
@@ -3039,7 +3040,7 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{} }) {
       } catch(e) { console.error("predictor init", e); }
       finally { setUL(false); }
     })();
-  }, [userId, syncProfile?.name]);
+  }, [userId, displayName]);
 
   // ── Load leaderboard when that tab is active ────────────────────────────
   useEffect(() => {
@@ -3053,7 +3054,7 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{} }) {
 
   // ── Register ────────────────────────────────────────────────────────────
   const handleRegister = async () => {
-    const name = nameInput.trim() || syncProfile?.name || "";
+    const name = nameInput.trim() || displayName || "";
     if (!name) return;
     setNS(true); setNameErr("");
     try {
@@ -3115,26 +3116,29 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{} }) {
         <div style={{fontWeight:700,fontSize:17,color:C.green,marginBottom:4}}>Match Predictor</div>
         <div style={{fontSize:12,color:C.mid,lineHeight:1.5}}>Pick scores for every group match. Compete with friends on the leaderboard.</div>
       </div>
-      {syncProfile?.name ? (
+      {(syncProfile && displayName) ? (
         /* Signed in but name registration failed — show retry */
         <Card style={{padding:18}}>
-          <div style={{fontWeight:700,color:C.text,fontSize:15,marginBottom:4}}>Join as {syncProfile.name}?</div>
-          <div style={{fontSize:12,color:C.dim,marginBottom:14}}>We'll use your account name for the leaderboard.</div>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
+            <div style={{width:40,height:40,borderRadius:"50%",background:`${C.green}22`,border:`1.5px solid ${C.green}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>
+              {userAvatar?.startsWith("data:") ? <img src={userAvatar} style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:"50%"}} alt=""/> : "⭐"}
+            </div>
+            <div>
+              <div style={{fontWeight:700,color:C.text,fontSize:15}}>Join as {displayName}?</div>
+              <div style={{fontSize:11,color:C.dim}}>Tap to join the predictor</div>
+            </div>
+          </div>
           {nameErr && <div style={{fontSize:12,color:C.red,marginBottom:8}}>{nameErr}</div>}
           <button onClick={handleRegister} disabled={nameSaving}
             style={{width:"100%",padding:"12px 0",borderRadius:12,background:`linear-gradient(135deg,${C.green},#22c55e)`,border:"none",color:"#030a05",fontWeight:700,fontSize:15,cursor:"pointer",opacity:nameSaving?0.6:1}}>
-            {nameSaving?"Joining...":"Join the Predictor →"}
+            {nameSaving?"Joining...":"Join as " + displayName + " →"}
           </button>
           <div style={{fontSize:11,color:C.dim,marginTop:10,textAlign:"center"}}>
-            Want a different name? <button onClick={()=>setNameInput("")} style={{background:"none",border:"none",color:C.green,cursor:"pointer",fontSize:11,textDecoration:"underline"}}>Change it</button>
+            Want a different name?
+            <input value={nameInput===displayName?"":nameInput} onChange={e=>{setNameInput(e.target.value.slice(0,20));setNameErr("");}}
+              placeholder="Type custom name..." maxLength={20}
+              style={{display:"block",width:"100%",marginTop:8,padding:"10px 14px",background:C.s2,border:`1px solid ${nameErr?C.red:C.b2}`,borderRadius:10,color:C.text,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
           </div>
-          {nameInput !== syncProfile.name && (
-            <div style={{marginTop:12}}>
-              <input value={nameInput} onChange={e=>{setNameInput(e.target.value.slice(0,20));setNameErr("");}}
-                placeholder="Custom display name..." maxLength={20}
-                style={{width:"100%",padding:"12px 14px",background:C.s2,border:`1px solid ${nameErr?C.red:C.b2}`,borderRadius:10,color:C.text,fontSize:15,outline:"none"}}/>
-            </div>
-          )}
         </Card>
       ) : (
         /* Not signed in — prompt to create account OR enter name */
@@ -3931,7 +3935,7 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
             {syncProfile.pin && <div style={{fontSize:11,color:C.mid}}>PIN: <strong style={{color:C.gold,letterSpacing:"0.1em"}}>{syncProfile.pin}</strong></div>}
             <div style={{fontSize:11,color:C.green,fontWeight:600}}>✅ Syncing</div>
           </> : <>
-            <div style={{fontSize:11,color:C.dim,marginTop:2}}>{displayName?"Sign in to keep your progress on every device":"Sign in to keep your progress on every device"}</div>
+
           </>}
         </div>
         {isSynced && <button onClick={()=>{persistProfile(null);onSignOut();setToast("Signed out.");onClose();}} style={{fontSize:11,color:C.dim,background:"none",border:`1px solid ${C.b2}`,borderRadius:8,padding:"4px 8px",cursor:"pointer"}}>{"Sign out"}</button>}
@@ -3961,12 +3965,12 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
       </div>
 
       {/* My Matches */}
-      <button onClick={()=>{onClose();onShowSaved();}} style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"13px 14px",background:C.s2,border:`1px solid ${C.b1}`,borderRadius:12,cursor:"pointer",marginBottom:8}}>
+      <button onClick={()=>{onClose();onShowSaved();}} style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"13px 14px",background:C.s2,border:`1px solid ${C.b1}`,borderRadius:12,cursor:"pointer",marginBottom:4}}>
         <div style={{display:"flex",alignItems:"center",gap:10}}><span style={{fontSize:18}}>⭐</span><div style={{textAlign:"left"}}><div style={{fontWeight:700,color:C.text,fontSize:14}}>{"My Matches"}</div><div style={{fontSize:11,color:C.dim}}>{saved.length} match{saved.length!==1?"es":""} saved</div></div></div>
         <span style={{color:C.mid,fontSize:18}}>›</span>
       </button>
 
-      <div style={{borderTop:`1px solid ${C.b1}`,margin:"4px 0 10px"}}/>
+      <div style={{borderTop:`1px solid ${C.b1}`,margin:"4px 0 8px"}}/>
 
       {/* Sync section */}
       {!isSynced ? (
@@ -3985,7 +3989,7 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
           {syncProfile?.pin&&<button onClick={()=>{setPin("");setScreen("pin-change");setError("");}} style={{padding:"6px 12px",borderRadius:8,border:`1px solid ${C.b2}`,background:C.s2,color:C.mid,fontSize:11,fontWeight:600,cursor:"pointer",flexShrink:0}}>🔁 Change PIN</button>}
         </div>
         <div style={{textAlign:"center",marginTop:10}}>
-          <span style={{fontSize:10,color:C.dim}}>v{APP_VERSION}</span>
+          <span style={{fontSize:10,color:C.dim}}>v{APP_VERSION} · {APP_DATE}</span>
         </div>
         </>
       )}
@@ -4858,7 +4862,7 @@ export default function App() {
           {tab==="stats"     && <StatsTab initial={statsTeam} tabTop={tabBarBottom}/>}
           {tab==="h2h"       && <H2HTab tabTop={tabBarBottom}/>}
           {tab==="predict"   && <PredTab tabTop={tabBarBottom} geoData={geoData}/>}
-          {tab==="predictor" && <PredictorTab syncProfile={syncProfile} displayName={displayName} onShowSync={()=>setShowSyncModal(true)}/>}
+          {tab==="predictor" && <PredictorTab syncProfile={syncProfile} displayName={displayName} onShowSync={()=>setShowSyncModal(true)} userAvatar={userAvatar}/>}
           {tab==="sim"       && <SimTab tabTop={tabBarBottom}/>}
           {tab==="bracket"   && <MyBracketTab tabTop={tabBarBottom}/>}
           {tab==="news"       && <WCNewsTab tabTop={tabBarBottom}/>}
