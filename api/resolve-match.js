@@ -341,7 +341,7 @@ export default async function handler(req, res) {
 
   // Mark as resolved in KV (keep for 40 days)
   try {
-    await kv.set(RESOLVE_KEY(id), { hg: parseInt(hg), ag: parseInt(ag), resolvedAt: Date.now() }, { ex: 40 * 24 * 60 * 60 });
+    await kv.set(RESOLVE_KEY(id), { hg: parseInt(hg), ag: parseInt(ag), resolvedAt: Date.now(), source: hg !== null ? "openfootball" : "highlightly" }, { ex: 365 * 24 * 60 * 60 }); // permanent — never re-fetch
   } catch(e) {}
 
   return res.status(200).json({ ok: true, matchId: id, hg, ag, scored: result.scored || 0 });

@@ -583,7 +583,7 @@ const API_NAME_MAP = {
   "Curaçao":"Curacao","Cabo Verde":"Cape Verde",
   "Bosnia-Herzegovina":"Bosnia & Herz.","Bosnia and Herz.":"Bosnia & Herz.",
   "New Zealand":"New Zealand","Aotearoa New Zealand":"New Zealand",
-  "Congo DR":"DR Congo","Congo (DR)":"DR Congo","RD Congo":"DR Congo",
+  "Congo (DR)":"DR Congo","RD Congo":"DR Congo","DRC":"DR Congo","Congo, DR":"DR Congo",
   "Trinidad & Tobago":"Trinidad & Tobago","Trinidad and Tobago":"Trinidad & Tobago",
   "Curacao":"Curacao",
 };
