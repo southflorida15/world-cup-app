@@ -984,7 +984,7 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=n
         </div>
       </div>
       
-      <div style={{height:(_lhH||50)+8}}/>
+      <div style={{height:(_lhH||36)+8}}/>
       {Object.keys(upcomingByDate).length > 0 && (
         <div style={{marginBottom:16}}>
           <div style={{fontSize:11,color:C.gold,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>
@@ -1077,11 +1077,12 @@ function SchedTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=
     if(filterMode==="round") {
       if(!roundF) return true;
       if(roundF==="group") return !!m.group;
-      if(roundF==="r32") return m.stage==="Round of 32"||m.round==="R32"||(!m.group&&m.id>=65&&m.id<=96);
-      if(roundF==="r16") return m.stage==="Round of 16"||m.round==="R16"||(!m.group&&m.id>=97&&m.id<=104);
-      if(roundF==="qf") return m.stage==="Quarter-Final"||m.round==="QF"||(!m.group&&m.id>=105&&m.id<=108);
-      if(roundF==="sf") return m.stage==="Semi-Final"||m.round==="SF"||(!m.group&&m.id>=109&&m.id<=110);
-      if(roundF==="final") return m.stage==="Final"||m.round==="Final"||m.id>=111;
+      if(roundF==="r32") return m.stage==="Round of 32"||(!m.group&&m.id>=73&&m.id<=88);
+      if(roundF==="r16") return m.stage==="Round of 16"||(!m.group&&m.id>=89&&m.id<=96);
+      if(roundF==="qf") return m.stage==="Quarter-final"||(!m.group&&m.id>=97&&m.id<=100);
+      if(roundF==="sf") return m.stage==="Semi-final"||(!m.group&&m.id>=101&&m.id<=102);
+      if(roundF==="3rd") return m.stage==="3rd Place"||m.id===103;
+      if(roundF==="final") return m.stage==="Final"||m.id===104;
       return true;
     }
     return true;
@@ -1095,7 +1096,7 @@ function SchedTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=
   return (
     <div>
       {/* Fixed filter header */}
-      <div ref={filterRef} style={{position:"fixed",top:tabTop,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:700,willChange:"transform",zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"10px 13px 8px"}}>
+      <div ref={filterRef} style={{position:"fixed",top:tabTop,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:700,willChange:"transform",zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
 
         {/* Date strip */}
         <div ref={stripRef} style={{display:"flex",overflowX:"auto",scrollbarWidth:"none",marginBottom:8,gap:4}}>
@@ -1132,7 +1133,7 @@ function SchedTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=
         </div>
 
         {/* Filter mode buttons */}
-        <div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none",marginBottom:8}}>
+        <div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none",marginBottom:8,alignItems:"center"}}>
           {favTeams?.length > 0 && <button style={ss(filterMode==="fav",C.gold)} onClick={()=>setFilterMode("fav")}>⭐ My Teams</button>}
           <button style={ss(filterMode==="group")} onClick={()=>setFilterMode("group")}>🗂 Group</button>
           <button style={ss(filterMode==="team")} onClick={()=>setFilterMode("team")}>👥 Team</button>
@@ -1158,13 +1159,14 @@ function SchedTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=
         )}
         {filterMode==="round" && (
           <div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none"}}>
-            {[{id:"",label:"All"},{id:"group",label:"Group Stage"},{id:"r32",label:"Round of 32"},{id:"r16",label:"Round of 16"},{id:"qf",label:"Quarter-Finals"},{id:"sf",label:"Semi-Finals"},{id:"final",label:"Final"}].map(r=>
+            {[{id:"",label:"All"},{id:"group",label:"Group Stage"},{id:"r32",label:"Round of 32"},{id:"r16",label:"Round of 16"},{id:"qf",label:"Quarter-Finals"},{id:"sf",label:"Semi-Finals"},{id:"3rd",label:"3rd Place"},{id:"final",label:"Final"}].map(r=>
               <Pill key={r.id} active={roundF===r.id} onClick={()=>setRoundF(r.id)} color={r.id===""?C.mid:C.gold}>{r.label}</Pill>
             )}
           </div>
         )}
-        {/* Time zone toggle */}
-        <div style={{display:"flex",justifyContent:"flex-end",marginTop:6}}>
+        {/* Time zone toggle + counter */}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:6}}>
+          <span style={{fontSize:13,color:C.mid,fontWeight:700,alignSelf:"flex-end",paddingBottom:3}}>Displaying {shown.length} matches</span>
           <div style={{display:"flex",background:C.s2,borderRadius:20,border:`1px solid ${C.b2}`,padding:2,gap:2}}>
             <button onClick={()=>setTimeMode("local")} style={{padding:"3px 10px",borderRadius:18,border:"none",cursor:"pointer",fontSize:10,fontWeight:700,background:timeMode==="local"?C.green:"transparent",color:timeMode==="local"?"#030a05":C.dim,transition:"all .15s"}}>My Time</button>
             <button onClick={()=>setTimeMode("venue")} style={{padding:"3px 10px",borderRadius:18,border:"none",cursor:"pointer",fontSize:10,fontWeight:700,background:timeMode==="venue"?C.gold:"transparent",color:timeMode==="venue"?"#030a05":C.dim,transition:"all .15s"}}>Venue</button>
@@ -1174,6 +1176,7 @@ function SchedTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=
 
       {/* Spacer to push content below fixed header */}
       <div style={{height: (filterHeight || 140) + 8}}/>
+
 
       {/* Match list */}
       {shown.length===0 ? <div style={{textAlign:"center",padding:"32px",color:C.dim}}>{"No matches found"}</div> : Object.entries(byDate).map(([date,ms],idx)=>(
@@ -1268,7 +1271,7 @@ function GrpTab({ onTeam, onMatchTap, tabTop=116 }) {
   return (
     <div>
       {/* Fixed header */}
-      <div ref={_ghRef} style={{position:"fixed",top:tabTop,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:700,willChange:"transform",zIndex:90,background:C.bg,borderBottom:`2px solid ${C.b2}`,boxShadow:`0 4px 16px ${C.bg},0 8px 24px ${C.bg}`,maxWidth:700,margin:"0 auto",padding:"8px 13px"}}>
+      <div ref={_ghRef} style={{position:"fixed",top:tabTop,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:700,willChange:"transform",zIndex:90,background:C.bg,borderBottom:`2px solid ${C.b2}`,boxShadow:`0 4px 16px ${C.bg},0 8px 24px ${C.bg}`,padding:"8px 13px"}}>
         <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:6,scrollbarWidth:"none"}}>
           {Object.keys(GROUPS).map(g=><Pill key={g} active={sel===g} onClick={()=>setSel(g)}>{g}</Pill>)}
         </div>
@@ -1279,7 +1282,7 @@ function GrpTab({ onTeam, onMatchTap, tabTop=116 }) {
       </div>
       {/* Spacer */}
       
-      <div style={{height:(_ghH||110)+16}}/>
+      <div style={{height:(_ghH||100)+8}}/>
       {view==="standings" && (
         <div>
           <Card style={{marginBottom:12}}>
@@ -1475,13 +1478,13 @@ function StatsTab({ initial="", tabTop=116 }) {
 
   return (
     <div>
-      <div ref={_shRef} style={{position:"fixed",top:tabTop,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:700,willChange:"transform",zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"10px 13px"}}>
+      <div ref={_shRef} style={{position:"fixed",top:tabTop,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:700,willChange:"transform",zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
         <select value={sel} onChange={e=>setSel(e.target.value)} style={{width:"100%",padding:"10px 14px",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:10,color:C.text,fontSize:14,outline:"none"}}>
           <option value="">Select a team</option>
           {Object.keys(GROUPS).map(g=><optgroup key={g} label={`Group ${g}`}>{GROUPS[g].teams.map(t=><option key={t} value={t}>{getFlag(t)} {t}</option>)}</optgroup>)}
         </select>
       </div>
-      <div style={{height:(_shH||70)+8}}/>
+      <div style={{height:(_shH||56)+8}}/>
       
       {!sel && <div style={{textAlign:"center",padding:"44px 20px",color:C.dim,fontSize:13}}>Select any of the 48 teams to view their squad</div>}
       {sel && d && (
@@ -1719,7 +1722,7 @@ function PredTab({ tabTop=140, geoData={} }) {
           <a href="https://polymarket.com" target="_blank" rel="noopener noreferrer" style={{fontSize:11,color:C.green,textDecoration:"none",border:`1px solid ${C.greenS}`,padding:"3px 9px",borderRadius:20}}>Live →</a>
         </div>
       </div>
-      <div style={{height:(_phH||60)+8}}/>
+      <div style={{height:(_phH||36)+8}}/>
       
 
       {/* Line chart */}
@@ -1847,7 +1850,7 @@ function SimTab({ tabTop=116 }) {
           <Pill active={view==="bracket"} onClick={()=>setView("bracket")} color={C.gold}>🏆 Most Likely Bracket</Pill>
         </div>
       </div>
-      <div style={{height:(_simhH||130)+8}}/>
+      <div style={{height:(_simhH||72)+8}}/>
       
 
       {running && (
@@ -2228,7 +2231,7 @@ function H2HTab({ tabTop=116 }) {
           </button>
         )}
       </div>
-      <div style={{height:(_h2hH||90)+8}}/>
+      <div style={{height:(_h2hH||72)+8}}/>
 
       {/* Simulated match odds — always shown */}
       {team1!==team2 && simOdds && (
@@ -2458,7 +2461,7 @@ function MyBracketTab({ tabTop=116 }) {
   const runBracket=()=>{setRunning(true);setTimeout(()=>{const qualifiers=[];Object.entries(groups).forEach(([,teams])=>{qualifiers.push(teams[0],teams[1]);});const r32=[...qualifiers,...thirds.slice(0,8)];const ko=(arr)=>{const n=[];for(let i=0;i<arr.length;i+=2)n.push(simKO(arr[i],arr[i+1]));return n;};const r16=ko(r32),qf=ko(r16),sf=ko(qf),champ=simKO(sf[0],sf[1]);setResult({r32,r16,qf,sf,champion:champ,runnerUp:sf.find(x=>x!==champ)});setStage("bracket");setRunning(false);},80);};
   return (
     <div>
-      <div ref={_mbhRef} style={{position:"fixed",top:tabTop,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:700,willChange:"transform",zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"10px 13px"}}>
+      <div ref={_mbhRef} style={{position:"fixed",top:tabTop,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:700,willChange:"transform",zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
         <div style={{display:"flex",gap:8}}>
           <Pill active={stage==="groups"} onClick={()=>setStage("groups")} color={C.green}>1 · Set Groups</Pill>
           <Pill active={stage==="thirds"} onClick={()=>setStage("thirds")} color={C.gold}>2 · Pick 3rds</Pill>
@@ -2466,7 +2469,7 @@ function MyBracketTab({ tabTop=116 }) {
         </div>
       </div>
       
-      <div style={{height:(_mbhH||90)+8}}/>
+      <div style={{height:(_mbhH||72)+8}}/>
       {stage==="groups" && (
         <div>
           <div style={{fontSize:12,color:C.mid,marginBottom:14,lineHeight:1.6}}>
@@ -3621,7 +3624,7 @@ function TopScorersTab({ tabTop=116 }) {
         )}
       </div>
       
-      <div style={{height:(_tshH||90)+8}}/>
+      <div style={{height:(_tshH||68)+8}}/>
       {!hasLive && (
           <div>
           {ONES_TO_WATCH.filter(p=>filter==="all"||p.pos===filter).map((p,i) => (
@@ -4083,7 +4086,7 @@ function WCNewsTab({ tabTop=116 }) {
   return (
     <div>
       {/* Sticky header */}
-      <div ref={_ref} style={{position:"fixed",top:tabTop,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:700,willChange:"transform",zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"10px 13px 8px"}}>
+      <div ref={_ref} style={{position:"fixed",top:tabTop,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:700,willChange:"transform",zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <span style={{fontSize:15,fontWeight:700,color:C.green}}>{"📰 World Cup 2026 News"}</span>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
@@ -4094,7 +4097,7 @@ function WCNewsTab({ tabTop=116 }) {
       </div>
       
 
-      <div style={{height:(_h||60)+8}}/>
+      <div style={{height:(_h||36)+8}}/>
       <div style={{padding:"0 0 20px"}}>
         {/* Tournament facts */}
         <QuickFacts tabTop={tabTop}/>
