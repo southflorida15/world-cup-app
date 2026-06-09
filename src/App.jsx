@@ -678,6 +678,7 @@ const VENUE_COORDS = {"Mexico City Stadium, Mexico City":"19.3029,-99.1505","Est
 const VENUE_TZ = {"Mexico City Stadium, Mexico City":"America/Mexico_City","Estadio Guadalajara, Zapopan":"America/Mexico_City","Estadio Monterrey, Guadalupe":"America/Monterrey","Toronto Stadium, Toronto":"America/Toronto","BC Place, Vancouver":"America/Vancouver","SoFi Stadium, Los Angeles":"America/Los_Angeles","San Francisco Bay Area Stadium, San Francisco":"America/Los_Angeles","Seattle Stadium, Seattle":"America/Los_Angeles","Dallas Stadium, Dallas":"America/Chicago","Houston Stadium, Houston":"America/Chicago","Kansas City Stadium, Kansas City":"America/Chicago","New York New Jersey Stadium, East Rutherford":"America/New_York","Boston Stadium, Boston":"America/New_York","Philadelphia Stadium, Philadelphia":"America/New_York","Atlanta Stadium, Atlanta":"America/New_York","Miami Stadium, Miami":"America/New_York"};
 const MATCH_UTC = {1:"2026-06-11T19:00:00Z",2:"2026-06-12T02:00:00Z",3:"2026-06-12T19:00:00Z",4:"2026-06-13T01:00:00Z",5:"2026-06-13T19:00:00Z",6:"2026-06-13T22:00:00Z",7:"2026-06-14T01:00:00Z",8:"2026-06-14T03:59:00Z",9:"2026-06-14T17:00:00Z",10:"2026-06-14T20:00:00Z",11:"2026-06-14T23:00:00Z",12:"2026-06-15T02:00:00Z",13:"2026-06-15T16:00:00Z",14:"2026-06-15T19:00:00Z",15:"2026-06-15T22:00:00Z",16:"2026-06-16T01:00:00Z",17:"2026-06-16T19:00:00Z",18:"2026-06-16T22:00:00Z",19:"2026-06-17T01:00:00Z",20:"2026-06-17T03:59:00Z",21:"2026-06-17T17:00:00Z",22:"2026-06-17T20:00:00Z",23:"2026-06-17T23:00:00Z",24:"2026-06-18T02:00:00Z",25:"2026-06-18T16:00:00Z",26:"2026-06-18T19:00:00Z",27:"2026-06-18T22:00:00Z",28:"2026-06-19T01:00:00Z",29:"2026-06-19T19:00:00Z",30:"2026-06-19T22:00:00Z",31:"2026-06-20T00:30:00Z",32:"2026-06-20T03:00:00Z",33:"2026-06-20T17:00:00Z",34:"2026-06-20T20:00:00Z",35:"2026-06-21T01:00:00Z",36:"2026-06-21T03:59:00Z",37:"2026-06-21T16:00:00Z",38:"2026-06-21T19:00:00Z",39:"2026-06-21T22:00:00Z",40:"2026-06-22T01:00:00Z",41:"2026-06-22T17:00:00Z",42:"2026-06-22T21:00:00Z",43:"2026-06-23T00:00:00Z",44:"2026-06-23T03:00:00Z",45:"2026-06-23T17:00:00Z",46:"2026-06-23T20:00:00Z",47:"2026-06-23T23:00:00Z",48:"2026-06-24T02:00:00Z",49:"2026-06-24T19:00:00Z",50:"2026-06-24T19:00:00Z",51:"2026-06-24T22:00:00Z",52:"2026-06-24T22:00:00Z",53:"2026-06-25T01:00:00Z",54:"2026-06-25T01:00:00Z",55:"2026-06-25T20:00:00Z",56:"2026-06-25T20:00:00Z",57:"2026-06-25T23:00:00Z",58:"2026-06-25T23:00:00Z",59:"2026-06-26T02:00:00Z",60:"2026-06-26T02:00:00Z",61:"2026-06-26T19:00:00Z",62:"2026-06-26T19:00:00Z",63:"2026-06-27T00:00:00Z",64:"2026-06-27T00:00:00Z",65:"2026-06-27T03:00:00Z",66:"2026-06-27T03:00:00Z",67:"2026-06-27T21:00:00Z",68:"2026-06-27T21:00:00Z",69:"2026-06-27T23:30:00Z",70:"2026-06-27T23:30:00Z",71:"2026-06-28T02:00:00Z",72:"2026-06-28T02:00:00Z"};
 const USER_TZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
+const APP_VERSION = "1.0.0";
 function getDeviceType() {
   const ua = navigator.userAgent;
   if (/iPad|iPhone|iPod/.test(ua)) return "iOS";
@@ -876,6 +877,17 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="",
   let winner = null;
   if(isKO && finished && hasScore) { if(sc.hg>sc.ag) winner=m.home; else if(sc.ag>sc.hg) winner=m.away; }
   const isFav = favTeams?.length && (favTeams.includes(m.home) || favTeams.includes(m.away));
+  const [scoreFlash, setScoreFlash] = useState(false);
+  const prevScore = useRef(null);
+  useEffect(() => {
+    if (!live || !hasScore) return;
+    const curr = `${sc.hg}-${sc.ag}`;
+    if (prevScore.current && prevScore.current !== curr) {
+      setScoreFlash(true);
+      setTimeout(() => setScoreFlash(false), 1200);
+    }
+    prevScore.current = curr;
+  }, [sc?.hg, sc?.ag, live]);
   const { localTime, venueTime, dateLabel } = matchTimes(m);
   const venueTz = VENUE_TZ[m.venue];
   const venueTzShort = venueTz ? new Intl.DateTimeFormat("en-US",{timeZoneName:"short",timeZone:venueTz}).formatToParts(new Date()).find(p=>p.type==="timeZoneName")?.value : "";
@@ -912,7 +924,7 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="",
         <span style={{fontWeight:winner===m.home?800:700,color:finished?(winner===m.home?C.text:C.dim):favTeams?.includes(m.home)?C.gold:C.text,flex:1,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.home}</span>
         {hasScore ? (
           <div style={{textAlign:"center",minWidth:60,flexShrink:0}}>
-            <div style={{fontWeight:900,fontSize:22,color:live?C.green:C.text,fontFamily:"monospace",lineHeight:1}}>{sc.hg} – {sc.ag}</div>
+            <div style={{fontWeight:900,fontSize:22,color:live?C.green:C.text,fontFamily:"monospace",lineHeight:1,animation:scoreFlash?"scoreFlash .6s ease":undefined,borderRadius:6,padding:"1px 4px",background:scoreFlash?`${C.green}30`:"transparent",transition:"background .3s"}}>{sc.hg} – {sc.ag}</div>
           </div>
         ) : (
           <span style={{fontSize:11,color:C.dim,fontWeight:700,minWidth:36,textAlign:"center",flexShrink:0}}>VS</span>
@@ -985,7 +997,12 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=n
       )}
       {liveMatches.length>0 && <div><div style={{fontSize:11,color:C.green,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>🔴 Live Now</div>{liveMatches.map(m=><MatchCard key={m.id} m={m} onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} savedIds={savedIds}/> )}</div>}
       {finishedToday.length>0 && <div style={{marginTop:liveMatches.length?16:0}}><div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>Today's Results</div>{finishedToday.map(m=><MatchCard key={m.id} m={m} onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} savedIds={savedIds}/> )}</div>}
-      {liveMatches.length===0 && finishedToday.length===0 && (
+      {liveMatches.length===0 && finishedToday.length===0 && Object.keys(upcomingByDate).length===0 && !lastFetch && (
+        <div style={{marginTop:8}}>
+          {[1,2,3].map(i=><SkeletonMatchCard key={i}/>)}
+        </div>
+      )}
+      {liveMatches.length===0 && finishedToday.length===0 && Object.keys(upcomingByDate).length===0 && lastFetch && (
         <div style={{textAlign:"center",padding:"48px 20px"}}>
           <div style={{fontSize:"2.5rem",marginBottom:10}}>⚽</div>
           <div style={{fontWeight:700,fontSize:16,color:C.mid,marginBottom:6}}>No matches today</div>
@@ -1195,7 +1212,7 @@ function urlBase64ToUint8Array(base64String) {
 function GrpTab({ onTeam, onMatchTap, tabTop=116 }) {
   const [sel, setSel] = useState("A");
   const [view, setView] = useState("standings");
-  const { allFixtures } = useContext(LiveScoresCtx);
+  const { allFixtures, lastFetch } = useContext(LiveScoresCtx);
 
   // Manual score overrides (user-entered)
   const [manualR, setManualR] = useState(() => {
@@ -1251,9 +1268,10 @@ function GrpTab({ onTeam, onMatchTap, tabTop=116 }) {
         <div>
           <Card style={{marginBottom:12}}>
             <div style={{padding:"8px 13px",borderBottom:`1px solid ${C.b1}`,background:C.s1,display:"flex",justifyContent:"space-between"}}>
-              <span style={{fontWeight:700,color:C.green,fontSize:16}}>GROUP {sel}</span>
+              <span style={{fontWeight:700,color:C.green,fontSize:15}}>GROUP {sel}</span>
               <div style={{display:"flex",alignItems:"center",gap:8}}>
                 {liveCount>0 && <Badge color={C.green}>🔴 Live</Badge>}
+                {lastFetch && <span style={{fontSize:10,color:C.dim}}>Updated {lastFetch.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}</span>}
                 <span style={{fontSize:10,color:C.dim}}>Tap for stats</span>
               </div>
             </div>
@@ -3781,6 +3799,7 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
           </>}
         </div>
         {isSynced && <button onClick={()=>{persistProfile(null);onSignOut();setToast("Signed out.");onClose();}} style={{fontSize:11,color:C.dim,background:"none",border:`1px solid ${C.b2}`,borderRadius:8,padding:"4px 8px",cursor:"pointer"}}>Sign out</button>}
+        <span style={{fontSize:10,color:C.dim,marginLeft:"auto"}}>v{APP_VERSION}</span>
       </div>
 
       {/* My Teams — collapsible */}
@@ -4057,9 +4076,8 @@ function WCNewsTab({ tabTop=116 }) {
         <div style={{fontSize:12,fontWeight:700,color:C.mid,letterSpacing:"0.08em",marginBottom:10}}>🗞️ LATEST HEADLINES</div>
 
         {loading && (
-          <div style={{textAlign:"center",padding:"40px 0"}}>
-            <div style={{width:24,height:24,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto 10px"}}/>
-            <div style={{fontSize:13,color:C.dim}}>Loading news…</div>
+          <div>
+            {[1,2,3,4,5].map(i=><SkeletonNewsCard key={i}/>)}
           </div>
         )}
 
@@ -4096,6 +4114,59 @@ function WCNewsTab({ tabTop=116 }) {
   );
 }
 
+
+
+// ── SKELETON LOADERS ───────────────────────────────────────────────────────
+function SkeletonBlock({ width="100%", height=14, radius=6, style={} }) {
+  return (
+    <div style={{
+      width, height, borderRadius:radius,
+      background:`linear-gradient(90deg,${C.s2} 25%,${C.b1} 50%,${C.s2} 75%)`,
+      backgroundSize:"200% 100%",
+      animation:"shimmer 1.4s infinite",
+      flexShrink:0,
+      ...style,
+    }}/>
+  );
+}
+
+function SkeletonMatchCard() {
+  return (
+    <div style={{background:C.s1,border:`1px solid ${C.b1}`,borderRadius:12,padding:"12px 14px",marginBottom:8}}>
+      <div style={{display:"flex",justifyContent:"space-between",marginBottom:10}}>
+        <SkeletonBlock width={80} height={11}/>
+        <SkeletonBlock width={60} height={11}/>
+      </div>
+      <div style={{display:"flex",alignItems:"center",gap:12}}>
+        <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"flex-start",gap:6}}>
+          <SkeletonBlock width={28} height={28} radius={4}/>
+          <SkeletonBlock width={70} height={12}/>
+        </div>
+        <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
+          <SkeletonBlock width={48} height={28} radius={6}/>
+          <SkeletonBlock width={40} height={10}/>
+        </div>
+        <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6}}>
+          <SkeletonBlock width={28} height={28} radius={4}/>
+          <SkeletonBlock width={70} height={12}/>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SkeletonNewsCard() {
+  return (
+    <div style={{background:C.s1,border:`1px solid ${C.b1}`,borderRadius:12,padding:"13px",marginBottom:8,display:"flex",gap:12}}>
+      <SkeletonBlock width={72} height={72} radius={8} style={{flexShrink:0}}/>
+      <div style={{flex:1,display:"flex",flexDirection:"column",gap:8,justifyContent:"center"}}>
+        <SkeletonBlock width="90%" height={13}/>
+        <SkeletonBlock width="75%" height={13}/>
+        <SkeletonBlock width="50%" height={10}/>
+      </div>
+    </div>
+  );
+}
 
 // ── PULL TO REFRESH ────────────────────────────────────────────────────────
 function PullToRefresh({ onRefresh, children }) {
@@ -4565,7 +4636,7 @@ export default function App() {
       <ThemeCtx.Provider value={{dark, toggle:toggleDark, headerDark, cardDark}}>
       <FavCtx.Provider value={{favTeam, favTeams, setFavTeam: toggleFav}}>
       <div style={{minHeight:"100vh",background:C.bg,maxWidth:700,margin:"0 auto",fontFamily:"system-ui,sans-serif",transition:"background .2s"}}>
-        <style>{`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}*{box-sizing:border-box;margin:0;padding:0}select option{background:${C.s1}}::-webkit-scrollbar{width:3px;height:3px}::-webkit-scrollbar-thumb{background:${C.b1};border-radius:2px}`}</style>
+        <style>{`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}@keyframes scoreFlash{0%{transform:scale(1)}25%{transform:scale(1.18)}50%{transform:scale(1.12)}100%{transform:scale(1)}}*{box-sizing:border-box;margin:0;padding:0}select option{background:${C.s1}}::-webkit-scrollbar{width:3px;height:3px}::-webkit-scrollbar-thumb{background:${C.b1};border-radius:2px}`}</style>
         <div ref={tabBarRef} style={{background:`linear-gradient(180deg,${headerDark},${C.bg})`,padding:"14px 14px 0",borderBottom:`1px solid ${C.b1}`,position:"sticky",top:0,zIndex:100,backdropFilter:"blur(10px)"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
             <div style={{display:"flex",alignItems:"center",gap:10}}>
