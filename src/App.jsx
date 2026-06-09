@@ -99,22 +99,22 @@ const MATCHES = [
   {id:70, date:"Jun 27",time:"7:30PM ET",home:"DR Congo",      away:"Uzbekistan",     venue:"Atlanta Stadium, Atlanta",                     group:"K",tv:"FS1 · Peacock · Telemundo"},
   {id:71, date:"Jun 27",time:"10PM ET",  home:"Algeria",       away:"Austria",        venue:"Kansas City Stadium, Kansas City",              group:"J",tv:"FS1 · Peacock · Telemundo"},
   {id:72, date:"Jun 27",time:"10PM ET",  home:"Jordan",        away:"Argentina",      venue:"Dallas Stadium, Dallas",                       group:"J",tv:"FOX · Peacock · Telemundo"},
-  {id:73, date:"Jun 28",time:"3PM ET",   home:"R32 M1",  away:"TBD",venue:"SoFi Stadium, Los Angeles",             group:"",stage:"Round of 32",tv:"FS1"},
-  {id:74, date:"Jun 29",time:"1PM ET",   home:"R32 M2",  away:"TBD",venue:"Houston Stadium, Houston",              group:"",stage:"Round of 32",tv:"FS1"},
-  {id:75, date:"Jun 29",time:"4:30PM ET",home:"R32 M3",  away:"TBD",venue:"Boston Stadium, Boston",                group:"",stage:"Round of 32",tv:"FS1"},
-  {id:76, date:"Jun 29",time:"9PM ET",   home:"R32 M4",  away:"TBD",venue:"Estadio Monterrey, Guadalupe",          group:"",stage:"Round of 32",tv:"FS1"},
-  {id:77, date:"Jun 30",time:"1PM ET",   home:"R32 M5",  away:"TBD",venue:"Dallas Stadium, Dallas",                group:"",stage:"Round of 32",tv:"FS1"},
-  {id:78, date:"Jun 30",time:"5PM ET",   home:"R32 M6",  away:"TBD",venue:"New York New Jersey Stadium, East Rutherford",group:"",stage:"Round of 32",tv:"FS1"},
-  {id:79, date:"Jun 30",time:"9PM ET",   home:"R32 M7",  away:"TBD",venue:"Mexico City Stadium, Mexico City",      group:"",stage:"Round of 32",tv:"FS1"},
-  {id:80, date:"Jul 1", time:"12PM ET",  home:"R32 M8",  away:"TBD",venue:"Atlanta Stadium, Atlanta",              group:"",stage:"Round of 32",tv:"FS1"},
-  {id:81, date:"Jul 1", time:"4PM ET",   home:"R32 M9",  away:"TBD",venue:"Seattle Stadium, Seattle",              group:"",stage:"Round of 32",tv:"FS1"},
-  {id:82, date:"Jul 1", time:"8PM ET",   home:"R32 M10", away:"TBD",venue:"San Francisco Bay Area Stadium, San Francisco",group:"",stage:"Round of 32",tv:"FS1"},
-  {id:83, date:"Jul 2", time:"3PM ET",   home:"R32 M11", away:"TBD",venue:"SoFi Stadium, Los Angeles",             group:"",stage:"Round of 32",tv:"FS1"},
-  {id:84, date:"Jul 2", time:"7PM ET",   home:"R32 M12", away:"TBD",venue:"Toronto Stadium, Toronto",              group:"",stage:"Round of 32",tv:"FS1"},
-  {id:85, date:"Jul 2", time:"11PM ET",  home:"R32 M13", away:"TBD",venue:"BC Place, Vancouver",                   group:"",stage:"Round of 32",tv:"FS1"},
-  {id:86, date:"Jul 3", time:"2PM ET",   home:"R32 M14", away:"TBD",venue:"Dallas Stadium, Dallas",                group:"",stage:"Round of 32",tv:"FS1"},
-  {id:87, date:"Jul 3", time:"6PM ET",   home:"R32 M15", away:"TBD",venue:"Miami Stadium, Miami",                  group:"",stage:"Round of 32",tv:"FS1"},
-  {id:88, date:"Jul 3", time:"9:30PM ET",home:"R32 M16", away:"TBD",venue:"Kansas City Stadium, Kansas City",      group:"",stage:"Round of 32",tv:"FS1"},
+  {id:73, date:"Jun 28",time:"3PM ET",   home:"2A",  away:"2B",venue:"SoFi Stadium, Los Angeles",             group:"",stage:"Round of 32",tv:"FS1"},
+  {id:74, date:"Jun 29",time:"1PM ET",   home:"1C",  away:"2F",venue:"Houston Stadium, Houston",              group:"",stage:"Round of 32",tv:"FS1"},
+  {id:75, date:"Jun 29",time:"4:30PM ET",home:"1E",  away:"3rd ABCDF",venue:"Boston Stadium, Boston",                group:"",stage:"Round of 32",tv:"FS1"},
+  {id:76, date:"Jun 29",time:"9PM ET",   home:"1F",  away:"2C",venue:"Estadio Monterrey, Guadalupe",          group:"",stage:"Round of 32",tv:"FS1"},
+  {id:77, date:"Jun 30",time:"1PM ET",   home:"2E",  away:"2I",venue:"Dallas Stadium, Dallas",                group:"",stage:"Round of 32",tv:"FS1"},
+  {id:78, date:"Jun 30",time:"5PM ET",   home:"1I",  away:"3rd CDFGH",venue:"New York New Jersey Stadium, East Rutherford",group:"",stage:"Round of 32",tv:"FS1"},
+  {id:79, date:"Jun 30",time:"9PM ET",   home:"1A",  away:"3rd CEFHI",venue:"Mexico City Stadium, Mexico City",      group:"",stage:"Round of 32",tv:"FS1"},
+  {id:80, date:"Jul 1", time:"12PM ET",  home:"1J",  away:"2H",venue:"Atlanta Stadium, Atlanta",              group:"",stage:"Round of 32",tv:"FS1"},
+  {id:81, date:"Jul 1", time:"4PM ET",   home:"1G",  away:"3rd AEHIJ",venue:"Seattle Stadium, Seattle",              group:"",stage:"Round of 32",tv:"FS1"},
+  {id:82, date:"Jul 1", time:"8PM ET",   home:"1D", away:"3rd BEFIJ",venue:"San Francisco Bay Area Stadium, San Francisco",group:"",stage:"Round of 32",tv:"FS1"},
+  {id:83, date:"Jul 2", time:"3PM ET",   home:"1H", away:"2J",venue:"SoFi Stadium, Los Angeles",             group:"",stage:"Round of 32",tv:"FS1"},
+  {id:84, date:"Jul 2", time:"7PM ET",   home:"2K", away:"2L",venue:"Toronto Stadium, Toronto",              group:"",stage:"Round of 32",tv:"FS1"},
+  {id:85, date:"Jul 2", time:"11PM ET",  home:"1B", away:"3rd EFGIJ",venue:"BC Place, Vancouver",                   group:"",stage:"Round of 32",tv:"FS1"},
+  {id:86, date:"Jul 3", time:"2PM ET",   home:"2D", away:"2G",venue:"Dallas Stadium, Dallas",                group:"",stage:"Round of 32",tv:"FS1"},
+  {id:87, date:"Jul 3", time:"6PM ET",   home:"1L", away:"3rd EHIJK",venue:"Miami Stadium, Miami",                  group:"",stage:"Round of 32",tv:"FS1"},
+  {id:88, date:"Jul 3", time:"9:30PM ET",home:"1K", away:"3rd DEIJL",venue:"Kansas City Stadium, Kansas City",      group:"",stage:"Round of 32",tv:"FS1"},
   {id:89, date:"Jul 4", time:"1PM ET",   home:"R16 M1",  away:"TBD",venue:"Houston Stadium, Houston",              group:"",stage:"Round of 16",tv:"FOX"},
   {id:90, date:"Jul 4", time:"5PM ET",   home:"R16 M2",  away:"TBD",venue:"Philadelphia Stadium, Philadelphia",    group:"",stage:"Round of 16",tv:"FOX"},
   {id:91, date:"Jul 5", time:"4PM ET",   home:"R16 M3",  away:"TBD",venue:"New York New Jersey Stadium, East Rutherford",group:"",stage:"Round of 16",tv:"FOX"},
@@ -676,7 +676,7 @@ function getBroadcast(countryCode) {
 const CountryCtx = createContext("US");
 const VENUE_COORDS = {"Mexico City Stadium, Mexico City":"19.3029,-99.1505","Estadio Guadalajara, Zapopan":"20.6867,-103.4079","Toronto Stadium, Toronto":"43.6333,-79.3891","SoFi Stadium, Los Angeles":"33.9535,-118.3392","San Francisco Bay Area Stadium, San Francisco":"37.4031,-121.9694","New York New Jersey Stadium, East Rutherford":"40.8135,-74.0745","Boston Stadium, Boston":"42.3467,-71.0972","BC Place, Vancouver":"49.2767,-123.1115","Houston Stadium, Houston":"29.6847,-95.4107","Dallas Stadium, Dallas":"32.7474,-97.0945","Philadelphia Stadium, Philadelphia":"39.9012,-75.1675","Estadio Monterrey, Guadalupe":"25.6694,-100.2436","Atlanta Stadium, Atlanta":"33.7553,-84.4006","Miami Stadium, Miami":"25.9580,-80.2389","Kansas City Stadium, Kansas City":"39.0489,-94.4839","Seattle Stadium, Seattle":"47.5952,-122.3316"};
 const VENUE_TZ = {"Mexico City Stadium, Mexico City":"America/Mexico_City","Estadio Guadalajara, Zapopan":"America/Mexico_City","Estadio Monterrey, Guadalupe":"America/Monterrey","Toronto Stadium, Toronto":"America/Toronto","BC Place, Vancouver":"America/Vancouver","SoFi Stadium, Los Angeles":"America/Los_Angeles","San Francisco Bay Area Stadium, San Francisco":"America/Los_Angeles","Seattle Stadium, Seattle":"America/Los_Angeles","Dallas Stadium, Dallas":"America/Chicago","Houston Stadium, Houston":"America/Chicago","Kansas City Stadium, Kansas City":"America/Chicago","New York New Jersey Stadium, East Rutherford":"America/New_York","Boston Stadium, Boston":"America/New_York","Philadelphia Stadium, Philadelphia":"America/New_York","Atlanta Stadium, Atlanta":"America/New_York","Miami Stadium, Miami":"America/New_York"};
-const MATCH_UTC = {1:"2026-06-11T19:00:00Z",2:"2026-06-12T02:00:00Z",3:"2026-06-12T19:00:00Z",4:"2026-06-13T01:00:00Z",5:"2026-06-13T19:00:00Z",6:"2026-06-13T22:00:00Z",7:"2026-06-14T01:00:00Z",8:"2026-06-14T03:59:00Z",9:"2026-06-14T17:00:00Z",10:"2026-06-14T20:00:00Z",11:"2026-06-14T23:00:00Z",12:"2026-06-15T02:00:00Z",13:"2026-06-15T16:00:00Z",14:"2026-06-15T19:00:00Z",15:"2026-06-15T22:00:00Z",16:"2026-06-16T01:00:00Z",17:"2026-06-16T19:00:00Z",18:"2026-06-16T22:00:00Z",19:"2026-06-17T01:00:00Z",20:"2026-06-17T03:59:00Z",21:"2026-06-17T17:00:00Z",22:"2026-06-17T20:00:00Z",23:"2026-06-17T23:00:00Z",24:"2026-06-18T02:00:00Z",25:"2026-06-18T16:00:00Z",26:"2026-06-18T19:00:00Z",27:"2026-06-18T22:00:00Z",28:"2026-06-19T01:00:00Z",29:"2026-06-19T19:00:00Z",30:"2026-06-19T22:00:00Z",31:"2026-06-20T00:30:00Z",32:"2026-06-20T03:00:00Z",33:"2026-06-20T17:00:00Z",34:"2026-06-20T20:00:00Z",35:"2026-06-21T01:00:00Z",36:"2026-06-21T03:59:00Z",37:"2026-06-21T16:00:00Z",38:"2026-06-21T19:00:00Z",39:"2026-06-21T22:00:00Z",40:"2026-06-22T01:00:00Z",41:"2026-06-22T17:00:00Z",42:"2026-06-22T21:00:00Z",43:"2026-06-23T00:00:00Z",44:"2026-06-23T03:00:00Z",45:"2026-06-23T17:00:00Z",46:"2026-06-23T20:00:00Z",47:"2026-06-23T23:00:00Z",48:"2026-06-24T02:00:00Z",49:"2026-06-24T19:00:00Z",50:"2026-06-24T19:00:00Z",51:"2026-06-24T22:00:00Z",52:"2026-06-24T22:00:00Z",53:"2026-06-25T01:00:00Z",54:"2026-06-25T01:00:00Z",55:"2026-06-25T20:00:00Z",56:"2026-06-25T20:00:00Z",57:"2026-06-25T23:00:00Z",58:"2026-06-25T23:00:00Z",59:"2026-06-26T02:00:00Z",60:"2026-06-26T02:00:00Z",61:"2026-06-26T19:00:00Z",62:"2026-06-26T19:00:00Z",63:"2026-06-27T00:00:00Z",64:"2026-06-27T00:00:00Z",65:"2026-06-27T03:00:00Z",66:"2026-06-27T03:00:00Z",67:"2026-06-27T21:00:00Z",68:"2026-06-27T21:00:00Z",69:"2026-06-27T23:30:00Z",70:"2026-06-27T23:30:00Z",71:"2026-06-28T02:00:00Z",72:"2026-06-28T02:00:00Z"};
+const MATCH_UTC = {1:"2026-06-11T19:00:00Z",2:"2026-06-12T02:00:00Z",3:"2026-06-12T19:00:00Z",4:"2026-06-13T01:00:00Z",5:"2026-06-13T19:00:00Z",6:"2026-06-13T22:00:00Z",7:"2026-06-14T01:00:00Z",8:"2026-06-14T03:59:00Z",9:"2026-06-14T17:00:00Z",10:"2026-06-14T20:00:00Z",11:"2026-06-14T23:00:00Z",12:"2026-06-15T02:00:00Z",13:"2026-06-15T16:00:00Z",14:"2026-06-15T19:00:00Z",15:"2026-06-15T22:00:00Z",16:"2026-06-16T01:00:00Z",17:"2026-06-16T19:00:00Z",18:"2026-06-16T22:00:00Z",19:"2026-06-17T01:00:00Z",20:"2026-06-17T03:59:00Z",21:"2026-06-17T17:00:00Z",22:"2026-06-17T20:00:00Z",23:"2026-06-17T23:00:00Z",24:"2026-06-18T02:00:00Z",25:"2026-06-18T16:00:00Z",26:"2026-06-18T19:00:00Z",27:"2026-06-18T22:00:00Z",28:"2026-06-19T01:00:00Z",29:"2026-06-19T19:00:00Z",30:"2026-06-19T22:00:00Z",31:"2026-06-20T00:30:00Z",32:"2026-06-20T03:00:00Z",33:"2026-06-20T17:00:00Z",34:"2026-06-20T20:00:00Z",35:"2026-06-21T01:00:00Z",36:"2026-06-21T03:59:00Z",37:"2026-06-21T16:00:00Z",38:"2026-06-21T19:00:00Z",39:"2026-06-21T22:00:00Z",40:"2026-06-22T01:00:00Z",41:"2026-06-22T17:00:00Z",42:"2026-06-22T21:00:00Z",43:"2026-06-23T00:00:00Z",44:"2026-06-23T03:00:00Z",45:"2026-06-23T17:00:00Z",46:"2026-06-23T20:00:00Z",47:"2026-06-23T23:00:00Z",48:"2026-06-24T02:00:00Z",49:"2026-06-24T19:00:00Z",50:"2026-06-24T19:00:00Z",51:"2026-06-24T22:00:00Z",52:"2026-06-24T22:00:00Z",53:"2026-06-25T01:00:00Z",54:"2026-06-25T01:00:00Z",55:"2026-06-25T20:00:00Z",56:"2026-06-25T20:00:00Z",57:"2026-06-25T23:00:00Z",58:"2026-06-25T23:00:00Z",59:"2026-06-26T02:00:00Z",60:"2026-06-26T02:00:00Z",61:"2026-06-26T19:00:00Z",62:"2026-06-26T19:00:00Z",63:"2026-06-27T00:00:00Z",64:"2026-06-27T00:00:00Z",65:"2026-06-27T03:00:00Z",66:"2026-06-27T03:00:00Z",67:"2026-06-27T21:00:00Z",68:"2026-06-27T21:00:00Z",69:"2026-06-27T23:30:00Z",70:"2026-06-27T23:30:00Z",71:"2026-06-28T02:00:00Z",72:"2026-06-28T02:00:00Z",73:"2026-06-28T23:00:00Z",74:"2026-06-29T17:00:00Z",75:"2026-06-29T20:30:00Z",76:"2026-06-30T01:00:00Z",77:"2026-06-30T17:00:00Z",78:"2026-06-30T21:00:00Z",79:"2026-07-01T01:00:00Z",80:"2026-07-01T16:00:00Z",81:"2026-07-01T20:00:00Z",82:"2026-07-02T00:00:00Z",83:"2026-07-02T19:00:00Z",84:"2026-07-02T23:00:00Z",85:"2026-07-03T03:00:00Z",86:"2026-07-03T18:00:00Z",87:"2026-07-03T22:00:00Z",88:"2026-07-04T01:30:00Z",89:"2026-07-04T17:00:00Z",90:"2026-07-04T21:00:00Z",91:"2026-07-05T20:00:00Z",92:"2026-07-06T00:00:00Z",93:"2026-07-06T19:00:00Z",94:"2026-07-07T00:00:00Z",95:"2026-07-07T16:00:00Z",96:"2026-07-07T20:00:00Z",97:"2026-07-09T20:00:00Z",98:"2026-07-10T19:00:00Z",99:"2026-07-11T21:00:00Z",100:"2026-07-12T01:00:00Z",101:"2026-07-14T19:00:00Z",102:"2026-07-15T19:00:00Z",103:"2026-07-18T21:00:00Z",104:"2026-07-19T19:00:00Z"};
 const USER_TZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
 const APP_VERSION = "1.0.0";
 
@@ -907,6 +907,7 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="",
             ? <span style={{fontSize:11,fontWeight:700,color:C.green,background:`${C.green}18`,padding:"2px 7px",borderRadius:10,flexShrink:0}}>Group {m.group}</span>
             : <span style={{fontSize:11,fontWeight:700,color:C.gold,background:`${C.gold}18`,padding:"2px 7px",borderRadius:10,flexShrink:0}}>{m.stage||"Knockout"}</span>
           }
+          <span style={{fontSize:10,color:C.dim,flexShrink:0}}>#{m.id}</span>
           <span onClick={()=>openMaps(m.venue)} style={{fontSize:11,color:C.dim,cursor:"pointer",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
             📍 {m.venue.split(",")[0]}
           </span>
@@ -974,7 +975,7 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=n
 
   return (
     <div>
-      <div ref={_lhRef} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,maxWidth:700,margin:"0 auto",padding:"8px 13px"}}>
+      <div ref={_lhRef} style={{position:"fixed",top:tabTop,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:700,willChange:"transform",zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <div style={{fontWeight:700,fontSize:15,color:C.green}}>{"LIVE SCORES"}</div>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
@@ -1094,7 +1095,7 @@ function SchedTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=
   return (
     <div>
       {/* Fixed filter header */}
-      <div ref={filterRef} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,maxWidth:700,margin:"0 auto",padding:"10px 13px 8px"}}>
+      <div ref={filterRef} style={{position:"fixed",top:tabTop,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:700,willChange:"transform",zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"10px 13px 8px"}}>
 
         {/* Date strip */}
         <div ref={stripRef} style={{display:"flex",overflowX:"auto",scrollbarWidth:"none",marginBottom:8,gap:4}}>
@@ -1102,20 +1103,30 @@ function SchedTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=
             <span style={{fontSize:9,color:selDate===null?C.green:C.dim,fontWeight:700}}>ALL</span>
             <span style={{fontSize:14,fontWeight:900,color:selDate===null?C.green:C.dim}}>⚽</span>
           </div>
-          {MATCH_DATES.map(d => {
+          {MATCH_DATES.map((d, idx) => {
             const isToday = d.key === today;
             const isSel = selDate === d.key;
+            const prevD = MATCH_DATES[idx - 1];
+            const monthChanged = prevD && d.date.getMonth() !== prevD.date.getMonth();
             return (
-              <div key={d.key} data-active={isSel} onClick={()=>setSelDate(isSel?null:d.key)}
-                style={{display:"flex",flexDirection:"column",alignItems:"center",minWidth:36,cursor:"pointer",padding:"4px 6px",borderRadius:8,
-                  background: isSel?`${C.green}22`:isToday?`${C.green}0a`:"transparent",
-                  border:`1px solid ${isSel?C.green:isToday?`${C.green}44`:"transparent"}`,
-                }}>
-                <span style={{fontSize:9,color:isSel?C.green:C.dim,fontWeight:600,textTransform:"uppercase"}}>{d.dow}</span>
-                <div style={{width:28,height:28,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",background:isSel?C.green:"transparent",marginTop:1}}>
-                  <span style={{fontSize:14,fontWeight:900,color:isSel?"#030a05":isToday?C.green:C.text}}>{d.day}</span>
+              <React.Fragment key={d.key}>
+                {monthChanged && (
+                  <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"0 4px",flexShrink:0}}>
+                    <div style={{width:1,height:32,background:C.b2,margin:"0 2px"}}/>
+                    <span style={{fontSize:8,color:C.dim,fontWeight:700,marginTop:2,letterSpacing:"0.05em"}}>{d.date.toLocaleDateString("en-US",{month:"short"}).toUpperCase()}</span>
+                  </div>
+                )}
+                <div data-active={isSel} onClick={()=>setSelDate(isSel?null:d.key)}
+                  style={{display:"flex",flexDirection:"column",alignItems:"center",minWidth:36,cursor:"pointer",padding:"4px 6px",borderRadius:8,
+                    background: isSel?`${C.green}22`:isToday?`${C.green}0a`:"transparent",
+                    border:`1px solid ${isSel?C.green:isToday?`${C.green}44`:"transparent"}`,
+                  }}>
+                  <span style={{fontSize:9,color:isSel?C.green:C.dim,fontWeight:600,textTransform:"uppercase"}}>{d.dow}</span>
+                  <div style={{width:28,height:28,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",background:isSel?C.green:"transparent",marginTop:1}}>
+                    <span style={{fontSize:14,fontWeight:900,color:isSel?"#030a05":isToday?C.green:C.text}}>{d.day}</span>
+                  </div>
                 </div>
-              </div>
+              </React.Fragment>
             );
           })}
         </div>
@@ -1257,7 +1268,7 @@ function GrpTab({ onTeam, onMatchTap, tabTop=116 }) {
   return (
     <div>
       {/* Fixed header */}
-      <div ref={_ghRef} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`2px solid ${C.b2}`,boxShadow:`0 4px 16px ${C.bg},0 8px 24px ${C.bg}`,maxWidth:700,margin:"0 auto",padding:"8px 13px"}}>
+      <div ref={_ghRef} style={{position:"fixed",top:tabTop,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:700,willChange:"transform",zIndex:90,background:C.bg,borderBottom:`2px solid ${C.b2}`,boxShadow:`0 4px 16px ${C.bg},0 8px 24px ${C.bg}`,maxWidth:700,margin:"0 auto",padding:"8px 13px"}}>
         <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:6,scrollbarWidth:"none"}}>
           {Object.keys(GROUPS).map(g=><Pill key={g} active={sel===g} onClick={()=>setSel(g)}>{g}</Pill>)}
         </div>
@@ -1464,7 +1475,7 @@ function StatsTab({ initial="", tabTop=116 }) {
 
   return (
     <div>
-      <div ref={_shRef} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,maxWidth:700,margin:"0 auto",padding:"10px 13px"}}>
+      <div ref={_shRef} style={{position:"fixed",top:tabTop,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:700,willChange:"transform",zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"10px 13px"}}>
         <select value={sel} onChange={e=>setSel(e.target.value)} style={{width:"100%",padding:"10px 14px",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:10,color:C.text,fontSize:14,outline:"none"}}>
           <option value="">Select a team</option>
           {Object.keys(GROUPS).map(g=><optgroup key={g} label={`Group ${g}`}>{GROUPS[g].teams.map(t=><option key={t} value={t}>{getFlag(t)} {t}</option>)}</optgroup>)}
@@ -1699,7 +1710,7 @@ function PredTab({ tabTop=140, geoData={} }) {
   const _phRef = useRef(null); const _phH = useElemHeight(_phRef);
   return (
     <div>
-      <div ref={_phRef} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,maxWidth:700,margin:"0 auto",padding:"8px 13px"}}>
+      <div ref={_phRef} style={{position:"fixed",top:tabTop,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:700,willChange:"transform",zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <div>
             <span style={{fontWeight:700,fontSize:15,color:C.green}}>🎯 POLYMARKET ODDS</span>
@@ -1816,7 +1827,7 @@ function SimTab({ tabTop=116 }) {
 
   return (
     <div>
-      <div ref={_simhRef} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,maxWidth:700,margin:"0 auto",padding:"8px 13px"}}>
+      <div ref={_simhRef} style={{position:"fixed",top:tabTop,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:700,willChange:"transform",zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
           <div>
             <div style={{fontWeight:700,fontSize:15,color:C.green}}>{"🎲 WORLD CUP SIMULATOR"}</div>
@@ -2194,7 +2205,7 @@ function H2HTab({ tabTop=116 }) {
   return (
     <div>
       {/* Fixed team selector */}
-      <div ref={_h2hRef} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,maxWidth:700,margin:"0 auto",padding:"8px 13px"}}>
+      <div ref={_h2hRef} style={{position:"fixed",top:tabTop,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:700,willChange:"transform",zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
         <div style={{fontWeight:700,color:C.green,fontSize:15,marginBottom:8}}>{"⚔️ COMPARE TEAMS HEAD TO HEAD"}</div>
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:team1&&team2&&team1!==team2?8:0}}>
           <div style={{flex:1}}>
@@ -2447,7 +2458,7 @@ function MyBracketTab({ tabTop=116 }) {
   const runBracket=()=>{setRunning(true);setTimeout(()=>{const qualifiers=[];Object.entries(groups).forEach(([,teams])=>{qualifiers.push(teams[0],teams[1]);});const r32=[...qualifiers,...thirds.slice(0,8)];const ko=(arr)=>{const n=[];for(let i=0;i<arr.length;i+=2)n.push(simKO(arr[i],arr[i+1]));return n;};const r16=ko(r32),qf=ko(r16),sf=ko(qf),champ=simKO(sf[0],sf[1]);setResult({r32,r16,qf,sf,champion:champ,runnerUp:sf.find(x=>x!==champ)});setStage("bracket");setRunning(false);},80);};
   return (
     <div>
-      <div ref={_mbhRef} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,maxWidth:700,margin:"0 auto",padding:"10px 13px"}}>
+      <div ref={_mbhRef} style={{position:"fixed",top:tabTop,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:700,willChange:"transform",zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"10px 13px"}}>
         <div style={{display:"flex",gap:8}}>
           <Pill active={stage==="groups"} onClick={()=>setStage("groups")} color={C.green}>1 · Set Groups</Pill>
           <Pill active={stage==="thirds"} onClick={()=>setStage("thirds")} color={C.gold}>2 · Pick 3rds</Pill>
@@ -2676,7 +2687,7 @@ function SavedTab({ saved, onRemove, tabTop=116 }) {
   return (
     <div style={{maxWidth:700,margin:"0 auto"}}>
       {/* Sticky controls */}
-      <div ref={_ref} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,maxWidth:700,margin:"0 auto",padding:"8px 13px"}}>
+      <div ref={_ref} style={{position:"fixed",top:tabTop,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:700,willChange:"transform",zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
         {/* Master actions */}
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
           <span style={{fontSize:12,fontWeight:700,color:C.mid,letterSpacing:"0.06em"}}>ALL MATCHES ({saved.length}){filterMode!=="all"&&filtered.length!==saved.length?<span style={{color:C.dim,fontWeight:400}}> · {filtered.length} shown</span>:null}</span>
@@ -3598,7 +3609,7 @@ function TopScorersTab({ tabTop=116 }) {
 
   return (
     <div>
-      <div ref={_tshRef} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,maxWidth:700,margin:"0 auto",padding:"8px 13px"}}>
+      <div ref={_tshRef} style={{position:"fixed",top:tabTop,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:700,willChange:"transform",zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
         <div style={{fontWeight:700,fontSize:15,color:C.green,marginBottom:!hasLive?4:0}}>{"TOP SCORERS"} <span style={{fontSize:11,color:C.dim,fontWeight:400}}>{hasLive?"· "+"Live data":"· "+"Pre-tournament"}</span></div>
         {!hasLive && (
           <div style={{display:"flex",gap:6}}>
@@ -4072,7 +4083,7 @@ function WCNewsTab({ tabTop=116 }) {
   return (
     <div>
       {/* Sticky header */}
-      <div ref={_ref} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,maxWidth:700,margin:"0 auto",padding:"10px 13px 8px"}}>
+      <div ref={_ref} style={{position:"fixed",top:tabTop,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:700,willChange:"transform",zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"10px 13px 8px"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <span style={{fontSize:15,fontWeight:700,color:C.green}}>{"📰 World Cup 2026 News"}</span>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
@@ -4683,7 +4694,7 @@ export default function App() {
       <FavCtx.Provider value={{favTeam, favTeams, setFavTeam: toggleFav}}>
       <div style={{minHeight:"100vh",background:C.bg,maxWidth:700,margin:"0 auto",fontFamily:"system-ui,sans-serif",transition:"background .2s"}}>
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}@keyframes scoreFlash{0%{transform:scale(1)}25%{transform:scale(1.18)}50%{transform:scale(1.12)}100%{transform:scale(1)}}*{box-sizing:border-box;margin:0;padding:0}select option{background:${C.s1}}::-webkit-scrollbar{width:3px;height:3px}::-webkit-scrollbar-thumb{background:${C.b1};border-radius:2px}`}</style>
-        <div ref={tabBarRef} style={{background:`linear-gradient(180deg,${headerDark},${C.bg})`,padding:"14px 14px 0",borderBottom:`1px solid ${C.b1}`,position:"sticky",top:0,zIndex:100,backdropFilter:"blur(10px)"}}>
+        <div ref={tabBarRef} style={{background:`linear-gradient(180deg,${headerDark},${C.bg})`,padding:"14px 14px 0",borderBottom:`1px solid ${C.b1}`,position:"sticky",top:0,zIndex:100,willChange:"transform",backdropFilter:"blur(10px)"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
             <div style={{display:"flex",alignItems:"center",gap:10}}>
               <div>
