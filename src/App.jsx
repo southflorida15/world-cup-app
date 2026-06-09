@@ -2451,21 +2451,34 @@ function BracketMatchup({ t1, t2, winner }) {
   );
 }
 function MyBracketTab({ tabTop=116 }) {
+  const makeDefaultGroupStats = (sourceGroups) => Object.fromEntries(
+    Object.entries(sourceGroups).map(([g,teams]) => [g, Object.fromEntries(
+      teams.map((team,idx) => [team, {
+        pts: idx===0 ? 7 : idx===1 ? 5 : idx===2 ? 4 : 0,
+        gd:  idx===0 ? 4 : idx===1 ? 2 : idx===2 ? 0 : -6,
+        gf:  idx===0 ? 7 : idx===1 ? 5 : idx===2 ? 4 : 1,
+      }])
+    )])
+  );
   const [stage,setStage]=useState("groups");
   const [bracketMode,setBracketMode]=useState("simulation");
   const [groups,setGroups]=useState(defaultBracketGroups);
+  const [groupStats,setGroupStats]=useState(()=>makeDefaultGroupStats(defaultBracketGroups));
   const [thirds,setThirds]=useState([]);
   const [result,setResult]=useState(null);
   const [running,setRunning]=useState(false);
-  const allThirds=Object.entries(groups).map(([g,teams])=>({group:g,team:teams[2]}));
+  const allThirds=Object.entries(groups).map(([g,teams])=>({group:g,team:teams[2],...(groupStats?.[g]?.[teams[2]]||{pts:0,gd:0,gf:0})}));
   const toggleThird=(t)=>{setThirds(p=>p.includes(t)?p.filter(x=>x!==t):[...p,t].slice(0,8));};
+  const updateTeamStat=(group,team,field,value)=>{const n=Number(value);setGroupStats(p=>({...p,[group]:{...(p[group]||{}),[team]:{...((p[group]||{})[team]||{pts:0,gd:0,gf:0}),[field]:Number.isFinite(n)?n:0}}}));};
+  const rankThirdPlaceTeams=(items)=>[...items].sort((a,b)=>(b.pts-a.pts)||(b.gd-a.gd)||(b.gf-a.gf)||(gs(b.team)-gs(a.team))||a.group.localeCompare(b.group));
   const _mbhRef = useRef(null); const _mbhH = useElemHeight(_mbhRef);
   const runBracket=()=>{
     setRunning(true);
     setTimeout(()=>{
       const qualifiedThirds = thirds
         .map(team => allThirds.find(x => x.team === team))
-        .filter(Boolean);
+        .filter(Boolean)
+        .map(x => ({group:x.group,team:x.team,pts:x.pts,gd:x.gd,gf:x.gf}));
 
       console.log("Qualified third-place teams:", qualifiedThirds);
 
@@ -2517,7 +2530,7 @@ function MyBracketTab({ tabTop=116 }) {
       {stage==="groups" && (
         <div>
           <div style={{fontSize:12,color:C.mid,marginBottom:14,lineHeight:1.6}}>
-            <strong style={{color:C.green}}>Free Simulation:</strong> press and drag <span style={{color:C.dim,fontSize:14}}>⠿</span> to reorder teams. Top 2 qualify automatically. Official Bracket mode will use live standings in the next integration step.
+            <strong style={{color:C.green}}>Free Simulation:</strong> drag teams to set group order, then adjust Pts/GD/GF. Top 2 qualify automatically; third-place ranking uses FIFA-style points, goal difference, then goals scored. Official Bracket mode will use live standings in a later step.
           </div>
           {Object.entries(groups).map(([g,teams])=>(
             <Card key={g} style={{marginBottom:10}}>
@@ -2541,6 +2554,17 @@ function MyBracketTab({ tabTop=116 }) {
                     );
                   }}
                 />
+                <div style={{marginTop:8,borderTop:`1px solid ${C.b1}`,paddingTop:8}}>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 48px 48px 48px",gap:6,alignItems:"center",fontSize:9,color:C.dim,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:5}}>
+                    <span>Standings data</span><span style={{textAlign:"center"}}>Pts</span><span style={{textAlign:"center"}}>GD</span><span style={{textAlign:"center"}}>GF</span>
+                  </div>
+                  {teams.map((team,idx)=>{const st=groupStats?.[g]?.[team]||{pts:0,gd:0,gf:0};const col=idx===0?C.green:idx===1?C.gold:idx===2?"#94a3b8":C.dim;return(
+                    <div key={`${g}-${team}-stats`} style={{display:"grid",gridTemplateColumns:"1fr 48px 48px 48px",gap:6,alignItems:"center",marginBottom:5}}>
+                      <div style={{display:"flex",alignItems:"center",gap:6,minWidth:0}}><span style={{fontSize:11,color:col,fontWeight:700,width:14}}>{idx+1}</span><span style={{fontSize:12,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{team}</span></div>
+                      {["pts","gd","gf"].map(field=><input key={field} type="number" value={st[field]} onChange={e=>updateTeamStat(g,team,field,e.target.value)} style={{width:"100%",boxSizing:"border-box",background:C.bg,border:`1px solid ${C.b1}`,borderRadius:7,color:C.text,fontSize:12,padding:"5px 4px",textAlign:"center"}}/>)}
+                    </div>
+                  );})}
+                </div>
               </div>
             </Card>
           ))}
@@ -2552,9 +2576,9 @@ function MyBracketTab({ tabTop=116 }) {
           <div style={{fontSize:12,color:C.mid,marginBottom:6,lineHeight:1.6}}>Select exactly <strong style={{color:C.gold}}>8 of 12</strong> third-place teams to advance.</div>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
             <span style={{fontSize:13,color:thirds.length===8?C.green:C.gold,fontWeight:700}}>{thirds.length}/8 selected</span>
-            <button onClick={()=>{const sorted=[...allThirds].sort((a,b)=>gs(b.team)-gs(a.team)).slice(0,8).map(x=>x.team);setThirds(sorted);}} style={{fontSize:11,padding:"4px 10px",borderRadius:10,background:`${C.gold}22`,border:`1px solid ${C.gold}55`,color:C.gold,cursor:"pointer",fontWeight:600}}>Auto-select best 8</button>
+            <button onClick={()=>{const sorted=rankThirdPlaceTeams(allThirds).slice(0,8).map(x=>x.team);setThirds(sorted);}} style={{fontSize:11,padding:"4px 10px",borderRadius:10,background:`${C.gold}22`,border:`1px solid ${C.gold}55`,color:C.gold,cursor:"pointer",fontWeight:600}}>Auto-select best 8</button>
           </div>
-          {allThirds.map(({group,team})=>{const sel=thirds.includes(team);return(<div key={team} onClick={()=>toggleThird(team)} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:10,marginBottom:6,cursor:"pointer",background:sel?`${C.green}18`:C.s1,border:`1px solid ${sel?C.green:C.b1}`}}><div style={{width:20,height:20,borderRadius:6,border:`2px solid ${sel?C.green:C.dim}`,background:sel?C.green:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{sel&&<span style={{color:"#030a05",fontSize:12,fontWeight:900}}>✓</span>}</div><Crest team={team} size={24}/><div style={{flex:1}}><div style={{fontSize:13,fontWeight:600,color:sel?C.green:C.text}}>{team}</div><div style={{fontSize:10,color:C.dim}}>3rd place Group {group} · STR {gs(team)}</div></div></div>);})}
+          {rankThirdPlaceTeams(allThirds).map(({group,team,pts,gd,gf},rankIdx)=>{const sel=thirds.includes(team);return(<div key={team} onClick={()=>toggleThird(team)} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:10,marginBottom:6,cursor:"pointer",background:sel?`${C.green}18`:C.s1,border:`1px solid ${sel?C.green:C.b1}`}}><div style={{width:20,height:20,borderRadius:6,border:`2px solid ${sel?C.green:C.dim}`,background:sel?C.green:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{sel&&<span style={{color:"#030a05",fontSize:12,fontWeight:900}}>✓</span>}</div><Crest team={team} size={24}/><div style={{flex:1}}><div style={{fontSize:13,fontWeight:600,color:sel?C.green:C.text}}>{rankIdx+1}. {team}</div><div style={{fontSize:10,color:C.dim}}>3rd Group {group} · {pts} pts · GD {gd>=0?`+${gd}`:gd} · GF {gf}</div></div></div>);})}
           <div style={{display:"flex",gap:8,marginTop:8}}>
             <button onClick={()=>setStage("groups")} style={{flex:1,padding:"11px 0",borderRadius:12,background:"transparent",border:`1px solid ${C.b2}`,color:C.mid,fontWeight:600,fontSize:14,cursor:"pointer"}}>← Back</button>
             <button onClick={runBracket} disabled={thirds.length!==8||running} style={{flex:2,padding:"11px 0",borderRadius:12,background:thirds.length===8?`linear-gradient(135deg,${C.green},#22c55e)`:C.b2,border:"none",color:thirds.length===8?"#030a05":C.dim,fontWeight:700,fontSize:14,cursor:thirds.length===8?"pointer":"default",opacity:running?0.6:1}}>{running?"Simulating...":"🎲 Simulate My Bracket →"}</button>
