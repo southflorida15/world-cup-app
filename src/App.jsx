@@ -2620,12 +2620,14 @@ function SavedMatchCard({ item, onRemove, notifiedIds=new Set(), onNotified=()=>
 function SavedTab({ saved, onRemove, tabTop=116 }) {
   const _ref = useRef(null);
   const _h = useElemHeight(_ref);
+  const savedStripRef = useRef(null);
   const [masterPushDone, setMasterPushDone] = useState(false);
   const [notifiedIds, setNotifiedIds] = useState(() => {
     try { return new Set(JSON.parse(localStorage.getItem("wc2026_push_set") || "[]")); } catch { return new Set(); }
   });
   const [filterMode, setFilterMode] = useState("all"); // all | group | team | date
   const [filterVal, setFilterVal] = useState("");
+  const savedToday = new Date().toLocaleDateString("en-US", { month:"short", day:"numeric" });
 
   const sorted = [...saved].sort((a,b) => {
     const ta = MATCH_UTC[a.match?.id] ? new Date(MATCH_UTC[a.match.id]).getTime() : 0;
@@ -2637,6 +2639,15 @@ function SavedTab({ saved, onRemove, tabTop=116 }) {
   const groups = [...new Set(sorted.map(x=>x.match?.group?.trim()).filter(Boolean))].sort();
   const teams  = [...new Set(sorted.flatMap(x=>[x.match?.home?.trim(),x.match?.away?.trim()]).filter(Boolean))].sort();
   const dates  = [...new Set(sorted.map(x=>x.match?.date?.trim()).filter(Boolean))];
+  // Build date objects for the strip (only dates that have saved matches)
+  const savedDates = sorted
+    .filter(x => MATCH_UTC[x.match?.id])
+    .reduce((acc, x) => {
+      const d = new Date(MATCH_UTC[x.match.id]);
+      const key = d.toLocaleDateString("en-US",{month:"short",day:"numeric"});
+      if (!acc.find(a=>a.key===key)) acc.push({key, date:d, day:d.getDate(), dow:d.toLocaleDateString("en-US",{weekday:"short"}).slice(0,1)});
+      return acc;
+    }, []);
 
   const filtered = sorted.filter(item => {
     const m = item.match;
@@ -2708,18 +2719,53 @@ function SavedTab({ saved, onRemove, tabTop=116 }) {
           <button style={ss(filterMode==="date")} onClick={()=>{setFilterMode("date");setFilterVal("");}}>📅 Date</button>
         </div>
         {/* Filter value selector */}
-        {filterMode !== "all" && (
+        {filterMode !== "all" && filterMode !== "date" && (
           <div style={{marginTop:8}}>
             <select value={filterVal} onChange={e=>setFilterVal(e.target.value)}
               style={{width:"100%",padding:"8px 12px",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:10,color:C.text,fontSize:13,outline:"none"}}>
               <option value="">All {filterMode}s</option>
               {filterMode==="group" && groups.map(g=><option key={g} value={g}>Group {g}</option>)}
               {filterMode==="team"  && teams.map(t=><option key={t} value={t}>{t}</option>)}
-              {filterMode==="date"  && dates.map(d=><option key={d} value={d}>{d}</option>)}
             </select>
           </div>
         )}
+        {/* Date strip — same as Schedule tab */}
+        {filterMode === "date" && (
+          <div ref={savedStripRef} style={{display:"flex",overflowX:"auto",scrollbarWidth:"none",marginTop:8,gap:4}}>
+            <div onClick={()=>setFilterVal("")} style={{display:"flex",flexDirection:"column",alignItems:"center",minWidth:36,cursor:"pointer",padding:"4px 2px",borderRadius:8,background:filterVal===""?`${C.green}22`:"transparent",border:`1px solid ${filterVal===""?C.green:"transparent"}`}}>
+              <span style={{fontSize:9,color:filterVal===""?C.green:C.dim,fontWeight:700}}>ALL</span>
+              <span style={{fontSize:14,fontWeight:900,color:filterVal===""?C.green:C.dim}}>⚽</span>
+            </div>
+            {savedDates.map((d, idx) => {
+              const isToday = d.key === savedToday;
+              const isSel = filterVal === d.key;
+              const prevD = savedDates[idx - 1];
+              const monthChanged = prevD && d.date.getMonth() !== prevD.date.getMonth();
+              return (
+                <React.Fragment key={d.key}>
+                  {monthChanged && (
+                    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"0 4px",flexShrink:0}}>
+                      <div style={{width:1,height:32,background:C.b2,margin:"0 2px"}}/>
+                      <span style={{fontSize:8,color:C.dim,fontWeight:700,marginTop:2,letterSpacing:"0.05em"}}>{d.date.toLocaleDateString("en-US",{month:"short"}).toUpperCase()}</span>
+                    </div>
+                  )}
+                  <div onClick={()=>setFilterVal(isSel?"":d.key)}
+                    style={{display:"flex",flexDirection:"column",alignItems:"center",minWidth:36,cursor:"pointer",padding:"4px 6px",borderRadius:8,
+                      background:isSel?`${C.green}22`:isToday?`${C.green}0a`:"transparent",
+                      border:`1px solid ${isSel?C.green:isToday?`${C.green}44`:"transparent"}`,
+                    }}>
+                    <span style={{fontSize:9,color:isSel?C.green:C.dim,fontWeight:600,textTransform:"uppercase"}}>{d.dow}</span>
+                    <div style={{width:28,height:28,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",background:isSel?C.green:"transparent",marginTop:1}}>
+                      <span style={{fontSize:14,fontWeight:900,color:isSel?"#030a05":isToday?C.green:C.text}}>{d.day}</span>
+                    </div>
+                  </div>
+                </React.Fragment>
+              );
+            })}
+          </div>
+        )}
       </div>
+      <div style={{height:(_h||140)+8}}/>
       {filtered.length === 0
         ? <div style={{textAlign:"center",padding:"32px 0",color:C.dim,fontSize:13}}>No matches match this filter.</div>
         : filtered.map(item=>(<SavedMatchCard key={item.id} item={item} onRemove={onRemove} notifiedIds={notifiedIds} onNotified={(id)=>setNotifiedIds(prev=>new Set([...prev,id]))}/>))
@@ -2922,7 +2968,7 @@ function useDebounce(fn, ms) {
   }, [fn, ms]);
 }
 
-function PredictorTab() {
+function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{} }) {
   const { getScore, isFinished } = useContext(LiveScoresCtx);
   const { favTeam, favTeams=[] } = useContext(FavCtx);
   const userId = useMemo(getUserId, []);
@@ -2930,7 +2976,7 @@ function PredictorTab() {
   // User registration state
   const [user, setUser]         = useState(null);   // { userId, name } or null
   const [userLoading, setUL]    = useState(true);
-  const [nameInput, setNameInput] = useState("");
+  const [nameInput, setNameInput] = useState(syncProfile?.name || "");
   const [nameErr, setNameErr]   = useState("");
   const [nameSaving, setNS]     = useState(false);
 
@@ -2949,11 +2995,16 @@ function PredictorTab() {
     (async () => {
       setUL(true);
       try {
-        const u = await apiPred("getUser", { userId });
+        let u = await apiPred("getUser", { userId });
+        // Auto-register if signed in via sync but not yet in predictor
+        if (!u && syncProfile?.name) {
+          try {
+            u = await apiPred("register", {}, { userId, name: syncProfile.name, avatar: null, city: "", country: "" });
+          } catch(e) { /* name taken or error — will show name prompt */ }
+        }
         setUser(u);
         if (u) {
           const p = await apiPred("getPreds", { userId });
-          // Normalise keys to numbers
           const normalised = {};
           Object.entries(p||{}).forEach(([k,v]) => { normalised[Number(k)] = v; });
           setPreds(normalised);
@@ -2975,10 +3026,11 @@ function PredictorTab() {
 
   // ── Register ────────────────────────────────────────────────────────────
   const handleRegister = async () => {
-    if (!nameInput.trim()) return;
+    const name = nameInput.trim() || syncProfile?.name || "";
+    if (!name) return;
     setNS(true); setNameErr("");
     try {
-      const u = await apiPred("register", {}, { userId, name: nameInput.trim(), avatar: userAvatar || null, city: geoData?.city || "", country: geoData?.country || "" });
+      const u = await apiPred("register", {}, { userId, name, avatar: null, city: "", country: "" });
       setUser(u);
     } catch(e) { setNameErr(e.message || "Could not save name"); }
     finally { setNS(false); }
@@ -3036,25 +3088,50 @@ function PredictorTab() {
         <div style={{fontWeight:700,fontSize:17,color:C.green,marginBottom:4}}>Match Predictor</div>
         <div style={{fontSize:12,color:C.mid,lineHeight:1.5}}>Pick scores for every group match. Compete with friends on the leaderboard.</div>
       </div>
-      <Card style={{padding:18}}>
-        <div style={{fontWeight:700,color:C.text,fontSize:15,marginBottom:4}}>Choose your display name</div>
-        <div style={{fontSize:12,color:C.dim,marginBottom:14}}>This is how you'll appear on the leaderboard — pick something your friends will recognise.</div>
-        <input
-          value={nameInput}
-          onChange={e=>{setNameInput(e.target.value.slice(0,20));setNameErr("");}}
-          onKeyDown={e=>e.key==="Enter"&&handleRegister()}
-          placeholder="e.g. Pablo, FootballFan99..."
-          maxLength={20}
-          style={{width:"100%",padding:"12px 14px",background:C.s2,border:`1px solid ${nameErr?C.red:C.b2}`,borderRadius:10,color:C.text,fontSize:15,outline:"none",marginBottom:8}}
-        />
-        {nameErr && <div style={{fontSize:12,color:C.red,marginBottom:8}}>{nameErr}</div>}
-        <div style={{fontSize:11,color:C.dim,marginBottom:14}}>{20-nameInput.length} characters remaining</div>
-        <button
-          onClick={handleRegister}
-          disabled={nameSaving||!nameInput.trim()}
-          style={{width:"100%",padding:"12px 0",borderRadius:12,background:nameInput.trim()?`linear-gradient(135deg,${C.green},#22c55e)`:C.b2,border:"none",color:nameInput.trim()?"#030a05":C.dim,fontWeight:700,fontSize:15,cursor:nameInput.trim()?"pointer":"default",opacity:nameSaving?0.6:1}}
-        >{nameSaving?"Saving...":"Join the Predictor →"}</button>
-      </Card>
+      {syncProfile?.name ? (
+        /* Signed in but name registration failed — show retry */
+        <Card style={{padding:18}}>
+          <div style={{fontWeight:700,color:C.text,fontSize:15,marginBottom:4}}>Join as {syncProfile.name}?</div>
+          <div style={{fontSize:12,color:C.dim,marginBottom:14}}>We'll use your account name for the leaderboard.</div>
+          {nameErr && <div style={{fontSize:12,color:C.red,marginBottom:8}}>{nameErr}</div>}
+          <button onClick={handleRegister} disabled={nameSaving}
+            style={{width:"100%",padding:"12px 0",borderRadius:12,background:`linear-gradient(135deg,${C.green},#22c55e)`,border:"none",color:"#030a05",fontWeight:700,fontSize:15,cursor:"pointer",opacity:nameSaving?0.6:1}}>
+            {nameSaving?"Joining...":"Join the Predictor →"}
+          </button>
+          <div style={{fontSize:11,color:C.dim,marginTop:10,textAlign:"center"}}>
+            Want a different name? <button onClick={()=>setNameInput("")} style={{background:"none",border:"none",color:C.green,cursor:"pointer",fontSize:11,textDecoration:"underline"}}>Change it</button>
+          </div>
+          {nameInput !== syncProfile.name && (
+            <div style={{marginTop:12}}>
+              <input value={nameInput} onChange={e=>{setNameInput(e.target.value.slice(0,20));setNameErr("");}}
+                placeholder="Custom display name..." maxLength={20}
+                style={{width:"100%",padding:"12px 14px",background:C.s2,border:`1px solid ${nameErr?C.red:C.b2}`,borderRadius:10,color:C.text,fontSize:15,outline:"none"}}/>
+            </div>
+          )}
+        </Card>
+      ) : (
+        /* Not signed in — prompt to create account OR enter name */
+        <div>
+          <Card style={{padding:18,marginBottom:12}}>
+            <div style={{fontWeight:700,color:C.text,fontSize:15,marginBottom:4}}>Choose your display name</div>
+            <div style={{fontSize:12,color:C.dim,marginBottom:14}}>This is how you'll appear on the leaderboard.</div>
+            <input value={nameInput} onChange={e=>{setNameInput(e.target.value.slice(0,20));setNameErr("");}}
+              onKeyDown={e=>e.key==="Enter"&&handleRegister()}
+              placeholder="e.g. Pablo, FootballFan99..." maxLength={20}
+              style={{width:"100%",padding:"12px 14px",background:C.s2,border:`1px solid ${nameErr?C.red:C.b2}`,borderRadius:10,color:C.text,fontSize:15,outline:"none",marginBottom:8}}/>
+            {nameErr && <div style={{fontSize:12,color:C.red,marginBottom:8}}>{nameErr}</div>}
+            <div style={{fontSize:11,color:C.dim,marginBottom:14}}>{20-nameInput.length} characters remaining</div>
+            <button onClick={handleRegister} disabled={nameSaving||!nameInput.trim()}
+              style={{width:"100%",padding:"12px 0",borderRadius:12,background:nameInput.trim()?`linear-gradient(135deg,${C.green},#22c55e)`:C.b2,border:"none",color:nameInput.trim()?"#030a05":C.dim,fontWeight:700,fontSize:15,cursor:nameInput.trim()?"pointer":"default",opacity:nameSaving?0.6:1}}>
+              {nameSaving?"Saving...":"Join the Predictor →"}
+            </button>
+          </Card>
+          <button onClick={onShowSync}
+            style={{width:"100%",padding:"12px 0",borderRadius:12,background:"transparent",border:`1px solid ${C.b2}`,color:C.mid,fontWeight:600,fontSize:13,cursor:"pointer"}}>
+            🔗 Sign in with PIN to sync across devices
+          </button>
+        </div>
+      )}
     </div>
   );
 
@@ -3831,7 +3908,6 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
           </>}
         </div>
         {isSynced && <button onClick={()=>{persistProfile(null);onSignOut();setToast("Signed out.");onClose();}} style={{fontSize:11,color:C.dim,background:"none",border:`1px solid ${C.b2}`,borderRadius:8,padding:"4px 8px",cursor:"pointer"}}>{"Sign out"}</button>}
-        <span style={{fontSize:10,color:C.dim,marginLeft:"auto"}}>v{APP_VERSION}</span>
       </div>
 
       {/* My Teams — collapsible */}
@@ -3863,7 +3939,7 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
         <span style={{color:C.mid,fontSize:18}}>›</span>
       </button>
 
-      <div style={{borderTop:`1px solid ${C.b1}`,margin:"4px 0 14px"}}/>
+      <div style={{borderTop:`1px solid ${C.b1}`,margin:"4px 0 10px"}}/>
 
       {/* Sync section */}
       {!isSynced ? (
@@ -3876,10 +3952,15 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
           <button onClick={()=>setScreen("email")} style={{...btnSecondary,marginTop:0,fontSize:13}}>✉️ Continue with Email</button>
         </div>
       ) : (
-        <div>
-          <div style={{fontSize:12,color:C.dim,textAlign:"center",marginBottom:10}}>Your progress syncs automatically across all signed-in devices.</div>
-          {syncProfile?.pin&&<button onClick={()=>{setPin("");setScreen("pin-change");setError("");}} style={{width:"100%",padding:"9px 0",borderRadius:10,border:`1px solid ${C.b2}`,background:C.s2,color:C.mid,fontSize:13,fontWeight:600,cursor:"pointer"}}>🔁 Change PIN</button>}
+        <>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>
+          <div style={{fontSize:11,color:C.dim,flex:1}}>✅ Syncing across devices</div>
+          {syncProfile?.pin&&<button onClick={()=>{setPin("");setScreen("pin-change");setError("");}} style={{padding:"6px 12px",borderRadius:8,border:`1px solid ${C.b2}`,background:C.s2,color:C.mid,fontSize:11,fontWeight:600,cursor:"pointer",flexShrink:0}}>🔁 Change PIN</button>}
         </div>
+        <div style={{textAlign:"center",marginTop:10}}>
+          <span style={{fontSize:10,color:C.dim}}>v{APP_VERSION}</span>
+        </div>
+        </>
       )}
 
       {/* Avatar picker overlay */}
@@ -4750,7 +4831,7 @@ export default function App() {
           {tab==="stats"     && <StatsTab initial={statsTeam} tabTop={tabBarBottom}/>}
           {tab==="h2h"       && <H2HTab tabTop={tabBarBottom}/>}
           {tab==="predict"   && <PredTab tabTop={tabBarBottom} geoData={geoData}/>}
-          {tab==="predictor" && <PredictorTab/>}
+          {tab==="predictor" && <PredictorTab syncProfile={syncProfile} displayName={displayName} onShowSync={()=>setShowSyncModal(true)}/>}
           {tab==="sim"       && <SimTab tabTop={tabBarBottom}/>}
           {tab==="bracket"   && <MyBracketTab tabTop={tabBarBottom}/>}
           {tab==="news"       && <WCNewsTab tabTop={tabBarBottom}/>}
