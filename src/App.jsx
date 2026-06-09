@@ -1257,7 +1257,7 @@ function GrpTab({ onTeam, onMatchTap, tabTop=116 }) {
   return (
     <div>
       {/* Fixed header */}
-      <div ref={_ghRef} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,maxWidth:700,margin:"0 auto",padding:"8px 13px"}}>
+      <div ref={_ghRef} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`2px solid ${C.b2}`,boxShadow:`0 4px 16px ${C.bg},0 8px 24px ${C.bg}`,maxWidth:700,margin:"0 auto",padding:"8px 13px"}}>
         <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:6,scrollbarWidth:"none"}}>
           {Object.keys(GROUPS).map(g=><Pill key={g} active={sel===g} onClick={()=>setSel(g)}>{g}</Pill>)}
         </div>
@@ -1268,7 +1268,7 @@ function GrpTab({ onTeam, onMatchTap, tabTop=116 }) {
       </div>
       {/* Spacer */}
       
-      <div style={{height:(_ghH||90)+8}}/>
+      <div style={{height:(_ghH||110)+16}}/>
       {view==="standings" && (
         <div>
           <Card style={{marginBottom:12}}>
