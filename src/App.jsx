@@ -982,6 +982,7 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=n
           </div>
         </div>
       </div>
+      <div style={{height:12}}/>
       
       {Object.keys(upcomingByDate).length > 0 && (
         <div style={{marginBottom:16}}>
@@ -1466,6 +1467,7 @@ function StatsTab({ initial="", tabTop=116 }) {
           {Object.keys(GROUPS).map(g=><optgroup key={g} label={`Group ${g}`}>{GROUPS[g].teams.map(t=><option key={t} value={t}>{getFlag(t)} {t}</option>)}</optgroup>)}
         </select>
       </div>
+      <div style={{height:12}}/>
       
       {!sel && <div style={{textAlign:"center",padding:"44px 20px",color:C.dim,fontSize:13}}>Select any of the 48 teams to view their squad</div>}
       {sel && d && (
@@ -1703,6 +1705,7 @@ function PredTab({ tabTop=140, geoData={} }) {
           <a href="https://polymarket.com" target="_blank" rel="noopener noreferrer" style={{fontSize:11,color:C.green,textDecoration:"none",border:`1px solid ${C.greenS}`,padding:"3px 9px",borderRadius:20}}>Live →</a>
         </div>
       </div>
+      <div style={{height:12}}/>
       
 
       {/* Line chart */}
@@ -1830,6 +1833,7 @@ function SimTab({ tabTop=116 }) {
           <Pill active={view==="bracket"} onClick={()=>setView("bracket")} color={C.gold}>🏆 Most Likely Bracket</Pill>
         </div>
       </div>
+      <div style={{height:12}}/>
       
 
       {running && (
@@ -2210,6 +2214,7 @@ function H2HTab({ tabTop=116 }) {
           </button>
         )}
       </div>
+      <div style={{height:12}}/>
       
 
       {/* Simulated match odds — always shown */}
@@ -2447,6 +2452,7 @@ function MyBracketTab({ tabTop=116 }) {
           <Pill active={stage==="bracket"} onClick={()=>setStage("bracket")} color={C.blue}>3 · Bracket</Pill>
         </div>
       </div>
+      <div style={{height:12}}/>
       
       {stage==="groups" && (
         <div>
@@ -3602,6 +3608,7 @@ function TopScorersTab({ tabTop=116 }) {
           </div>
         )}
       </div>
+      <div style={{height:12}}/>
       
       {!hasLive && (
           <div>
@@ -4199,6 +4206,8 @@ function PullToRefresh({ onRefresh, children }) {
     const onTouchMove = (e) => {
       const scroller = document.getElementById("scroll-area");
       if (scroller && scroller.scrollTop > 0) return;
+      // Also check if touch started inside scroll area but not at top
+      if (!startY.current) return;
       const dy = e.touches[0].clientY - startY.current;
       if (dy > 8) {
         // Prevent iOS native bounce — only prevent when pulling down from top
@@ -4672,8 +4681,8 @@ export default function App() {
       <CountryCtx.Provider value={country}>
       <ThemeCtx.Provider value={{dark, toggle:toggleDark, headerDark, cardDark}}>
       <FavCtx.Provider value={{favTeam, favTeams, setFavTeam: toggleFav}}>
-      <div style={{height:"100dvh",overflow:"hidden",background:C.bg,maxWidth:700,margin:"0 auto",fontFamily:"system-ui,sans-serif",transition:"background .2s",display:"flex",flexDirection:"column"}}>
-        <style>{`@keyframes spin{to{transform:rotate(360deg)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}@keyframes scoreFlash{0%{transform:scale(1)}25%{transform:scale(1.18)}50%{transform:scale(1.12)}100%{transform:scale(1)}}*{box-sizing:border-box;margin:0;padding:0}select option{background:${C.s1}}::-webkit-scrollbar{width:3px;height:3px}::-webkit-scrollbar-thumb{background:${C.b1};border-radius:2px}`}</style>
+      <div style={{height:"100dvh",overflow:"hidden",background:C.bg,maxWidth:700,margin:"0 auto",fontFamily:"system-ui,sans-serif",transition:"background .2s",display:"flex",flexDirection:"column",overscrollBehavior:"none"}}>
+        <style>{`html,body{overscroll-behavior:none;overflow:hidden;height:100%;}@keyframes spin{to{transform:rotate(360deg)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}@keyframes scoreFlash{0%{transform:scale(1)}25%{transform:scale(1.18)}50%{transform:scale(1.12)}100%{transform:scale(1)}}*{box-sizing:border-box;margin:0;padding:0}select option{background:${C.s1}}::-webkit-scrollbar{width:3px;height:3px}::-webkit-scrollbar-thumb{background:${C.b1};border-radius:2px}`}</style>
         <div ref={tabBarRef} style={{background:`linear-gradient(180deg,${headerDark},${C.bg})`,padding:"14px 14px 0",borderBottom:`1px solid ${C.b1}`,position:"sticky",top:0,zIndex:100,backdropFilter:"blur(10px)"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
             <div style={{display:"flex",alignItems:"center",gap:10}}>
@@ -4719,7 +4728,7 @@ export default function App() {
           </div>
         </div>
         <PullToRefresh onRefresh={async()=>{ if(refreshScores) await refreshScores(); }}>
-        <div id="scroll-area" style={{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch",padding:"0 13px 100px"}}>
+        <div id="scroll-area" style={{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch",overscrollBehavior:"contain",padding:"0 13px 100px"}}>
           {tab==="live"      && <LiveTab onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} tabTop={tabBarBottom} savedIds={savedIds}/>}
           {tab==="scorers"   && <TopScorersTab tabTop={tabBarBottom}/>}
           {tab==="schedule"  && <SchedTab onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} tabTop={tabBarBottom} savedIds={savedIds}/>}
