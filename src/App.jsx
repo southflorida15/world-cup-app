@@ -2452,6 +2452,7 @@ function BracketMatchup({ t1, t2, winner }) {
 }
 function MyBracketTab({ tabTop=116 }) {
   const [stage,setStage]=useState("groups");
+  const [bracketMode,setBracketMode]=useState("simulation");
   const [groups,setGroups]=useState(defaultBracketGroups);
   const [thirds,setThirds]=useState([]);
   const [result,setResult]=useState(null);
@@ -2484,6 +2485,7 @@ function MyBracketTab({ tabTop=116 }) {
       const r16=ko(r32),qf=ko(r16),sf=ko(qf),champ=simKO(sf[0],sf[1]);
 
       setResult({
+        mode:bracketMode,
         r32,
         r16,
         qf,
@@ -2500,6 +2502,10 @@ function MyBracketTab({ tabTop=116 }) {
   return (
     <div>
       <div ref={_mbhRef} style={{position:"fixed",top:tabTop,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:700,willChange:"transform",zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
+        <div style={{display:"flex",gap:8,marginBottom:8}}>
+          <button onClick={()=>setBracketMode("simulation")} style={{flex:1,padding:"7px 8px",borderRadius:10,cursor:"pointer",background:bracketMode==="simulation"?`${C.green}22`:C.s1,border:`1px solid ${bracketMode==="simulation"?C.green:C.b1}`,color:bracketMode==="simulation"?C.green:C.mid,fontWeight:700,fontSize:12}}>🎮 Free Simulation</button>
+          <button disabled title="Official mode will use live standings after the next integration step" style={{flex:1,padding:"7px 8px",borderRadius:10,cursor:"not-allowed",background:C.s1,border:`1px solid ${C.b1}`,color:C.dim,fontWeight:700,fontSize:12,opacity:0.65}}>🌐 Official Bracket · Soon</button>
+        </div>
         <div style={{display:"flex",gap:8}}>
           <Pill active={stage==="groups"} onClick={()=>setStage("groups")} color={C.green}>1 · Set Groups</Pill>
           <Pill active={stage==="thirds"} onClick={()=>setStage("thirds")} color={C.gold}>2 · Pick 3rds</Pill>
@@ -2511,7 +2517,7 @@ function MyBracketTab({ tabTop=116 }) {
       {stage==="groups" && (
         <div>
           <div style={{fontSize:12,color:C.mid,marginBottom:14,lineHeight:1.6}}>
-            Press and drag <span style={{color:C.dim,fontSize:14}}>⠿</span> to reorder teams. Top 2 qualify automatically.
+            <strong style={{color:C.green}}>Free Simulation:</strong> press and drag <span style={{color:C.dim,fontSize:14}}>⠿</span> to reorder teams. Top 2 qualify automatically. Official Bracket mode will use live standings in the next integration step.
           </div>
           {Object.entries(groups).map(([g,teams])=>(
             <Card key={g} style={{marginBottom:10}}>
