@@ -1,5 +1,7 @@
 // /api/admin.js
-// Returns analytics data for the admin panel. Protected by PREDICTOR_ADMIN_SECRET.
+// Combined: admin analytics dashboard + client-side visit/tab tracking
+// GET  ?action=dashboard  — protected, returns full analytics
+// POST (no action)        — tracks visit or tab event from client
 
 import { Redis } from "@upstash/redis";
 
@@ -12,91 +14,120 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   if (req.method === "OPTIONS") return res.status(200).end();
 
-  // Auth check
-  const auth = req.headers.authorization || "";
-  const secret = process.env.PREDICTOR_ADMIN_SECRET || process.env.CRON_SECRET;
-  if (!secret || auth !== `Bearer ${secret}`) {
-    return res.status(401).json({ error: "Unauthorized" });
+  // ── Analytics tracking (POST from client) ────────────────────────────────
+  if (req.method === "POST") {
+    try {
+      const { uid, event, device, city, country, tab } = req.body || {};
+      if (!uid) return res.status(400).json({ error: "uid required" });
+
+      const now = Date.now();
+      const today = new Date().toISOString().slice(0, 10);
+
+      if (event === "visit") {
+        const existing = await kv.get(`visitor:${uid}`) || {};
+        const isNew = !existing.firstSeen;
+        const record = {
+          uid,
+          device: device || existing.device || "unknown",
+          city: city || existing.city || "",
+          country: country || existing.country || "",
+          firstSeen: existing.firstSeen || now,
+          lastSeen: now,
+          visits: (existing.visits || 0) + 1,
+          tabs: existing.tabs || {},
+        };
+        await kv.set(`visitor:${uid}`, record, { ex: 60 * 60 * 24 * 365 });
+        await kv.sadd(`daily:${today}`, uid);
+        await kv.sadd("visitors:all", uid);
+        return res.status(200).json({ ok: true, isNew });
+      }
+
+      if (event === "tab") {
+        if (!tab) return res.status(400).json({ error: "tab required" });
+        const existing = await kv.get(`visitor:${uid}`) || {};
+        const tabs = existing.tabs || {};
+        tabs[tab] = (tabs[tab] || 0) + 1;
+        await kv.set(`visitor:${uid}`, { ...existing, tabs, lastSeen: now }, { ex: 60 * 60 * 24 * 365 });
+        await kv.incr(`tab_count:${tab}`);
+        return res.status(200).json({ ok: true });
+      }
+
+      return res.status(400).json({ error: "unknown event" });
+    } catch (err) {
+      console.error("[analytics] error:", err.message);
+      return res.status(500).json({ error: err.message });
+    }
   }
 
-  try {
-    // ── Visitors ────────────────────────────────────────────────────────────
-    const allUids = await kv.smembers("visitors:all") || [];
-
-    // Fetch all visitor records
-    const visitors = allUids.length
-      ? (await kv.mget(...allUids.map(uid => `visitor:${uid}`))).filter(Boolean)
-      : [];
-
-    // Daily stats — last 14 days
-    const dailyStats = [];
-    for (let i = 13; i >= 0; i--) {
-      const d = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
-      const count = (await kv.scard(`daily:${d}`)) || 0;
-      dailyStats.push({ date: d, count });
+  // ── Admin dashboard (GET ?action=dashboard) ───────────────────────────────
+  if (req.method === "GET") {
+    const auth = req.headers.authorization || "";
+    const secret = process.env.PREDICTOR_ADMIN_SECRET || process.env.CRON_SECRET;
+    if (!secret || auth !== `Bearer ${secret}`) {
+      return res.status(401).json({ error: "Unauthorized" });
     }
 
-    // ── Users (predictor) ───────────────────────────────────────────────────
-    const userKeys = [];
-    let cursor = 0;
-    do {
-      const [nc, keys] = await kv.scan(cursor, { match: "user:*", count: 100 });
-      cursor = parseInt(nc) || 0;
-      userKeys.push(...keys);
-    } while (cursor !== 0);
+    try {
+      const allUids = await kv.smembers("visitors:all") || [];
+      const visitors = allUids.length
+        ? (await kv.mget(...allUids.map(uid => `visitor:${uid}`))).filter(Boolean)
+        : [];
 
-    const users = userKeys.length
-      ? (await kv.mget(...userKeys)).filter(Boolean)
-      : [];
+      const dailyStats = [];
+      for (let i = 13; i >= 0; i--) {
+        const d = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
+        const count = (await kv.scard(`daily:${d}`)) || 0;
+        dailyStats.push({ date: d, count });
+      }
 
-    // ── PIN accounts ────────────────────────────────────────────────────────
-    const pinKeys = [];
-    let c2 = 0;
-    do {
-      const [nc, keys] = await kv.scan(c2, { match: "pin:*", count: 100 });
-      c2 = parseInt(nc) || 0;
-      pinKeys.push(...keys.filter(k => !k.startsWith("pin:change")));
-    } while (c2 !== 0);
+      const userKeys = [];
+      let cursor = 0;
+      do {
+        const [nc, keys] = await kv.scan(cursor, { match: "user:*", count: 100 });
+        cursor = parseInt(nc) || 0;
+        userKeys.push(...keys);
+      } while (cursor !== 0);
 
-    // ── Tab usage ────────────────────────────────────────────────────────────
-    const tabNames = ["live","schedule","groups","scorers","stats","h2h","news","predict","predictor","sim","bracket"];
-    const tabCounts = {};
-    if (tabNames.length) {
-      const vals = await kv.mget(...tabNames.map(t => `tab_count:${t}`));
-      tabNames.forEach((t, i) => { tabCounts[t] = parseInt(vals[i] || 0); });
+      const users = userKeys.length
+        ? (await kv.mget(...userKeys)).filter(Boolean)
+        : [];
+
+      const pinKeys = [];
+      let c2 = 0;
+      do {
+        const [nc, keys] = await kv.scan(c2, { match: "pin:*", count: 100 });
+        c2 = parseInt(nc) || 0;
+        pinKeys.push(...keys.filter(k => !k.startsWith("pin:change")));
+      } while (c2 !== 0);
+
+      const tabNames = ["live","schedule","groups","scorers","stats","h2h","news","predict","predictor","sim","bracket"];
+      const tabCounts = {};
+      if (tabNames.length) {
+        const vals = await kv.mget(...tabNames.map(t => `tab_count:${t}`));
+        tabNames.forEach((t, i) => { tabCounts[t] = parseInt(vals[i] || 0); });
+      }
+
+      const predKeys = [];
+      let c3 = 0;
+      do {
+        const [nc, keys] = await kv.scan(c3, { match: "preds:*", count: 100 });
+        c3 = parseInt(nc) || 0;
+        predKeys.push(...keys);
+      } while (c3 !== 0);
+
+      return res.status(200).json({
+        visitors: { total: allUids.length, records: visitors, daily: dailyStats },
+        users: { total: users.length, records: users },
+        pins: { total: pinKeys.length },
+        tabs: tabCounts,
+        predictions: { total: predKeys.length },
+        generatedAt: new Date().toISOString(),
+      });
+    } catch (err) {
+      console.error("[admin] error:", err.message);
+      return res.status(500).json({ error: err.message });
     }
-
-    // ── Predictions ──────────────────────────────────────────────────────────
-    const predKeys = [];
-    let c3 = 0;
-    do {
-      const [nc, keys] = await kv.scan(c3, { match: "preds:*", count: 100 });
-      c3 = parseInt(nc) || 0;
-      predKeys.push(...keys);
-    } while (c3 !== 0);
-
-    return res.status(200).json({
-      visitors: {
-        total: allUids.length,
-        records: visitors,
-        daily: dailyStats,
-      },
-      users: {
-        total: users.length,
-        records: users,
-      },
-      pins: {
-        total: pinKeys.length,
-      },
-      tabs: tabCounts,
-      predictions: {
-        total: predKeys.length,
-      },
-      generatedAt: new Date().toISOString(),
-    });
-
-  } catch (err) {
-    console.error("[admin] error:", err.message);
-    return res.status(500).json({ error: err.message });
   }
+
+  return res.status(405).end();
 }
