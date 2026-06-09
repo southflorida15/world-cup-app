@@ -553,7 +553,6 @@ const runFullSim = () => {
 };
 
 // ── LIVE SCORES CONTEXT ───────────────────────────────────────────────────
-const LangCtx = createContext("en");
 const LiveScoresCtx = createContext({scores:{},getScore:()=>null,isLive:()=>false,isFinished:()=>false,lastFetch:null});
 
 const statusIsLive = (s) => ["1H","HT","2H","ET","BT","P","LIVE","inprogress","first_half","halftime","second_half","extra_time","penalties"].includes(s);
@@ -680,117 +679,6 @@ const VENUE_TZ = {"Mexico City Stadium, Mexico City":"America/Mexico_City","Esta
 const MATCH_UTC = {1:"2026-06-11T19:00:00Z",2:"2026-06-12T02:00:00Z",3:"2026-06-12T19:00:00Z",4:"2026-06-13T01:00:00Z",5:"2026-06-13T19:00:00Z",6:"2026-06-13T22:00:00Z",7:"2026-06-14T01:00:00Z",8:"2026-06-14T03:59:00Z",9:"2026-06-14T17:00:00Z",10:"2026-06-14T20:00:00Z",11:"2026-06-14T23:00:00Z",12:"2026-06-15T02:00:00Z",13:"2026-06-15T16:00:00Z",14:"2026-06-15T19:00:00Z",15:"2026-06-15T22:00:00Z",16:"2026-06-16T01:00:00Z",17:"2026-06-16T19:00:00Z",18:"2026-06-16T22:00:00Z",19:"2026-06-17T01:00:00Z",20:"2026-06-17T03:59:00Z",21:"2026-06-17T17:00:00Z",22:"2026-06-17T20:00:00Z",23:"2026-06-17T23:00:00Z",24:"2026-06-18T02:00:00Z",25:"2026-06-18T16:00:00Z",26:"2026-06-18T19:00:00Z",27:"2026-06-18T22:00:00Z",28:"2026-06-19T01:00:00Z",29:"2026-06-19T19:00:00Z",30:"2026-06-19T22:00:00Z",31:"2026-06-20T00:30:00Z",32:"2026-06-20T03:00:00Z",33:"2026-06-20T17:00:00Z",34:"2026-06-20T20:00:00Z",35:"2026-06-21T01:00:00Z",36:"2026-06-21T03:59:00Z",37:"2026-06-21T16:00:00Z",38:"2026-06-21T19:00:00Z",39:"2026-06-21T22:00:00Z",40:"2026-06-22T01:00:00Z",41:"2026-06-22T17:00:00Z",42:"2026-06-22T21:00:00Z",43:"2026-06-23T00:00:00Z",44:"2026-06-23T03:00:00Z",45:"2026-06-23T17:00:00Z",46:"2026-06-23T20:00:00Z",47:"2026-06-23T23:00:00Z",48:"2026-06-24T02:00:00Z",49:"2026-06-24T19:00:00Z",50:"2026-06-24T19:00:00Z",51:"2026-06-24T22:00:00Z",52:"2026-06-24T22:00:00Z",53:"2026-06-25T01:00:00Z",54:"2026-06-25T01:00:00Z",55:"2026-06-25T20:00:00Z",56:"2026-06-25T20:00:00Z",57:"2026-06-25T23:00:00Z",58:"2026-06-25T23:00:00Z",59:"2026-06-26T02:00:00Z",60:"2026-06-26T02:00:00Z",61:"2026-06-26T19:00:00Z",62:"2026-06-26T19:00:00Z",63:"2026-06-27T00:00:00Z",64:"2026-06-27T00:00:00Z",65:"2026-06-27T03:00:00Z",66:"2026-06-27T03:00:00Z",67:"2026-06-27T21:00:00Z",68:"2026-06-27T21:00:00Z",69:"2026-06-27T23:30:00Z",70:"2026-06-27T23:30:00Z",71:"2026-06-28T02:00:00Z",72:"2026-06-28T02:00:00Z"};
 const USER_TZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
 const APP_VERSION = "1.0.0";
-
-// ── TRANSLATIONS ──────────────────────────────────────────────────────────
-var TRANSLATIONS = {
-  "tab_live": {en:"Live", pt:"Ao Vivo", es:"En Vivo", fr:"En Direct"},
-  "tab_schedule": {en:"Schedule", pt:"Calendário", es:"Calendario", fr:"Calendrier"},
-  "tab_groups": {en:"Groups", pt:"Grupos", es:"Grupos", fr:"Groupes"},
-  "tab_scorers": {en:"Scorers", pt:"Artilheiros", es:"Goleadores", fr:"Buteurs"},
-  "tab_stats": {en:"Stats", pt:"Estatísticas", es:"Estadísticas", fr:"Stats"},
-  "tab_h2h": {en:"H2H", pt:"H2H", es:"H2H", fr:"H2H"},
-  "tab_news": {en:"WC News", pt:"Notícias", es:"Noticias", fr:"Actualités"},
-  "tab_odds": {en:"Odds", pt:"Odds", es:"Cuotas", fr:"Cotes"},
-  "tab_predictor": {en:"Predictor", pt:"Palpites", es:"Predictor", fr:"Pronostics"},
-  "tab_sim": {en:"Simulator", pt:"Simulador", es:"Simulador", fr:"Simulateur"},
-  "tab_bracket": {en:"My Bracket", pt:"Meu Chaveamento", es:"Mi Llave", fr:"Mon Tableau"},
-  "live_scores": {en:"LIVE SCORES", pt:"AO VIVO", es:"EN VIVO", fr:"EN DIRECT"},
-  "live_updated": {en:"Updated", pt:"Atualizado", es:"Actualizado", fr:"Mis à jour"},
-  "live_upcoming_teams": {en:"UPCOMING — YOUR TEAMS", pt:"PRÓXIMOS — SEUS TIMES", es:"PRÓXIMOS — TUS EQUIPOS", fr:"À VENIR — VOS ÉQUIPES"},
-  "live_no_matches": {en:"No matches today", pt:"Sem jogos hoje", es:"Sin partidos hoy", fr:"Pas de matchs aujourd\'hui"},
-  "live_appear": {en:"Live scores appear here on match days.", pt:"Placar ao vivo aparece aqui nos dias de jogo.", es:"Los marcadores en vivo aparecen aquí en días de partido.", fr:"Les scores en direct apparaissent ici les jours de match."},
-  "live_starts": {en:"Tournament starts Jun 11, 2026", pt:"Torneio começa em 11 de junho de 2026", es:"El torneo comienza el 11 de junio de 2026", fr:"Le tournoi commence le 11 juin 2026"},
-  "today_results": {en:"Today\'s Results", pt:"Resultados de Hoje", es:"Resultados de Hoy", fr:"Résultats du Jour"},
-  "sched_all": {en:"All", pt:"Todos", es:"Todos", fr:"Tous"},
-  "sched_my_teams": {en:"⭐ My Teams", pt:"⭐ Meus Times", es:"⭐ Mis Equipos", fr:"⭐ Mes Équipes"},
-  "sched_group": {en:"🗂 Group", pt:"🗂 Grupo", es:"🗂 Grupo", fr:"🗂 Groupe"},
-  "sched_team": {en:"👥 Team", pt:"👥 Time", es:"👥 Equipo", fr:"👥 Équipe"},
-  "sched_venue": {en:"📍 Venue", pt:"📍 Estádio", es:"📍 Estadio", fr:"📍 Stade"},
-  "sched_round": {en:"🏆 Round", pt:"🏆 Fase", es:"🏆 Ronda", fr:"🏆 Tour"},
-  "all_teams": {en:"All teams", pt:"Todos os times", es:"Todos los equipos", fr:"Toutes les équipes"},
-  "all_venues": {en:"All venues", pt:"Todos os estádios", es:"Todos los estadios", fr:"Tous les stades"},
-  "no_matches_found": {en:"No matches found", pt:"Nenhum jogo encontrado", es:"No se encontraron partidos", fr:"Aucun match trouvé"},
-  "my_time": {en:"My Time", pt:"Meu Horário", es:"Mi Hora", fr:"Mon Heure"},
-  "venue_time": {en:"Venue Time", pt:"Hora Local", es:"Hora Local", fr:"Heure Locale"},
-  "standings": {en:"📊 Standings", pt:"📊 Classificação", es:"📊 Tabla", fr:"📊 Classement"},
-  "matches": {en:"📋 Matches", pt:"📋 Jogos", es:"📋 Partidos", fr:"📋 Matchs"},
-  "tap_stats": {en:"Tap for stats", pt:"Toque p/ stats", es:"Toca para stats", fr:"Appuyer pour stats"},
-  "top2_qualify": {en:"Top 2 Qualify", pt:"Top 2 avançam", es:"Top 2 clasifican", fr:"Top 2 qualifiés"},
-  "best_3rd": {en:"Best 3rd", pt:"Melhor 3º", es:"Mejor 3ro", fr:"Meilleur 3e"},
-  "top_scorers": {en:"TOP SCORERS", pt:"ARTILHEIROS", es:"GOLEADORES", fr:"MEILLEURS BUTEURS"},
-  "pre_tournament": {en:"Pre-tournament", pt:"Pré-torneio", es:"Pre-torneo", fr:"Pré-tournoi"},
-  "live_data": {en:"Live data", pt:"Dados ao vivo", es:"Datos en vivo", fr:"Données en direct"},
-  "all": {en:"All", pt:"Todos", es:"Todos", fr:"Tous"},
-  "strikers": {en:"Strikers", pt:"Atacantes", es:"Delanteros", fr:"Attaquants"},
-  "midfielders": {en:"Midfielders", pt:"Meias", es:"Mediocampistas", fr:"Milieux"},
-  "defenders": {en:"Defenders", pt:"Defensores", es:"Defensores", fr:"Défenseurs"},
-  "wc_news_title": {en:"📰 World Cup 2026 News", pt:"📰 Notícias Copa 2026", es:"📰 Noticias Copa 2026", fr:"📰 Actualités Coupe 2026"},
-  "latest_headlines": {en:"🗞️ LATEST HEADLINES", pt:"🗞️ ÚLTIMAS NOTÍCIAS", es:"🗞️ ÚLTIMAS NOTICIAS", fr:"🗞️ DERNIÈRES NOUVELLES"},
-  "tournament_facts": {en:"⚡ TOURNAMENT FACTS", pt:"⚡ FATOS DO TORNEIO", es:"⚡ DATOS DEL TORNEO", fr:"⚡ FAITS DU TOURNOI"},
-  "facts_soon": {en:"Facts will appear here as matches are played.", pt:"Fatos aparecerão aqui conforme os jogos acontecem.", es:"Los datos aparecerán aquí a medida que se jueguen los partidos.", fr:"Les faits apparaîtront ici au fil des matchs."},
-  "refresh": {en:"↻ Refresh", pt:"↻ Atualizar", es:"↻ Actualizar", fr:"↻ Actualiser"},
-  "h2h_title": {en:"⚔️ COMPARE TEAMS HEAD TO HEAD", pt:"⚔️ COMPARAR TIMES", es:"⚔️ COMPARAR EQUIPOS", fr:"⚔️ COMPARER LES ÉQUIPES"},
-  "select_teams": {en:"Select two teams to compare", pt:"Selecione dois times para comparar", es:"Selecciona dos equipos para comparar", fr:"Sélectionnez deux équipes à comparer"},
-  "win_probability": {en:"WIN PROBABILITY", pt:"PROBABILIDADE DE VITÓRIA", es:"PROBABILIDAD DE GANAR", fr:"PROBABILITÉ DE VICTOIRE"},
-  "squad": {en:"Squad", pt:"Elenco", es:"Plantel", fr:"Effectif"},
-  "recent_form": {en:"Recent Form", pt:"Forma Recente", es:"Forma Reciente", fr:"Forme Récente"},
-  "position": {en:"Position", pt:"Posição", es:"Posición", fr:"Position"},
-  "upcoming": {en:"Upcoming", pt:"Em breve", es:"Próximo", fr:"À venir"},
-  "ft": {en:"FT", pt:"FIM", es:"FIN", fr:"FIN"},
-  "save": {en:"Save", pt:"Salvar", es:"Guardar", fr:"Sauver"},
-  "saved": {en:"Saved", pt:"Salvo", es:"Guardado", fr:"Sauvegardé"},
-  "my_matches": {en:"My Matches", pt:"Meus Jogos", es:"Mis Partidos", fr:"Mes Matchs"},
-  "all_matches": {en:"ALL MATCHES", pt:"TODOS OS JOGOS", es:"TODOS LOS PARTIDOS", fr:"TOUS LES MATCHS"},
-  "export_all": {en:"📅 Export all", pt:"📅 Exportar", es:"📅 Exportar", fr:"📅 Exporter"},
-  "notify_all": {en:"🔔 Notify all", pt:"🔔 Notificar", es:"🔔 Notificar", fr:"🔔 Notifier"},
-  "notify_me": {en:"🔔 Notify me", pt:"🔔 Notificar", es:"🔔 Notificarme", fr:"🔔 Me notifier"},
-  "all_set": {en:"🔔 All set!", pt:"🔔 Pronto!", es:"🔔 ¡Listo!", fr:"🔔 C\'est bon!"},
-  "calendar": {en:"📅 Calendar", pt:"📅 Agenda", es:"📅 Calendario", fr:"📅 Agenda"},
-  "clear_all": {en:"Clear all", pt:"Limpar tudo", es:"Borrar todo", fr:"Tout effacer"},
-  "back": {en:"‹ Back", pt:"‹ Voltar", es:"‹ Volver", fr:"‹ Retour"},
-  "no_saved": {en:"No matches saved yet", pt:"Nenhum jogo salvo", es:"No hay partidos guardados", fr:"Aucun match sauvegardé"},
-  "tap_star": {en:"Tap ☆ Add on any match to save it here.", pt:"Toque em ☆ para salvar jogos aqui.", es:"Toca ☆ para guardar partidos aquí.", fr:"Appuyez sur ☆ pour sauvegarder des matchs ici."},
-  "date": {en:"📅 Date", pt:"📅 Data", es:"📅 Fecha", fr:"📅 Date"},
-  "predictor_title": {en:"🔮 MATCH PREDICTOR", pt:"🔮 PALPITES", es:"🔮 PREDICTOR", fr:"🔮 PRONOSTICS"},
-  "leaderboard": {en:"🏅 Leaderboard", pt:"🏅 Classificação", es:"🏅 Clasificación", fr:"🏅 Classement"},
-  "my_picks": {en:"🎯 My Picks", pt:"🎯 Meus Palpites", es:"🎯 Mis Picks", fr:"🎯 Mes Pronostics"},
-  "sim_title": {en:"🎲 WORLD CUP SIMULATOR", pt:"🎲 SIMULADOR DA COPA", es:"🎲 SIMULADOR COPA", fr:"🎲 SIMULATEUR COUPE"},
-  "run_sim": {en:"▶ Run Simulation", pt:"▶ Simular", es:"▶ Simular", fr:"▶ Simuler"},
-  "running": {en:"Simulating…", pt:"Simulando…", es:"Simulando…", fr:"Simulation…"},
-  "my_account": {en:"My Account", pt:"Minha Conta", es:"Mi Cuenta", fr:"Mon Compte"},
-  "sign_out": {en:"Sign out", pt:"Sair", es:"Cerrar sesión", fr:"Déconnexion"},
-  "create_pin": {en:"Create PIN", pt:"Criar PIN", es:"Crear PIN", fr:"Créer un PIN"},
-  "enter_pin": {en:"Enter PIN", pt:"Digite o PIN", es:"Ingresar PIN", fr:"Entrer le PIN"},
-  "sync_devices": {en:"Sync across devices", pt:"Sincronizar dispositivos", es:"Sincronizar dispositivos", fr:"Synchroniser"},
-  "my_teams": {en:"My Teams", pt:"Meus Times", es:"Mis Equipos", fr:"Mes Équipes"},
-  "language": {en:"Language", pt:"Idioma", es:"Idioma", fr:"Langue"},
-  "share": {en:"📤 Share", pt:"📤 Compartilhar", es:"📤 Compartir", fr:"📤 Partager"},
-  "open_app": {en:"⚽ Open App", pt:"⚽ Abrir App", es:"⚽ Abrir App", fr:"⚽ Ouvrir App"},
-  "loading": {en:"Loading…", pt:"Carregando…", es:"Cargando…", fr:"Chargement…"},
-  "error_retry": {en:"Try again", pt:"Tentar novamente", es:"Intentar de nuevo", fr:"Réessayer"},
-  "no_data": {en:"No data available", pt:"Sem dados disponíveis", es:"Sin datos disponibles", fr:"Aucune donnée"},
-  "install_app": {en:"Install the app", pt:"Instale o app", es:"Instala la app", fr:"Installer l\'app"},
-  "group": {en:"Group", pt:"Grupo", es:"Grupo", fr:"Groupe"},
-  "knockout": {en:"🏆 KO", pt:"🏆 Mata-mata", es:"🏆 Eliminación", fr:"🏆 Élim."},
-  "group_stage": {en:"Group Stage", pt:"Fase de Grupos", es:"Fase de Grupos", fr:"Phase de Groupes"},
-  "round_of_32": {en:"Round of 32", pt:"Oitavas", es:"Octavos", fr:"Seizièmes"},
-  "round_of_16": {en:"Round of 16", pt:"Oitavas de Final", es:"Octavos de Final", fr:"Huitièmes"},
-  "quarter_finals": {en:"Quarter-Finals", pt:"Quartas de Final", es:"Cuartos de Final", fr:"Quarts de Finale"},
-  "semi_finals": {en:"Semi-Finals", pt:"Semifinais", es:"Semifinales", fr:"Demi-Finales"},
-  "final": {en:"Final", pt:"Final", es:"Final", fr:"Finale"},
-};
-
-function t(key) {
-  const lang = (typeof window !== "undefined" && window.__wc_lang__) || "en";
-  return (TRANSLATIONS[key] && (TRANSLATIONS[key][lang] || TRANSLATIONS[key]["en"])) || key;
-}
-// Hook version for components that need reactive re-render on lang change
-function useT() {
-  const lang = React.useContext(LangCtx);
-  return React.useCallback((key) => {
-    return (TRANSLATIONS[key] && (TRANSLATIONS[key][lang] || TRANSLATIONS[key]["en"])) || key;
-  }, [lang]);
-}
 
 function getDeviceType() {
   const ua = navigator.userAgent;
@@ -1027,7 +915,7 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="",
           {live && <span style={{fontSize:10,fontWeight:700,color:C.green}}>🔴 {statusLabel(sc.status,sc.elapsed)}</span>}
           {!live && <span style={{fontSize:12,fontWeight:600,color:timeMode==="venue"?C.gold:C.text}}>{displayTime}</span>}
           {!live && <span style={{fontSize:10,color:C.dim}}>{tzLabel}</span>}
-          {finished && <span style={{fontSize:10,color:C.dim,marginLeft:2}}>· {t("ft")}</span>}
+          {finished && <span style={{fontSize:10,color:C.dim,marginLeft:2}}>· {"FT"}</span>}
         </div>
       </div>
 
@@ -1088,7 +976,7 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=n
     <div>
       <div ref={_lhRef} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"8px 13px",maxWidth:700,margin:"0 auto"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-          <div style={{fontWeight:700,fontSize:15,color:C.green}}>{t("live_scores")}</div>
+          <div style={{fontWeight:700,fontSize:15,color:C.green}}>{"LIVE SCORES"}</div>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
             {lastUpdate && <span style={{fontSize:11,color:C.dim}}>Updated {lastUpdate}</span>}
           </div>
@@ -1098,7 +986,7 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=n
       {Object.keys(upcomingByDate).length > 0 && (
         <div style={{marginBottom:16}}>
           <div style={{fontSize:11,color:C.gold,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>
-            {t("live_upcoming_teams")}
+            {"UPCOMING — YOUR TEAMS"}
           </div>
           {Object.entries(upcomingByDate).map(([date, matches]) => (
             <div key={date} style={{marginBottom:10}}>
@@ -1108,8 +996,8 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=n
           ))}
         </div>
       )}
-      {liveMatches.length>0 && <div><div style={{fontSize:11,color:C.green,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>{t("tab_live")} — {t("today_results").split("'")[0]}</div>{liveMatches.map(m=><MatchCard key={m.id} m={m} onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} savedIds={savedIds}/> )}</div>}
-      {finishedToday.length>0 && <div style={{marginTop:liveMatches.length?16:0}}><div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>{t("today_results")}</div>{finishedToday.map(m=><MatchCard key={m.id} m={m} onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} savedIds={savedIds}/> )}</div>}
+      {liveMatches.length>0 && <div><div style={{fontSize:11,color:C.green,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>{"Live"} — {"Today's Results".split("'")[0]}</div>{liveMatches.map(m=><MatchCard key={m.id} m={m} onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} savedIds={savedIds}/> )}</div>}
+      {finishedToday.length>0 && <div style={{marginTop:liveMatches.length?16:0}}><div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>{"Today's Results"}</div>{finishedToday.map(m=><MatchCard key={m.id} m={m} onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} savedIds={savedIds}/> )}</div>}
       {liveMatches.length===0 && finishedToday.length===0 && Object.keys(upcomingByDate).length===0 && !lastFetch && (
         <div style={{marginTop:8}}>
           {[1,2,3].map(i=><SkeletonMatchCard key={i}/>)}
@@ -1118,9 +1006,9 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=n
       {liveMatches.length===0 && finishedToday.length===0 && Object.keys(upcomingByDate).length===0 && lastFetch && (
         <div style={{textAlign:"center",padding:"48px 20px"}}>
           <div style={{fontSize:"2.5rem",marginBottom:10}}>⚽</div>
-          <div style={{fontWeight:700,fontSize:16,color:C.mid,marginBottom:6}}>{t("live_no_matches")}</div>
-          <div style={{fontSize:13,color:C.dim}}>{t("live_appear")}</div>
-          <div style={{fontSize:12,color:C.dim,marginTop:12}}>{t("live_starts")}</div>
+          <div style={{fontWeight:700,fontSize:16,color:C.mid,marginBottom:6}}>{"No matches today"}</div>
+          <div style={{fontSize:13,color:C.dim}}>{"Live scores appear here on match days."}</div>
+          <div style={{fontSize:12,color:C.dim,marginTop:12}}>{"Tournament starts Jun 11, 2026"}</div>
         </div>
       )}
     </div>
@@ -1246,19 +1134,19 @@ function SchedTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=
         )}
         {filterMode==="team" && (
           <select value={teamF} onChange={e=>setTeamF(e.target.value)} style={{width:"100%",padding:"8px 14px",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:10,color:C.text,fontSize:14,outline:"none"}}>
-            <option value="">{t("all_teams")}</option>
+            <option value="">{"All teams"}</option>
             {allTeams.map(t=><option key={t} value={t}>{getFlag(t)} {t}</option>)}
           </select>
         )}
         {filterMode==="venue" && (
           <select value={venueF} onChange={e=>setVenueF(e.target.value)} style={{width:"100%",padding:"8px 14px",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:10,color:C.text,fontSize:14,outline:"none"}}>
-            <option value="">{t("all_venues")}</option>
+            <option value="">{"All venues"}</option>
             {allVenues.map(v=><option key={v} value={v}>{v}</option>)}
           </select>
         )}
         {filterMode==="round" && (
           <div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none"}}>
-            {[{id:"",label:t("all")},{id:"group",label:t("group_stage")},{id:"r32",label:t("round_of_32")},{id:"r16",label:t("round_of_16")},{id:"qf",label:t("quarter_finals")},{id:"sf",label:t("semi_finals")},{id:"final",label:t("final")}].map(r=>
+            {[{id:"",label:"All"},{id:"group",label:"Group Stage"},{id:"r32",label:"Round of 32"},{id:"r16",label:"Round of 16"},{id:"qf",label:"Quarter-Finals"},{id:"sf",label:"Semi-Finals"},{id:"final",label:"Final"}].map(r=>
               <Pill key={r.id} active={roundF===r.id} onClick={()=>setRoundF(r.id)} color={r.id===""?C.mid:C.gold}>{r.label}</Pill>
             )}
           </div>
@@ -1269,7 +1157,7 @@ function SchedTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=
       <div style={{height: (filterHeight || 140) + 8}}/>
 
       {/* Match list */}
-      {shown.length===0 ? <div style={{textAlign:"center",padding:"32px",color:C.dim}}>{t("no_matches_found")}</div> : Object.entries(byDate).map(([date,ms],idx)=>(
+      {shown.length===0 ? <div style={{textAlign:"center",padding:"32px",color:C.dim}}>{"No matches found"}</div> : Object.entries(byDate).map(([date,ms],idx)=>(
         <div key={date} style={{marginBottom:14}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:5,marginTop:10}}>
             <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>{date}</div>
@@ -1385,7 +1273,7 @@ function GrpTab({ onTeam, onMatchTap, tabTop=116 }) {
               <div style={{display:"flex",alignItems:"center",gap:8}}>
                 {liveCount>0 && <Badge color={C.green}>🔴 Live</Badge>}
                 {lastFetch && <span style={{fontSize:10,color:C.dim}}>Updated {lastFetch.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}</span>}
-                <span style={{fontSize:10,color:C.dim}}>{t("tap_stats")}</span>
+                <span style={{fontSize:10,color:C.dim}}>{"Tap for stats"}</span>
               </div>
             </div>
             <div style={{display:"grid",gridTemplateColumns:"22px 1fr 28px 28px 28px 28px 32px 32px",padding:"4px 10px",borderBottom:`1px solid ${C.b1}`,background:C.bg}}>
@@ -1401,8 +1289,8 @@ function GrpTab({ onTeam, onMatchTap, tabTop=116 }) {
               </div>
             ))}
             <div style={{padding:"6px 12px",borderTop:`1px solid ${C.b1}`,display:"flex",gap:12}}>
-              <div style={{display:"flex",alignItems:"center",gap:4,fontSize:12,color:C.dim}}><div style={{width:9,height:9,background:C.green,borderRadius:2}}/>{t("top2_qualify")}</div>
-              <div style={{display:"flex",alignItems:"center",gap:4,fontSize:12,color:C.dim}}><div style={{width:9,height:9,background:C.gold,borderRadius:2}}/>{t("best_3rd")}</div>
+              <div style={{display:"flex",alignItems:"center",gap:4,fontSize:12,color:C.dim}}><div style={{width:9,height:9,background:C.green,borderRadius:2}}/>{"Top 2 Qualify"}</div>
+              <div style={{display:"flex",alignItems:"center",gap:4,fontSize:12,color:C.dim}}><div style={{width:9,height:9,background:C.gold,borderRadius:2}}/>{"Best 3rd"}</div>
             </div>
           </Card>
           <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>ENTER SCORES</div>
@@ -1925,7 +1813,7 @@ function SimTab({ tabTop=116 }) {
       <div ref={_simhRef} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"8px 13px",maxWidth:700,margin:"0 auto"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
           <div>
-            <div style={{fontWeight:700,fontSize:15,color:C.green}}>{t("sim_title")}</div>
+            <div style={{fontWeight:700,fontSize:15,color:C.green}}>{"🎲 WORLD CUP SIMULATOR"}</div>
             <div style={{fontSize:10,color:C.dim}}>Poisson model · FIFA ratings · form · home advantage</div>
           </div>
           <button onClick={()=>runMC(sims)} disabled={running} style={{padding:"6px 12px",borderRadius:10,background:`${C.green}22`,border:`1px solid ${C.greenS}`,color:C.green,fontWeight:700,fontSize:12,cursor:"pointer",opacity:running?0.5:1,flexShrink:0}}>
@@ -2300,7 +2188,7 @@ function H2HTab({ tabTop=116 }) {
     <div>
       {/* Fixed team selector */}
       <div ref={_h2hRef} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"8px 13px",maxWidth:700,margin:"0 auto"}}>
-        <div style={{fontWeight:700,color:C.green,fontSize:15,marginBottom:8}}>{t("h2h_title")}</div>
+        <div style={{fontWeight:700,color:C.green,fontSize:15,marginBottom:8}}>{"⚔️ COMPARE TEAMS HEAD TO HEAD"}</div>
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:team1&&team2&&team1!==team2?8:0}}>
           <div style={{flex:1}}>
             <select value={team1} onChange={e=>{setTeam1(e.target.value);setD1(null);setFetched(false);}} style={{width:"100%",padding:"7px 10px",background:C.s2,border:`1px solid ${C.b2}`,borderRadius:8,color:C.text,fontSize:13,outline:"none"}}>
@@ -2688,7 +2576,7 @@ function SavedMatchCard({ item, onRemove, notifiedIds=new Set(), onNotified=()=>
         <div style={{display:"flex",gap:4,alignItems:"center",flexShrink:0}}>
           <button onClick={handleCalendar} title="Add to Calendar" style={{padding:"5px 10px",borderRadius:7,border:`1px solid ${C.green}44`,background:`${C.green}15`,color:C.green,fontSize:12,fontWeight:600,cursor:"pointer"}}>📅 Calendar</button>
           <button onClick={handlePush} disabled={pushState==="denied"} title={pushState==="needs-install"?"Install app to enable push":"Set push notification"} style={{padding:"5px 10px",borderRadius:7,border:`1px solid ${notified?C.green:pushState==="denied"?C.b2:C.gold}44`,background:notified?`${C.green}15`:pushState==="denied"?C.s1:`${C.gold}15`,color:notified?C.green:pushState==="denied"?C.dim:C.gold,fontSize:12,fontWeight:600,cursor:pushState==="denied"?"not-allowed":"pointer",opacity:pushState==="denied"?0.4:1}}>
-            {notified?"🔔 Set":t("notify_me")}
+            {notified?"🔔 Set":"🔔 Notify me"}
           </button>
           <button onClick={()=>onRemove(item.id)} style={{padding:"5px 7px",borderRadius:7,border:`1px solid ${C.b2}`,background:"none",color:C.dim,fontSize:15,cursor:"pointer",lineHeight:1}}>×</button>
         </div>
@@ -2772,7 +2660,7 @@ function SavedTab({ saved, onRemove, tabTop=116 }) {
   if (saved.length === 0) return (
     <div style={{textAlign:"center",padding:"50px 20px"}}>
       <div style={{fontSize:"2.8rem",marginBottom:10}}>⭐</div>
-      <div style={{fontWeight:700,fontSize:18,color:C.mid,marginBottom:6}}>{t("no_saved")}</div>
+      <div style={{fontWeight:700,fontSize:18,color:C.mid,marginBottom:6}}>{"No matches saved yet"}</div>
       <div style={{fontSize:13,color:C.dim}}>Tap ☆ Add on any match to save it here.</div>
     </div>
   );
@@ -2788,11 +2676,11 @@ function SavedTab({ saved, onRemove, tabTop=116 }) {
         </div>
         <div style={{display:"flex",gap:6,marginBottom:8}}>
           <button onClick={handleMasterCalendar} style={{flex:1,padding:"6px 4px",borderRadius:8,cursor:"pointer",border:`1px solid ${C.green}44`,background:`${C.green}15`,color:C.green,fontSize:11,fontWeight:600}}>📅 Export all</button>
-          <button onClick={handleMasterPush} style={{flex:1,padding:"6px 4px",borderRadius:8,cursor:"pointer",border:`1px solid ${masterPushDone?C.green:C.gold}44`,background:masterPushDone?`${C.green}15`:`${C.gold}15`,color:masterPushDone?C.green:C.gold,fontSize:11,fontWeight:600}}>{masterPushDone?t("all_set"):t("notify_all")}</button>
+          <button onClick={handleMasterPush} style={{flex:1,padding:"6px 4px",borderRadius:8,cursor:"pointer",border:`1px solid ${masterPushDone?C.green:C.gold}44`,background:masterPushDone?`${C.green}15`:`${C.gold}15`,color:masterPushDone?C.green:C.gold,fontSize:11,fontWeight:600}}>{masterPushDone?"🔔 All set!":"🔔 Notify all"}</button>
         </div>
         {/* Filter pills */}
         <div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none"}}>
-          <button style={ss(filterMode==="all")} onClick={()=>{setFilterMode("all");setFilterVal("");}}>{t("all")}</button>
+          <button style={ss(filterMode==="all")} onClick={()=>{setFilterMode("all");setFilterVal("");}}>{"All"}</button>
           <button style={ss(filterMode==="group")} onClick={()=>{setFilterMode("group");setFilterVal("");}}>🗂️ Group</button>
           <button style={ss(filterMode==="team")} onClick={()=>{setFilterMode("team");setFilterVal("");}}>👥 Team</button>
           <button style={ss(filterMode==="date")} onClick={()=>{setFilterMode("date");setFilterVal("");}}>📅 Date</button>
@@ -3155,7 +3043,7 @@ function PredictorTab() {
       <div style={{background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b2}`,borderRadius:12,padding:14,marginBottom:14}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
           <div>
-            <div style={{fontWeight:700,fontSize:15,color:C.green}}>{t("predictor_title")}</div>
+            <div style={{fontWeight:700,fontSize:15,color:C.green}}>{"🔮 MATCH PREDICTOR"}</div>
             <div style={{fontSize:11,color:C.mid,marginTop:2}}>Playing as <strong style={{color:C.gold}}>{user.name}</strong></div>
           </div>
           <button onClick={()=>setShowInfo(v=>!v)} style={{background:"none",border:`1px solid ${C.b2}`,borderRadius:20,color:C.dim,fontSize:11,padding:"3px 10px",cursor:"pointer"}}>Scoring?</button>
@@ -3632,7 +3520,7 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
                 <StarIcon filled={isSaved} size={15}/>{isSaved?"Saved":"Save Match"}
               </button>
             ); })()}
-            <button onClick={shareMatch} style={{flex:1,padding:"11px 0",borderRadius:12,background:`${C.blue}22`,border:`1px solid ${C.blue}44`,color:C.blue,fontWeight:700,fontSize:14,cursor:"pointer"}}>{t("share")}</button>
+            <button onClick={shareMatch} style={{flex:1,padding:"11px 0",borderRadius:12,background:`${C.blue}22`,border:`1px solid ${C.blue}44`,color:C.blue,fontWeight:700,fontSize:14,cursor:"pointer"}}>{"📤 Share"}</button>
           </div>
 
         </div>
@@ -3704,13 +3592,13 @@ function TopScorersTab({ tabTop=116 }) {
   return (
     <div>
       <div ref={_tshRef} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"8px 13px",maxWidth:700,margin:"0 auto"}}>
-        <div style={{fontWeight:700,fontSize:15,color:C.green,marginBottom:!hasLive?4:0}}>{t("top_scorers")} <span style={{fontSize:11,color:C.dim,fontWeight:400}}>{hasLive?"· "+t("live_data"):"· "+t("pre_tournament")}</span></div>
+        <div style={{fontWeight:700,fontSize:15,color:C.green,marginBottom:!hasLive?4:0}}>{"TOP SCORERS"} <span style={{fontSize:11,color:C.dim,fontWeight:400}}>{hasLive?"· "+"Live data":"· "+"Pre-tournament"}</span></div>
         {!hasLive && (
           <div style={{display:"flex",gap:6}}>
-            <Pill active={filter==="all"} onClick={()=>setFilter("all")}  color={C.green}>{t("all")}</Pill>
-            <Pill active={filter==="FW"}  onClick={()=>setFilter("FW")}   color={C.red}>{t("strikers")}</Pill>
-            <Pill active={filter==="MF"}  onClick={()=>setFilter("MF")}   color={C.gold}>{t("midfielders")}</Pill>
-            <Pill active={filter==="DF"}  onClick={()=>setFilter("DF")}   color={C.blue}>{t("defenders")}</Pill>
+            <Pill active={filter==="all"} onClick={()=>setFilter("all")}  color={C.green}>{"All"}</Pill>
+            <Pill active={filter==="FW"}  onClick={()=>setFilter("FW")}   color={C.red}>{"Strikers"}</Pill>
+            <Pill active={filter==="MF"}  onClick={()=>setFilter("MF")}   color={C.gold}>{"Midfielders"}</Pill>
+            <Pill active={filter==="DF"}  onClick={()=>setFilter("DF")}   color={C.blue}>{"Defenders"}</Pill>
           </div>
         )}
       </div>
@@ -3789,7 +3677,7 @@ const FOOTBALL_ICONS = [
 ];
 
 // ── SYNC MODAL ─────────────────────────────────────────────────────────────
-function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved, favTeams, setToast, setSaved, setFavTeams, dark, setDark, geoData, locationOverride, setLocationOverride, onShowSaved, userAvatar, persistAvatar, displayName, persistDisplayName, onSignOut=()=>{}, lang="en", setLanguage=()=>{} }) {
+function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved, favTeams, setToast, setSaved, setFavTeams, dark, setDark, geoData, locationOverride, setLocationOverride, onShowSaved, userAvatar, persistAvatar, displayName, persistDisplayName, onSignOut=()=>{} }) {
   const [screen, setScreen] = useState("home");
   const [pin, setPin] = useState("");
   const [pinInput, setPinInput] = useState("");
@@ -3879,7 +3767,7 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
   const btnPrimary = { width:"100%", padding:"13px 0", borderRadius:12, border:"none", background:`linear-gradient(135deg,${C.green},#22c55e)`, color:"#030a05", fontWeight:700, fontSize:15, cursor:"pointer" };
   const btnSecondary = { width:"100%", padding:"11px 0", borderRadius:12, border:`1px solid ${C.b2}`, background:C.s2, color:C.text, fontWeight:600, fontSize:14, cursor:"pointer", marginTop:8 };
 
-  const screenTitle = { home:t("my_account"),"pin-create":t("create_pin"),"pin-created":"Your PIN","pin-join":t("enter_pin"),email:"Sign in with Email","email-sent":"Check Your Email",predictions:"My Predictions",teams:t("my_teams"),location:"Location","pin-change":"Change PIN" }[screen] || t("my_account");
+  const screenTitle = { home:"My Account","pin-create":"Create PIN","pin-created":"Your PIN","pin-join":"Enter PIN",email:"Sign in with Email","email-sent":"Check Your Email",predictions:"My Predictions",teams:"My Teams",location:"Location","pin-change":"Change PIN" }[screen] || "My Account";
 
   const renderAvatarImg = (size) => {
     if (!userAvatar) return <span style={{fontSize:size*0.6}}>👤</span>;
@@ -3917,25 +3805,11 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
             {syncProfile.pin && <div style={{fontSize:11,color:C.mid}}>PIN: <strong style={{color:C.gold,letterSpacing:"0.1em"}}>{syncProfile.pin}</strong></div>}
             <div style={{fontSize:11,color:C.green,fontWeight:600}}>✅ Syncing</div>
           </> : <>
-            <div style={{fontSize:11,color:C.dim,marginTop:2}}>{displayName?t("sign_in_sync"):t("sign_in_sync")}</div>
+            <div style={{fontSize:11,color:C.dim,marginTop:2}}>{displayName?"Sign in to keep your progress on every device":"Sign in to keep your progress on every device"}</div>
           </>}
         </div>
-        {isSynced && <button onClick={()=>{persistProfile(null);onSignOut();setToast("Signed out.");onClose();}} style={{fontSize:11,color:C.dim,background:"none",border:`1px solid ${C.b2}`,borderRadius:8,padding:"4px 8px",cursor:"pointer"}}>{t("sign_out")}</button>}
+        {isSynced && <button onClick={()=>{persistProfile(null);onSignOut();setToast("Signed out.");onClose();}} style={{fontSize:11,color:C.dim,background:"none",border:`1px solid ${C.b2}`,borderRadius:8,padding:"4px 8px",cursor:"pointer"}}>{"Sign out"}</button>}
         <span style={{fontSize:10,color:C.dim,marginLeft:"auto"}}>v{APP_VERSION}</span>
-      </div>
-
-      {/* Language picker */}
-      <div style={{marginBottom:10}}>
-        <div style={{fontSize:11,fontWeight:700,color:C.dim,letterSpacing:"0.08em",marginBottom:7}}>{t("language").toUpperCase()}</div>
-        <div style={{display:"flex",gap:6}}>
-          {[{code:"en",flag:"🇺🇸",label:"EN"},{code:"pt",flag:"🇧🇷",label:"PT"},{code:"es",flag:"🇪🇸",label:"ES"},{code:"fr",flag:"🇫🇷",label:"FR"}].map(l=>(
-            <button key={l.code} onClick={()=>setLanguage(l.code)}
-              style={{flex:1,padding:"8px 4px",borderRadius:10,border:`1px solid ${lang===l.code?C.green:C.b2}`,background:lang===l.code?`${C.green}18`:C.s2,color:lang===l.code?C.green:C.mid,fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
-              <span>{l.flag}</span>
-              <span style={{fontSize:10}}>{l.label}</span>
-            </button>
-          ))}
-        </div>
       </div>
 
       {/* My Teams — collapsible */}
@@ -3945,7 +3819,7 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
             <span style={{fontSize:16}}>⭐</span>
             <div style={{textAlign:"left"}}>
               <div style={{fontSize:13,fontWeight:700,color:C.text}}>My Teams</div>
-              <div style={{fontSize:11,color:favTeams.length?C.gold:C.dim}}>{favTeams.length?favTeams.join(", "):t("tap_select_teams")}</div>
+              <div style={{fontSize:11,color:favTeams.length?C.gold:C.dim}}>{favTeams.length?favTeams.join(", "):"Tap to select up to 4 teams"}</div>
             </div>
           </div>
           <span style={{color:C.dim,fontSize:16,transition:"transform .2s",transform:teamsExpanded?"rotate(90deg)":"none"}}>›</span>
@@ -3963,7 +3837,7 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
 
       {/* My Matches */}
       <button onClick={()=>{onClose();onShowSaved();}} style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"13px 14px",background:C.s2,border:`1px solid ${C.b1}`,borderRadius:12,cursor:"pointer",marginBottom:8}}>
-        <div style={{display:"flex",alignItems:"center",gap:10}}><span style={{fontSize:18}}>⭐</span><div style={{textAlign:"left"}}><div style={{fontWeight:700,color:C.text,fontSize:14}}>{t("my_matches")}</div><div style={{fontSize:11,color:C.dim}}>{saved.length} match{saved.length!==1?"es":""} saved</div></div></div>
+        <div style={{display:"flex",alignItems:"center",gap:10}}><span style={{fontSize:18}}>⭐</span><div style={{textAlign:"left"}}><div style={{fontWeight:700,color:C.text,fontSize:14}}>{"My Matches"}</div><div style={{fontSize:11,color:C.dim}}>{saved.length} match{saved.length!==1?"es":""} saved</div></div></div>
         <span style={{color:C.mid,fontSize:18}}>›</span>
       </button>
 
@@ -3972,7 +3846,7 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
       {/* Sync section */}
       {!isSynced ? (
         <div>
-          <div style={{fontSize:11,color:C.mid,fontWeight:700,letterSpacing:"0.08em",marginBottom:10}}>{t("sync_across")}</div>
+          <div style={{fontSize:11,color:C.mid,fontWeight:700,letterSpacing:"0.08em",marginBottom:10}}>{"🔗 SYNC ACROSS DEVICES"}</div>
           <div style={{display:"flex",gap:8,marginBottom:8}}>
             <button onClick={()=>setScreen("pin-create")} style={{flex:1,padding:"11px 8px",borderRadius:12,border:`1px solid ${C.green}44`,background:`${C.green}15`,color:C.green,fontWeight:700,fontSize:13,cursor:"pointer"}}>🔢 Create PIN</button>
             <button onClick={()=>setScreen("pin-join")} style={{flex:1,padding:"11px 8px",borderRadius:12,border:`1px solid ${C.b2}`,background:C.bg,color:C.mid,fontWeight:600,fontSize:13,cursor:"pointer"}}>I have a PIN</button>
@@ -4028,7 +3902,7 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
           <div style={{fontSize:11,color:C.mid,fontWeight:600,letterSpacing:"0.1em",marginBottom:8}}>YOUR PIN</div>
           <div style={{fontSize:40,fontWeight:900,color:C.green,letterSpacing:"0.2em",fontFamily:"monospace"}}>{syncProfile?.pin||pin}</div>
         </div>
-        <div style={{fontSize:12,color:C.dim,marginBottom:20,lineHeight:1.5}}>Screenshot this. On another device, tap the profile icon → t("i_have_pin").</div>
+        <div style={{fontSize:12,color:C.dim,marginBottom:20,lineHeight:1.5}}>Screenshot this. On another device, tap the profile icon → "I have a PIN".</div>
         <button onClick={onClose} style={btnPrimary}>Done</button>
         <button onClick={()=>{setPin("");setScreen("pin-change");setError("");}} style={{...btnSecondary,fontSize:13}}>🔁 Change PIN</button>
         <div style={{height:16}}/>
@@ -4120,8 +3994,8 @@ function QuickFacts({ tabTop }) {
 
   if (scores.length === 0) return (
     <div style={{background:C.s2,borderRadius:12,padding:16,marginBottom:16,border:`1px solid ${C.b1}`}}>
-      <div style={{fontSize:12,fontWeight:700,color:C.mid,letterSpacing:"0.08em",marginBottom:8}}>{t("tournament_facts")}</div>
-      <div style={{fontSize:13,color:C.dim,textAlign:"center",padding:"12px 0"}}>{t("facts_soon")}</div>
+      <div style={{fontSize:12,fontWeight:700,color:C.mid,letterSpacing:"0.08em",marginBottom:8}}>{"⚡ TOURNAMENT FACTS"}</div>
+      <div style={{fontSize:13,color:C.dim,textAlign:"center",padding:"12px 0"}}>{"Facts will appear here as matches are played."}</div>
     </div>
   );
 
@@ -4195,7 +4069,7 @@ function WCNewsTab({ tabTop=116 }) {
       {/* Sticky header */}
       <div ref={_ref} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,padding:"10px 13px 8px",maxWidth:700,margin:"0 auto"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-          <span style={{fontSize:15,fontWeight:700,color:C.green}}>{t("wc_news_title")}</span>
+          <span style={{fontSize:15,fontWeight:700,color:C.green}}>{"📰 World Cup 2026 News"}</span>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
             {lastFetch && <span style={{fontSize:11,color:C.dim}}>Updated {timeAgo(new Date(lastFetch).toISOString())}</span>}
             <button onClick={fetchNews} disabled={loading} style={{padding:"4px 10px",borderRadius:8,border:`1px solid ${C.b2}`,background:C.s2,color:C.mid,fontSize:11,cursor:"pointer",opacity:loading?0.5:1}}>↻ Refresh</button>
@@ -4209,7 +4083,7 @@ function WCNewsTab({ tabTop=116 }) {
         <QuickFacts tabTop={tabTop}/>
 
         {/* News feed */}
-        <div style={{fontSize:12,fontWeight:700,color:C.mid,letterSpacing:"0.08em",marginBottom:10}}>{t("latest_headlines")}</div>
+        <div style={{fontSize:12,fontWeight:700,color:C.mid,letterSpacing:"0.08em",marginBottom:10}}>{"🗞️ LATEST HEADLINES"}</div>
 
         {loading && (
           <div>
@@ -4446,17 +4320,17 @@ function Onboarding({ onDone }) {
 
 // ── APP ────────────────────────────────────────────────────────────────────
 const TABS = [
-  {id:"live",      icon:"🔴", key:"tab_live"},
-  {id:"schedule",  icon:"📋", key:"tab_schedule"},
-  {id:"groups",    icon:"🗂️", key:"tab_groups"},
-  {id:"scorers",   icon:"⚽", key:"tab_scorers"},
-  {id:"stats",     icon:"📊", key:"tab_stats"},
-  {id:"h2h",       icon:"⚔️", key:"tab_h2h"},
-  {id:"news",      icon:"📰", key:"tab_news"},
-  {id:"predict",   icon:"🎯", key:"tab_odds"},
-  {id:"predictor", icon:"🔮", key:"tab_predictor"},
-  {id:"sim",       icon:"🎮", key:"tab_sim"},
-  {id:"bracket",   icon:"🏆", key:"tab_bracket"},
+  {id:"live",      icon:"🔴", label:"Live"},
+  {id:"schedule",  icon:"📋", label:"Schedule"},
+  {id:"groups",    icon:"🗂️", label:"Groups"},
+  {id:"scorers",   icon:"⚽", label:"Scorers"},
+  {id:"stats",     icon:"📊", label:"Stats"},
+  {id:"h2h",       icon:"⚔️", label:"H2H"},
+  {id:"news",      icon:"📰", label:"WC News"},
+  {id:"predict",   icon:"🎯", label:"Odds"},
+  {id:"predictor", icon:"🔮", label:"Predictor"},
+  {id:"sim",       icon:"🎮", label:"Simulator"},
+  {id:"bracket",   icon:"🏆", label:"My Bracket"},
 ];
 
 // ── PWA INSTALL BANNER ────────────────────────────────────────────────────
@@ -4564,21 +4438,6 @@ export default function App() {
   const completeOnboarding = () => {
     setOnboardingDone(true);
     try { localStorage.setItem("wc2026_onboarded", "1"); } catch {}
-  };
-  const [lang, setLang] = useState(() => {
-    try {
-      const saved = localStorage.getItem("wc2026_lang");
-      if (saved) { window.__wc_lang__ = saved; return saved; }
-      const browser = (navigator.language || "en").toLowerCase().slice(0, 2);
-      const detected = ["pt","es","fr"].includes(browser) ? browser : "en";
-      window.__wc_lang__ = detected;
-      return detected;
-    } catch { return "en"; }
-  });
-  const setLanguage = (l) => {
-    setLang(l);
-    window.__wc_lang__ = l;
-    try { localStorage.setItem("wc2026_lang", l); } catch {}
   };
   const [splashDone, setSplashDone] = useState(() => {
     // Skip splash on return visits within the same session
@@ -4771,7 +4630,6 @@ export default function App() {
   };
 
   const onTeam=(t)=>{setStatsTeam(t);setTab("stats");};
-  const _lang = React.useContext(LangCtx); // subscribes App to lang changes for t() calls
   const { isLive: isMatchLive, refresh: refreshScores } = useContext(LiveScoresCtx);
   const hasLiveMatches = MATCHES.some(m => isMatchLive(m.home, m.away));
   const savedIds = new Set(saved.map(x=>x.match?.id));
@@ -4808,7 +4666,6 @@ export default function App() {
   );
 
   return (
-    <LangCtx.Provider value={lang}>
     <LiveScoresProvider>
       <CountryCtx.Provider value={country}>
       <ThemeCtx.Provider value={{dark, toggle:toggleDark, headerDark, cardDark}}>
@@ -4832,7 +4689,7 @@ export default function App() {
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="rgba(255,255,255,0.9)" stroke="none" style={{position:"absolute",right:7,top:8,opacity:dark?0:1,transition:"opacity .2s",pointerEvents:"none"}}><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
               </button>
               {/* Profile / sync avatar */}
-              <button onClick={()=>setShowSyncModal(true)} title={t("my_account")} style={{position:"relative",width:36,height:36,borderRadius:"50%",border:`2px solid ${syncProfile?C.green:dark?"#2a4f38":"#1a3828"}`,background:syncProfile?`${C.green}18`:dark?"#0c1a12":"#1a3828",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,flexShrink:0,overflow:"hidden",padding:0}}>
+              <button onClick={()=>setShowSyncModal(true)} title={"My Account"} style={{position:"relative",width:36,height:36,borderRadius:"50%",border:`2px solid ${syncProfile?C.green:dark?"#2a4f38":"#1a3828"}`,background:syncProfile?`${C.green}18`:dark?"#0c1a12":"#1a3828",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,flexShrink:0,overflow:"hidden",padding:0}}>
                 {userAvatar?.startsWith("data:") ? <img src={userAvatar} style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:"50%"}} alt="avatar"/>
                 : userAvatar?.startsWith("icon:") ? (()=>{const ic=FOOTBALL_ICONS?.find(i=>i.id===userAvatar);return ic?ic.el(22):"⚽";})()
                 : userAvatar?.startsWith("flag:") ? <img src={`https://flagcdn.com/w80/${FLAG_CODES_MAP[userAvatar.slice(5)]}.png`} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="avatar"/>
@@ -4845,11 +4702,11 @@ export default function App() {
 
           <div style={{position:"relative"}}>
             <div style={{display:"flex",overflowX:"auto",scrollbarWidth:"none",marginBottom:-1}}>
-              {TABS.map(tb=>(
-                <button key={tb.id} onClick={()=>setTab(tb.id)} style={{flex:"0 0 auto",padding:"8px 10px",background:"none",border:"none",borderBottom:`2px solid ${tab===tb.id?C.green:"transparent"}`,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,color:tab===tb.id?C.green:C.dim,position:"relative"}}>
-                  <span style={{fontSize:14}}>{tb.icon}</span>
-                  <span style={{fontSize:9,fontWeight:600,whiteSpace:"nowrap"}}>{t(tb.key)}</span>
-                  {tb.id==="live" && hasLiveMatches && tab!=="live" && (
+              {TABS.map(t=>(
+                <button key={t.id} onClick={()=>setTab(t.id)} style={{flex:"0 0 auto",padding:"8px 10px",background:"none",border:"none",borderBottom:`2px solid ${tab===t.id?C.green:"transparent"}`,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,color:tab===t.id?C.green:C.dim,position:"relative"}}>
+                  <span style={{fontSize:14}}>{t.icon}</span>
+                  <span style={{fontSize:9,fontWeight:600,whiteSpace:"nowrap"}}>{t.label}</span>
+                  {t.id==="live" && hasLiveMatches && tab!=="live" && (
                     <span style={{position:"absolute",top:6,right:6,width:7,height:7,borderRadius:"50%",background:"#ef4444",boxShadow:"0 0 0 2px #ef444488",animation:"pulse 1.5s infinite"}}/>
                   )}
                 </button>
@@ -4884,7 +4741,7 @@ export default function App() {
                 <button onClick={()=>setShowSavedView(false)} style={{background:"none",border:"none",color:C.green,fontSize:15,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:6,padding:"4px 10px 4px 0"}}>
                   <span style={{fontSize:20,lineHeight:1}}>‹</span> Back
                 </button>
-                <span style={{fontWeight:700,fontSize:17,color:C.green}}>{t("my_matches")}</span>
+                <span style={{fontWeight:700,fontSize:17,color:C.green}}>{"My Matches"}</span>
                 <span style={{fontSize:13,color:C.dim,marginLeft:"auto"}}>{saved.length} saved</span>
               </div>
             </div>
@@ -4912,7 +4769,6 @@ export default function App() {
             setFavTeams([]);
             try{localStorage.removeItem("wc2026_favs")}catch{}
           }}
-          lang={lang} setLanguage={setLanguage}
         />
         <MatchEventsModal match={eventsModal.match} open={eventsModal.open} onClose={()=>setEventsModal({open:false,match:null})} onAction={onAction} savedIds={savedIds} userPredHg={eventsModal.predHg} userPredAg={eventsModal.predAg}/>
         <Toast msg={toast} onDone={()=>setToast("")}/>
@@ -4922,7 +4778,6 @@ export default function App() {
       </ThemeCtx.Provider>
       </CountryCtx.Provider>
     </LiveScoresProvider>
-    </LangCtx.Provider>
   );
 }
 
