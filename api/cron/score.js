@@ -1,7 +1,17 @@
 // /api/cron/score.js
 // Auto-scores predictions for finished WC matches.
 // Called by cron-job.org every 15 minutes.
-// Uses Highlightly API (same as livescores.js)
+// Reads from shared KV cache (written by livescores.js) to avoid extra Highlightly calls.
+// Only hits Highlightly directly if KV cache is missing or stale.
+
+import { Redis } from "@upstash/redis";
+const kv = new Redis({
+  url:   process.env.KV_REST_API_URL,
+  token: process.env.KV_REST_API_TOKEN,
+});
+const CACHE_KEY    = "wc2026:livescores";
+const CACHE_TS_KEY = "wc2026:livescores:ts";
+const MAX_CACHE_AGE = 20 * 60 * 1000; // 20min — if older, fetch fresh
 
 const RAPIDAPI_KEY  = process.env.RAPIDAPI_KEY;
 const RAPIDAPI_HOST = process.env.RAPIDAPI_HOST || "football-highlights-api.p.rapidapi.com";
@@ -9,6 +19,125 @@ const BASE          = `https://${RAPIDAPI_HOST}`;
 const LEAGUE_ID     = "1635";  // World Cup 2026 on Highlightly
 const SEASON        = "2026";
 const ADMIN_SECRET  = process.env.PREDICTOR_ADMIN_SECRET || process.env.CRON_SECRET;
+
+// ── Match window guard ────────────────────────────────────────────────────
+// All 104 WC 2026 kickoff times in UTC. No API call needed to check this.
+const KICKOFFS = [
+  "2026-06-11T19:00:00Z",
+  "2026-06-12T02:00:00Z",
+  "2026-06-12T19:00:00Z",
+  "2026-06-13T01:00:00Z",
+  "2026-06-13T19:00:00Z",
+  "2026-06-13T22:00:00Z",
+  "2026-06-14T01:00:00Z",
+  "2026-06-14T03:59:00Z",
+  "2026-06-14T17:00:00Z",
+  "2026-06-14T20:00:00Z",
+  "2026-06-14T23:00:00Z",
+  "2026-06-15T02:00:00Z",
+  "2026-06-15T16:00:00Z",
+  "2026-06-15T19:00:00Z",
+  "2026-06-15T22:00:00Z",
+  "2026-06-16T01:00:00Z",
+  "2026-06-16T19:00:00Z",
+  "2026-06-16T22:00:00Z",
+  "2026-06-17T01:00:00Z",
+  "2026-06-17T03:59:00Z",
+  "2026-06-17T17:00:00Z",
+  "2026-06-17T20:00:00Z",
+  "2026-06-17T23:00:00Z",
+  "2026-06-18T02:00:00Z",
+  "2026-06-18T16:00:00Z",
+  "2026-06-18T19:00:00Z",
+  "2026-06-18T22:00:00Z",
+  "2026-06-19T01:00:00Z",
+  "2026-06-19T19:00:00Z",
+  "2026-06-19T22:00:00Z",
+  "2026-06-20T00:30:00Z",
+  "2026-06-20T03:00:00Z",
+  "2026-06-20T17:00:00Z",
+  "2026-06-20T20:00:00Z",
+  "2026-06-21T01:00:00Z",
+  "2026-06-21T03:59:00Z",
+  "2026-06-21T16:00:00Z",
+  "2026-06-21T19:00:00Z",
+  "2026-06-21T22:00:00Z",
+  "2026-06-22T01:00:00Z",
+  "2026-06-22T17:00:00Z",
+  "2026-06-22T21:00:00Z",
+  "2026-06-23T00:00:00Z",
+  "2026-06-23T03:00:00Z",
+  "2026-06-23T17:00:00Z",
+  "2026-06-23T20:00:00Z",
+  "2026-06-23T23:00:00Z",
+  "2026-06-24T02:00:00Z",
+  "2026-06-24T19:00:00Z",
+  "2026-06-24T19:00:00Z",
+  "2026-06-24T22:00:00Z",
+  "2026-06-24T22:00:00Z",
+  "2026-06-25T01:00:00Z",
+  "2026-06-25T01:00:00Z",
+  "2026-06-25T20:00:00Z",
+  "2026-06-25T20:00:00Z",
+  "2026-06-25T23:00:00Z",
+  "2026-06-25T23:00:00Z",
+  "2026-06-26T02:00:00Z",
+  "2026-06-26T02:00:00Z",
+  "2026-06-26T19:00:00Z",
+  "2026-06-26T19:00:00Z",
+  "2026-06-27T00:00:00Z",
+  "2026-06-27T00:00:00Z",
+  "2026-06-27T03:00:00Z",
+  "2026-06-27T03:00:00Z",
+  "2026-06-27T21:00:00Z",
+  "2026-06-27T21:00:00Z",
+  "2026-06-27T23:30:00Z",
+  "2026-06-27T23:30:00Z",
+  "2026-06-28T02:00:00Z",
+  "2026-06-28T02:00:00Z",
+  "2026-06-28T23:00:00Z",
+  "2026-06-29T17:00:00Z",
+  "2026-06-29T20:30:00Z",
+  "2026-06-30T01:00:00Z",
+  "2026-06-30T17:00:00Z",
+  "2026-06-30T21:00:00Z",
+  "2026-07-01T01:00:00Z",
+  "2026-07-01T16:00:00Z",
+  "2026-07-01T20:00:00Z",
+  "2026-07-02T00:00:00Z",
+  "2026-07-02T19:00:00Z",
+  "2026-07-02T23:00:00Z",
+  "2026-07-03T03:00:00Z",
+  "2026-07-03T18:00:00Z",
+  "2026-07-03T22:00:00Z",
+  "2026-07-04T01:30:00Z",
+  "2026-07-04T17:00:00Z",
+  "2026-07-04T21:00:00Z",
+  "2026-07-05T20:00:00Z",
+  "2026-07-06T00:00:00Z",
+  "2026-07-06T19:00:00Z",
+  "2026-07-07T00:00:00Z",
+  "2026-07-07T16:00:00Z",
+  "2026-07-07T20:00:00Z",
+  "2026-07-09T20:00:00Z",
+  "2026-07-10T19:00:00Z",
+  "2026-07-11T21:00:00Z",
+  "2026-07-12T01:00:00Z",
+  "2026-07-14T19:00:00Z",
+  "2026-07-15T19:00:00Z",
+  "2026-07-18T21:00:00Z",
+  "2026-07-19T19:00:00Z"
+];
+const WINDOW_MS = 150 * 60 * 1000; // 2.5 hrs — covers 90min + ET + injury time
+
+function isMatchWindowActive() {
+  const now = Date.now();
+  return KICKOFFS.some(k => {
+    const ko = new Date(k).getTime();
+    return now >= ko && now <= ko + WINDOW_MS;
+  });
+}
+
 
 // Map "home|away" team names to our internal match IDs
 const MATCH_ID_MAP = {
@@ -60,23 +189,59 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
-  try {
-    // Fetch all WC matches from Highlightly
-    const url = `${BASE}/matches?leagueId=${LEAGUE_ID}&season=${SEASON}&limit=200`;
-    const r = await fetch(url, {
-      headers: {
-        "X-RapidAPI-Key": RAPIDAPI_KEY,
-        "X-RapidAPI-Host": RAPIDAPI_HOST,
-      }
-    });
+  // ── Window guard — skip if no match is active or recently finished ────────
+  // Allow up to 30min after window closes so final scores are captured
+  const GRACE_MS = 30 * 60 * 1000;
+  const nowMs = Date.now();
+  const inWindow = KICKOFFS.some(k => {
+    const ko = new Date(k).getTime();
+    return nowMs >= ko && nowMs <= ko + WINDOW_MS + GRACE_MS;
+  });
+  if (!inWindow) {
+    console.log("[cron/score] outside match window — skipping");
+    return res.status(200).json({ ok: true, skipped: true, reason: "outside match window" });
+  }
 
-    if (!r.ok) {
-      const body = await r.text();
-      throw new Error(`Fixtures API ${r.status}: ${body}`);
+  try {
+    // ── Try KV cache first (shared with livescores.js) ────────────────────
+    let matches = null;
+    try {
+      const [cached, ts] = await Promise.all([
+        kv.get(CACHE_KEY),
+        kv.get(CACHE_TS_KEY),
+      ]);
+      if (cached && ts && (Date.now() - parseInt(ts)) < MAX_CACHE_AGE) {
+        // KV cache is fresh — convert back from livescores shape to raw match shape
+        matches = cached.map(f => ({
+          homeTeam: { name: f.teams?.home?.name || "" },
+          awayTeam: { name: f.teams?.away?.name || "" },
+          homeScore: f.goals?.home,
+          awayScore: f.goals?.away,
+          status: f.fixture?.status?.short || "NS",
+        }));
+        console.log(`[cron/score] using KV cache (age: ${Math.round((Date.now()-parseInt(ts))/1000)}s)`);
+      }
+    } catch(e) {
+      console.warn("[cron/score] KV read failed:", e.message);
     }
 
-    const data = await r.json();
-    const matches = data.data || data.response || [];
+    // ── Fall back to Highlightly if cache missing/stale ───────────────────
+    if (!matches) {
+      const url = `${BASE}/matches?leagueId=${LEAGUE_ID}&season=${SEASON}&limit=200`;
+      const r = await fetch(url, {
+        headers: {
+          "X-RapidAPI-Key": RAPIDAPI_KEY,
+          "X-RapidAPI-Host": RAPIDAPI_HOST,
+        }
+      });
+      if (!r.ok) {
+        const body = await r.text();
+        throw new Error(`Fixtures API ${r.status}: ${body}`);
+      }
+      const data = await r.json();
+      matches = data.data || data.response || [];
+      console.log(`[cron/score] fetched fresh from Highlightly (${matches.length} matches)`);
+    }
 
     const finished = matches.filter(m => {
       const status = m.status || m.fixture?.status?.short || "";

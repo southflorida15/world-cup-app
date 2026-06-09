@@ -4654,6 +4654,21 @@ export default function App() {
   const [showFavPicker, setShowFavPicker] = useState(false);
   const favTeam = favTeams[0] || "";
 
+  // Client-triggered prediction scoring — fire on mount
+  // Checks if any match ended in the last hour and triggers resolve
+  useEffect(() => {
+    const now = Date.now();
+    const WINDOW_MS = 150 * 60 * 1000; // 2.5hr match window
+    const GRACE_MS  =  60 * 60 * 1000; // 1hr grace period after
+    Object.entries(MATCH_UTC).forEach(([id, kickoff]) => {
+      const ko  = new Date(kickoff).getTime();
+      const end = ko + WINDOW_MS;
+      if (now > end && now < end + GRACE_MS) {
+        fetch(`/api/resolve-match?matchId=${id}`).catch(() => {});
+      }
+    });
+  }, []);
+
   // Analytics tracking — fire on mount
   useEffect(() => {
     const device = getDeviceType();

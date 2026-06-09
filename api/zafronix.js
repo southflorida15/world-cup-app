@@ -1,6 +1,12 @@
 // Zafronix FIFA World Cup 2026 API proxy
-// Server-side caching ensures only 1 API call per cache window
-// regardless of how many users are hitting the app simultaneously.
+// KV-backed cache (Upstash Redis) — survives cold starts, shared across all instances.
+// Guarantees we never exceed the 20 req/hour free tier limit.
+
+import { Redis } from "@upstash/redis";
+const kv = new Redis({
+  url:   process.env.KV_REST_API_URL,
+  token: process.env.KV_REST_API_TOKEN,
+});
 
 const BASE = "https://zafronix-fifa-world-cup-api.p.rapidapi.com";
 const BASE_DIRECT = "https://api.zafronix.com/fifa/worldcup/v1";
@@ -15,28 +21,36 @@ const HEADERS_DIRECT = {
   "X-API-Key": process.env.ZAFRONIX_API_KEY,
 };
 
-// In-memory cache — persists across requests within the same serverless instance
-const cache = {};
+// KV cache TTLs in seconds
 const TTL = {
-  teams:       6 * 60 * 60 * 1000, // 6 hours  — squads don't change mid-tournament
-  matches:     3 * 60 * 1000,       // 3 min    — match results
-  standings:   3 * 60 * 1000,       // 3 min    — standings
-  bracket:     5 * 60 * 1000,       // 5 min    — bracket
-  livescores:  3 * 60 * 1000,       // 3 min    — live scores
+  teams:              6 * 60 * 60, // 6 hours — squads don't change mid-tournament
+  matches:            5 * 60,      // 5 min   — match results
+  standings:          5 * 60,      // 5 min   — standings
+  bracket:            5 * 60,      // 5 min   — bracket
+  aggregates_players: 6 * 60 * 60, // 6 hours — player aggregates
+  stadiums:          24 * 60 * 60, // 24 hours — venues never change
+  tournament:        24 * 60 * 60, // 24 hours — tournament info static
 };
 
-function getCached(key) {
-  const entry = cache[key];
-  if (!entry) return null;
-  if (Date.now() - entry.ts > (TTL[key] || TTL.matches)) {
-    delete cache[key];
+const KV_PREFIX = "wc2026:zafronix:";
+
+async function getCached(key) {
+  try {
+    const data = await kv.get(KV_PREFIX + key);
+    return data || null;
+  } catch(e) {
+    console.warn("[zafronix] KV read error:", e.message);
     return null;
   }
-  return entry.data;
 }
 
-function setCached(key, data) {
-  cache[key] = { ts: Date.now(), data };
+async function setCached(key, data, ttlKey) {
+  try {
+    const ex = TTL[ttlKey] || TTL.matches;
+    await kv.set(KV_PREFIX + key, data, { ex });
+  } catch(e) {
+    console.warn("[zafronix] KV write error:", e.message);
+  }
 }
 
 async function zafronixFetch(path) {
@@ -67,11 +81,11 @@ export default async function handler(req, res) {
 
       // All 48 teams + full squads — heavy, cache 6 hours
       case "teams": {
-        data = getCached("teams");
+        data = await getCached("teams");
         if (!data) {
           const raw = await zafronixFetch("/teams");
           data = raw; // { teams: [...] } or array
-          setCached("teams", data);
+          await setCached("teams", data, "teams");
         }
         break;
       }
@@ -85,10 +99,10 @@ export default async function handler(req, res) {
           return res.status(500).json({ error: "ZAFRONIX_API_KEY env var not set — run: vercel env add ZAFRONIX_API_KEY" });
         }
         const cKey = `team_${name}`;
-        data = getCached(cKey);
+        data = await getCached(cKey);
         if (!data) {
           data = await zafronixFetchDirect(`/teams/${encodeURIComponent(name)}`);
-          if (data) setCached(cKey, data);
+          if (data) await setCached(cKey, data, "teams");
         }
         break;
       }
@@ -98,10 +112,10 @@ export default async function handler(req, res) {
         const { name } = req.query;
         if (!name) return res.status(400).json({ error: "Missing name param" });
         const cKey = `roster_${name}`;
-        data = getCached(cKey);
+        data = await getCached(cKey);
         if (!data) {
           data = await zafronixFetch(`/teams/${encodeURIComponent(name)}/roster`);
-          setCached(cKey, data);
+          await setCached(cKey, data, "teams");
         }
         break;
       }
@@ -109,10 +123,10 @@ export default async function handler(req, res) {
       // All matches (full schedule)
       case "matches": {
         const { order = "asc" } = req.query;
-        data = getCached("matches");
+        data = await getCached("matches");
         if (!data) {
           data = await zafronixFetch(`/matches?order=${order}`);
-          setCached("matches", data);
+          await setCached("matches", data, "matches");
         }
         break;
       }
@@ -122,60 +136,60 @@ export default async function handler(req, res) {
         const { id } = req.query;
         if (!id) return res.status(400).json({ error: "Missing id param" });
         const cKey = `match_${id}`;
-        data = getCached(cKey);
+        data = await getCached(cKey);
         if (!data) {
           data = await zafronixFetch(`/matches/${id}`);
-          setCached(cKey, data);
+          await setCached(cKey, data, "matches");
         }
         break;
       }
 
       // Group standings
       case "standings": {
-        data = getCached("standings");
+        data = await getCached("standings");
         if (!data) {
           data = await zafronixFetch("/standings");
-          setCached("standings", data);
+          await setCached("standings", data, "standings");
         }
         break;
       }
 
       // Knockout bracket
       case "bracket": {
-        data = getCached("bracket");
+        data = await getCached("bracket");
         if (!data) {
           data = await zafronixFetch("/bracket");
-          setCached("bracket", data);
+          await setCached("bracket", data, "bracket");
         }
         break;
       }
 
       // Tournament info
       case "tournament": {
-        data = getCached("tournament");
+        data = await getCached("tournament");
         if (!data) {
           data = await zafronixFetch("/tournaments/2026");
-          setCached("tournament", data);
+          await setCached("tournament", data, "tournament");
         }
         break;
       }
 
       // Top scorers / aggregates
       case "aggregates_players": {
-        data = getCached("aggregates_players");
+        data = await getCached("aggregates_players");
         if (!data) {
           data = await zafronixFetch("/aggregates/players");
-          setCached("aggregates_players", data);
+          await setCached("aggregates_players", data, "aggregates_players");
         }
         break;
       }
 
       // Stadiums
       case "stadiums": {
-        data = getCached("stadiums");
+        data = await getCached("stadiums");
         if (!data) {
           data = await zafronixFetch("/stadiums");
-          setCached("stadiums", data);
+          await setCached("stadiums", data, "stadiums");
         }
         break;
       }
@@ -185,17 +199,16 @@ export default async function handler(req, res) {
         const healthData = await zafronixFetch("/health");
         data = {
           ...healthData,
-          cacheKeys: Object.keys(cache),
-          cacheSize: Object.keys(cache).length,
+
         };
         break;
       }
 
       // Cache buster — call with ?endpoint=flush to clear all cached data
       case "flush": {
-        const count = Object.keys(cache).length;
-        Object.keys(cache).forEach(k => delete cache[k]);
-        data = { flushed: count, message: "Cache cleared" };
+        const keys = await kv.keys(KV_PREFIX + "*");
+        if (keys.length) await Promise.all(keys.map(k => kv.del(k)));
+        data = { flushed: keys.length, message: "KV cache cleared" };
         break;
       }
 

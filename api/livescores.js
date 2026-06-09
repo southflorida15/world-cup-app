@@ -16,13 +16,143 @@ const RAPIDAPI_HOST = process.env.RAPIDAPI_HOST || "football-highlights-api.p.ra
 const BASE          = `https://${RAPIDAPI_HOST}`;
 const LEAGUE_ID     = "1635";
 const SEASON        = "2026";
+
+// ── Match window guard ────────────────────────────────────────────────────
+// All 104 WC 2026 kickoff times in UTC. No API call needed to check this.
+const KICKOFFS = [
+  "2026-06-11T19:00:00Z",
+  "2026-06-12T02:00:00Z",
+  "2026-06-12T19:00:00Z",
+  "2026-06-13T01:00:00Z",
+  "2026-06-13T19:00:00Z",
+  "2026-06-13T22:00:00Z",
+  "2026-06-14T01:00:00Z",
+  "2026-06-14T03:59:00Z",
+  "2026-06-14T17:00:00Z",
+  "2026-06-14T20:00:00Z",
+  "2026-06-14T23:00:00Z",
+  "2026-06-15T02:00:00Z",
+  "2026-06-15T16:00:00Z",
+  "2026-06-15T19:00:00Z",
+  "2026-06-15T22:00:00Z",
+  "2026-06-16T01:00:00Z",
+  "2026-06-16T19:00:00Z",
+  "2026-06-16T22:00:00Z",
+  "2026-06-17T01:00:00Z",
+  "2026-06-17T03:59:00Z",
+  "2026-06-17T17:00:00Z",
+  "2026-06-17T20:00:00Z",
+  "2026-06-17T23:00:00Z",
+  "2026-06-18T02:00:00Z",
+  "2026-06-18T16:00:00Z",
+  "2026-06-18T19:00:00Z",
+  "2026-06-18T22:00:00Z",
+  "2026-06-19T01:00:00Z",
+  "2026-06-19T19:00:00Z",
+  "2026-06-19T22:00:00Z",
+  "2026-06-20T00:30:00Z",
+  "2026-06-20T03:00:00Z",
+  "2026-06-20T17:00:00Z",
+  "2026-06-20T20:00:00Z",
+  "2026-06-21T01:00:00Z",
+  "2026-06-21T03:59:00Z",
+  "2026-06-21T16:00:00Z",
+  "2026-06-21T19:00:00Z",
+  "2026-06-21T22:00:00Z",
+  "2026-06-22T01:00:00Z",
+  "2026-06-22T17:00:00Z",
+  "2026-06-22T21:00:00Z",
+  "2026-06-23T00:00:00Z",
+  "2026-06-23T03:00:00Z",
+  "2026-06-23T17:00:00Z",
+  "2026-06-23T20:00:00Z",
+  "2026-06-23T23:00:00Z",
+  "2026-06-24T02:00:00Z",
+  "2026-06-24T19:00:00Z",
+  "2026-06-24T19:00:00Z",
+  "2026-06-24T22:00:00Z",
+  "2026-06-24T22:00:00Z",
+  "2026-06-25T01:00:00Z",
+  "2026-06-25T01:00:00Z",
+  "2026-06-25T20:00:00Z",
+  "2026-06-25T20:00:00Z",
+  "2026-06-25T23:00:00Z",
+  "2026-06-25T23:00:00Z",
+  "2026-06-26T02:00:00Z",
+  "2026-06-26T02:00:00Z",
+  "2026-06-26T19:00:00Z",
+  "2026-06-26T19:00:00Z",
+  "2026-06-27T00:00:00Z",
+  "2026-06-27T00:00:00Z",
+  "2026-06-27T03:00:00Z",
+  "2026-06-27T03:00:00Z",
+  "2026-06-27T21:00:00Z",
+  "2026-06-27T21:00:00Z",
+  "2026-06-27T23:30:00Z",
+  "2026-06-27T23:30:00Z",
+  "2026-06-28T02:00:00Z",
+  "2026-06-28T02:00:00Z",
+  "2026-06-28T23:00:00Z",
+  "2026-06-29T17:00:00Z",
+  "2026-06-29T20:30:00Z",
+  "2026-06-30T01:00:00Z",
+  "2026-06-30T17:00:00Z",
+  "2026-06-30T21:00:00Z",
+  "2026-07-01T01:00:00Z",
+  "2026-07-01T16:00:00Z",
+  "2026-07-01T20:00:00Z",
+  "2026-07-02T00:00:00Z",
+  "2026-07-02T19:00:00Z",
+  "2026-07-02T23:00:00Z",
+  "2026-07-03T03:00:00Z",
+  "2026-07-03T18:00:00Z",
+  "2026-07-03T22:00:00Z",
+  "2026-07-04T01:30:00Z",
+  "2026-07-04T17:00:00Z",
+  "2026-07-04T21:00:00Z",
+  "2026-07-05T20:00:00Z",
+  "2026-07-06T00:00:00Z",
+  "2026-07-06T19:00:00Z",
+  "2026-07-07T00:00:00Z",
+  "2026-07-07T16:00:00Z",
+  "2026-07-07T20:00:00Z",
+  "2026-07-09T20:00:00Z",
+  "2026-07-10T19:00:00Z",
+  "2026-07-11T21:00:00Z",
+  "2026-07-12T01:00:00Z",
+  "2026-07-14T19:00:00Z",
+  "2026-07-15T19:00:00Z",
+  "2026-07-18T21:00:00Z",
+  "2026-07-19T19:00:00Z"
+];
+const WINDOW_MS = 150 * 60 * 1000; // 2.5 hrs — covers 90min + ET + injury time
+
+function isMatchWindowActive() {
+  const now = Date.now();
+  return KICKOFFS.some(k => {
+    const ko = new Date(k).getTime();
+    return now >= ko && now <= ko + WINDOW_MS;
+  });
+}
+
 const CACHE_KEY     = "wc2026:livescores";
 const CACHE_TS_KEY  = "wc2026:livescores:ts";
 
 // TTLs in seconds (for KV expiry) and ms (for freshness check)
-const TTL_LIVE     = 4 * 60;             // 4min live — ~24 calls/match
-const TTL_NORMAL   = 15 * 60;       // 15min off-peak — minimal quota use
-const TTL_FINISHED = 30 * 60;    // 30min when all done for the day
+// Smart-stretch TTLs — fewer concurrent matches = tighter polling
+const TTL_LIVE_SOLO   = 2 * 60;   // 2min  — 1 match live
+const TTL_LIVE_MULTI  = 5 * 60;   // 5min  — 2-3 matches live
+const TTL_LIVE_HEAVY  = 8 * 60;   // 8min  — 4+ matches live (group stage crunch)
+const TTL_NORMAL      = 60 * 60;  // 1hr   — window active but no live matches
+const TTL_FINISHED    = 30 * 60;  // 30min — all done for the day
+
+function getSmartTTL(fixtures) {
+  const liveCount = fixtures.filter(f => LIVE_STATUSES.includes(f?.fixture?.status?.short)).length;
+  if (liveCount === 0) return allFinishedToday(fixtures) ? TTL_FINISHED : TTL_NORMAL;
+  if (liveCount >= 4) return TTL_LIVE_HEAVY;
+  if (liveCount >= 2) return TTL_LIVE_MULTI;
+  return TTL_LIVE_SOLO;
+}
 
 const LIVE_STATUSES     = ["LIVE","1H","HT","2H","ET","BT","P","INT","inprogress","first_half","halftime","second_half","extra_time","penalties"];
 const FINISHED_STATUSES = ["FT","AET","PEN","AWD","WO","finished","ended","after_extra_time","after_penalties"];
@@ -74,6 +204,19 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   if (req.method === "OPTIONS") return res.status(200).end();
 
+  // ── Window guard — skip entirely if no match is active ───────────────────
+  if (!isMatchWindowActive()) {
+    // No match playing — return frozen cache or empty response
+    let frozen = null;
+    try { frozen = await kv.get(CACHE_KEY); } catch(e) {}
+    res.setHeader("Cache-Control", "no-cache");
+    return res.status(200).json({
+      response: frozen || [],
+      cached: true,
+      windowActive: false,
+    });
+  }
+
   // ── Read shared KV cache ──────────────────────────────────────────────────
   let cached = null;
   let cachedTs = 0;
@@ -89,10 +232,7 @@ export default async function handler(req, res) {
 
   // ── Check freshness ───────────────────────────────────────────────────────
   if (cached) {
-    let ttlMs = TTL_NORMAL * 1000;
-    if (isAnyLive(cached))              ttlMs = TTL_LIVE * 1000;
-    else if (allFinishedToday(cached))  ttlMs = TTL_FINISHED * 1000;
-
+    const ttlMs = getSmartTTL(cached) * 1000;
     if (Date.now() - cachedTs < ttlMs) {
       res.setHeader("Cache-Control", "no-cache");
       return res.status(200).json({
@@ -127,10 +267,7 @@ export default async function handler(req, res) {
     const fixtures = raw.map(mapMatch);
 
     // ── Write to KV cache ─────────────────────────────────────────────────
-    // Pick TTL for KV expiry based on match state
-    let kvTtl = TTL_NORMAL;
-    if (isAnyLive(fixtures))              kvTtl = TTL_LIVE;
-    else if (allFinishedToday(fixtures))  kvTtl = TTL_FINISHED;
+    const kvTtl = getSmartTTL(fixtures);
 
     try {
       await Promise.all([
