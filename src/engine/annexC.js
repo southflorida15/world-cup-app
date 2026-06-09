@@ -1,15 +1,14 @@
 // FIFA World Cup 26™ Annex C utilities
 // Source basis: FIFA World Cup 26™ Regulations, Annexe C, "Combinations for eight best third-placed teams".
-// The rendered 495-row table is also mirrored on Wikipedia's 2026 FIFA World Cup knockout-stage/template pages.
+// The rendered 495-row table is mirrored on Wikipedia's 2026 FIFA World Cup knockout-stage/template pages.
 //
-// This version does not guess or use fallback placement. It can parse the official 495-row matrix
-// from rendered table text and validates the expected row count before accepting it.
+// This version does not guess or use fallback placement. It loads the official 495-row matrix
+// through a same-origin Vercel proxy (/api/annexc) and validates the expected row count before accepting it.
 
 export const THIRD_PLACE_TARGET_COLUMNS = ["1A", "1B", "1D", "1E", "1G", "1I", "1K", "1L"];
 
-// Read-only public mirror of the FIFA Annex C table. Used only by loadAnnexCFromRemote().
-export const ANNEX_C_SOURCE_URL =
-  "https://en.wikipedia.org/api/rest_v1/page/html/Template:2026_FIFA_World_Cup_third-place_table";
+// Same-origin Vercel proxy. Avoids browser CORS/runtime fetch issues from Wikipedia/Wikimedia.
+export const ANNEX_C_SOURCE_URL = "/api/annexc";
 
 let annexCStore = {};
 
@@ -87,28 +86,25 @@ export function setAnnexCMapping(table) {
   return annexCStore;
 }
 
+function htmlToText(html) {
+  if (typeof DOMParser !== "undefined") {
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    return doc.body?.textContent || html;
+  }
+  return String(html).replace(/<[^>]+>/g, "\n");
+}
+
 export async function loadAnnexCFromRemote(fetchImpl = fetch) {
   const res = await fetchImpl(ANNEX_C_SOURCE_URL);
   if (!res.ok) throw new Error(`Unable to load Annex C source: HTTP ${res.status}`);
 
-  const html = await res.text();
-  let text = html;
-
-  // Browser-friendly HTML-to-text extraction.
-  if (typeof DOMParser !== "undefined") {
-    const doc = new DOMParser().parseFromString(html, "text/html");
-    text = doc.body?.textContent || html;
-  } else {
-    text = html.replace(/<[^>]+>/g, "\n");
-  }
-
+  const source = await res.text();
+  const text = htmlToText(source);
   const parsed = parseAnnexCRows(text);
   return setAnnexCMapping(parsed);
 }
 
-// Synchronous getter used by the bracket engine. Before the UI is switched over,
-// ANNEX_C can remain unloaded. Once we wire the engine, we will either embed the
-// 495-row object directly or load it before calling buildFifa2026Bracket().
+// Synchronous getter used by the bracket engine.
 export const ANNEX_C = annexCStore;
 
 export function getAnnexCMapping(qualifiedThirds) {
