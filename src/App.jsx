@@ -2626,7 +2626,7 @@ function SavedTab({ saved, onRemove, tabTop=116 }) {
     try { return new Set(JSON.parse(localStorage.getItem("wc2026_push_set") || "[]")); } catch { return new Set(); }
   });
   const [filterMode, setFilterMode] = useState("all"); // all | group | team | date
-  const [filterVal, setFilterVal] = useState("");
+  const [filterVal, setFilterVal] = useState(new Set()); // Set for multi-select
   const savedToday = new Date().toLocaleDateString("en-US", { month:"short", day:"numeric" });
 
   const sorted = [...saved].sort((a,b) => {
@@ -2655,9 +2655,9 @@ function SavedTab({ saved, onRemove, tabTop=116 }) {
     const away = m.away?.trim();
     const group = m.group?.trim();
     const date = m.date?.trim();
-    if (filterMode === "group") return !filterVal || group === filterVal;
-    if (filterMode === "team")  return !filterVal || home === filterVal || away === filterVal;
-    if (filterMode === "date")  return !filterVal || date === filterVal;
+    if (filterMode === "group") return filterVal.size===0 || filterVal.has(group);
+    if (filterMode === "team")  return filterVal.size===0 || filterVal.has(home) || filterVal.has(away);
+    if (filterMode === "date")  return !filterVal.size || filterVal.has(date);
     return true;
   });
 
@@ -2704,7 +2704,7 @@ function SavedTab({ saved, onRemove, tabTop=116 }) {
       <div ref={_ref} style={{position:"fixed",top:tabTop,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:700,willChange:"transform",zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
         {/* Master actions */}
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
-          <span style={{fontSize:12,fontWeight:700,color:C.mid,letterSpacing:"0.06em"}}>ALL MATCHES ({saved.length}){filterMode!=="all"&&filtered.length!==saved.length?<span style={{color:C.dim,fontWeight:400}}> · {filtered.length} shown</span>:null}</span>
+          <span style={{fontSize:12,fontWeight:700,color:C.mid,letterSpacing:"0.06em"}}>ALL MATCHES ({saved.length}){(filterMode!=="all"&&filterVal.size>0)&&filtered.length!==saved.length?<span style={{color:C.dim,fontWeight:400}}> · {filtered.length} shown</span>:null}</span>
           <button onClick={()=>saved.forEach(it=>onRemove(it.id))} style={{background:"none",border:`1px solid ${C.b2}`,color:C.dim,fontSize:11,cursor:"pointer",padding:"2px 8px",borderRadius:6}}>Clear all</button>
         </div>
         <div style={{display:"flex",gap:6,marginBottom:8}}>
@@ -2713,32 +2713,48 @@ function SavedTab({ saved, onRemove, tabTop=116 }) {
         </div>
         {/* Filter pills */}
         <div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none"}}>
-          <button style={ss(filterMode==="all")} onClick={()=>{setFilterMode("all");setFilterVal("");}}>{"All"}</button>
-          <button style={ss(filterMode==="group")} onClick={()=>{setFilterMode("group");setFilterVal("");}}>🗂️ Group</button>
-          <button style={ss(filterMode==="team")} onClick={()=>{setFilterMode("team");setFilterVal("");}}>👥 Team</button>
-          <button style={ss(filterMode==="date")} onClick={()=>{setFilterMode("date");setFilterVal("");}}>📅 Date</button>
+          <button style={ss(filterMode==="all")} onClick={()=>{setFilterMode("all");setFilterVal(new Set());}}>{"All"}</button>
+          <button style={ss(filterMode==="group")} onClick={()=>{setFilterMode("group");setFilterVal(new Set());}}>🗂️ Group</button>
+          <button style={ss(filterMode==="team")} onClick={()=>{setFilterMode("team");setFilterVal(new Set());}}>👥 Team</button>
+          <button style={ss(filterMode==="date")} onClick={()=>{setFilterMode("date");setFilterVal(new Set());}}>📅 Date</button>
         </div>
         {/* Filter value selector */}
-        {filterMode !== "all" && filterMode !== "date" && (
-          <div style={{marginTop:8}}>
-            <select value={filterVal} onChange={e=>setFilterVal(e.target.value)}
-              style={{width:"100%",padding:"8px 12px",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:10,color:C.text,fontSize:13,outline:"none"}}>
-              <option value="">All {filterMode}s</option>
-              {filterMode==="group" && groups.map(g=><option key={g} value={g}>Group {g}</option>)}
-              {filterMode==="team"  && teams.map(t=><option key={t} value={t}>{t}</option>)}
-            </select>
+        {filterMode === "group" && (
+          <div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:8}}>
+            {groups.map(g=>{
+              const active = filterVal.has(g);
+              return (
+                <button key={g} onClick={()=>setFilterVal(prev=>{const n=new Set(prev);active?n.delete(g):n.add(g);return n;})}
+                  style={{padding:"5px 12px",borderRadius:20,border:`1px solid ${active?C.green:C.b2}`,background:active?`${C.green}18`:"transparent",color:active?C.green:C.mid,fontSize:12,fontWeight:600,cursor:"pointer"}}>
+                  Group {g}
+                </button>
+              );
+            })}
+          </div>
+        )}
+        {filterMode === "team" && (
+          <div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:8}}>
+            {teams.map(t=>{
+              const active = filterVal.has(t);
+              return (
+                <button key={t} onClick={()=>setFilterVal(prev=>{const n=new Set(prev);active?n.delete(t):n.add(t);return n;})}
+                  style={{display:"flex",alignItems:"center",gap:5,padding:"5px 10px",borderRadius:20,border:`1px solid ${active?C.green:C.b2}`,background:active?`${C.green}18`:"transparent",color:active?C.green:C.mid,fontSize:11,fontWeight:600,cursor:"pointer",flexShrink:0}}>
+                  <Crest team={t} size={14}/>{t}
+                </button>
+              );
+            })}
           </div>
         )}
         {/* Date strip — same as Schedule tab */}
         {filterMode === "date" && (
           <div ref={savedStripRef} style={{display:"flex",overflowX:"auto",scrollbarWidth:"none",marginTop:8,gap:4}}>
-            <div onClick={()=>setFilterVal("")} style={{display:"flex",flexDirection:"column",alignItems:"center",minWidth:36,cursor:"pointer",padding:"4px 2px",borderRadius:8,background:filterVal===""?`${C.green}22`:"transparent",border:`1px solid ${filterVal===""?C.green:"transparent"}`}}>
-              <span style={{fontSize:9,color:filterVal===""?C.green:C.dim,fontWeight:700}}>ALL</span>
-              <span style={{fontSize:14,fontWeight:900,color:filterVal===""?C.green:C.dim}}>⚽</span>
+            <div onClick={()=>setFilterVal(new Set())} style={{display:"flex",flexDirection:"column",alignItems:"center",minWidth:36,cursor:"pointer",padding:"4px 2px",borderRadius:8,background:filterVal.size===0?`${C.green}22`:"transparent",border:`1px solid ${filterVal.size===0?C.green:"transparent"}`}}>
+              <span style={{fontSize:9,color:filterVal.size===0?C.green:C.dim,fontWeight:700}}>ALL</span>
+              <span style={{fontSize:14,fontWeight:900,color:filterVal.size===0?C.green:C.dim}}>⚽</span>
             </div>
             {savedDates.map((d, idx) => {
               const isToday = d.key === savedToday;
-              const isSel = filterVal === d.key;
+              const isSel = filterVal.has(d.key);
               const prevD = savedDates[idx - 1];
               const monthChanged = prevD && d.date.getMonth() !== prevD.date.getMonth();
               return (
@@ -2749,7 +2765,7 @@ function SavedTab({ saved, onRemove, tabTop=116 }) {
                       <span style={{fontSize:8,color:C.dim,fontWeight:700,marginTop:2,letterSpacing:"0.05em"}}>{d.date.toLocaleDateString("en-US",{month:"short"}).toUpperCase()}</span>
                     </div>
                   )}
-                  <div onClick={()=>setFilterVal(isSel?"":d.key)}
+                  <div onClick={()=>setFilterVal(prev=>{const n=new Set(prev);isSel?n.delete(d.key):n.add(d.key);return n;})}
                     style={{display:"flex",flexDirection:"column",alignItems:"center",minWidth:36,cursor:"pointer",padding:"4px 6px",borderRadius:8,
                       background:isSel?`${C.green}22`:isToday?`${C.green}0a`:"transparent",
                       border:`1px solid ${isSel?C.green:isToday?`${C.green}44`:"transparent"}`,
@@ -2998,9 +3014,20 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{} }) {
         let u = await apiPred("getUser", { userId });
         // Auto-register if signed in via sync but not yet in predictor
         if (!u && syncProfile?.name) {
-          try {
-            u = await apiPred("register", {}, { userId, name: syncProfile.name, avatar: null, city: "", country: "" });
-          } catch(e) { /* name taken or error — will show name prompt */ }
+          // Try with exact name first, then with suffix if taken
+          const namesToTry = [
+            syncProfile.name,
+            syncProfile.name.slice(0, 18) + "2",
+            syncProfile.name.slice(0, 17) + " FC",
+          ];
+          for (const name of namesToTry) {
+            try {
+              u = await apiPred("register", {}, { userId, name, avatar: null, city: "", country: "" });
+              if (u) break;
+            } catch(e) {
+              if (!e.message?.includes("taken")) break; // non-name error, stop trying
+            }
+          }
         }
         setUser(u);
         if (u) {
@@ -3012,7 +3039,7 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{} }) {
       } catch(e) { console.error("predictor init", e); }
       finally { setUL(false); }
     })();
-  }, [userId]);
+  }, [userId, syncProfile?.name]);
 
   // ── Load leaderboard when that tab is active ────────────────────────────
   useEffect(() => {
