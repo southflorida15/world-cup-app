@@ -682,7 +682,7 @@ const USER_TZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
 const APP_VERSION = "1.0.0";
 
 // ── TRANSLATIONS ──────────────────────────────────────────────────────────
-const TRANSLATIONS = {
+var TRANSLATIONS = {
   "tab_live": {en:"Live", pt:"Ao Vivo", es:"En Vivo", fr:"En Direct"},
   "tab_schedule": {en:"Schedule", pt:"Calendário", es:"Calendario", fr:"Calendrier"},
   "tab_groups": {en:"Groups", pt:"Grupos", es:"Grupos", fr:"Groupes"},
@@ -759,10 +759,10 @@ const TRANSLATIONS = {
   "running": {en:"Simulating…", pt:"Simulando…", es:"Simulando…", fr:"Simulation…"},
   "my_account": {en:"My Account", pt:"Minha Conta", es:"Mi Cuenta", fr:"Mon Compte"},
   "sign_out": {en:"Sign out", pt:"Sair", es:"Cerrar sesión", fr:"Déconnexion"},
-  "create_pin": {en:t("create_pin"), pt:"Criar PIN", es:"Crear PIN", fr:"Créer un PIN"},
-  "enter_pin": {en:t("enter_pin"), pt:"Digite o PIN", es:"Ingresar PIN", fr:"Entrer le PIN"},
+  "create_pin": {en:"Create PIN", pt:"Criar PIN", es:"Crear PIN", fr:"Créer un PIN"},
+  "enter_pin": {en:"Enter PIN", pt:"Digite o PIN", es:"Ingresar PIN", fr:"Entrer le PIN"},
   "sync_devices": {en:"Sync across devices", pt:"Sincronizar dispositivos", es:"Sincronizar dispositivos", fr:"Synchroniser"},
-  "my_teams": {en:t("my_teams"), pt:"Meus Times", es:"Mis Equipos", fr:"Mes Équipes"},
+  "my_teams": {en:"My Teams", pt:"Meus Times", es:"Mis Equipos", fr:"Mes Équipes"},
   "language": {en:"Language", pt:"Idioma", es:"Idioma", fr:"Langue"},
   "share": {en:"📤 Share", pt:"📤 Compartilhar", es:"📤 Compartir", fr:"📤 Partager"},
   "open_app": {en:"⚽ Open App", pt:"⚽ Abrir App", es:"⚽ Abrir App", fr:"⚽ Ouvrir App"},
