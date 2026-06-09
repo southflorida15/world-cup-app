@@ -974,7 +974,7 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=n
 
   return (
     <div>
-      <div ref={_lhRef} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,maxWidth:700,margin:"0 auto",padding:"8px 13px"}}>
+      <div ref={_lhRef} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,maxWidth:700,margin:"0 auto",padding:"8px 13px"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <div style={{fontWeight:700,fontSize:15,color:C.green}}>{"LIVE SCORES"}</div>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
@@ -1094,7 +1094,7 @@ function SchedTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=
   return (
     <div>
       {/* Fixed filter header */}
-      <div ref={filterRef} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,maxWidth:700,margin:"0 auto",padding:"10px 13px 8px"}}>
+      <div ref={filterRef} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,maxWidth:700,margin:"0 auto",padding:"10px 13px 8px"}}>
 
         {/* Date strip */}
         <div ref={stripRef} style={{display:"flex",overflowX:"auto",scrollbarWidth:"none",marginBottom:8,gap:4}}>
@@ -1257,7 +1257,7 @@ function GrpTab({ onTeam, onMatchTap, tabTop=116 }) {
   return (
     <div>
       {/* Fixed header */}
-      <div ref={_ghRef} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,maxWidth:700,margin:"0 auto",padding:"8px 13px"}}>
+      <div ref={_ghRef} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,maxWidth:700,margin:"0 auto",padding:"8px 13px"}}>
         <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:6,scrollbarWidth:"none"}}>
           {Object.keys(GROUPS).map(g=><Pill key={g} active={sel===g} onClick={()=>setSel(g)}>{g}</Pill>)}
         </div>
@@ -1464,7 +1464,7 @@ function StatsTab({ initial="", tabTop=116 }) {
 
   return (
     <div>
-      <div ref={_shRef} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,maxWidth:700,margin:"0 auto",padding:"10px 13px"}}>
+      <div ref={_shRef} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,maxWidth:700,margin:"0 auto",padding:"10px 13px"}}>
         <select value={sel} onChange={e=>setSel(e.target.value)} style={{width:"100%",padding:"10px 14px",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:10,color:C.text,fontSize:14,outline:"none"}}>
           <option value="">Select a team</option>
           {Object.keys(GROUPS).map(g=><optgroup key={g} label={`Group ${g}`}>{GROUPS[g].teams.map(t=><option key={t} value={t}>{getFlag(t)} {t}</option>)}</optgroup>)}
@@ -1699,7 +1699,7 @@ function PredTab({ tabTop=140, geoData={} }) {
   const _phRef = useRef(null); const _phH = useElemHeight(_phRef);
   return (
     <div>
-      <div ref={_phRef} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,maxWidth:700,margin:"0 auto",padding:"8px 13px"}}>
+      <div ref={_phRef} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,maxWidth:700,margin:"0 auto",padding:"8px 13px"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <div>
             <span style={{fontWeight:700,fontSize:15,color:C.green}}>🎯 POLYMARKET ODDS</span>
@@ -1816,7 +1816,7 @@ function SimTab({ tabTop=116 }) {
 
   return (
     <div>
-      <div ref={_simhRef} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,maxWidth:700,margin:"0 auto",padding:"8px 13px"}}>
+      <div ref={_simhRef} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,maxWidth:700,margin:"0 auto",padding:"8px 13px"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
           <div>
             <div style={{fontWeight:700,fontSize:15,color:C.green}}>{"🎲 WORLD CUP SIMULATOR"}</div>
@@ -2194,10 +2194,9 @@ function H2HTab({ tabTop=116 }) {
   return (
     <div>
       {/* Fixed team selector */}
-      <div ref={_h2hRef} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,maxWidth:700,margin:"0 auto",padding:"8px 13px"}}>
+      <div ref={_h2hRef} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,maxWidth:700,margin:"0 auto",padding:"8px 13px"}}>
         <div style={{fontWeight:700,color:C.green,fontSize:15,marginBottom:8}}>{"⚔️ COMPARE TEAMS HEAD TO HEAD"}</div>
-        <div style={{height:(_h2hH||90)+8}}/>
-      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:team1&&team2&&team1!==team2?8:0}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:team1&&team2&&team1!==team2?8:0}}>
           <div style={{flex:1}}>
             <select value={team1} onChange={e=>{setTeam1(e.target.value);setD1(null);setFetched(false);}} style={{width:"100%",padding:"7px 10px",background:C.s2,border:`1px solid ${C.b2}`,borderRadius:8,color:C.text,fontSize:13,outline:"none"}}>
               <option value="">Team 1…</option>
@@ -2218,7 +2217,7 @@ function H2HTab({ tabTop=116 }) {
           </button>
         )}
       </div>
-      
+      <div style={{height:(_h2hH||90)+8}}/>
 
       {/* Simulated match odds — always shown */}
       {team1!==team2 && simOdds && (
@@ -2448,7 +2447,7 @@ function MyBracketTab({ tabTop=116 }) {
   const runBracket=()=>{setRunning(true);setTimeout(()=>{const qualifiers=[];Object.entries(groups).forEach(([,teams])=>{qualifiers.push(teams[0],teams[1]);});const r32=[...qualifiers,...thirds.slice(0,8)];const ko=(arr)=>{const n=[];for(let i=0;i<arr.length;i+=2)n.push(simKO(arr[i],arr[i+1]));return n;};const r16=ko(r32),qf=ko(r16),sf=ko(qf),champ=simKO(sf[0],sf[1]);setResult({r32,r16,qf,sf,champion:champ,runnerUp:sf.find(x=>x!==champ)});setStage("bracket");setRunning(false);},80);};
   return (
     <div>
-      <div ref={_mbhRef} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,maxWidth:700,margin:"0 auto",padding:"10px 13px"}}>
+      <div ref={_mbhRef} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,maxWidth:700,margin:"0 auto",padding:"10px 13px"}}>
         <div style={{display:"flex",gap:8}}>
           <Pill active={stage==="groups"} onClick={()=>setStage("groups")} color={C.green}>1 · Set Groups</Pill>
           <Pill active={stage==="thirds"} onClick={()=>setStage("thirds")} color={C.gold}>2 · Pick 3rds</Pill>
@@ -2677,7 +2676,7 @@ function SavedTab({ saved, onRemove, tabTop=116 }) {
   return (
     <div style={{maxWidth:700,margin:"0 auto"}}>
       {/* Sticky controls */}
-      <div ref={_ref} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,maxWidth:700,margin:"0 auto",padding:"8px 13px"}}>
+      <div ref={_ref} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,maxWidth:700,margin:"0 auto",padding:"8px 13px"}}>
         {/* Master actions */}
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
           <span style={{fontSize:12,fontWeight:700,color:C.mid,letterSpacing:"0.06em"}}>ALL MATCHES ({saved.length}){filterMode!=="all"&&filtered.length!==saved.length?<span style={{color:C.dim,fontWeight:400}}> · {filtered.length} shown</span>:null}</span>
@@ -3599,7 +3598,7 @@ function TopScorersTab({ tabTop=116 }) {
 
   return (
     <div>
-      <div ref={_tshRef} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,maxWidth:700,margin:"0 auto",padding:"8px 13px"}}>
+      <div ref={_tshRef} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,maxWidth:700,margin:"0 auto",padding:"8px 13px"}}>
         <div style={{fontWeight:700,fontSize:15,color:C.green,marginBottom:!hasLive?4:0}}>{"TOP SCORERS"} <span style={{fontSize:11,color:C.dim,fontWeight:400}}>{hasLive?"· "+"Live data":"· "+"Pre-tournament"}</span></div>
         {!hasLive && (
           <div style={{display:"flex",gap:6}}>
@@ -4073,7 +4072,7 @@ function WCNewsTab({ tabTop=116 }) {
   return (
     <div>
       {/* Sticky header */}
-      <div ref={_ref} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b1}`,maxWidth:700,margin:"0 auto",padding:"10px 13px 8px"}}>
+      <div ref={_ref} style={{position:"fixed",top:tabTop,left:0,right:0,zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,maxWidth:700,margin:"0 auto",padding:"10px 13px 8px"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <span style={{fontSize:15,fontWeight:700,color:C.green}}>{"📰 World Cup 2026 News"}</span>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
