@@ -185,7 +185,7 @@ const TEAMS = {
   "Czechia":{flag:"🇨🇿",conf:"UEFA",rank:36,ss:6.7,titles:0,coach:"Miroslav Koubek",base:"Mansfield, TX",form:["W","W","D","L","W"],stats:{ATT:6.6,MID:6.8,DEF:6.9,FIT:7.1},players:[{name:"Patrik Schick",pos:"FW",club:"Bayer Leverkusen",caps:53,goals:27,ss:7.6,note:"Clinical"},{name:"Tomas Soucek",pos:"MF",club:"West Ham",caps:79,goals:18,ss:7.3,note:"Box-to-box"},{name:"Vladimir Coufal",pos:"DF",club:"West Ham",caps:44,goals:2,ss:6.8,note:"RB"},{name:"Jiri Stanek",pos:"GK",club:"Atletico Madrid",caps:22,goals:0,ss:7.1,note:"Keeper"}],note:"First World Cup in 20 years. Schick and Soucek are genuine top-level players."},
 };
 
-// ── RECENT4 — verified as of Jun 8, 2026 ────────────────────────────────
+// ── RECENT4 — verified as of Jun 10, 2026 ────────────────────────────────
 // Once WC starts (Jun 11), RecentForm component auto-upgrades to live API data.
 const RECENT4 = {
   "Argentina":[
@@ -982,7 +982,7 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=n
           </div>
         </div>
       </div>
-      <div style={{height:12}}/>
+      <div style={{height:16}}/>
       
       {Object.keys(upcomingByDate).length > 0 && (
         <div style={{marginBottom:16}}>
@@ -1155,7 +1155,6 @@ function SchedTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=
       </div>
 
       {/* Spacer to push content below fixed header */}
-      <div style={{height: (filterHeight || 140) + 8}}/>
 
       {/* Match list */}
       {shown.length===0 ? <div style={{textAlign:"center",padding:"32px",color:C.dim}}>{"No matches found"}</div> : Object.entries(byDate).map(([date,ms],idx)=>(
@@ -1467,7 +1466,7 @@ function StatsTab({ initial="", tabTop=116 }) {
           {Object.keys(GROUPS).map(g=><optgroup key={g} label={`Group ${g}`}>{GROUPS[g].teams.map(t=><option key={t} value={t}>{getFlag(t)} {t}</option>)}</optgroup>)}
         </select>
       </div>
-      <div style={{height:12}}/>
+      <div style={{height:16}}/>
       
       {!sel && <div style={{textAlign:"center",padding:"44px 20px",color:C.dim,fontSize:13}}>Select any of the 48 teams to view their squad</div>}
       {sel && d && (
@@ -1705,7 +1704,7 @@ function PredTab({ tabTop=140, geoData={} }) {
           <a href="https://polymarket.com" target="_blank" rel="noopener noreferrer" style={{fontSize:11,color:C.green,textDecoration:"none",border:`1px solid ${C.greenS}`,padding:"3px 9px",borderRadius:20}}>Live →</a>
         </div>
       </div>
-      <div style={{height:12}}/>
+      <div style={{height:16}}/>
       
 
       {/* Line chart */}
@@ -1833,7 +1832,7 @@ function SimTab({ tabTop=116 }) {
           <Pill active={view==="bracket"} onClick={()=>setView("bracket")} color={C.gold}>🏆 Most Likely Bracket</Pill>
         </div>
       </div>
-      <div style={{height:12}}/>
+      <div style={{height:16}}/>
       
 
       {running && (
@@ -2214,7 +2213,7 @@ function H2HTab({ tabTop=116 }) {
           </button>
         )}
       </div>
-      <div style={{height:12}}/>
+      <div style={{height:16}}/>
       
 
       {/* Simulated match odds — always shown */}
@@ -2452,7 +2451,7 @@ function MyBracketTab({ tabTop=116 }) {
           <Pill active={stage==="bracket"} onClick={()=>setStage("bracket")} color={C.blue}>3 · Bracket</Pill>
         </div>
       </div>
-      <div style={{height:12}}/>
+      <div style={{height:16}}/>
       
       {stage==="groups" && (
         <div>
@@ -2704,7 +2703,7 @@ function SavedTab({ saved, onRemove, tabTop=116 }) {
           </div>
         )}
       </div>
-      <div style={{height:12}}/>
+      <div style={{height:16}}/>
       {filtered.length === 0
         ? <div style={{textAlign:"center",padding:"32px 0",color:C.dim,fontSize:13}}>No matches match this filter.</div>
         : filtered.map(item=>(<SavedMatchCard key={item.id} item={item} onRemove={onRemove} notifiedIds={notifiedIds} onNotified={(id)=>setNotifiedIds(prev=>new Set([...prev,id]))}/>))
@@ -3608,7 +3607,7 @@ function TopScorersTab({ tabTop=116 }) {
           </div>
         )}
       </div>
-      <div style={{height:12}}/>
+      <div style={{height:16}}/>
       
       {!hasLive && (
           <div>
@@ -4249,27 +4248,28 @@ function PullToRefresh({ onRefresh, children }) {
 
   return (
     <>
-      {/* Pull indicator — fixed, never moves the page */}
+      {children}
+      {/* Pull indicator — sticky at top of scroll area */}
       {(pulling || refreshing) && (
         <div style={{
-          position:"fixed", top:130, left:"50%", transform:"translateX(-50%)",
+          position:"fixed", top:"50%", left:"50%",
+          transform:"translate(-50%,-50%)",
           zIndex:500, pointerEvents:"none",
         }}>
           <div style={{
-            width:36, height:36, borderRadius:"50%",
-            background:C.s2, border:`1px solid ${C.b2}`,
+            width:44, height:44, borderRadius:"50%",
+            background:C.s1, border:`2px solid ${C.green}`,
             display:"flex", alignItems:"center", justifyContent:"center",
-            boxShadow:"0 2px 12px rgba(0,0,0,.4)",
-            opacity: Math.min(pullY / 30, 1),
+            boxShadow:"0 4px 20px rgba(0,0,0,.5)",
+            opacity: Math.min(pullY / 20, 1),
           }}>
             {refreshing
-              ? <div style={{width:16,height:16,border:`2px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .7s linear infinite"}}/>
-              : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={pullY>=THRESHOLD?C.green:C.mid} strokeWidth="2.5" strokeLinecap="round" style={{transform:`rotate(${(pullY/THRESHOLD)*180}deg)`,transition:"transform .1s"}}><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+              ? <div style={{width:18,height:18,border:`2.5px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .7s linear infinite"}}/>
+              : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={pullY>=THRESHOLD?C.green:C.mid} strokeWidth="2.5" strokeLinecap="round" style={{transform:`rotate(${(pullY/THRESHOLD)*180}deg)`,transition:"transform .1s"}}><path d="M12 5v14M5 12l7 7 7-7"/></svg>
             }
           </div>
         </div>
       )}
-      {children}
     </>
   );
 }
@@ -4728,7 +4728,7 @@ export default function App() {
           </div>
         </div>
         <PullToRefresh onRefresh={async()=>{ if(refreshScores) await refreshScores(); }}>
-        <div id="scroll-area" style={{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch",overscrollBehavior:"contain",padding:"0 13px 100px"}}>
+        <div id="scroll-area" style={{flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch",overscrollBehavior:"contain",padding:"8px 13px 100px"}}>
           {tab==="live"      && <LiveTab onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} tabTop={tabBarBottom} savedIds={savedIds}/>}
           {tab==="scorers"   && <TopScorersTab tabTop={tabBarBottom}/>}
           {tab==="schedule"  && <SchedTab onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} tabTop={tabBarBottom} savedIds={savedIds}/>}
