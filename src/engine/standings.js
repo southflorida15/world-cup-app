@@ -1,3 +1,5 @@
+import { compareThirdPlaceTeams, normalizeStandingMetrics } from "./tiebreakers";
+
 export function getGroupPodium(groups) {
   return Object.fromEntries(
     Object.entries(groups || {}).map(([group, teams]) => [
@@ -12,9 +14,27 @@ export function getGroupPodium(groups) {
   );
 }
 
-export function getThirdPlaceCandidates(groups) {
-  return Object.entries(groups || {}).map(([group, teams]) => ({
-    group,
-    team: teams?.[2] || null,
-  })).filter(x => x.team);
+export function getThirdPlaceCandidates(groups, metricsByTeam = {}) {
+  return Object.entries(groups || {})
+    .map(([group, teams]) => {
+      const team = teams?.[2] || null;
+      if (!team) return null;
+      const metrics = metricsByTeam[team] || {};
+      return normalizeStandingMetrics({
+        group,
+        team,
+        position: 3,
+        ...metrics,
+      });
+    })
+    .filter(Boolean);
+}
+
+export function rankThirdPlaceCandidates(candidates, options = {}) {
+  return [...(candidates || [])].sort((a, b) => compareThirdPlaceTeams(a, b, options));
+}
+
+export function selectQualifiedThirds(groups, options = {}) {
+  const candidates = getThirdPlaceCandidates(groups, options.metricsByTeam || {});
+  return rankThirdPlaceCandidates(candidates, options).slice(0, 8);
 }
