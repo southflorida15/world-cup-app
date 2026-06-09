@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useContext, createContext, useCallback, useMemo, useRef } from "react";
 import { buildFifa2026Bracket, buildQualifiedThirdsFromSelectedTeams, buildThirdGroupsKey } from "./engine/fifa2026Bracket";
+import { loadAnnexCFromRemote } from "./engine/annexC";
 
 // ── THEME ─────────────────────────────────────────────────────────────────
 const C = {
@@ -2458,9 +2459,26 @@ function MyBracketTab({ tabTop=116 }) {
   const [thirds,setThirds]=useState([]);
   const [result,setResult]=useState(null);
   const [running,setRunning]=useState(false);
+  const [annexStatus,setAnnexStatus]=useState({state:"loading",message:"Loading FIFA Annex C table..."});
   const allThirds=Object.entries(groups).map(([g,teams])=>({group:g,team:teams[2]}));
   const toggleThird=(t)=>{setThirds(p=>p.includes(t)?p.filter(x=>x!==t):[...p,t].slice(0,8));};
   const _mbhRef = useRef(null); const _mbhH = useElemHeight(_mbhRef);
+
+  useEffect(()=>{
+    let alive=true;
+    setAnnexStatus({state:"loading",message:"Loading FIFA Annex C table..."});
+    loadAnnexCFromRemote()
+      .then(table=>{
+        if(!alive) return;
+        setAnnexStatus({state:"ready",message:`FIFA Annex C loaded (${Object.keys(table).length} combinations).`});
+      })
+      .catch(err=>{
+        if(!alive) return;
+        console.warn("Unable to load FIFA Annex C table:", err);
+        setAnnexStatus({state:"error",message:"FIFA Annex C could not be loaded. Brackets will use legacy fallback until the table is available."});
+      });
+    return()=>{alive=false};
+  },[]);
   const runBracket=()=>{
     setRunning(true);
     setTimeout(()=>{
@@ -2474,14 +2492,16 @@ function MyBracketTab({ tabTop=116 }) {
       let r32=[];
       let fifaR32=null;
       let fifaEngineStatus="fifa-fallback";
-      let fifaEngineMessage="FIFA Annex C is not loaded yet, so this simulation is still using the legacy bracket path.";
+      let fifaEngineMessage=annexStatus.state==="ready"
+        ? "FIFA engine attempted to run, but this combination could not be resolved. Using legacy fallback."
+        : `${annexStatus.message} Using legacy fallback for this simulation.`;
 
       try {
         const fifaBracket = buildFifa2026Bracket({ groups, qualifiedThirds });
         fifaR32 = fifaBracket.r32;
         r32 = fifaR32.flatMap(m => [m.home, m.away]);
         fifaEngineStatus="fifa-ready";
-        fifaEngineMessage="FIFA 2026 Round of 32 structure generated from the engine.";
+        fifaEngineMessage="FIFA 2026 Round of 32 structure generated using Annex C.";
       } catch(e) {
         console.warn("FIFA bracket engine fallback:", e);
         const qualifiers=[];
@@ -2511,7 +2531,8 @@ function MyBracketTab({ tabTop=116 }) {
         thirdGroupsKey,
         fifaR32,
         fifaEngineStatus,
-        fifaEngineMessage
+        fifaEngineMessage,
+        annexStatus
       });
 
       setStage("bracket");
@@ -2524,6 +2545,9 @@ function MyBracketTab({ tabTop=116 }) {
         <div style={{display:"flex",gap:8,marginBottom:8}}>
           <button onClick={()=>setBracketMode("simulation")} style={{flex:1,padding:"7px 8px",borderRadius:10,cursor:"pointer",background:bracketMode==="simulation"?`${C.green}22`:C.s1,border:`1px solid ${bracketMode==="simulation"?C.green:C.b1}`,color:bracketMode==="simulation"?C.green:C.mid,fontWeight:700,fontSize:12}}>🎮 Free Simulation</button>
           <button disabled title="Official mode will use live standings after the next integration step" style={{flex:1,padding:"7px 8px",borderRadius:10,cursor:"not-allowed",background:C.s1,border:`1px solid ${C.b1}`,color:C.dim,fontWeight:700,fontSize:12,opacity:0.65}}>🌐 Official Bracket · Soon</button>
+        </div>
+        <div style={{fontSize:10,color:annexStatus.state==="ready"?C.green:annexStatus.state==="error"?C.red:C.gold,marginBottom:7,fontWeight:700}}>
+          {annexStatus.state==="ready"?"✅ Annex C ready":annexStatus.state==="error"?"⚠️ Annex C unavailable":"⏳ Loading Annex C"}
         </div>
         <div style={{display:"flex",gap:8}}>
           <Pill active={stage==="groups"} onClick={()=>setStage("groups")} color={C.green}>1 · Set Groups</Pill>
