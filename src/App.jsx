@@ -901,6 +901,12 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="",
   const bc = getBroadcast(country);
   const isUS = country === "US" || !BROADCAST[country];
 
+  // Share card should mirror the in-app match modal. Resolve the same venue weather
+  // data here so /api/og receives the same facts the user sees in the modal.
+  const venueCityName = match ? VENUE_TO_CITY[match.venue] : null;
+  const venueCityData = venueCityName ? HOST_CITIES[venueCityName] : null;
+  const modalWx = useWeather(venueCityData?.lat, venueCityData?.lon, !!open && !!venueCityData);
+
   return (
     <div style={{marginBottom:8,background:C.s1,border:`1px solid ${live?C.green:isFav?`${C.gold}55`:C.b1}`,borderRadius:12,overflow:"hidden",opacity:finished?0.8:1}}>
       {/* Header: group/stage + venue + time */}
@@ -3912,9 +3918,32 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
     if (match.group) params.set("group", match.group);
     else params.set("stage", match.stage||"World Cup 2026");
     if (match.date) params.set("date", match.date);
-    if (match.venue) params.set("venue", match.venue.split(",")[0]);
-    if (!hasScore && p1) params.set("p1", p1.poly);
-    if (!hasScore && p2) params.set("p2", p2.poly);
+    if (localTime) params.set("time", localTime);
+    if (match.venue) {
+      const venueParts = match.venue.split(",");
+      params.set("venue", venueParts[0].trim());
+      const venueCity = venueParts.slice(1).join(",").trim();
+      if (venueCity) params.set("city", venueCity);
+    }
+
+    // Same weather / broadcast / market information shown in the in-app modal.
+    if (modalWx) {
+      params.set("tempF", modalWx.temp);
+      params.set("tempC", modalWx.tempC);
+      params.set("condition", modalWx.icon || "Match conditions");
+      if (modalWx.wind !== undefined) params.set("wind", `${modalWx.wind} mph wind`);
+    }
+    if (match.tv) {
+      params.set("broadcast", isUS ? match.tv : `${bc.note} ${bc.primary}`);
+      if (bc.streaming) params.set("streaming", bc.streaming);
+    }
+    if (!finished && simOdds) {
+      params.set("homeSim", simOdds.win1);
+      params.set("drawSim", simOdds.draw);
+      params.set("awaySim", simOdds.win2);
+    }
+    if (!hasScore && p1) { params.set("p1", p1.poly); params.set("homePoly", p1.poly); if (p1.odds) params.set("homeOdds", p1.odds); }
+    if (!hasScore && p2) { params.set("p2", p2.poly); params.set("awayPoly", p2.poly); if (p2.odds) params.set("awayOdds", p2.odds); }
     if (keyEvents.length > 0) params.set("events", encodeURIComponent(JSON.stringify(keyEvents)));
     // Include user's prediction if passed as prop
     if (userPredHg !== undefined && userPredHg !== "" && userPredAg !== undefined && userPredAg !== "") {
@@ -3932,7 +3961,13 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
           ...(hasScore ? {hg: sc.hg, ag: sc.ag} : {}),
           ...(match.group ? {group: match.group} : {stage: match.stage||"World Cup 2026"}),
           ...(match.date ? {date: match.date} : {}),
-          ...(match.venue ? {venue: match.venue.split(",")[0]} : {}),
+          ...(localTime ? {time: localTime} : {}),
+          ...(match.venue ? {venue: match.venue.split(",")[0], city: match.venue.split(",").slice(1).join(",").trim()} : {}),
+          ...(modalWx ? {tempF: modalWx.temp, tempC: modalWx.tempC, condition: modalWx.icon || "Match conditions", wind: `${modalWx.wind} mph wind`} : {}),
+          ...(match.tv ? {broadcast: isUS ? match.tv : `${bc.note} ${bc.primary}`} : {}),
+          ...(!finished && simOdds ? {homeSim: simOdds.win1, drawSim: simOdds.draw, awaySim: simOdds.win2} : {}),
+          ...(!hasScore && p1 ? {homePoly: p1.poly, p1: p1.poly, homeOdds: p1.odds || ""} : {}),
+          ...(!hasScore && p2 ? {awayPoly: p2.poly, p2: p2.poly, awayOdds: p2.odds || ""} : {}),
         }).toString()
       : shareUrl;
 
