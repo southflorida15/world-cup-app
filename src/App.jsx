@@ -1,3 +1,4 @@
+import MatchHeader from "./components/MatchHeader";
 import MatchInfoSection from "./components/MatchInfoSection";
 import MatchDetailCard from "./components/MatchDetailCard";
 import React, { useState, useEffect, useContext, createContext, useCallback, useMemo, useRef } from "react";
@@ -4014,46 +4015,17 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
     <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",zIndex:1000,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
       <div onClick={e=>e.stopPropagation()} style={{background:C.bg,border:`1px solid ${C.b2}`,borderRadius:"18px 18px 0 0",width:"100%",maxWidth:620,maxHeight:"92vh",overflowY:"auto",paddingBottom:20}}>
 
-        {/* ── HERO HEADER ── */}
-        <div style={{background:`linear-gradient(135deg,${C.s1},${C.s2})`,padding:"16px 18px 20px",position:"relative"}}>
-          <button onClick={onClose} style={{position:"absolute",top:14,right:14,background:"none",border:"none",color:C.mid,fontSize:22,cursor:"pointer"}}>×</button>
-
-          {/* Stage + match info */}
-          <div style={{textAlign:"center",marginBottom:16}}>
-            <div style={{fontSize:12,color:C.dim,fontWeight:700,letterSpacing:"0.1em"}}>{match.group?`GROUP ${match.group}`:(match.stage||"WORLD CUP 2026").toUpperCase()}</div>
-            {match.date && <div style={{fontSize:13,color:C.mid,marginTop:2}}>{match.date} · {localTime}</div>}
-          </div>
-
-          {/* Teams hero */}
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
-            {/* Home */}
-            <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:8}}>
-              <Crest team={match.home} size={64}/>
-              <span style={{fontWeight:700,fontSize:16,color:favTeams.includes(match.home)?C.gold:C.text,textAlign:"center"}}>{match.home}</span>
-            </div>
-            {/* Score / vs */}
-            <div style={{textAlign:"center",minWidth:80}}>
-              {hasScore ? (
-                <>
-                  <div style={{fontWeight:900,fontSize:44,color:live?C.green:C.text,fontFamily:"monospace",lineHeight:1}}>{sc.hg}–{sc.ag}</div>
-                  <div style={{fontSize:11,fontWeight:700,color:live?C.green:C.dim,marginTop:4}}>
-                    {live?"🔴 ":""}{statusLabel(sc.status,sc.elapsed)||"FT"}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div style={{fontSize:13,fontWeight:700,color:C.dim}}>VS</div>
-                  <div style={{fontSize:11,color:C.dim,marginTop:4}}>Upcoming</div>
-                </>
-              )}
-            </div>
-            {/* Away */}
-            <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:8}}>
-              <Crest team={match.away} size={64}/>
-              <span style={{fontWeight:700,fontSize:16,color:favTeams.includes(match.away)?C.gold:C.text,textAlign:"center"}}>{match.away}</span>
-            </div>
-          </div>
-        </div>
+        <MatchHeader
+  match={match}
+  localTime={localTime}
+  hasScore={hasScore}
+  live={live}
+  sc={sc}
+  favTeams={favTeams}
+  statusLabel={statusLabel}
+  Crest={Crest}
+  C={C}
+/>
 
         <div style={{padding:"14px 18px"}}>
 
