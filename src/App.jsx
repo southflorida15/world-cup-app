@@ -2540,8 +2540,8 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
         </div>
         <div style={{fontSize:10,color:C.dim,background:C.s2,border:`1px solid ${C.b1}`,borderRadius:999,padding:"4px 8px",whiteSpace:"nowrap"}}>{completedCount}/31 picked</div>
       </div>
-      <div style={{width:"100%",overflowX:"auto",overflowY:"hidden",WebkitOverflowScrolling:"touch",padding:"6px 0 18px",scrollPaddingLeft:32}}>
-        <div style={{minWidth:1380,width:"max-content",padding:"6px 36px 14px",margin:"0 auto"}}>
+      <div style={{width:"100%",overflowX:"auto",overflowY:"hidden",WebkitOverflowScrolling:"touch",padding:"6px 0 18px",scrollPaddingLeft:64}}>
+        <div style={{minWidth:1380,width:"max-content",padding:"6px 72px 14px",margin:"0"}}>
           <div style={{display:"flex",gap:16,alignItems:"flex-start",justifyContent:"center"}}>
             {left.map(r => renderColumn(r,"left"))}
             <div style={{width:190,flex:"0 0 190px",paddingTop:286,display:"flex",flexDirection:"column",alignItems:"center",position:"relative"}}>
@@ -4367,12 +4367,12 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
   };
 
   const homeContent = (
-    <div style={{padding:"16px 20px 0"}}>
+    <div style={{padding:isDesktop?"18px 28px 0":"16px 20px 0"}}>
       {/* Account card */}
-      <div style={{padding:"12px 14px",background:`linear-gradient(135deg,${C.s2},${C.s1})`,borderRadius:16,marginBottom:14,border:`1px solid ${isSynced?C.green+"44":C.b1}`,boxShadow:"0 10px 26px rgba(0,0,0,0.20)"}}>
-        <div style={{display:"flex",alignItems:"center",gap:14}}>
-          <div onClick={()=>setShowAvatarPicker(true)} style={{position:"relative",width:56,height:56,borderRadius:"50%",flexShrink:0,background:isSynced?`${C.green}22`:C.bg,border:`2.5px solid ${isSynced?C.green:C.b2}`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",overflow:"hidden"}}>
-            {renderAvatarImg(38)}
+      <div style={{padding:isDesktop?"20px 26px":"16px 18px",background:`linear-gradient(135deg,${C.s2},${C.s1})`,borderRadius:18,marginBottom:18,border:`1px solid ${isSynced?C.green+"66":C.b1}`,boxShadow:"0 14px 34px rgba(0,0,0,0.24)"}}>
+        <div style={{display:"flex",alignItems:"center",gap:isDesktop?22:14}}>
+          <div onClick={()=>setShowAvatarPicker(true)} style={{position:"relative",width:isDesktop?74:62,height:isDesktop?74:62,borderRadius:"50%",flexShrink:0,background:isSynced?`${C.green}22`:C.bg,border:`3px solid ${isSynced?C.green:C.b2}`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",overflow:"hidden"}}>
+            {renderAvatarImg(isDesktop?54:42)}
             <div style={{position:"absolute",bottom:0,left:0,right:0,background:"rgba(0,0,0,.45)",fontSize:9,color:"#fff",textAlign:"center",padding:"2px 0",lineHeight:1.4}}>edit</div>
           </div>
           <div style={{flex:1,minWidth:0}}>
@@ -4383,22 +4383,20 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
                   maxLength={24}
                   style={{background:"none",border:"none",borderBottom:`1px solid ${C.green}`,outline:"none",color:C.text,fontSize:16,fontWeight:800,width:"100%",padding:"2px 0"}}/>
               : <div onClick={()=>{setNameInput(displayName||"");setNameEditing(true);}} style={{cursor:"text"}}>
-                  <div style={{fontWeight:displayName?900:700,color:displayName?C.text:C.dim,fontSize:displayName?16:13,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
+                  <div style={{fontWeight:displayName?900:700,color:displayName?C.text:C.dim,fontSize:displayName?(isDesktop?24:19):(isDesktop?16:13),lineHeight:1.08,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
                     {displayName||<span style={{color:C.dim,fontStyle:"italic"}}>Tap to add your name</span>}
                     {displayName && <span style={{fontSize:10,color:C.dim,marginLeft:6,fontWeight:400}}>✏️</span>}
                   </div>
                 </div>
             }
             {isSynced ? <>
-              <div style={{fontSize:11,color:C.dim,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginTop:3}}>{syncProfile.email||"PIN User"}</div>
-              {syncProfile.pin && <div style={{fontSize:11,color:C.mid,marginTop:1}}>PIN: <strong style={{color:C.gold,letterSpacing:"0.1em"}}>{syncProfile.pin}</strong></div>}
-              <div style={{fontSize:11,color:C.green,fontWeight:700,marginTop:2}}>✅ Syncing across devices</div>
+              <div style={{fontSize:isDesktop?15:13,color:C.dim,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginTop:6}}>{syncProfile.email||"PIN User"}</div>
+              {syncProfile.pin && <div style={{fontSize:isDesktop?15:13,color:C.mid,marginTop:2}}>PIN: <strong style={{color:C.gold,letterSpacing:"0.1em"}}>{syncProfile.pin}</strong></div>}
+              <div style={{fontSize:isDesktop?15:13,color:C.green,fontWeight:800,marginTop:3}}>✅ Syncing</div>
             </> : <div style={{fontSize:11,color:C.dim,marginTop:3}}>Sign in to sync your saved matches, teams and bracket picks.</div>}
           </div>
+          {isSynced && <button onClick={()=>{persistProfile(null);onSignOut();setToast("Signed out.");onClose();}} style={{fontSize:isDesktop?14:12,color:C.mid,background:C.bg,border:`1px solid ${C.b2}`,borderRadius:12,padding:isDesktop?"9px 16px":"7px 12px",cursor:"pointer",fontWeight:700,flexShrink:0}}>Sign out</button>}
         </div>
-        {isSynced && <div style={{display:"flex",justifyContent:"flex-end",marginTop:10}}>
-          <button onClick={()=>{persistProfile(null);onSignOut();setToast("Signed out.");onClose();}} style={{fontSize:11,color:C.mid,background:C.bg,border:`1px solid ${C.b2}`,borderRadius:9,padding:"5px 10px",cursor:"pointer",fontWeight:600}}>Sign out</button>
-        </div>}
       </div>
 
       {/* My Teams — collapsible */}
@@ -4546,7 +4544,7 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
     return (
       <>
         <div onClick={onClose} style={{position:"fixed",inset:0,zIndex:999}}/>
-        <div onClick={e=>e.stopPropagation()} style={{position:"fixed",top:58,right:14,width:340,maxWidth:"calc(100vw - 28px)",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:16,boxShadow:"0 8px 32px rgba(0,0,0,0.4)",zIndex:1000,overflow:"hidden",maxHeight:"88dvh",overflowY:"auto",WebkitOverflowScrolling:"touch"}}>
+        <div onClick={e=>e.stopPropagation()} style={{position:"fixed",top:58,right:14,width:440,maxWidth:"calc(100vw - 28px)",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:18,boxShadow:"0 8px 32px rgba(0,0,0,0.4)",zIndex:1000,overflow:"hidden",maxHeight:"calc(92dvh - env(safe-area-inset-bottom))",overflowY:"auto",WebkitOverflowScrolling:"touch",paddingBottom:"env(safe-area-inset-bottom)"}}>
           {header(!isHome)}
           {isHome ? homeContent : subScreenContent}
         </div>
@@ -4556,7 +4554,7 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
 
   return (
     <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",zIndex:1000,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
-      <div onClick={e=>e.stopPropagation()} style={{background:C.s1,border:`1px solid ${C.b2}`,borderRadius:"20px 20px 0 0",width:"100%",maxWidth:520,maxHeight:"90dvh",overflowY:"auto",WebkitOverflowScrolling:"touch",paddingBottom:"calc(32px + env(safe-area-inset-bottom))"}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:C.s1,border:`1px solid ${C.b2}`,borderRadius:"20px 20px 0 0",width:"100%",maxWidth:520,maxHeight:"calc(92dvh - env(safe-area-inset-bottom))",overflowY:"auto",WebkitOverflowScrolling:"touch",paddingBottom:"calc(48px + env(safe-area-inset-bottom))"}}>
         {header(!isHome)}
         {isHome ? homeContent : subScreenContent}
       </div>
