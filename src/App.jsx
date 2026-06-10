@@ -2664,12 +2664,26 @@ function readSavedMyBracket() {
 function writeSavedMyBracket(state) {
   try {
     localStorage.setItem(MY_BRACKET_STORAGE_KEY, JSON.stringify(state));
+    window.dispatchEvent(new CustomEvent("wc2026_my_bracket_changed", { detail: state }));
+  } catch {}
+}
+
+function restoreSavedMyBracket(state) {
+  try {
+    if (state && Object.keys(state).length) {
+      localStorage.setItem(MY_BRACKET_STORAGE_KEY, JSON.stringify(state));
+    } else {
+      localStorage.removeItem(MY_BRACKET_STORAGE_KEY);
+    }
+    window.dispatchEvent(new CustomEvent("wc2026_my_bracket_synced", { detail: state || {} }));
+    window.dispatchEvent(new CustomEvent("wc2026_my_bracket_changed", { detail: state || {} }));
   } catch {}
 }
 
 function clearSavedMyBracket() {
   try {
     localStorage.removeItem(MY_BRACKET_STORAGE_KEY);
+    window.dispatchEvent(new CustomEvent("wc2026_my_bracket_changed", { detail: {} }));
   } catch {}
 }
 
@@ -2688,6 +2702,22 @@ function MyBracketTab({ tabTop=116 }) {
   const allThirds=Object.entries(groups).map(([g,teams])=>({group:g,team:teams[2]}));
   const toggleThird=(t)=>{setThirds(p=>p.includes(t)?p.filter(x=>x!==t):[...p,t].slice(0,8));};
   const _mbhRef = useRef(null); const _mbhH = useElemHeight(_mbhRef);
+
+  useEffect(()=>{
+    const applySyncedBracket = (ev) => {
+      const incoming = ev?.detail && Object.keys(ev.detail).length ? ev.detail : readSavedMyBracket();
+      setStage(incoming.stage || (incoming.result ? "bracket" : "groups"));
+      setBracketMode(incoming.bracketMode || "simulation");
+      setPlayMode(incoming.playMode || "manual");
+      setBracketView(incoming.bracketView || "tree");
+      setManualPicks(incoming.manualPicks || {});
+      setGroups(incoming.groups || defaultBracketGroups());
+      setThirds(incoming.thirds || []);
+      setResult(incoming.result || null);
+    };
+    window.addEventListener("wc2026_my_bracket_synced", applySyncedBracket);
+    return () => window.removeEventListener("wc2026_my_bracket_synced", applySyncedBracket);
+  },[]);
 
   useEffect(()=>{
     let alive=true;
@@ -4219,7 +4249,7 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
     if (pin.length < 6) { setError("Please enter a 6-digit PIN."); return; }
     setLoading(true); setError("");
     try {
-      const r = await fetch("/api/sync?action=pin-create", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ uid:syncUid, saved, favTeams, dark, locationOverride, displayName, avatar:userAvatar, chosenPin:pin }) });
+      const r = await fetch("/api/sync?action=pin-create", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ uid:syncUid, saved, favTeams, dark, locationOverride, displayName, avatar:userAvatar, myBracket:readSavedMyBracket(), chosenPin:pin }) });
       const d = await r.json();
       if (!d.ok) throw new Error(d.error);
       persistProfile({ uid:syncUid, pin:d.pin, method:"pin" });
@@ -4242,6 +4272,7 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
       if (p.locationOverride) { setLocationOverride(p.locationOverride); try { localStorage.setItem("wc2026_location", JSON.stringify(p.locationOverride)); } catch {} }
       if (p.avatar) persistAvatar(p.avatar);
       if (p.displayName) persistDisplayName(p.displayName);
+      if (p.myBracket) restoreSavedMyBracket(p.myBracket);
       persistProfile({ uid:p.uid, pin:p.pin, email:p.email, method:"pin" });
       setToast("✅ Synced! Your progress has been restored."); onClose();
     } catch(e) { setError(e.message); }
@@ -4252,7 +4283,7 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
     if (!email.includes("@")) { setError("Enter a valid email address."); return; }
     setLoading(true); setError("");
     try {
-      const r = await fetch("/api/sync?action=magic-send", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ email, uid:syncUid, saved, favTeams, dark, locationOverride, displayName, avatar:userAvatar }) });
+      const r = await fetch("/api/sync?action=magic-send", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ email, uid:syncUid, saved, favTeams, dark, locationOverride, displayName, avatar:userAvatar, myBracket:readSavedMyBracket() }) });
       const d = await r.json();
       if (!d.ok && !d.dev) throw new Error(d.error);
       setScreen("email-sent");
@@ -4276,36 +4307,37 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
 
   const homeContent = (
     <div style={{padding:"16px 20px 0"}}>
-      {/* Avatar */}
-      <div style={{display:"flex",alignItems:"center",gap:14,padding:"12px 14px",background:C.s2,borderRadius:14,marginBottom:14,border:`1px solid ${isSynced?C.green+"44":C.b1}`}}>
-        <div onClick={()=>setShowAvatarPicker(true)} style={{position:"relative",width:52,height:52,borderRadius:"50%",flexShrink:0,background:isSynced?`${C.green}22`:C.bg,border:`2.5px solid ${isSynced?C.green:C.b2}`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",overflow:"hidden"}}>
-          {renderAvatarImg(36)}
-          <div style={{position:"absolute",bottom:0,left:0,right:0,background:"rgba(0,0,0,.45)",fontSize:9,color:"#fff",textAlign:"center",padding:"2px 0",lineHeight:1.4}}>edit</div>
-        </div>
-        <div style={{flex:1,minWidth:0}}>
-          {/* Tappable name — click to edit inline */}
-          {nameEditing
-            ? <input autoFocus value={nameInput} onChange={e=>setNameInput(e.target.value)}
-                onBlur={()=>{persistDisplayName(nameInput.trim());setNameEditing(false);}}
-                onKeyDown={e=>{if(e.key==="Enter"){persistDisplayName(nameInput.trim());setNameEditing(false);}}}
-                maxLength={24}
-                style={{background:"none",border:"none",borderBottom:`1px solid ${C.green}`,outline:"none",color:C.text,fontSize:15,fontWeight:700,width:"100%",padding:"2px 0"}}/>
-            : <div onClick={()=>{setNameInput(displayName||"");setNameEditing(true);}} style={{cursor:"text"}}>
-                <div style={{fontWeight:displayName?800:700,color:displayName?C.text:C.dim,fontSize:displayName?15:13}}>
-                  {displayName||<span style={{color:C.dim,fontStyle:"italic"}}>Tap to add your name</span>}
-                  {displayName && <span style={{fontSize:10,color:C.dim,marginLeft:6,fontWeight:400}}>✏️</span>}
+      {/* Account card */}
+      <div style={{padding:"12px 14px",background:`linear-gradient(135deg,${C.s2},${C.s1})`,borderRadius:16,marginBottom:14,border:`1px solid ${isSynced?C.green+"44":C.b1}`,boxShadow:"0 10px 26px rgba(0,0,0,0.20)"}}>
+        <div style={{display:"flex",alignItems:"center",gap:14}}>
+          <div onClick={()=>setShowAvatarPicker(true)} style={{position:"relative",width:56,height:56,borderRadius:"50%",flexShrink:0,background:isSynced?`${C.green}22`:C.bg,border:`2.5px solid ${isSynced?C.green:C.b2}`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",overflow:"hidden"}}>
+            {renderAvatarImg(38)}
+            <div style={{position:"absolute",bottom:0,left:0,right:0,background:"rgba(0,0,0,.45)",fontSize:9,color:"#fff",textAlign:"center",padding:"2px 0",lineHeight:1.4}}>edit</div>
+          </div>
+          <div style={{flex:1,minWidth:0}}>
+            {nameEditing
+              ? <input autoFocus value={nameInput} onChange={e=>setNameInput(e.target.value)}
+                  onBlur={()=>{persistDisplayName(nameInput.trim());setNameEditing(false);}}
+                  onKeyDown={e=>{if(e.key==="Enter"){persistDisplayName(nameInput.trim());setNameEditing(false);}}}
+                  maxLength={24}
+                  style={{background:"none",border:"none",borderBottom:`1px solid ${C.green}`,outline:"none",color:C.text,fontSize:16,fontWeight:800,width:"100%",padding:"2px 0"}}/>
+              : <div onClick={()=>{setNameInput(displayName||"");setNameEditing(true);}} style={{cursor:"text"}}>
+                  <div style={{fontWeight:displayName?900:700,color:displayName?C.text:C.dim,fontSize:displayName?16:13,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
+                    {displayName||<span style={{color:C.dim,fontStyle:"italic"}}>Tap to add your name</span>}
+                    {displayName && <span style={{fontSize:10,color:C.dim,marginLeft:6,fontWeight:400}}>✏️</span>}
+                  </div>
                 </div>
-              </div>
-          }
-          {isSynced ? <>
-            <div style={{fontSize:11,color:C.dim,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginTop:2}}>{syncProfile.email||"PIN User"}</div>
-            {syncProfile.pin && <div style={{fontSize:11,color:C.mid}}>PIN: <strong style={{color:C.gold,letterSpacing:"0.1em"}}>{syncProfile.pin}</strong></div>}
-            <div style={{fontSize:11,color:C.green,fontWeight:600}}>✅ Syncing</div>
-          </> : <>
-
-          </>}
+            }
+            {isSynced ? <>
+              <div style={{fontSize:11,color:C.dim,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginTop:3}}>{syncProfile.email||"PIN User"}</div>
+              {syncProfile.pin && <div style={{fontSize:11,color:C.mid,marginTop:1}}>PIN: <strong style={{color:C.gold,letterSpacing:"0.1em"}}>{syncProfile.pin}</strong></div>}
+              <div style={{fontSize:11,color:C.green,fontWeight:700,marginTop:2}}>✅ Syncing across devices</div>
+            </> : <div style={{fontSize:11,color:C.dim,marginTop:3}}>Sign in to sync your saved matches, teams and bracket picks.</div>}
+          </div>
         </div>
-        {isSynced && <button onClick={()=>{persistProfile(null);onSignOut();setToast("Signed out.");onClose();}} style={{fontSize:11,color:C.dim,background:"none",border:`1px solid ${C.b2}`,borderRadius:8,padding:"4px 8px",cursor:"pointer"}}>{"Sign out"}</button>}
+        {isSynced && <div style={{display:"flex",justifyContent:"flex-end",marginTop:10}}>
+          <button onClick={()=>{persistProfile(null);onSignOut();setToast("Signed out.");onClose();}} style={{fontSize:11,color:C.mid,background:C.bg,border:`1px solid ${C.b2}`,borderRadius:9,padding:"5px 10px",cursor:"pointer",fontWeight:600}}>Sign out</button>
+        </div>}
       </div>
 
       {/* My Teams — collapsible */}
@@ -4413,7 +4445,7 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
           if(pin.length<6){setError("Please enter a 6-digit PIN.");return;}
           if(pin===syncProfile?.pin){setError("That's already your current PIN.");return;}
           setLoading(true);setError("");
-          try{const r=await fetch("/api/sync?action=pin-change",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({uid:syncUid,oldPin:syncProfile?.pin,newPin:pin,saved,favTeams,dark,locationOverride,displayName,avatar:userAvatar})});const d=await r.json();if(!d.ok)throw new Error(d.error);persistProfile({...syncProfile,pin});setScreen("pin-created");}
+          try{const r=await fetch("/api/sync?action=pin-change",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({uid:syncUid,oldPin:syncProfile?.pin,newPin:pin,saved,favTeams,dark,locationOverride,displayName,avatar:userAvatar,myBracket:readSavedMyBracket()})});const d=await r.json();if(!d.ok)throw new Error(d.error);persistProfile({...syncProfile,pin});setScreen("pin-created");}
           catch(e){setError(e.message);}
           setLoading(false);
         }} disabled={loading||pin.length<6} style={{...btnPrimary,opacity:loading||pin.length<6?0.5:1}}>{loading?"Saving...":"Update PIN"}</button>
@@ -4453,7 +4485,7 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
     return (
       <>
         <div onClick={onClose} style={{position:"fixed",inset:0,zIndex:999}}/>
-        <div onClick={e=>e.stopPropagation()} style={{position:"fixed",top:58,right:14,width:300,background:C.s1,border:`1px solid ${C.b2}`,borderRadius:14,boxShadow:"0 8px 32px rgba(0,0,0,0.4)",zIndex:1000,overflow:"hidden",maxHeight:"88vh",overflowY:"auto"}}>
+        <div onClick={e=>e.stopPropagation()} style={{position:"fixed",top:58,right:14,width:340,maxWidth:"calc(100vw - 28px)",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:16,boxShadow:"0 8px 32px rgba(0,0,0,0.4)",zIndex:1000,overflow:"hidden",maxHeight:"88dvh",overflowY:"auto",WebkitOverflowScrolling:"touch"}}>
           {header(!isHome)}
           {isHome ? homeContent : subScreenContent}
         </div>
@@ -4463,7 +4495,7 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
 
   return (
     <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",zIndex:1000,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
-      <div onClick={e=>e.stopPropagation()} style={{background:C.s1,border:`1px solid ${C.b2}`,borderRadius:"20px 20px 0 0",width:"100%",maxWidth:520,maxHeight:"92vh",overflowY:"auto",paddingBottom:32}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:C.s1,border:`1px solid ${C.b2}`,borderRadius:"20px 20px 0 0",width:"100%",maxWidth:520,maxHeight:"90dvh",overflowY:"auto",WebkitOverflowScrolling:"touch",paddingBottom:"calc(32px + env(safe-area-inset-bottom))"}}>
         {header(!isHome)}
         {isHome ? homeContent : subScreenContent}
       </div>
@@ -4983,6 +5015,12 @@ export default function App() {
   const [displayName, setDisplayName] = useState(() => {
     try { return localStorage.getItem("wc2026_displayname") || ""; } catch { return ""; }
   });
+  const [myBracketSyncRev, setMyBracketSyncRev] = useState(0);
+  useEffect(() => {
+    const bump = () => setMyBracketSyncRev(v => v + 1);
+    window.addEventListener("wc2026_my_bracket_changed", bump);
+    return () => window.removeEventListener("wc2026_my_bracket_changed", bump);
+  }, []);
   const persistDisplayName = (n) => { setDisplayName(n); try { localStorage.setItem("wc2026_displayname", n); } catch {} };
 
   const tabBarRef = useRef(null);
@@ -5081,6 +5119,7 @@ export default function App() {
         }
         if (p.displayName) persistDisplayName(p.displayName);
         if (p.favTeams?.length) setFavTeams(p.favTeams);
+        if (p.myBracket) restoreSavedMyBracket(p.myBracket);
         if (p.dark !== undefined) setDark(p.dark);
       })
       .catch(() => {});
@@ -5104,6 +5143,7 @@ export default function App() {
                 if (p.favTeams?.length) setFavTeams(p.favTeams);
                 if (p.dark !== undefined) setDark(p.dark);
                 if (p.locationOverride) { setLocationOverride(p.locationOverride); try{localStorage.setItem("wc2026_location",JSON.stringify(p.locationOverride))}catch{} }
+                if (p.myBracket) restoreSavedMyBracket(p.myBracket);
                 if (p.avatar) persistAvatar(p.avatar);
                 if (p.displayName) persistDisplayName(p.displayName);
                 const prof = { uid:p.uid, email:p.email, pin:p.pin, method:"email" };
@@ -5124,10 +5164,10 @@ export default function App() {
   useEffect(() => {
     if (!syncProfile?.uid) return;
     const t = setTimeout(() => {
-      fetch("/api/sync?action=push", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ uid:syncProfile.uid, saved, favTeams, dark, locationOverride, avatar:userAvatar, avatarTs, displayName }) }).catch(()=>{});
+      fetch("/api/sync?action=push", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ uid:syncProfile.uid, saved, favTeams, dark, locationOverride, avatar:userAvatar, avatarTs, displayName, myBracket:readSavedMyBracket() }) }).catch(()=>{});
     }, 1500);
     return () => clearTimeout(t);
-  }, [saved, favTeams, dark, locationOverride, userAvatar, displayName, syncProfile]);
+  }, [saved, favTeams, dark, locationOverride, userAvatar, displayName, syncProfile, myBracketSyncRev]);
 
   // Apply theme — mutates C so all components pick up new colors on re-render
   const theme = dark ? DARK : LIGHT;

@@ -38,7 +38,7 @@ export default async function handler(req, res) {
   // ── PIN CREATE ────────────────────────────────────────────────────────────
   if (action === "pin-create" && req.method === "POST") {
     try {
-      const { uid, saved, favTeams, dark, locationOverride, avatar, displayName, chosenPin } = req.body;
+      const { uid, saved, favTeams, dark, locationOverride, avatar, displayName, myBracket, chosenPin } = req.body;
       if (!uid) return res.status(400).json({ error: "uid required" });
 
       let pin;
@@ -58,7 +58,7 @@ export default async function handler(req, res) {
         } while (await kv.get(`pin:${pin}`));
       }
 
-      const profile = { uid, pin, saved: saved || [], favTeams: favTeams || [], dark, locationOverride, avatar: avatar || null, displayName: displayName || "", updatedAt: Date.now() };
+      const profile = { uid, pin, saved: saved || [], favTeams: favTeams || [], dark, locationOverride, avatar: avatar || null, displayName: displayName || "", myBracket: myBracket || {}, updatedAt: Date.now() };
 
       // Store by PIN and by UID
       await kv.set(`pin:${pin}`,  profile, { ex: 60 * 60 * 24 * 180 }); // 180 days
@@ -89,13 +89,13 @@ export default async function handler(req, res) {
   // ── MAGIC LINK SEND ───────────────────────────────────────────────────────
   if (action === "magic-send" && req.method === "POST") {
     try {
-      const { email, uid, saved, favTeams, dark, locationOverride, avatar } = req.body;
+      const { email, uid, saved, favTeams, dark, locationOverride, avatar, displayName, myBracket } = req.body;
       if (!email || !uid) return res.status(400).json({ error: "email and uid required" });
 
       const magicToken = genToken();
 
       // Save profile + pending token
-      const profile = { uid, email, saved: saved || [], favTeams: favTeams || [], dark, locationOverride, avatar: avatar || null, updatedAt: Date.now() };
+      const profile = { uid, email, saved: saved || [], favTeams: favTeams || [], dark, locationOverride, avatar: avatar || null, displayName: displayName || "", myBracket: myBracket || {}, updatedAt: Date.now() };
       await kv.set(`magic:${magicToken}`, { ...profile, email }, { ex: 60 * 15 }); // 15 min TTL
       await kv.set(`uid:${uid}`, profile, { ex: 60 * 60 * 24 * 180 });
 
@@ -166,11 +166,11 @@ export default async function handler(req, res) {
   // ── PUSH (save state to KV) ───────────────────────────────────────────────
   if (action === "push" && req.method === "POST") {
     try {
-      const { uid, saved, favTeams, dark, locationOverride, avatar, avatarTs, displayName } = req.body;
+      const { uid, saved, favTeams, dark, locationOverride, avatar, avatarTs, displayName, myBracket } = req.body;
       if (!uid) return res.status(400).json({ error: "uid required" });
 
       const existing = await kv.get(`uid:${uid}`) || {};
-      const profile = { ...existing, uid, saved: saved || [], favTeams: favTeams || [], dark, locationOverride, avatar: avatar !== undefined ? avatar : (existing.avatar || null), avatarTs: avatarTs || existing.avatarTs || 0, displayName: displayName !== undefined ? displayName : (existing.displayName || ""), updatedAt: Date.now() };
+      const profile = { ...existing, uid, saved: saved || [], favTeams: favTeams || [], dark, locationOverride, avatar: avatar !== undefined ? avatar : (existing.avatar || null), avatarTs: avatarTs || existing.avatarTs || 0, displayName: displayName !== undefined ? displayName : (existing.displayName || ""), myBracket: myBracket !== undefined ? myBracket : (existing.myBracket || {}), updatedAt: Date.now() };
 
       await kv.set(`uid:${uid}`, profile, { ex: 60 * 60 * 24 * 180 });
       // If user has a PIN, keep that entry in sync too
@@ -187,7 +187,7 @@ export default async function handler(req, res) {
   // ── PIN CHANGE ───────────────────────────────────────────────────────────
   if (action === "pin-change" && req.method === "POST") {
     try {
-      const { uid, oldPin, newPin, saved, favTeams, dark, locationOverride, displayName, avatar } = req.body;
+      const { uid, oldPin, newPin, saved, favTeams, dark, locationOverride, displayName, avatar, myBracket } = req.body;
       if (!uid || !newPin) return res.status(400).json({ error: "uid and newPin required" });
       if (!/^\d{6}$/.test(newPin)) return res.status(400).json({ error: "PIN must be 6 digits" });
 
@@ -195,7 +195,7 @@ export default async function handler(req, res) {
       const existing = await kv.get(`pin:${newPin}`);
       if (existing && existing.uid !== uid) return res.status(409).json({ error: "That PIN is already taken. Please choose another." });
 
-      const profile = { uid, pin: newPin, saved: saved || [], favTeams: favTeams || [], dark, locationOverride, displayName: displayName || "", avatar: avatar || null, updatedAt: Date.now() };
+      const profile = { uid, pin: newPin, saved: saved || [], favTeams: favTeams || [], dark, locationOverride, displayName: displayName || "", avatar: avatar || null, myBracket: myBracket || {}, updatedAt: Date.now() };
 
       // Delete old PIN key
       if (oldPin && oldPin !== newPin) await kv.del(`pin:${oldPin}`);
