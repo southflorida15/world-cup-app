@@ -2477,66 +2477,120 @@ function BracketMatchup({ match, t1, t2, winner, onPick, interactive=false }) {
 }
 
 function VisualBracketTree({ bracket, pickMode="auto", onPick=()=>{} }) {
-  const order = {
-    r32:[74,77,73,75,76,78,79,80,83,84,81,82,86,88,85,87],
-    r16:[89,90,91,92,93,94,95,96],
-    qf:[97,98,99,100],
-    sf:[101,102],
-    final:[104]
+  const byId = (matches=[]) => Object.fromEntries((matches||[]).map(m => [Number(m.match), m]));
+  const matchesById = {
+    ...byId(bracket?.r32),
+    ...byId(bracket?.r16),
+    ...byId(bracket?.qf),
+    ...byId(bracket?.sf),
+    ...byId(bracket?.final),
   };
-  const sortRound = (matches=[], key) => {
-    const wanted = order[key] || [];
-    return [...matches].sort((a,b)=>{
-      const ai = wanted.indexOf(a.match), bi = wanted.indexOf(b.match);
-      return (ai===-1?999:ai) - (bi===-1?999:bi);
-    });
-  };
-  const rounds = [
-    {key:"r32", label:"Round of 32", short:"R32", matches:sortRound(bracket?.r32 || [], "r32"), gap:8, padTop:0},
-    {key:"r16", label:"Round of 16", short:"R16", matches:sortRound(bracket?.r16 || [], "r16"), gap:42, padTop:30},
-    {key:"qf", label:"Quarterfinals", short:"QF", matches:sortRound(bracket?.qf || [], "qf"), gap:110, padTop:82},
-    {key:"sf", label:"Semifinals", short:"SF", matches:sortRound(bracket?.sf || [], "sf"), gap:250, padTop:178},
-    {key:"final", label:"Final", short:"FINAL", matches:sortRound(bracket?.final || [], "final"), gap:0, padTop:330},
+
+  // Official FIFA 2026 knockout path, arranged visually around the Final.
+  // Left side feeds M101; right side feeds M102.
+  const left = [
+    {key:"r32L", short:"R32", label:"Round of 32", ids:[74,77,73,75,83,84,81,82], gap:8, padTop:0},
+    {key:"r16L", short:"R16", label:"Round of 16", ids:[89,90,93,94], gap:70, padTop:38},
+    {key:"qfL", short:"QF", label:"Quarterfinals", ids:[97,98], gap:224, padTop:130},
+    {key:"sfL", short:"SF", label:"Semifinal", ids:[101], gap:0, padTop:318},
   ];
+  const right = [
+    {key:"sfR", short:"SF", label:"Semifinal", ids:[102], gap:0, padTop:318},
+    {key:"qfR", short:"QF", label:"Quarterfinals", ids:[99,100], gap:224, padTop:130},
+    {key:"r16R", short:"R16", label:"Round of 16", ids:[91,92,95,96], gap:70, padTop:38},
+    {key:"r32R", short:"R32", label:"Round of 32", ids:[76,78,79,80,86,88,85,87], gap:8, padTop:0},
+  ];
+
+  const columnWidth = 166;
+  const renderColumn = (round, side="left") => {
+    const ids = round.ids || [];
+    return (
+      <div key={round.key} style={{width:columnWidth,flex:`0 0 ${columnWidth}px`,paddingTop:round.padTop}}>
+        <div style={{position:"sticky",top:0,zIndex:2,textAlign:"center",marginBottom:10,background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b1}`,borderRadius:999,padding:"6px 8px",boxShadow:"0 6px 14px rgba(0,0,0,0.25)"}}>
+          <div style={{fontSize:10,fontWeight:900,color:round.short==="FINAL"?C.gold:C.green,letterSpacing:"0.08em"}}>{round.short}</div>
+          <div style={{fontSize:9,color:C.dim,whiteSpace:"nowrap"}}>{round.label}</div>
+        </div>
+        <div style={{display:"flex",flexDirection:"column",gap:round.gap}}>
+          {ids.map((id, idx) => {
+            const m = matchesById[id] || {match:id,home:null,away:null,winner:null};
+            const locked = !(m.home && m.away);
+            return (
+              <div key={id} style={{position:"relative",opacity:locked?0.58:1}}>
+                {side === "left" && round.key !== "sfL" && <div style={{position:"absolute",right:-16,top:"50%",width:16,borderTop:`2px solid ${m.winner?C.greenS:C.b2}`}}/>}
+                {side === "left" && round.key !== "r32L" && <div style={{position:"absolute",left:-16,top:"50%",width:16,borderTop:`2px solid ${m.winner?C.greenS:C.b2}`}}/>}
+                {side === "right" && round.key !== "sfR" && <div style={{position:"absolute",left:-16,top:"50%",width:16,borderTop:`2px solid ${m.winner?C.greenS:C.b2}`}}/>}
+                {side === "right" && round.key !== "r32R" && <div style={{position:"absolute",right:-16,top:"50%",width:16,borderTop:`2px solid ${m.winner?C.greenS:C.b2}`}}/>}
+                <BracketMatchup match={m.match} t1={m.home} t2={m.away} winner={m.winner} interactive={pickMode==="manual"} onPick={(team)=>onPick(m,team)}/>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  const finalMatch = matchesById[104] || (bracket?.final || [])[0] || {match:104,home:null,away:null,winner:null};
+
   return (
-    <div style={{overflowX:"auto",padding:"4px 0 14px",WebkitOverflowScrolling:"touch"}}>
-      <div style={{display:"flex",gap:18,minWidth:980,alignItems:"flex-start",padding:"4px 6px 8px"}}>
-        {rounds.map(round => (
-          <div key={round.key} style={{width:176,flex:"0 0 176px",paddingTop:round.padTop}}>
-            <div style={{position:"sticky",top:0,zIndex:1,textAlign:"center",marginBottom:10,background:C.bg,border:`1px solid ${C.b1}`,borderRadius:999,padding:"5px 8px"}}>
-              <div style={{fontSize:10,fontWeight:900,color:round.key==="final"?C.gold:C.green,letterSpacing:"0.08em"}}>{round.short}</div>
-              <div style={{fontSize:9,color:C.dim,whiteSpace:"nowrap"}}>{round.label}</div>
+    <div style={{overflowX:"auto",padding:"6px 0 18px",WebkitOverflowScrolling:"touch"}}>
+      <div style={{minWidth:1380,padding:"6px 8px 14px"}}>
+        <div style={{textAlign:"center",marginBottom:8}}>
+          <div style={{fontSize:10,color:C.dim,fontWeight:800,letterSpacing:"0.16em",textTransform:"uppercase"}}>Official Knockout Path</div>
+          <div style={{fontSize:12,color:C.mid,marginTop:3}}>Tap winners as each matchup unlocks. The bracket advances automatically.</div>
+        </div>
+        <div style={{display:"flex",gap:16,alignItems:"flex-start",justifyContent:"center"}}>
+          {left.map(r => renderColumn(r,"left"))}
+          <div style={{width:190,flex:"0 0 190px",paddingTop:286,display:"flex",flexDirection:"column",alignItems:"center",position:"relative"}}>
+            <div style={{fontSize:46,lineHeight:1,filter:"drop-shadow(0 10px 18px rgba(0,0,0,0.45))"}}>🏆</div>
+            <div style={{fontSize:10,color:C.gold,fontWeight:900,letterSpacing:"0.14em",margin:"5px 0 10px"}}>FINAL</div>
+            <div style={{position:"relative"}}>
+              <div style={{position:"absolute",left:-16,top:"50%",width:16,borderTop:`2px solid ${finalMatch.winner?C.greenS:C.b2}`}}/>
+              <div style={{position:"absolute",right:-16,top:"50%",width:16,borderTop:`2px solid ${finalMatch.winner?C.greenS:C.b2}`}}/>
+              <BracketMatchup match={104} t1={finalMatch.home} t2={finalMatch.away} winner={finalMatch.winner} interactive={pickMode==="manual"} onPick={(team)=>onPick(finalMatch,team)}/>
             </div>
-            <div style={{display:"flex",flexDirection:"column",gap:round.gap}}>
-              {round.matches.map((m, idx) => (
-                <div key={m.match || idx} style={{position:"relative"}}>
-                  {round.key !== "r32" && <div style={{position:"absolute",left:-18,top:"50%",width:18,borderTop:`1px solid ${C.b2}`}}/>}
-                  {round.key !== "final" && <div style={{position:"absolute",right:-18,top:"50%",width:18,borderTop:`1px solid ${C.b2}`}}/>}
-                  <BracketMatchup match={m.match} t1={m.home} t2={m.away} winner={m.winner} interactive={pickMode==="manual"} onPick={(team)=>onPick(m,team)}/>
-                </div>
-              ))}
+            <div style={{marginTop:14,background:`linear-gradient(135deg,${C.green}22,${C.gold}18)`,border:`1px solid ${bracket?.champion?C.greenS:C.gold}66`,borderRadius:16,padding:12,minWidth:168,textAlign:"center",boxShadow:"0 10px 26px rgba(0,0,0,0.28)"}}>
+              <div style={{fontSize:9,color:C.dim,fontWeight:900,letterSpacing:"0.12em",marginBottom:6}}>CHAMPION</div>
+              {bracket?.champion ? <><Crest team={bracket.champion} size={44}/><div style={{fontWeight:900,fontSize:15,color:C.green,marginTop:6}}>{bracket.champion}</div></> : <div style={{fontSize:12,color:C.dim,lineHeight:1.5}}>Pick the Final winner</div>}
             </div>
           </div>
-        ))}
-        <div style={{flex:"0 0 180px",paddingTop:304,display:"flex",flexDirection:"column",alignItems:"center",gap:10}}>
-          <div style={{fontSize:42,lineHeight:1}}>🏆</div>
-          <div style={{fontSize:10,color:C.gold,fontWeight:900,letterSpacing:"0.12em"}}>CHAMPION</div>
-          <div style={{background:`linear-gradient(135deg,${C.green}22,${C.gold}18)`,border:`1px solid ${C.greenS}`,borderRadius:14,padding:12,minWidth:160,textAlign:"center"}}>
-            {bracket?.champion ? <><Crest team={bracket.champion} size={42}/><div style={{fontWeight:900,fontSize:15,color:C.green,marginTop:6}}>{bracket.champion}</div></> : <div style={{fontSize:12,color:C.dim,lineHeight:1.5}}>Pick the Final winner</div>}
-          </div>
+          {right.map(r => renderColumn(r,"right"))}
         </div>
       </div>
     </div>
   );
 }
+const MY_BRACKET_STORAGE_KEY = "wc2026_my_bracket_v1";
+
+function readSavedMyBracket() {
+  try {
+    const raw = localStorage.getItem(MY_BRACKET_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeSavedMyBracket(state) {
+  try {
+    localStorage.setItem(MY_BRACKET_STORAGE_KEY, JSON.stringify(state));
+  } catch {}
+}
+
+function clearSavedMyBracket() {
+  try {
+    localStorage.removeItem(MY_BRACKET_STORAGE_KEY);
+  } catch {}
+}
+
 function MyBracketTab({ tabTop=116 }) {
-  const [stage,setStage]=useState("groups");
-  const [bracketMode,setBracketMode]=useState("simulation");
-  const [playMode,setPlayMode]=useState("manual");
-  const [manualPicks,setManualPicks]=useState({});
-  const [groups,setGroups]=useState(defaultBracketGroups);
-  const [thirds,setThirds]=useState([]);
-  const [result,setResult]=useState(null);
+  const savedBracket = useMemo(() => readSavedMyBracket(), []);
+  const [stage,setStage]=useState(()=>savedBracket.stage || (savedBracket.result ? "bracket" : "groups"));
+  const [bracketMode,setBracketMode]=useState(()=>savedBracket.bracketMode || "simulation");
+  const [playMode,setPlayMode]=useState(()=>savedBracket.playMode || "manual");
+  const [manualPicks,setManualPicks]=useState(()=>savedBracket.manualPicks || {});
+  const [groups,setGroups]=useState(()=>savedBracket.groups || defaultBracketGroups());
+  const [thirds,setThirds]=useState(()=>savedBracket.thirds || []);
+  const [result,setResult]=useState(()=>savedBracket.result || null);
   const [running,setRunning]=useState(false);
   const [annexStatus,setAnnexStatus]=useState({state:"loading",message:"Loading FIFA Annex C table..."});
   const allThirds=Object.entries(groups).map(([g,teams])=>({group:g,team:teams[2]}));
@@ -2558,6 +2612,34 @@ function MyBracketTab({ tabTop=116 }) {
       });
     return()=>{alive=false};
   },[]);
+
+  useEffect(()=>{
+    writeSavedMyBracket({
+      stage,
+      bracketMode,
+      playMode,
+      manualPicks,
+      groups,
+      thirds,
+      result
+    });
+  }, [stage, bracketMode, playMode, manualPicks, groups, thirds, result]);
+
+  const resetMyBracket=()=>{
+    clearSavedMyBracket();
+    setStage("groups");
+    setBracketMode("simulation");
+    setPlayMode("manual");
+    setManualPicks({});
+    setGroups(defaultBracketGroups());
+    setThirds([]);
+    setResult(null);
+  };
+
+  const resetWinners=()=>{
+    setManualPicks({});
+  };
+
   const runBracket=()=>{
     setRunning(true);
     setTimeout(()=>{
@@ -2724,14 +2806,14 @@ function MyBracketTab({ tabTop=116 }) {
         <div>
           <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap"}}>
             <button onClick={()=>setStage("groups")} style={{padding:"7px 12px",borderRadius:10,background:"transparent",border:`1px solid ${C.b2}`,color:C.mid,fontSize:12,cursor:"pointer"}}>← Edit</button>
-            <button onClick={runBracket} style={{padding:"7px 12px",borderRadius:10,background:`${C.green}22`,border:`1px solid ${C.greenS}`,color:C.green,fontSize:12,fontWeight:600,cursor:"pointer"}}>↻ Regenerate</button>
+            <button onClick={resetWinners} style={{padding:"7px 12px",borderRadius:10,background:`${C.green}22`,border:`1px solid ${C.greenS}`,color:C.green,fontSize:12,fontWeight:700,cursor:"pointer"}}>🔄 Reset Winners</button>
+            <button onClick={resetMyBracket} style={{padding:"7px 12px",borderRadius:10,background:`${C.gold}12`,border:`1px solid ${C.gold}44`,color:C.gold,fontSize:12,fontWeight:700,cursor:"pointer"}}>🗑 Reset Bracket</button>
             <button onClick={()=>{setPlayMode("manual");setManualPicks({});}} disabled={result.fifaEngineStatus!=="fifa-ready"} style={{padding:"7px 12px",borderRadius:10,background:playMode==="manual"?`${C.blue}22`:C.s1,border:`1px solid ${playMode==="manual"?C.blue:C.b1}`,color:playMode==="manual"?C.blue:C.mid,fontSize:12,fontWeight:700,cursor:result.fifaEngineStatus==="fifa-ready"?"pointer":"not-allowed",opacity:result.fifaEngineStatus==="fifa-ready"?1:0.55}}>👆 Manual Picks</button>
             <button disabled title="Prediction-based simulation will come later" style={{padding:"7px 12px",borderRadius:10,background:C.s1,border:`1px solid ${C.b1}`,color:C.dim,fontSize:12,fontWeight:700,cursor:"not-allowed",opacity:0.65}}>🔮 Prediction Sim · Soon</button>
           </div>
-          {playMode==="manual" && <div style={{fontSize:11,color:C.mid,lineHeight:1.45,marginBottom:12,background:C.s1,border:`1px solid ${C.b1}`,borderRadius:10,padding:"8px 10px"}}>Tap a team in each unlocked match. Winners advance automatically to the next round.</div>}
           {result.thirdGroupsKey && <div style={{background:result.fifaEngineStatus==="fifa-ready"?`${C.green}14`:`${C.gold}14`,border:`1px solid ${result.fifaEngineStatus==="fifa-ready"?C.greenS:`${C.gold}55`}`,borderRadius:12,padding:"9px 11px",marginBottom:12}}>
             <div style={{fontSize:11,fontWeight:800,color:result.fifaEngineStatus==="fifa-ready"?C.green:C.gold,marginBottom:3}}>{result.fifaEngineStatus==="fifa-ready"?"🏆 FIFA 2026 Bracket Generated":"⚠️ Bracket generated with fallback logic"}</div>
-            <div style={{fontSize:11,color:C.mid,lineHeight:1.45}}>{result.fifaEngineStatus==="fifa-ready"?"Tap winners in each unlocked match to build your path to the Final.":"Official FIFA bracket rules could not be applied for this selection."}</div>
+            <div style={{fontSize:11,color:C.mid,lineHeight:1.45}}>{result.fifaEngineStatus==="fifa-ready"?"Select winners to build your path to the Final.":"Official FIFA bracket rules could not be applied for this selection."}</div>
           </div>}
           <div style={{background:`linear-gradient(135deg,${C.green}22,${C.gold}18)`,border:`1px solid ${C.greenS}`,borderRadius:14,padding:16,marginBottom:16,textAlign:"center"}}>
             <div style={{fontSize:11,color:C.dim,letterSpacing:"0.15em",fontWeight:700,marginBottom:8}}>🏆 YOUR CHAMPION</div>
