@@ -14,8 +14,9 @@ export default function MatchHeader({
   return (
     <div
       style={{
-        background: `linear-gradient(135deg, ${C.s1}, ${C.s2})`,
+        background: `linear-gradient(135deg,${C.s1},${C.s2})`,
         padding: "16px 18px 20px",
+        position: "relative",
       }}
     >
       <div
@@ -58,26 +59,35 @@ export default function MatchHeader({
           gap: 8,
         }}
       >
-        <div style={{ flex: 1, textAlign: "center" }}>
+        <div
+          style={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
           <Crest team={match.home} size={64} />
-          <div
+
+          <span
             style={{
-              marginTop: 8,
               fontWeight: 700,
               fontSize: 16,
               color: favTeams.includes(match.home)
                 ? C.gold
                 : C.text,
+              textAlign: "center",
             }}
           >
             {match.home}
-          </div>
+          </span>
         </div>
 
         <div
           style={{
-            minWidth: 80,
             textAlign: "center",
+            minWidth: 80,
           }}
         >
           {hasScore ? (
@@ -131,20 +141,29 @@ export default function MatchHeader({
           )}
         </div>
 
-        <div style={{ flex: 1, textAlign: "center" }}>
+        <div
+          style={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
           <Crest team={match.away} size={64} />
-          <div
+
+          <span
             style={{
-              marginTop: 8,
               fontWeight: 700,
               fontSize: 16,
               color: favTeams.includes(match.away)
                 ? C.gold
                 : C.text,
+              textAlign: "center",
             }}
           >
             {match.away}
-          </div>
+          </span>
         </div>
       </div>
     </div>
