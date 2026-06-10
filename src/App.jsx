@@ -4015,6 +4015,23 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
     <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",zIndex:1000,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
       <div onClick={e=>e.stopPropagation()} style={{background:C.bg,border:`1px solid ${C.b2}`,borderRadius:"18px 18px 0 0",width:"100%",maxWidth:620,maxHeight:"92vh",overflowY:"auto",paddingBottom:20}}>
 
+        <button
+  onClick={onClose}
+  style={{
+    position: "absolute",
+    top: 14,
+    right: 14,
+    background: "none",
+    border: "none",
+    color: C.mid,
+    fontSize: 22,
+    cursor: "pointer",
+    zIndex: 20,
+  }}
+>
+  ×
+</button>
+        
         <MatchHeader
   match={match}
   localTime={localTime}
