@@ -3429,6 +3429,18 @@ function scoreOnePred(pred, actual) {
   const ar = ah>aa?"H":ah<aa?"A":"D";
   return pr===ar ? 1 : 0;
 }
+function fantasyMatchLocked(match) {
+  const iso = MATCH_UTC?.[match?.id];
+  if (!iso) return false;
+  return Date.now() >= new Date(iso).getTime();
+}
+
+function fantasyLockLabel(match) {
+  const iso = MATCH_UTC?.[match?.id];
+  if (!iso) return "Locks at kickoff";
+  return `Locks at ${fmtTime(iso, USER_TZ)}`;
+}
+
 
 async function apiPred(action, params={}, body=null) {
   const qs = new URLSearchParams({ action, ...params }).toString();
@@ -3452,7 +3464,8 @@ function useDebounce(fn, ms) {
 function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, userAvatar=null }) {
   const { getScore, isFinished } = useContext(LiveScoresCtx);
   const { favTeam, favTeams=[] } = useContext(FavCtx);
-  const userId = useMemo(getUserId, []);
+  const deviceUserId = useMemo(getUserId, []);
+  const fantasyUserId = syncProfile?.uid || deviceUserId;
 
   // User registration state
   const [user, setUser]         = useState(null);   // { userId, name } or null
@@ -3476,27 +3489,27 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
     (async () => {
       setUL(true);
       try {
-        let u = await apiPred("getUser", { userId });
-        // Auto-register if signed in via sync but not yet in predictor
+        let u = await apiPred("getUser", { userId: fantasyUserId });
+        // Auto-register signed-in users under the stable synced account ID.
+        // Do not auto-create name variants like "Felipe2"; the API now migrates/claims
+        // an existing same-name predictor profile when appropriate.
         if (!u && displayName) {
-          // Try with exact name first, then with suffix if taken
-          const namesToTry = [
-            displayName,
-            displayName.slice(0, 18) + "2",
-            displayName.slice(0, 17) + " FC",
-          ];
-          for (const name of namesToTry) {
-            try {
-              u = await apiPred("register", {}, { userId, name, avatar: null, city: "", country: "" });
-              if (u) break;
-            } catch(e) {
-              if (!e.message?.includes("taken")) break; // non-name error, stop trying
-            }
+          try {
+            u = await apiPred("register", {}, {
+              userId: fantasyUserId,
+              name: displayName,
+              avatar: userAvatar || null,
+              city: "",
+              country: "",
+              syncUid: syncProfile?.uid || ""
+            });
+          } catch(e) {
+            console.error("predictor auto-register", e);
           }
         }
         setUser(u);
         if (u) {
-          const p = await apiPred("getPreds", { userId });
+          const p = await apiPred("getPreds", { userId: fantasyUserId });
           const normalised = {};
           Object.entries(p||{}).forEach(([k,v]) => { normalised[Number(k)] = v; });
           setPreds(normalised);
@@ -3504,7 +3517,7 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
       } catch(e) { console.error("predictor init", e); }
       finally { setUL(false); }
     })();
-  }, [userId, displayName]);
+  }, [fantasyUserId, displayName, userAvatar, syncProfile?.uid]);
 
   // ── Load leaderboard when that tab is active ────────────────────────────
   useEffect(() => {
@@ -3522,7 +3535,7 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
     if (!name) return;
     setNS(true); setNameErr("");
     try {
-      const u = await apiPred("register", {}, { userId, name, avatar: null, city: "", country: "" });
+      const u = await apiPred("register", {}, { userId: fantasyUserId, name, avatar: userAvatar || null, city: "", country: "", syncUid: syncProfile?.uid || "" });
       setUser(u);
     } catch(e) { setNameErr(e.message || "Could not save name"); }
     finally { setNS(false); }
@@ -3533,10 +3546,10 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
     if (!user) return;
     setPSaving(p => ({...p, [matchId]: true}));
     try {
-      await apiPred("savePred", {}, { userId, matchId, hg, ag });
+      await apiPred("savePred", {}, { userId: fantasyUserId, matchId, hg, ag });
     } catch(e) { console.error("savePred", e); }
     finally { setPSaving(p => ({...p, [matchId]: false})); }
-  }, [userId, user]);
+  }, [fantasyUserId, user]);
 
   const debouncedSave = useDebounce(savePredToKV, 800);
 
@@ -3646,7 +3659,7 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
             <div>⚽⚽⚽ <strong style={{color:C.green}}>3 pts</strong> — Exact score</div>
             <div>⚽ <strong style={{color:C.gold}}>1 pt</strong> — Correct result (Win / Draw / Loss)</div>
             <div>❌ <strong style={{color:C.red}}>0 pts</strong> — Wrong result</div>
-            <div style={{marginTop:6,fontSize:11,color:C.dim}}>Fantasy picks auto-save as you type. Picks should lock before kickoff once match locks are enabled.</div>
+            <div style={{marginTop:6,fontSize:11,color:C.dim}}>Fantasy picks auto-save as you type. Picks lock when the match starts; future matches remain editable.</div>
           </div>
         )}
         {totalPossible > 0 && (
@@ -3689,7 +3702,7 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
             <div style={{textAlign:"center",padding:"32px 20px",color:C.dim,fontSize:13}}>No predictions scored yet. Check back after June 11!</div>
           )}
           {!boardLoading && board && board.map((entry, i) => {
-            const isMe = entry.userId === userId;
+            const isMe = entry.userId === fantasyUserId;
             const medal = i===0?"🥇":i===1?"🥈":i===2?"🥉":null;
             return (
               <Card key={entry.userId} style={{marginBottom:7,border:`1px solid ${isMe?C.gold:C.b1}`,background:isMe?`linear-gradient(135deg,${C.gold}0a,${C.s1})`:""}}>
@@ -3736,19 +3749,22 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
           {shownMatches.map(m => {
             const sc = getScore(m.home, m.away);
             const done = isFinished(m.home, m.away);
+            const locked = done || fantasyMatchLocked(m);
             const pred = preds[m.id] || {};
             const pts = done && sc ? scoreOnePred(pred, sc) : null;
             const ptColor = pts===3?C.green:pts===1?C.gold:pts===0?C.red:C.dim;
             const hasPred = pred.hg!==undefined && pred.ag!==undefined && pred.hg!=="" && pred.ag!=="";
             const saving = predSaving[m.id];
             return (
-              <Card key={m.id} style={{marginBottom:8,border:`1px solid ${pts===3?C.green:pts===1?C.gold:pts===0?C.red:hasPred?`${C.green}44`:C.b1}`}}>
+              <Card key={m.id} style={{marginBottom:8,border:`1px solid ${pts===3?C.green:pts===1?C.gold:pts===0?C.red:hasPred?`${C.green}44`:C.b1}`,opacity:locked&&!done?0.72:1}} >
                 <div style={{padding:"10px 13px"}}>
                   <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
                     <Badge>Group {m.group} · {m.date}</Badge>
                     <div style={{display:"flex",alignItems:"center",gap:6}}>
                       {saving && <span style={{fontSize:10,color:C.dim}}>saving...</span>}
-                      {!saving && hasPred && !done && <span style={{fontSize:10,color:C.green}}>✓ saved</span>}
+                      {!saving && hasPred && !done && !locked && <span style={{fontSize:10,color:C.green}}>✓ saved</span>}
+                      {!done && locked && <span style={{fontSize:10,color:C.gold}}>🔒 locked</span>}
+                      {!done && !locked && <span style={{fontSize:10,color:C.dim}}>{fantasyLockLabel(m)}</span>}
                       {pts !== null && <div style={{fontWeight:700,color:ptColor,fontSize:12}}>{pts===3?"⚽⚽⚽ +3":pts===1?"⚽ +1":"❌ 0"}pts</div>}
                     </div>
                   </div>
@@ -3764,11 +3780,11 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
                       )}
                       {!done && (
                         <>
-                          <input value={pred.hg||""} onChange={e=>upd(m.id,"hg",e.target.value)} placeholder="?" maxLength={2}
-                            style={{width:34,textAlign:"center",background:C.s2,border:`1px solid ${hasPred?C.green:C.b2}`,borderRadius:8,color:C.green,fontSize:16,fontWeight:700,padding:"4px 0",outline:"none"}}/>
+                          <input value={pred.hg||""} onChange={e=>!locked&&upd(m.id,"hg",e.target.value)} disabled={locked} placeholder="?" maxLength={2}
+                            style={{width:34,textAlign:"center",background:locked?C.bg:C.s2,border:`1px solid ${hasPred?C.green:C.b2}`,borderRadius:8,color:locked?C.dim:C.green,fontSize:16,fontWeight:700,padding:"4px 0",outline:"none",opacity:locked?0.65:1}}/>
                           <span style={{color:C.dim,fontWeight:700}}>–</span>
-                          <input value={pred.ag||""} onChange={e=>upd(m.id,"ag",e.target.value)} placeholder="?" maxLength={2}
-                            style={{width:34,textAlign:"center",background:C.s2,border:`1px solid ${hasPred?C.green:C.b2}`,borderRadius:8,color:C.green,fontSize:16,fontWeight:700,padding:"4px 0",outline:"none"}}/>
+                          <input value={pred.ag||""} onChange={e=>!locked&&upd(m.id,"ag",e.target.value)} disabled={locked} placeholder="?" maxLength={2}
+                            style={{width:34,textAlign:"center",background:locked?C.bg:C.s2,border:`1px solid ${hasPred?C.green:C.b2}`,borderRadius:8,color:locked?C.dim:C.green,fontSize:16,fontWeight:700,padding:"4px 0",outline:"none",opacity:locked?0.65:1}}/>
                         </>
                       )}
                       {done && hasPred && (
@@ -4375,12 +4391,12 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
   };
 
   const homeContent = (
-    <div style={{padding:isDesktop?"18px 28px 0":"16px 20px 0"}}>
+    <div style={{padding:isDesktop?"14px 24px 0":"16px 20px 0"}}>
       {/* Account card */}
-      <div style={{padding:isDesktop?"20px 26px":"16px 18px",background:`linear-gradient(135deg,${C.s2},${C.s1})`,borderRadius:18,marginBottom:18,border:`1px solid ${isSynced?C.green+"66":C.b1}`,boxShadow:"0 14px 34px rgba(0,0,0,0.24)"}}>
-        <div style={{display:"flex",alignItems:"center",gap:isDesktop?22:14}}>
-          <div onClick={()=>setShowAvatarPicker(true)} style={{position:"relative",width:isDesktop?74:62,height:isDesktop?74:62,borderRadius:"50%",flexShrink:0,background:isSynced?`${C.green}22`:C.bg,border:`3px solid ${isSynced?C.green:C.b2}`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",overflow:"hidden"}}>
-            {renderAvatarImg(isDesktop?54:42)}
+      <div style={{padding:isDesktop?"14px 18px":"16px 18px",background:`linear-gradient(135deg,${C.s2},${C.s1})`,borderRadius:18,marginBottom:12,border:`1px solid ${isSynced?C.green+"66":C.b1}`,boxShadow:"0 10px 24px rgba(0,0,0,0.20)",maxWidth:isDesktop?380:"none",marginLeft:isDesktop?"auto":0,marginRight:isDesktop?"auto":0}}>
+        <div style={{display:"flex",alignItems:"center",gap:isDesktop?14:14}}>
+          <div onClick={()=>setShowAvatarPicker(true)} style={{position:"relative",width:isDesktop?58:62,height:isDesktop?58:62,borderRadius:"50%",flexShrink:0,background:isSynced?`${C.green}22`:C.bg,border:`3px solid ${isSynced?C.green:C.b2}`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",overflow:"hidden"}}>
+            {renderAvatarImg(isDesktop?40:42)}
             <div style={{position:"absolute",bottom:0,left:0,right:0,background:"rgba(0,0,0,.45)",fontSize:9,color:"#fff",textAlign:"center",padding:"2px 0",lineHeight:1.4}}>edit</div>
           </div>
           <div style={{flex:1,minWidth:0}}>
@@ -4391,19 +4407,19 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
                   maxLength={24}
                   style={{background:"none",border:"none",borderBottom:`1px solid ${C.green}`,outline:"none",color:C.text,fontSize:16,fontWeight:800,width:"100%",padding:"2px 0"}}/>
               : <div onClick={()=>{setNameInput(displayName||"");setNameEditing(true);}} style={{cursor:"text"}}>
-                  <div style={{fontWeight:displayName?900:700,color:displayName?C.text:C.dim,fontSize:displayName?(isDesktop?24:19):(isDesktop?16:13),lineHeight:1.08,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
+                  <div style={{fontWeight:displayName?900:700,color:displayName?C.text:C.dim,fontSize:displayName?(isDesktop?19:19):(isDesktop?14:13),lineHeight:1.08,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
                     {displayName||<span style={{color:C.dim,fontStyle:"italic"}}>Tap to add your name</span>}
                     {displayName && <span style={{fontSize:10,color:C.dim,marginLeft:6,fontWeight:400}}>✏️</span>}
                   </div>
                 </div>
             }
             {isSynced ? <>
-              <div style={{fontSize:isDesktop?15:13,color:C.dim,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginTop:6}}>{syncProfile.email||"PIN User"}</div>
-              {syncProfile.pin && <div style={{fontSize:isDesktop?15:13,color:C.mid,marginTop:2}}>PIN: <strong style={{color:C.gold,letterSpacing:"0.1em"}}>{syncProfile.pin}</strong></div>}
-              <div style={{fontSize:isDesktop?15:13,color:C.green,fontWeight:800,marginTop:3}}>✅ Syncing</div>
+              <div style={{fontSize:isDesktop?12:13,color:C.dim,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginTop:6}}>{syncProfile.email||"PIN User"}</div>
+              {syncProfile.pin && <div style={{fontSize:isDesktop?12:13,color:C.mid,marginTop:2}}>PIN: <strong style={{color:C.gold,letterSpacing:"0.1em"}}>{syncProfile.pin}</strong></div>}
+              <div style={{fontSize:isDesktop?12:13,color:C.green,fontWeight:800,marginTop:3}}>✅ Syncing</div>
             </> : <div style={{fontSize:11,color:C.dim,marginTop:3}}>Sign in to sync your saved matches, teams and bracket picks.</div>}
           </div>
-          {isSynced && <button onClick={()=>{persistProfile(null);onSignOut();setToast("Signed out.");onClose();}} style={{fontSize:isDesktop?14:12,color:C.mid,background:C.bg,border:`1px solid ${C.b2}`,borderRadius:12,padding:isDesktop?"9px 16px":"7px 12px",cursor:"pointer",fontWeight:700,flexShrink:0}}>Sign out</button>}
+          {isSynced && <button onClick={()=>{persistProfile(null);onSignOut();setToast("Signed out.");onClose();}} style={{fontSize:isDesktop?14:12,color:C.mid,background:C.bg,border:`1px solid ${C.b2}`,borderRadius:12,padding:isDesktop?"7px 11px":"7px 12px",cursor:"pointer",fontWeight:700,flexShrink:0}}>Sign out</button>}
         </div>
       </div>
 
