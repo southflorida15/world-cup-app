@@ -2698,6 +2698,7 @@ function MyBracketTab({ tabTop=116 }) {
   const [thirds,setThirds]=useState(()=>savedBracket.thirds || []);
   const [result,setResult]=useState(()=>savedBracket.result || null);
   const [running,setRunning]=useState(false);
+  const [sharing,setSharing]=useState(false);
   const [annexStatus,setAnnexStatus]=useState({state:"loading",message:"Loading FIFA Annex C table..."});
   const allThirds=Object.entries(groups).map(([g,teams])=>({group:g,team:teams[2]}));
   const toggleThird=(t)=>{setThirds(p=>p.includes(t)?p.filter(x=>x!==t):[...p,t].slice(0,8));};
@@ -2863,6 +2864,65 @@ function MyBracketTab({ tabTop=116 }) {
     });
   };
 
+  const shareBracketCard = async () => {
+    const bracket = displayedResult;
+    if (!bracket?.champion) {
+      alert("Pick the Final winner before sharing your bracket card.");
+      return;
+    }
+    setSharing(true);
+    try {
+      const displayName = (localStorage.getItem("wc2026_displayname") || "").trim();
+      const owner = displayName || "My";
+      const semifinals = (bracket.sf || []).flatMap(m => [m.home, m.away]).filter(Boolean);
+      const finalists = (bracket.final || []).flatMap(m => [m.home, m.away]).filter(Boolean);
+      const snapshot = {
+        owner,
+        title: `${owner === "My" ? "My" : owner + "'s"} World Cup 2026 Bracket`,
+        champion: bracket.champion,
+        runnerUp: bracket.runnerUp || finalists.find(t => t && t !== bracket.champion) || "",
+        finalists,
+        semifinalists: Array.from(new Set(semifinals)),
+        thirdGroupsKey: bracket.thirdGroupsKey || "",
+        createdAt: Date.now(),
+        rounds: {
+          r32: bracket.r32 || [],
+          r16: bracket.r16 || [],
+          qf: bracket.qf || [],
+          sf: bracket.sf || [],
+          final: bracket.final || []
+        }
+      };
+
+      const res = await fetch("/api/bracket-share", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify(snapshot)
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) throw new Error(data.error || "Unable to create share card");
+      const url = data.url || `${window.location.origin}/api/bracket-share?id=${data.id}`;
+
+      if (navigator.share) {
+        await navigator.share({
+          title: snapshot.title,
+          text: `🏆 ${snapshot.title} — Champion: ${snapshot.champion}`,
+          url
+        });
+      } else if (navigator.clipboard) {
+        await navigator.clipboard.writeText(url);
+        alert("Share link copied. Send it by SMS or WhatsApp.");
+      } else {
+        window.open(url, "_blank", "noopener,noreferrer");
+      }
+    } catch (err) {
+      console.error("Share bracket card failed:", err);
+      alert(err.message || "Unable to share bracket card right now.");
+    } finally {
+      setSharing(false);
+    }
+  };
+
   return (
     <div>
       <div ref={_mbhRef} style={{position:"fixed",top:tabTop,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:700,willChange:"transform",zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
@@ -2938,6 +2998,7 @@ function MyBracketTab({ tabTop=116 }) {
             <button onClick={()=>setStage("groups")} style={{padding:"7px 12px",borderRadius:10,background:"transparent",border:`1px solid ${C.b2}`,color:C.mid,fontSize:12,cursor:"pointer"}}>← Edit</button>
             <button onClick={resetWinners} style={{padding:"7px 12px",borderRadius:10,background:`${C.green}22`,border:`1px solid ${C.greenS}`,color:C.green,fontSize:12,fontWeight:700,cursor:"pointer"}}>🔄 Reset Winners</button>
             <button onClick={resetMyBracket} style={{padding:"7px 12px",borderRadius:10,background:`${C.gold}12`,border:`1px solid ${C.gold}44`,color:C.gold,fontSize:12,fontWeight:700,cursor:"pointer"}}>🗑 Reset Bracket</button>
+            <button onClick={shareBracketCard} disabled={!displayedResult?.champion || sharing} title={!displayedResult?.champion?"Pick the Final winner before sharing":undefined} style={{padding:"7px 12px",borderRadius:10,background:displayedResult?.champion?`${C.blue}22`:C.s1,border:`1px solid ${displayedResult?.champion?C.blue:C.b1}`,color:displayedResult?.champion?C.blue:C.dim,fontSize:12,fontWeight:700,cursor:displayedResult?.champion&&!sharing?"pointer":"not-allowed",opacity:sharing?0.65:1}}>{sharing?"Creating...":"📤 Share Card"}</button>
             <button onClick={()=>{setPlayMode("manual");setManualPicks({});}} disabled={result.fifaEngineStatus!=="fifa-ready"} style={{padding:"7px 12px",borderRadius:10,background:playMode==="manual"?`${C.blue}22`:C.s1,border:`1px solid ${playMode==="manual"?C.blue:C.b1}`,color:playMode==="manual"?C.blue:C.mid,fontSize:12,fontWeight:700,cursor:result.fifaEngineStatus==="fifa-ready"?"pointer":"not-allowed",opacity:result.fifaEngineStatus==="fifa-ready"?1:0.55}}>👆 Manual Picks</button>
             <button disabled title="Prediction-based simulation will come later" style={{padding:"7px 12px",borderRadius:10,background:C.s1,border:`1px solid ${C.b1}`,color:C.dim,fontSize:12,fontWeight:700,cursor:"not-allowed",opacity:0.65}}>🔮 Prediction Sim · Soon</button>
           </div>
