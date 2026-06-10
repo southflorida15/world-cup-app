@@ -5147,16 +5147,38 @@ function AskWorldCupTab({ tabTop=116 }) {
 }
 
 // ── APP ────────────────────────────────────────────────────────────────────
+
+function StatsHubTab({ initial="", tabTop=116 }) {
+  const [mode, setMode] = useState("team");
+  const _statsHubRef = useRef(null);
+  const _statsHubH = useElemHeight(_statsHubRef);
+  const childTop = (tabTop || 116) + (_statsHubH || 48);
+
+  return (
+    <div>
+      <div ref={_statsHubRef} style={{position:"fixed",top:tabTop,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:700,willChange:"transform",zIndex:91,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
+        <div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none"}}>
+          <Pill active={mode==="team"} onClick={()=>setMode("team")} color={C.green}>📊 Team Stats</Pill>
+          <Pill active={mode==="h2h"} onClick={()=>setMode("h2h")} color={C.rival}>⚔️ Head to Head</Pill>
+          <Pill active={mode==="scorers"} onClick={()=>setMode("scorers")} color={C.gold}>⚽ Scorers</Pill>
+        </div>
+      </div>
+      <div style={{height:(_statsHubH||48)+8}}/>
+      {mode==="team" && <StatsTab initial={initial} tabTop={childTop}/>}      
+      {mode==="h2h" && <H2HTab tabTop={childTop}/>}      
+      {mode==="scorers" && <TopScorersTab tabTop={childTop}/>}      
+    </div>
+  );
+}
+
 const TABS = [
   {id:"live",      icon:"🔴", label:"Live"},
   {id:"schedule",  icon:"📋", label:"Schedule"},
   {id:"groups",    icon:"🗂️", label:"Groups"},
-  {id:"scorers",   icon:"⚽", label:"Scorers"},
   {id:"bracket",   icon:"🏆", label:"My Bracket"},
   {id:"predictor", icon:"🎯", label:"Fantasy"},
   {id:"ask",       icon:"🔎", label:"Ask"},
   {id:"stats",     icon:"📊", label:"Stats"},
-  {id:"h2h",       icon:"⚔️", label:"H2H"},
   {id:"news",      icon:"📰", label:"WC News"},
   {id:"predict",   icon:"📈", label:"Odds"},
   {id:"sim",       icon:"🎮", label:"Simulator"},
@@ -5572,11 +5594,9 @@ export default function App() {
         <PullToRefresh onRefresh={async()=>{ if(refreshScores) await refreshScores(); }}>
         <div style={{padding:"0 13px 100px"}}>
           {tab==="live"      && <LiveTab onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} tabTop={tabBarBottom} savedIds={savedIds}/>}
-          {tab==="scorers"   && <TopScorersTab tabTop={tabBarBottom}/>}
           {tab==="schedule"  && <SchedTab onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} tabTop={tabBarBottom} savedIds={savedIds}/>}
           {tab==="groups"    && <GrpTab onTeam={onTeam} onMatchTap={onMatchTap} tabTop={tabBarBottom}/>}
-          {tab==="stats"     && <StatsTab initial={statsTeam} tabTop={tabBarBottom}/>}
-          {tab==="h2h"       && <H2HTab tabTop={tabBarBottom}/>}
+          {tab==="stats"     && <StatsHubTab initial={statsTeam} tabTop={tabBarBottom}/>}
           {tab==="predict"   && <PredTab tabTop={tabBarBottom} geoData={geoData}/>}
           {tab==="predictor" && <PredictorTab syncProfile={syncProfile} displayName={displayName} onShowSync={()=>setShowSyncModal(true)} userAvatar={userAvatar}/>}
           {tab==="sim"       && <SimTab tabTop={tabBarBottom}/>}
