@@ -979,7 +979,7 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=n
 
   return (
     <div>
-      <div ref={_lhRef} style={{position:"fixed",top:tabTop,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:700,willChange:"transform",zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
+      <div ref={_lhRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <div style={{fontWeight:700,fontSize:15,color:C.green}}>{"LIVE SCORES"}</div>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
@@ -988,7 +988,7 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=n
         </div>
       </div>
       
-      <div style={{height:(_lhH||36)+8}}/>
+      <div style={{height:0}}/>
       {Object.keys(upcomingByDate).length > 0 && (
         <div style={{marginBottom:16}}>
           <div style={{fontSize:11,color:C.gold,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>
@@ -1099,8 +1099,8 @@ function SchedTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=
 
   return (
     <div>
-      {/* Fixed filter header */}
-      <div ref={filterRef} style={{position:"fixed",top:tabTop,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:700,willChange:"transform",zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
+      {/* Filter header in normal document flow */}
+      <div ref={filterRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
 
         {/* Date strip */}
         <div ref={stripRef} style={{display:"flex",overflowX:"auto",scrollbarWidth:"none",marginBottom:8,gap:4}}>
@@ -1178,7 +1178,7 @@ function SchedTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=
         </div>
       </div>
 
-      {/* Spacer to push content below fixed header */}
+      {/* Content follows filter header in normal flow */}
       <div style={{height: (filterHeight || 140) + 8}}/>
 
 
@@ -1275,7 +1275,7 @@ function GrpTab({ onTeam, onMatchTap, tabTop=116 }) {
   return (
     <div>
       {/* Fixed header */}
-      <div ref={_ghRef} style={{position:"fixed",top:tabTop,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:700,willChange:"transform",zIndex:90,background:C.bg,borderBottom:`2px solid ${C.b2}`,boxShadow:`0 4px 16px ${C.bg},0 8px 24px ${C.bg}`,padding:"8px 13px"}}>
+      <div ref={_ghRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`2px solid ${C.b2}`,boxShadow:`0 4px 16px ${C.bg},0 8px 24px ${C.bg}`,padding:"8px 13px"}}>
         <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:6,scrollbarWidth:"none"}}>
           {Object.keys(GROUPS).map(g=><Pill key={g} active={sel===g} onClick={()=>setSel(g)}>{g}</Pill>)}
         </div>
@@ -1286,7 +1286,7 @@ function GrpTab({ onTeam, onMatchTap, tabTop=116 }) {
       </div>
       {/* Spacer */}
       
-      <div style={{height:(_ghH||100)+8}}/>
+      <div style={{height:0}}/>
       {view==="standings" && (
         <div>
           <Card style={{marginBottom:12}}>
@@ -1482,13 +1482,13 @@ function StatsTab({ initial="", tabTop=116 }) {
 
   return (
     <div>
-      <div ref={_shRef} style={{position:"fixed",top:tabTop,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:700,willChange:"transform",zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
+      <div ref={_shRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
         <select value={sel} onChange={e=>setSel(e.target.value)} style={{width:"100%",padding:"10px 14px",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:10,color:C.text,fontSize:14,outline:"none"}}>
           <option value="">Select a team</option>
           {Object.keys(GROUPS).map(g=><optgroup key={g} label={`Group ${g}`}>{GROUPS[g].teams.map(t=><option key={t} value={t}>{getFlag(t)} {t}</option>)}</optgroup>)}
         </select>
       </div>
-      <div style={{height:(_shH||56)+8}}/>
+      <div style={{height:0}}/>
       
       {!sel && <div style={{textAlign:"center",padding:"44px 20px",color:C.dim,fontSize:13}}>Select any of the 48 teams to view their squad</div>}
       {sel && d && (
@@ -1717,7 +1717,7 @@ function PredTab({ tabTop=140, geoData={} }) {
   const _phRef = useRef(null); const _phH = useElemHeight(_phRef);
   return (
     <div>
-      <div ref={_phRef} style={{position:"fixed",top:tabTop,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:700,willChange:"transform",zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
+      <div ref={_phRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <div>
             <span style={{fontWeight:700,fontSize:15,color:C.green}}>🎯 POLYMARKET ODDS</span>
@@ -1726,7 +1726,7 @@ function PredTab({ tabTop=140, geoData={} }) {
           <a href="https://polymarket.com" target="_blank" rel="noopener noreferrer" style={{fontSize:11,color:C.green,textDecoration:"none",border:`1px solid ${C.greenS}`,padding:"3px 9px",borderRadius:20}}>Live →</a>
         </div>
       </div>
-      <div style={{height:(_phH||36)+8}}/>
+      <div style={{height:0}}/>
       
 
       {/* Line chart */}
@@ -1834,7 +1834,7 @@ function SimTab({ tabTop=116 }) {
 
   return (
     <div>
-      <div ref={_simhRef} style={{position:"fixed",top:tabTop,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:700,willChange:"transform",zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
+      <div ref={_simhRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
           <div>
             <div style={{fontWeight:700,fontSize:15,color:C.green}}>{"🎲 WORLD CUP SIMULATOR"}</div>
@@ -1854,7 +1854,7 @@ function SimTab({ tabTop=116 }) {
           <Pill active={view==="bracket"} onClick={()=>setView("bracket")} color={C.gold}>🏆 Most Likely Bracket</Pill>
         </div>
       </div>
-      <div style={{height:(_simhH||72)+8}}/>
+      <div style={{height:0}}/>
       
 
       {running && (
@@ -2212,7 +2212,7 @@ function H2HTab({ tabTop=116 }) {
   return (
     <div>
       {/* Fixed team selector */}
-      <div ref={_h2hRef} style={{position:"fixed",top:tabTop,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:700,willChange:"transform",zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
+      <div ref={_h2hRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
         <div style={{fontWeight:700,color:C.green,fontSize:15,marginBottom:8}}>{"⚔️ COMPARE TEAMS HEAD TO HEAD"}</div>
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:team1&&team2&&team1!==team2?8:0}}>
           <div style={{flex:1}}>
@@ -2235,7 +2235,7 @@ function H2HTab({ tabTop=116 }) {
           </button>
         )}
       </div>
-      <div style={{height:(_h2hH||72)+8}}/>
+      <div style={{height:0}}/>
 
       {/* Simulated match odds — always shown */}
       {team1!==team2 && simOdds && (
@@ -2927,7 +2927,7 @@ function MyBracketTab({ tabTop=116 }) {
 
   return (
     <div>
-      <div ref={_mbhRef} style={{position:"fixed",top:tabTop,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:700,willChange:"transform",zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:isMobileBracket?"7px 8px":"8px 13px"}}>
+      <div ref={_mbhRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:isMobileBracket?"7px 8px":"8px 13px"}}>
         <div style={{display:"flex",gap:8,marginBottom:8}}>
           <button onClick={()=>setBracketMode("simulation")} style={{flex:1,padding:"7px 8px",borderRadius:10,cursor:"pointer",background:bracketMode==="simulation"?`${C.green}22`:C.s1,border:`1px solid ${bracketMode==="simulation"?C.green:C.b1}`,color:bracketMode==="simulation"?C.green:C.mid,fontWeight:700,fontSize:12}}>🎮 Free Simulation</button>
           <button disabled title="Official mode will use live standings after the next integration step" style={{flex:1,padding:"7px 8px",borderRadius:10,cursor:"not-allowed",background:C.s1,border:`1px solid ${C.b1}`,color:C.dim,fontWeight:700,fontSize:12,opacity:0.65}}>🌐 Official Bracket · Soon</button>
@@ -2946,7 +2946,7 @@ function MyBracketTab({ tabTop=116 }) {
         </div>
       </div>
       
-      <div style={{height:(_mbhH||72)+8}}/>
+      <div style={{height:0}}/>
       {stage==="groups" && (
         <div>
           <div style={{fontSize:12,color:C.mid,marginBottom:14,lineHeight:1.6}}>
@@ -3165,7 +3165,7 @@ function SavedTab({ saved, onRemove, tabTop=116 }) {
   return (
     <div style={{maxWidth:700,margin:"0 auto"}}>
       {/* Sticky controls */}
-      <div ref={_ref} style={{position:"fixed",top:tabTop,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:700,willChange:"transform",zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
+      <div ref={_ref} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
         {/* Master actions */}
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
           <span style={{fontSize:12,fontWeight:700,color:C.mid,letterSpacing:"0.06em"}}>ALL MATCHES ({saved.length}){(filterMode!=="all"&&filterVal.size>0)&&filtered.length!==saved.length?<span style={{color:C.dim,fontWeight:400}}> · {filtered.length} shown</span>:null}</span>
@@ -3245,7 +3245,7 @@ function SavedTab({ saved, onRemove, tabTop=116 }) {
           </div>
         )}
       </div>
-      <div style={{height:(_h||140)+8}}/>
+      <div style={{height:0}}/>
       {filtered.length === 0
         ? <div style={{textAlign:"center",padding:"32px 0",color:C.dim,fontSize:13}}>No matches match this filter.</div>
         : filtered.map(item=>(<SavedMatchCard key={item.id} item={item} onRemove={onRemove} notifiedIds={notifiedIds} onNotified={(id)=>setNotifiedIds(prev=>new Set([...prev,id]))}/>))
@@ -3966,25 +3966,41 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
         }).toString()
       : shareUrl;
 
+    const venueName = match.venue ? match.venue.split(",")[0] : "";
+    const shareTime = localTime || matchTimes(match).localTime || "";
+    const shareText = hasScore
+      ? `${match.home} ${sc.hg}-${sc.ag} ${match.away} · World Cup 2026${venueName ? " · " + venueName : ""}`
+      : [
+          `${match.home} vs ${match.away}`,
+          `World Cup 2026`,
+          match.date || "",
+          shareTime || "",
+          venueName || "",
+        ].filter(Boolean).join(" · ");
+
+    const copyOrOpen = async () => {
+      try {
+        if (navigator.clipboard) {
+          await navigator.clipboard.writeText(finalUrl);
+          alert("Share link copied. You can paste it into SMS or WhatsApp.");
+          return;
+        }
+      } catch (err) {
+        console.warn("Clipboard fallback failed:", err);
+      }
+      window.open(finalUrl, "_blank", "noopener,noreferrer");
+    };
+
     if (navigator.share) {
-      const venueName = match.venue ? match.venue.split(",")[0] : "";
-      const { localTime } = matchTimes(match);
-      const shareText = hasScore
-        ? `${match.home} ${sc.hg}-${sc.ag} ${match.away} · World Cup 2026${venueName ? " · " + venueName : ""}`
-        : [
-            `${match.home} vs ${match.away}`,
-            `World Cup 2026`,
-            match.date || "",
-            localTime || "",
-            venueName || "",
-          ].filter(Boolean).join(" · ");
-      navigator.share({
-        title,
-        text: shareText,
-        url: finalUrl,
-      }).catch(()=>{});
+      navigator.share({ title, text: shareText, url: finalUrl })
+        .catch(err => {
+          // Ignore intentional user cancel, but fallback for real share failures.
+          if (err && err.name === "AbortError") return;
+          console.warn("Native share failed, using fallback:", err);
+          copyOrOpen();
+        });
     } else {
-      navigator.clipboard?.writeText(finalUrl).then(()=>alert("Link copied!")).catch(()=>{});
+      copyOrOpen();
     }
   };
 
@@ -4232,7 +4248,7 @@ function TopScorersTab({ tabTop=116 }) {
 
   return (
     <div>
-      <div ref={_tshRef} style={{position:"fixed",top:tabTop,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:700,willChange:"transform",zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
+      <div ref={_tshRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
         <div style={{fontWeight:700,fontSize:15,color:C.green,marginBottom:!hasLive?4:0}}>{"TOP SCORERS"} <span style={{fontSize:11,color:C.dim,fontWeight:400}}>{hasLive?"· "+"Live data":"· "+"Pre-tournament"}</span></div>
         {!hasLive && (
           <div style={{display:"flex",gap:6}}>
@@ -4244,7 +4260,7 @@ function TopScorersTab({ tabTop=116 }) {
         )}
       </div>
       
-      <div style={{height:(_tshH||68)+8}}/>
+      <div style={{height:0}}/>
       {!hasLive && (
           <div>
           {ONES_TO_WATCH.filter(p=>filter==="all"||p.pos===filter).map((p,i) => (
@@ -4710,7 +4726,7 @@ function WCNewsTab({ tabTop=116 }) {
   return (
     <div>
       {/* Sticky header */}
-      <div ref={_ref} style={{position:"fixed",top:tabTop,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:700,willChange:"transform",zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
+      <div ref={_ref} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <span style={{fontSize:15,fontWeight:700,color:C.green}}>{"📰 World Cup 2026 News"}</span>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
@@ -4721,7 +4737,7 @@ function WCNewsTab({ tabTop=116 }) {
       </div>
       
 
-      <div style={{height:(_h||36)+8}}/>
+      <div style={{height:0}}/>
       <div style={{padding:"0 0 20px"}}>
         {/* Tournament facts */}
         <QuickFacts tabTop={tabTop}/>
@@ -5202,14 +5218,14 @@ function StatsHubTab({ initial="", tabTop=116 }) {
 
   return (
     <div>
-      <div ref={_statsHubRef} style={{position:"fixed",top:tabTop,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:700,willChange:"transform",zIndex:91,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
+      <div ref={_statsHubRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
         <div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none"}}>
           <Pill active={mode==="team"} onClick={()=>setMode("team")} color={C.green}>📊 Team Stats</Pill>
           <Pill active={mode==="h2h"} onClick={()=>setMode("h2h")} color={C.rival}>⚔️ Head to Head</Pill>
           <Pill active={mode==="scorers"} onClick={()=>setMode("scorers")} color={C.gold}>⚽ Scorers</Pill>
         </div>
       </div>
-      <div style={{height:(_statsHubH||48)+8}}/>
+      <div style={{height:0}}/>
       {mode==="team" && <StatsTab initial={initial} tabTop={childTop}/>}      
       {mode==="h2h" && <H2HTab tabTop={childTop}/>}      
       {mode==="scorers" && <TopScorersTab tabTop={childTop}/>}      
