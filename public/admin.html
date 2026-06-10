@@ -37,6 +37,11 @@
     .header h1 { font-size: 20px; font-weight: 800; color: var(--green); }
     .header-meta { font-size: 11px; color: var(--dim); }
     .logout { font-size: 12px; color: var(--mid); background: none; border: 1px solid var(--b2); border-radius: 8px; padding: 5px 12px; cursor: pointer; color: var(--dim); }
+    .tool-row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .admin-btn { font-size:12px; font-weight:700; border:1px solid var(--b2); background:var(--s1); color:var(--green); border-radius:10px; padding:9px 12px; cursor:pointer; }
+    .admin-btn.warn { color:var(--gold); border-color:rgba(251,191,36,.45); background:rgba(251,191,36,.08); }
+    .admin-btn.danger { color:var(--red); border-color:rgba(248,113,113,.45); background:rgba(248,113,113,.08); }
+    .admin-note { color:var(--mid); font-size:12px; line-height:1.45; margin-top:8px; }
 
     /* Stat cards */
     .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 28px; }
@@ -82,6 +87,11 @@
     .vis-row { display: grid; grid-template-columns: 1fr 90px 80px 80px 80px; gap: 10px; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--b1); font-size: 12px; }
     .vis-row:last-child { border-bottom: none; }
     .vis-row.head { font-size: 10px; font-weight: 700; color: var(--dim); text-transform: uppercase; letter-spacing: 0.08em; padding: 8px 14px; background: var(--s2); }
+    .acct-table { background: var(--s1); border: 1px solid var(--b1); border-radius: 12px; overflow: hidden; }
+    .acct-row { display: grid; grid-template-columns: 1fr 90px 110px 100px; gap: 10px; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--b1); font-size: 12px; }
+    .acct-row:last-child { border-bottom: none; }
+    .acct-row.head { font-size: 10px; font-weight: 700; color: var(--dim); text-transform: uppercase; letter-spacing: 0.08em; padding: 8px 14px; background: var(--s2); }
+    @media(max-width:700px){ .acct-row { grid-template-columns: 1fr; gap:6px; } .acct-row.head { display:none; } }
 
     .loading { text-align: center; padding: 60px 20px; color: var(--dim); font-size: 14px; }
     .spinner { width: 24px; height: 24px; border: 3px solid var(--green); border-top-color: transparent; border-radius: 50%; animation: spin .7s linear infinite; margin: 0 auto 16px; }
@@ -120,6 +130,18 @@
     <!-- Top stats -->
     <div class="stats-grid" id="stats-grid"></div>
 
+    <!-- Admin tools -->
+    <div class="section">
+      <div class="section-title">Admin Tools</div>
+      <div class="chart">
+        <div class="tool-row">
+          <button class="admin-btn" onclick="markAdminDevice()">🧪 Mark this device as admin/test</button>
+          <button class="admin-btn warn" onclick="resetAnalytics()">🗑 Reset Analytics</button>
+        </div>
+        <div class="admin-note" id="admin-device-note">Use this on your desktop and iPhone test devices so your own deploy/cache testing stops counting as new visitors.</div>
+      </div>
+    </div>
+
     <!-- Daily chart -->
     <div class="section">
       <div class="section-title">Daily Unique Visitors (last 14 days)</div>
@@ -133,6 +155,17 @@
     <div class="section">
       <div class="section-title">Tab Usage</div>
       <div class="tabs-grid" id="tabs-grid"></div>
+    </div>
+
+    <!-- Accounts -->
+    <div class="section">
+      <div class="section-title">Accounts</div>
+      <div class="acct-table">
+        <div class="acct-row head">
+          <div>User</div><div>PIN</div><div>Saved</div><div>Actions</div>
+        </div>
+        <div id="accounts-list"></div>
+      </div>
     </div>
 
     <!-- Registered users -->
@@ -180,6 +213,40 @@ function logout() {
   document.getElementById("loading").style.display = "block";
 }
 
+async function adminAction(payload) {
+  const r = await fetch("/api/admin", {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${SECRET}`, "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.error || `Admin action failed: ${r.status}`);
+  return d;
+}
+
+function markAdminDevice() {
+  localStorage.setItem("wc2026_disable_analytics", "1");
+  document.getElementById("admin-device-note").textContent = "✅ This browser is now marked as admin/test. App visits from this device will not be tracked unless you clear site data again.";
+}
+
+async function resetAnalytics() {
+  if (!confirm("Reset visitor analytics and tab usage? Accounts, predictions, brackets, saved matches, and notifications will be kept.")) return;
+  try {
+    await adminAction({ adminAction: "reset-analytics" });
+    await loadData();
+    alert("Analytics reset complete.");
+  } catch (e) { alert(e.message); }
+}
+
+async function deleteAccount(uid, label) {
+  if (!uid) return;
+  if (!confirm(`Delete account ${label || uid}? This removes the sync profile and fantasy identity for that user. This cannot be undone.`)) return;
+  try {
+    await adminAction({ adminAction: "delete-account", uid });
+    await loadData();
+  } catch (e) { alert(e.message); }
+}
+
 async function loadData() {
   try {
     const r = await fetch("/api/admin", {
@@ -210,7 +277,7 @@ function renderDashboard(d) {
   const stats = [
     { val: d.visitors.total, lbl: "Unique Visitors" },
     { val: todayCount, lbl: "Visitors Today" },
-    { val: d.users.total, lbl: "Registered Users" },
+    { val: d.accounts?.total || d.users.total, lbl: "Accounts" },
     { val: d.pins.total, lbl: "PIN Accounts" },
     { val: totalPreds, lbl: "Predictions Made" },
   ];
@@ -244,6 +311,20 @@ function renderDashboard(d) {
       <div class="tab-bar-count">${count.toLocaleString()} taps</div>
     </div>`;
   }).join("");
+
+  // Accounts
+  const accounts = (d.accounts?.records || []).sort((a,b) => (b.updatedAt||b.predictorRegisteredAt||0) - (a.updatedAt||a.predictorRegisteredAt||0));
+  document.getElementById("accounts-list").innerHTML = accounts.length ? accounts.map(a => {
+    const label = a.displayName || a.predictorName || a.email || a.uid;
+    const saved = `${a.savedMatches || 0} matches${a.hasBracket ? " · bracket" : ""}`;
+    const sub = [a.email, a.favTeams?.length ? `Teams: ${a.favTeams.join(", ")}` : ""].filter(Boolean).join(" · ");
+    return `<div class="acct-row">
+      <div><div style="font-weight:700;color:var(--text)">${escHtml(label)}</div><div style="font-size:10px;color:var(--dim)">${escHtml(a.uid)}${sub ? " · "+escHtml(sub) : ""}</div></div>
+      <div style="color:var(--gold);font-weight:700">${escHtml(a.pin || "—")}</div>
+      <div style="color:var(--mid)">${escHtml(saved)}</div>
+      <div><button class="admin-btn danger" onclick="deleteAccount('${escAttr(a.uid)}','${escAttr(label)}')">Delete</button></div>
+    </div>`;
+  }).join("") : `<div style="padding:20px;text-align:center;color:var(--dim);font-size:13px">No accounts yet</div>`;
 
   // Registered users
   const users = (d.users.records || []).sort((a,b) => (b.registeredAt||0) - (a.registeredAt||0));
@@ -279,6 +360,9 @@ function renderDashboard(d) {
 
 function escHtml(s) {
   return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+function escAttr(s) {
+  return escHtml(s).replace(/'/g,"&#39;").replace(/"/g,"&quot;");
 }
 </script>
 </body>

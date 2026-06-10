@@ -5298,6 +5298,19 @@ function InstallBanner() {
   );
 }
 
+function analyticsDisabled() {
+  try {
+    const params = new URLSearchParams(window.location.search || "");
+    if (params.get("test") === "1" || params.get("admin") === "1") {
+      localStorage.setItem("wc2026_disable_analytics", "1");
+      return true;
+    }
+    return localStorage.getItem("wc2026_disable_analytics") === "1" || window.location.pathname.includes("admin.html");
+  } catch {
+    return false;
+  }
+}
+
 export default function App() {
   const [onboardingDone, setOnboardingDone] = useState(() => {
     try { return localStorage.getItem("wc2026_onboarded") === "1"; } catch { return false; }
@@ -5408,6 +5421,7 @@ export default function App() {
 
   // Analytics tracking — fire on mount
   useEffect(() => {
+    if (analyticsDisabled()) return;
     const device = getDeviceType();
     fetch("/api/admin", {
       method: "POST",
@@ -5424,7 +5438,7 @@ export default function App() {
 
   // Track tab changes
   useEffect(() => {
-    if (!tab) return;
+    if (!tab || analyticsDisabled()) return;
     fetch("/api/admin", {
       method: "POST",
       headers: {"Content-Type":"application/json"},
