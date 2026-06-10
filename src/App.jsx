@@ -2867,8 +2867,9 @@ function MyBracketTab({ tabTop=116 }) {
 
   const shareBracketCard = async () => {
     const bracket = displayedResult;
-    if (!bracket?.champion) {
-      alert("Pick the Final winner before sharing your bracket card.");
+    const hasAnyPick = Object.keys(manualPicks || {}).length > 0;
+    if (!bracket || !hasAnyPick) {
+      alert("Pick at least one winner before sharing your bracket card.");
       return;
     }
     setSharing(true);
@@ -2880,8 +2881,8 @@ function MyBracketTab({ tabTop=116 }) {
       const snapshot = {
         owner,
         title: `${owner === "My" ? "My" : owner + "'s"} World Cup 2026 Bracket`,
-        champion: bracket.champion,
-        runnerUp: bracket.runnerUp || finalists.find(t => t && t !== bracket.champion) || "",
+        champion: bracket.champion || "In progress",
+        runnerUp: bracket.runnerUp || (bracket.champion ? finalists.find(t => t && t !== bracket.champion) : "") || "",
         finalists,
         semifinalists: Array.from(new Set(semifinals)),
         thirdGroupsKey: bracket.thirdGroupsKey || "",
@@ -2907,7 +2908,7 @@ function MyBracketTab({ tabTop=116 }) {
       if (navigator.share) {
         await navigator.share({
           title: snapshot.title,
-          text: `🏆 ${snapshot.title} — Champion: ${snapshot.champion}`,
+          text: bracket.champion ? `🏆 ${snapshot.title} — Champion: ${snapshot.champion}` : `🏆 ${snapshot.title} — bracket in progress`,
           url
         });
       } else if (navigator.clipboard) {
@@ -2923,6 +2924,9 @@ function MyBracketTab({ tabTop=116 }) {
       setSharing(false);
     }
   };
+
+  const hasBracketPicks = Object.keys(manualPicks || {}).length > 0;
+  const shareBracketLabel = displayedResult?.champion ? "🏆 Share Champion Card" : "📤 Share Card";
 
   return (
     <div>
@@ -2999,13 +3003,17 @@ function MyBracketTab({ tabTop=116 }) {
             <button onClick={()=>setStage("groups")} style={{padding:"7px 12px",borderRadius:10,background:"transparent",border:`1px solid ${C.b2}`,color:C.mid,fontSize:12,cursor:"pointer"}}>← Edit</button>
             <button onClick={resetWinners} style={{padding:"7px 12px",borderRadius:10,background:`${C.green}22`,border:`1px solid ${C.greenS}`,color:C.green,fontSize:12,fontWeight:700,cursor:"pointer"}}>🔄 Reset Winners</button>
             <button onClick={resetMyBracket} style={{padding:"7px 12px",borderRadius:10,background:`${C.gold}12`,border:`1px solid ${C.gold}44`,color:C.gold,fontSize:12,fontWeight:700,cursor:"pointer"}}>🗑 Reset Bracket</button>
-            <button onClick={shareBracketCard} disabled={!displayedResult?.champion || sharing} title={!displayedResult?.champion?"Pick the Final winner before sharing":undefined} style={{padding:"7px 12px",borderRadius:10,background:displayedResult?.champion?`${C.blue}22`:C.s1,border:`1px solid ${displayedResult?.champion?C.blue:C.b1}`,color:displayedResult?.champion?C.blue:C.dim,fontSize:12,fontWeight:700,cursor:displayedResult?.champion&&!sharing?"pointer":"not-allowed",opacity:sharing?0.65:1}}>{sharing?"Creating...":"📤 Share Card"}</button>
             <button onClick={()=>{setPlayMode("manual");setManualPicks({});}} disabled={result.fifaEngineStatus!=="fifa-ready"} style={{padding:"7px 12px",borderRadius:10,background:playMode==="manual"?`${C.blue}22`:C.s1,border:`1px solid ${playMode==="manual"?C.blue:C.b1}`,color:playMode==="manual"?C.blue:C.mid,fontSize:12,fontWeight:700,cursor:result.fifaEngineStatus==="fifa-ready"?"pointer":"not-allowed",opacity:result.fifaEngineStatus==="fifa-ready"?1:0.55}}>👆 Manual Picks</button>
             <button disabled title="Prediction-based simulation will come later" style={{padding:"7px 12px",borderRadius:10,background:C.s1,border:`1px solid ${C.b1}`,color:C.dim,fontSize:12,fontWeight:700,cursor:"not-allowed",opacity:0.65}}>🔮 Prediction Sim · Soon</button>
           </div>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:10,flexWrap:"wrap"}}>
-            <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Interactive Bracket Path</div>
-            <div style={{display:"flex",gap:6,background:C.s1,border:`1px solid ${C.b1}`,borderRadius:999,padding:3}}>
+          <div style={{display:"grid",gridTemplateColumns:isMobileBracket?"1fr":"1fr auto 1fr",alignItems:"center",gap:10,marginBottom:10}}>
+            <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",whiteSpace:"nowrap"}}>Interactive Bracket Path</div>
+            {hasBracketPicks && (
+              <button onClick={shareBracketCard} disabled={sharing} style={{justifySelf:"center",padding:isMobileBracket?"6px 10px":"7px 13px",borderRadius:999,background:displayedResult?.champion?`${C.gold}22`:`${C.blue}22`,border:`1px solid ${displayedResult?.champion?C.gold:C.blue}66`,color:displayedResult?.champion?C.gold:C.blue,fontSize:isMobileBracket?10:12,fontWeight:900,cursor:sharing?"wait":"pointer",opacity:sharing?0.65:1,whiteSpace:"nowrap"}}>
+                {sharing?"Creating...":shareBracketLabel}
+              </button>
+            )}
+            <div style={{display:"flex",gap:6,background:C.s1,border:`1px solid ${C.b1}`,borderRadius:999,padding:3,justifySelf:isMobileBracket?"start":"end",gridColumn:isMobileBracket?"1 / -1":"auto"}}>
               <button onClick={()=>setBracketView("compact")} style={{border:"none",borderRadius:999,padding:"5px 9px",fontSize:10,fontWeight:800,cursor:"pointer",background:bracketView==="compact"?`${C.green}22`:"transparent",color:bracketView==="compact"?C.green:C.mid}}>📱 Compact</button>
               <button onClick={()=>setBracketView("tree")} style={{border:"none",borderRadius:999,padding:"5px 9px",fontSize:10,fontWeight:800,cursor:"pointer",background:bracketView==="tree"?`${C.gold}22`:"transparent",color:bracketView==="tree"?C.gold:C.mid}}>🌳 Tree</button>
             </div>
