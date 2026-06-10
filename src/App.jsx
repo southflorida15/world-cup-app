@@ -979,7 +979,7 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=n
 
   return (
     <div>
-      <div ref={_lhRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
+      <div ref={_lhRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:"none",padding:"8px 13px",marginBottom:0}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <div style={{fontWeight:700,fontSize:15,color:C.green}}>{"LIVE SCORES"}</div>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
@@ -988,7 +988,7 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=n
         </div>
       </div>
       
-      <div style={{height:0}}/>
+      <div style={{height:10}}/>
       {Object.keys(upcomingByDate).length > 0 && (
         <div style={{marginBottom:16}}>
           <div style={{fontSize:11,color:C.gold,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>
@@ -1010,7 +1010,7 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=n
         </div>
       )}
       {liveMatches.length===0 && finishedToday.length===0 && Object.keys(upcomingByDate).length===0 && lastFetch && (
-        <div style={{textAlign:"center",padding:"48px 20px"}}>
+        <div style={{textAlign:"center",padding:"28px 20px"}}>
           <div style={{fontSize:"2.5rem",marginBottom:10}}>⚽</div>
           <div style={{fontWeight:700,fontSize:16,color:C.mid,marginBottom:6}}>{"No matches today"}</div>
           <div style={{fontSize:13,color:C.dim}}>{"Live scores appear here on match days."}</div>
@@ -1100,7 +1100,7 @@ function SchedTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=
   return (
     <div>
       {/* Filter header in normal document flow */}
-      <div ref={filterRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
+      <div ref={filterRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:"none",padding:"8px 13px",marginBottom:0}}>
 
         {/* Date strip */}
         <div ref={stripRef} style={{display:"flex",overflowX:"auto",scrollbarWidth:"none",marginBottom:8,gap:4}}>
@@ -1178,8 +1178,10 @@ function SchedTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=
         </div>
       </div>
 
-      {/* Match list */}
+      {/* Match list follows the filters directly in normal document flow */}
+      <div style={{height:8}}/>
 
+      {/* Match list */}
       {shown.length===0 ? <div style={{textAlign:"center",padding:"32px",color:C.dim}}>{"No matches found"}</div> : Object.entries(byDate).map(([date,ms],idx)=>(
         <div key={date} style={{marginBottom:14}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:5,marginTop:10}}>
@@ -1272,7 +1274,7 @@ function GrpTab({ onTeam, onMatchTap, tabTop=116 }) {
   return (
     <div>
       {/* Fixed header */}
-      <div ref={_ghRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`2px solid ${C.b2}`,boxShadow:`0 4px 16px ${C.bg},0 8px 24px ${C.bg}`,padding:"8px 13px"}}>
+      <div ref={_ghRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`2px solid ${C.b2}`,boxShadow:"none",padding:"8px 13px",marginBottom:0}}>
         <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:6,scrollbarWidth:"none"}}>
           {Object.keys(GROUPS).map(g=><Pill key={g} active={sel===g} onClick={()=>setSel(g)}>{g}</Pill>)}
         </div>
@@ -1281,9 +1283,8 @@ function GrpTab({ onTeam, onMatchTap, tabTop=116 }) {
           <Pill active={view==="matches"} onClick={()=>setView("matches")} color={C.gold}>📋 Matches</Pill>
         </div>
       </div>
-      {/* Spacer */}
-      
-      <div style={{height:0}}/>
+      {/* Content follows the filters directly in normal document flow */}
+      <div style={{height:10}}/>
       {view==="standings" && (
         <div>
           <Card style={{marginBottom:12}}>
@@ -3578,7 +3579,7 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
 
   // ── Registration gate ───────────────────────────────────────────────────
   if (userLoading) return (
-    <div style={{textAlign:"center",padding:"48px 20px"}}>
+    <div style={{textAlign:"center",padding:"28px 20px"}}>
       <div style={{width:28,height:28,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto 12px"}}/>
       <div style={{fontSize:13,color:C.mid}}>Loading fantasy picks...</div>
     </div>
@@ -3878,9 +3879,6 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
   const live = sc ? statusIsLive(sc.status) : false;
   const finished = sc ? statusIsFinished(sc.status) : false;
   const { localTime } = match ? matchTimes(match) : {};
-  const modalCity = match ? VENUE_TO_CITY[match.venue] : null;
-  const modalCityData = modalCity ? HOST_CITIES[modalCity] : null;
-  const modalWx = useWeather(modalCityData?.lat, modalCityData?.lon, !!modalCityData);
 
   // Polymarket odds
   const p1 = match ? PREDS.find(x=>x.team===match.home) : null;
@@ -3900,8 +3898,7 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
 
   if (!match) return null;
 
-  const shareMatch = async () => {
-    try {
+  const shareMatch = () => {
     const base = window.location.origin;
     const keyEvents = events && events.length > 0
       ? events.filter(ev=>ev.type==="Goal"||ev.type==="Card").slice(0,5)
@@ -3993,31 +3990,15 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
     };
 
     if (navigator.share) {
-      try {
-        await navigator.share({ title, text: shareText, url: finalUrl });
-      } catch (err) {
-        // Ignore intentional user cancel, but fallback for real share failures.
-        if (err && err.name === "AbortError") return;
-        console.warn("Native share failed, using fallback:", err);
-        await copyOrOpen();
-      }
+      navigator.share({ title, text: shareText, url: finalUrl })
+        .catch(err => {
+          // Ignore intentional user cancel, but fallback for real share failures.
+          if (err && err.name === "AbortError") return;
+          console.warn("Native share failed, using fallback:", err);
+          copyOrOpen();
+        });
     } else {
-      await copyOrOpen();
-    }
-    } catch (err) {
-      console.error("Share match failed:", err);
-      try {
-        const fallback = window.location.origin + "/api/og?" + new URLSearchParams({
-          home: match?.home || "Home",
-          away: match?.away || "Away",
-          ...(match?.group ? {group: match.group} : {}),
-          ...(match?.date ? {date: match.date} : {}),
-          ...(localTime ? {time: localTime} : {}),
-        }).toString();
-        window.open(fallback, "_blank", "noopener,noreferrer");
-      } catch (_) {
-        alert("Unable to share this match right now.");
-      }
+      copyOrOpen();
     }
   };
 
@@ -4194,7 +4175,7 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
                 <StarIcon filled={isSaved} size={15}/>{isSaved?"Saved":"Save Match"}
               </button>
             ); })()}
-            <button onClick={(e)=>{e.stopPropagation(); shareMatch();}} style={{flex:1,padding:"11px 0",borderRadius:12,background:`${C.blue}22`,border:`1px solid ${C.blue}44`,color:C.blue,fontWeight:700,fontSize:14,cursor:"pointer"}}>{"📤 Share"}</button>
+            <button onClick={shareMatch} style={{flex:1,padding:"11px 0",borderRadius:12,background:`${C.blue}22`,border:`1px solid ${C.blue}44`,color:C.blue,fontWeight:700,fontSize:14,cursor:"pointer"}}>{"📤 Share"}</button>
           </div>
 
         </div>
@@ -5242,7 +5223,7 @@ function StatsHubTab({ initial="", tabTop=116 }) {
           <Pill active={mode==="scorers"} onClick={()=>setMode("scorers")} color={C.gold}>⚽ Scorers</Pill>
         </div>
       </div>
-      <div style={{height:0}}/>
+      <div style={{height:10}}/>
       {mode==="team" && <StatsTab initial={initial} tabTop={childTop}/>}      
       {mode==="h2h" && <H2HTab tabTop={childTop}/>}      
       {mode==="scorers" && <TopScorersTab tabTop={childTop}/>}      
