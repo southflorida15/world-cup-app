@@ -2445,7 +2445,7 @@ function DragList({ items, onReorder, renderItem }) {
 
 // ── MY BRACKET TAB ────────────────────────────────────────────────────────
 const defaultBracketGroups=()=>Object.fromEntries(Object.entries(GROUPS).map(([g,{teams}])=>[g,[...teams]]));
-function BracketMatchup({ match, t1, t2, winner, onPick, interactive=false }) {
+function BracketMatchup({ match, t1, t2, winner, onPick, interactive=false, compact=false }) {
   const canPick = interactive && t1 && t2 && t1 !== "TBD" && t2 !== "TBD";
   const teamRow = (team, i) => {
     const isW = winner && team === winner;
@@ -2456,18 +2456,18 @@ function BracketMatchup({ match, t1, t2, winner, onPick, interactive=false }) {
         onClick={() => !disabled && onPick?.(team)}
         disabled={disabled}
         title={canPick ? `Pick ${team}` : undefined}
-        style={{width:"100%",display:"flex",alignItems:"center",gap:6,padding:"7px 8px",background:isW?`${C.green}24`:"transparent",border:"none",borderBottom:i===0?`1px solid ${C.b1}`:"none",cursor:canPick?"pointer":"default",textAlign:"left",opacity:team?1:0.65}}
+        style={{width:"100%",display:"flex",alignItems:"center",gap:8,padding:compact?"7px 8px":"10px 10px",background:isW?`${C.green}24`:"transparent",border:"none",borderBottom:i===0?`1px solid ${C.b1}`:"none",cursor:canPick?"pointer":"default",textAlign:"left",opacity:team?1:0.65}}
       >
-        <Crest team={team||"TBD"} size={16}/>
-        <span style={{fontSize:12,color:isW?C.green:team?C.text:C.dim,fontWeight:isW?800:500,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",flex:1}}>{team||"TBD"}</span>
-        {isW && <span style={{fontSize:11,color:C.green,fontWeight:900}}>✓</span>}
+        <Crest team={team||"TBD"} size={compact?16:22}/>
+        <span style={{fontSize:compact?12:14,color:isW?C.green:team?C.text:C.dim,fontWeight:isW?800:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",flex:1}}>{team||"TBD"}</span>
+        {isW && <span style={{fontSize:12,color:C.green,fontWeight:900}}>✓</span>}
       </button>
     );
   };
   return (
-    <div style={{position:"relative",background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${winner?C.greenS:C.b1}`,borderRadius:10,overflow:"hidden",minWidth:150,maxWidth:176,boxShadow:winner?`0 0 0 1px ${C.greenS}, 0 8px 20px rgba(0,0,0,0.25)`:"0 5px 16px rgba(0,0,0,0.22)"}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 8px",borderBottom:`1px solid ${C.b1}`,background:`${C.gold}10`}}>
-        <span style={{fontSize:9,color:C.gold,fontWeight:900,letterSpacing:"0.08em"}}>M{match || "—"}</span>
+    <div style={{position:"relative",background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${winner?C.greenS:C.b1}`,borderRadius:12,overflow:"hidden",width:"100%",boxShadow:winner?`0 0 0 1px ${C.greenS}, 0 8px 20px rgba(0,0,0,0.25)`:"0 5px 16px rgba(0,0,0,0.22)"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 10px",borderBottom:`1px solid ${C.b1}`,background:`${C.gold}10`}}>
+        <span style={{fontSize:10,color:C.gold,fontWeight:900,letterSpacing:"0.08em"}}>M{match || "—"}</span>
         {interactive && <span style={{fontSize:9,color:canPick?C.green:C.dim,fontWeight:800}}>{canPick?"TAP PICK":"LOCKED"}</span>}
       </div>
       {teamRow(t1,0)}
@@ -2486,79 +2486,77 @@ function VisualBracketTree({ bracket, pickMode="auto", onPick=()=>{} }) {
     ...byId(bracket?.final),
   };
 
-  // Official FIFA 2026 knockout path, arranged visually around the Final.
-  // Left side feeds M101; right side feeds M102.
-  const left = [
-    {key:"r32L", short:"R32", label:"Round of 32", ids:[74,77,73,75,83,84,81,82], gap:8, padTop:0},
-    {key:"r16L", short:"R16", label:"Round of 16", ids:[89,90,93,94], gap:70, padTop:38},
-    {key:"qfL", short:"QF", label:"Quarterfinals", ids:[97,98], gap:224, padTop:130},
-    {key:"sfL", short:"SF", label:"Semifinal", ids:[101], gap:0, padTop:318},
+  const rounds = [
+    {key:"r32", short:"R32", label:"Round of 32", ids:[73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88]},
+    {key:"r16", short:"R16", label:"Round of 16", ids:[89,90,91,92,93,94,95,96]},
+    {key:"qf", short:"QF", label:"Quarterfinals", ids:[97,98,99,100]},
+    {key:"sf", short:"SF", label:"Semifinals", ids:[101,102]},
+    {key:"final", short:"FINAL", label:"Final", ids:[104]},
   ];
-  const right = [
-    {key:"sfR", short:"SF", label:"Semifinal", ids:[102], gap:0, padTop:318},
-    {key:"qfR", short:"QF", label:"Quarterfinals", ids:[99,100], gap:224, padTop:130},
-    {key:"r16R", short:"R16", label:"Round of 16", ids:[91,92,95,96], gap:70, padTop:38},
-    {key:"r32R", short:"R32", label:"Round of 32", ids:[76,78,79,80,86,88,85,87], gap:8, padTop:0},
-  ];
-
-  const columnWidth = 166;
-  const renderColumn = (round, side="left") => {
-    const ids = round.ids || [];
-    return (
-      <div key={round.key} style={{width:columnWidth,flex:`0 0 ${columnWidth}px`,paddingTop:round.padTop}}>
-        <div style={{position:"sticky",top:0,zIndex:2,textAlign:"center",marginBottom:10,background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b1}`,borderRadius:999,padding:"6px 8px",boxShadow:"0 6px 14px rgba(0,0,0,0.25)"}}>
-          <div style={{fontSize:10,fontWeight:900,color:round.short==="FINAL"?C.gold:C.green,letterSpacing:"0.08em"}}>{round.short}</div>
-          <div style={{fontSize:9,color:C.dim,whiteSpace:"nowrap"}}>{round.label}</div>
-        </div>
-        <div style={{display:"flex",flexDirection:"column",gap:round.gap}}>
-          {ids.map((id, idx) => {
-            const m = matchesById[id] || {match:id,home:null,away:null,winner:null};
-            const locked = !(m.home && m.away);
-            return (
-              <div key={id} style={{position:"relative",opacity:locked?0.58:1}}>
-                {side === "left" && round.key !== "sfL" && <div style={{position:"absolute",right:-16,top:"50%",width:16,borderTop:`2px solid ${m.winner?C.greenS:C.b2}`}}/>}
-                {side === "left" && round.key !== "r32L" && <div style={{position:"absolute",left:-16,top:"50%",width:16,borderTop:`2px solid ${m.winner?C.greenS:C.b2}`}}/>}
-                {side === "right" && round.key !== "sfR" && <div style={{position:"absolute",left:-16,top:"50%",width:16,borderTop:`2px solid ${m.winner?C.greenS:C.b2}`}}/>}
-                {side === "right" && round.key !== "r32R" && <div style={{position:"absolute",right:-16,top:"50%",width:16,borderTop:`2px solid ${m.winner?C.greenS:C.b2}`}}/>}
-                <BracketMatchup match={m.match} t1={m.home} t2={m.away} winner={m.winner} interactive={pickMode==="manual"} onPick={(team)=>onPick(m,team)}/>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  };
 
   const finalMatch = matchesById[104] || (bracket?.final || [])[0] || {match:104,home:null,away:null,winner:null};
+  const completedCount = Object.values(matchesById).filter(m => m?.winner).length;
 
   return (
-    <div style={{overflowX:"auto",padding:"6px 0 18px",WebkitOverflowScrolling:"touch"}}>
-      <div style={{minWidth:1380,padding:"6px 8px 14px"}}>
-        <div style={{textAlign:"center",marginBottom:8}}>
-          <div style={{fontSize:10,color:C.dim,fontWeight:800,letterSpacing:"0.16em",textTransform:"uppercase"}}>Official Knockout Path</div>
-          <div style={{fontSize:12,color:C.mid,marginTop:3}}>Tap winners as each matchup unlocks. The bracket advances automatically.</div>
+    <div style={{width:"100%",maxWidth:"100%",overflow:"hidden"}}>
+      <div style={{textAlign:"center",marginBottom:14,background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b1}`,borderRadius:16,padding:14}}>
+        <div style={{fontSize:34,lineHeight:1,filter:"drop-shadow(0 8px 14px rgba(0,0,0,0.35))"}}>🏆</div>
+        <div style={{fontSize:10,color:C.gold,fontWeight:900,letterSpacing:"0.14em",marginTop:6}}>WORLD CUP PATH</div>
+        <div style={{fontSize:12,color:C.mid,marginTop:5,lineHeight:1.45}}>
+          {bracket?.champion
+            ? <>Champion selected: <strong style={{color:C.green}}>{getFlag(bracket.champion)} {bracket.champion}</strong></>
+            : <>Select winners round by round. New matchups unlock automatically.</>}
         </div>
-        <div style={{display:"flex",gap:16,alignItems:"flex-start",justifyContent:"center"}}>
-          {left.map(r => renderColumn(r,"left"))}
-          <div style={{width:190,flex:"0 0 190px",paddingTop:286,display:"flex",flexDirection:"column",alignItems:"center",position:"relative"}}>
-            <div style={{fontSize:46,lineHeight:1,filter:"drop-shadow(0 10px 18px rgba(0,0,0,0.45))"}}>🏆</div>
-            <div style={{fontSize:10,color:C.gold,fontWeight:900,letterSpacing:"0.14em",margin:"5px 0 10px"}}>FINAL</div>
-            <div style={{position:"relative"}}>
-              <div style={{position:"absolute",left:-16,top:"50%",width:16,borderTop:`2px solid ${finalMatch.winner?C.greenS:C.b2}`}}/>
-              <div style={{position:"absolute",right:-16,top:"50%",width:16,borderTop:`2px solid ${finalMatch.winner?C.greenS:C.b2}`}}/>
-              <BracketMatchup match={104} t1={finalMatch.home} t2={finalMatch.away} winner={finalMatch.winner} interactive={pickMode==="manual"} onPick={(team)=>onPick(finalMatch,team)}/>
-            </div>
-            <div style={{marginTop:14,background:`linear-gradient(135deg,${C.green}22,${C.gold}18)`,border:`1px solid ${bracket?.champion?C.greenS:C.gold}66`,borderRadius:16,padding:12,minWidth:168,textAlign:"center",boxShadow:"0 10px 26px rgba(0,0,0,0.28)"}}>
-              <div style={{fontSize:9,color:C.dim,fontWeight:900,letterSpacing:"0.12em",marginBottom:6}}>CHAMPION</div>
-              {bracket?.champion ? <><Crest team={bracket.champion} size={44}/><div style={{fontWeight:900,fontSize:15,color:C.green,marginTop:6}}>{bracket.champion}</div></> : <div style={{fontSize:12,color:C.dim,lineHeight:1.5}}>Pick the Final winner</div>}
+        <div style={{fontSize:10,color:C.dim,marginTop:8}}>{completedCount} of 31 knockout winners selected</div>
+      </div>
+
+      <div style={{display:"flex",flexDirection:"column",gap:18}}>
+        {rounds.map(round => {
+          const matches = round.ids.map(id => matchesById[id] || {match:id,home:null,away:null,winner:null});
+          const unlocked = matches.filter(m => m.home && m.away).length;
+          return (
+            <section key={round.key} style={{background:`linear-gradient(180deg,${C.s1},transparent)`,border:`1px solid ${C.b1}`,borderRadius:16,padding:12,overflow:"hidden"}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:10}}>
+                <div>
+                  <div style={{fontSize:11,fontWeight:900,color:round.key==="final"?C.gold:C.green,letterSpacing:"0.12em"}}>{round.short}</div>
+                  <div style={{fontSize:16,fontWeight:900,color:C.text}}>{round.label}</div>
+                </div>
+                <div style={{fontSize:10,color:C.dim,background:C.s2,border:`1px solid ${C.b1}`,borderRadius:999,padding:"4px 8px",whiteSpace:"nowrap"}}>{unlocked}/{matches.length} unlocked</div>
+              </div>
+
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(220px, 1fr))",gap:10}}>
+                {matches.map(m => {
+                  const locked = !(m.home && m.away);
+                  return (
+                    <div key={m.match} style={{opacity:locked?0.55:1,position:"relative"}}>
+                      <BracketMatchup match={m.match} t1={m.home} t2={m.away} winner={m.winner} interactive={pickMode==="manual"} onPick={(team)=>onPick(m,team)}/>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          );
+        })}
+      </div>
+
+      <div style={{marginTop:16,background:`linear-gradient(135deg,${C.green}22,${C.gold}18)`,border:`1px solid ${bracket?.champion?C.greenS:C.gold}66`,borderRadius:18,padding:16,textAlign:"center",boxShadow:"0 10px 26px rgba(0,0,0,0.28)"}}>
+        <div style={{fontSize:9,color:C.dim,fontWeight:900,letterSpacing:"0.15em",marginBottom:8}}>CHAMPION</div>
+        {bracket?.champion ? (
+          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:12}}>
+            <Crest team={bracket.champion} size={46}/>
+            <div style={{textAlign:"left"}}>
+              <div style={{fontWeight:900,fontSize:22,color:C.green}}>{bracket.champion}</div>
+              <div style={{fontSize:12,color:C.mid}}>Your World Cup winner</div>
             </div>
           </div>
-          {right.map(r => renderColumn(r,"right"))}
-        </div>
+        ) : (
+          <div style={{fontSize:13,color:C.mid,lineHeight:1.5}}>Pick the Final winner to crown your champion.</div>
+        )}
       </div>
     </div>
   );
 }
+
 const MY_BRACKET_STORAGE_KEY = "wc2026_my_bracket_v1";
 
 function readSavedMyBracket() {

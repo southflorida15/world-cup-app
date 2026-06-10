@@ -23,8 +23,8 @@ export const ROUND_OF_32_TEMPLATE = [
 ];
 
 export const ROUND_OF_16_TEMPLATE = [
-  { match: 89, home: "W74", away: "W77" },
-  { match: 90, home: "W73", away: "W75" },
+  { match: 89, home: "W73", away: "W75" },
+  { match: 90, home: "W74", away: "W77" },
   { match: 91, home: "W76", away: "W78" },
   { match: 92, home: "W79", away: "W80" },
   { match: 93, home: "W83", away: "W84" },
