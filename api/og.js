@@ -141,9 +141,9 @@ export default async function handler(req, res) {
 
   const scoreBlock = hasScore
     ? `<text x="600" y="295" text-anchor="middle" font-size="100" font-weight="900" fill="#4ade80" font-family="monospace">${hg} - ${ag}</text>
-       <text x="600" y="345" text-anchor="middle" font-size="26" font-weight="700" fill="#3d6a4d" letter-spacing="6">FULL TIME</text>`
-    : `<text x="600" y="300" text-anchor="middle" font-size="72" font-weight="900" fill="#2a5a38" letter-spacing="8">VS</text>
-       <text x="600" y="345" text-anchor="middle" font-size="26" font-weight="700" fill="#3d6a4d" letter-spacing="6">UPCOMING</text>`;
+       <text x="600" y="330" text-anchor="middle" font-size="26" font-weight="700" fill="#3d6a4d" letter-spacing="6">FULL TIME</text>`
+    : `<text x="600" y="285" text-anchor="middle" font-size="82" font-weight="900" fill="#2a5a38" letter-spacing="8">VS</text>
+       <text x="600" y="330" text-anchor="middle" font-size="26" font-weight="700" fill="#3d6a4d" letter-spacing="6">UPCOMING</text>`;
 
   const oddsBlock = (!hasScore && p1 && p2)
     ? `<rect x="280" y="400" width="640" height="72" rx="10" fill="rgba(74,222,128,0.08)" stroke="rgba(74,222,128,0.2)" stroke-width="1"/>
@@ -162,8 +162,8 @@ export default async function handler(req, res) {
     '<linearGradient id="acc" x1="0%" y1="0%" x2="100%" y2="0%">',
     '<stop offset="0%" style="stop-color:#060e0a;stop-opacity:0"/><stop offset="50%" style="stop-color:#4ade80"/><stop offset="100%" style="stop-color:#060e0a;stop-opacity:0"/>',
     '</linearGradient>',
-    `<clipPath id="hfc" clipPathUnits="userSpaceOnUse"><rect x="128" y="195" width="160" height="107" rx="8"/></clipPath>`,
-    `<clipPath id="afc" clipPathUnits="userSpaceOnUse"><rect x="912" y="195" width="160" height="107" rx="8"/></clipPath>`,
+    `<clipPath id="hfc" clipPathUnits="userSpaceOnUse"><rect x="130" y="170" width="168" height="112" rx="10"/></clipPath>`,
+    `<clipPath id="afc" clipPathUnits="userSpaceOnUse"><rect x="902" y="170" width="168" height="112" rx="10"/></clipPath>`,
     '</defs>',
     '<rect width="1200" height="630" fill="url(#bg)"/>',
     '<circle cx="1100" cy="80" r="280" fill="rgba(74,222,128,0.025)"/>',
@@ -174,12 +174,12 @@ export default async function handler(req, res) {
     `<rect x="${1200-48-sw}" y="40" width="${sw}" height="40" rx="20" fill="rgba(74,222,128,0.12)" stroke="rgba(74,222,128,0.3)" stroke-width="1"/>`,
     `<text x="${1200-48-sw/2}" y="65" text-anchor="middle" font-size="22" font-weight="700" fill="#4ade80" font-family="system-ui">${stageLabel}</text>`,
     date ? `<text x="${1200-48}" y="98" text-anchor="end" font-size="20" fill="#7aaa8a" font-family="system-ui">${date}</text>` : "",
-    hf ? `<image href="${hf}" x="128" y="195" width="160" height="107" clip-path="url(#hfc)" preserveAspectRatio="xMidYMid slice"/>` : "",
-    `<text x="208" y="348" text-anchor="middle" font-size="44" font-weight="900" fill="#d4ead9" font-family="system-ui">${home}</text>`,
+    hf ? `<image href="${hf}" x="130" y="170" width="168" height="112" clip-path="url(#hfc)" preserveAspectRatio="xMidYMid slice"/>` : "",
+    `<text x="214" y="330" text-anchor="middle" font-size="46" font-weight="900" fill="#d4ead9" font-family="system-ui">${home}</text>`,
     scoreBlock,
     oddsBlock,
-    af ? `<image href="${af}" x="912" y="195" width="160" height="107" clip-path="url(#afc)" preserveAspectRatio="xMidYMid slice"/>` : "",
-    `<text x="992" y="348" text-anchor="middle" font-size="44" font-weight="900" fill="#d4ead9" font-family="system-ui">${away}</text>`,
+    af ? `<image href="${af}" x="902" y="170" width="168" height="112" clip-path="url(#afc)" preserveAspectRatio="xMidYMid slice"/>` : "",
+    `<text x="986" y="330" text-anchor="middle" font-size="46" font-weight="900" fill="#d4ead9" font-family="system-ui">${away}</text>`,
     // User prediction on SVG
     hasPred ? `<rect x="440" y="490" width="320" height="70" rx="10" fill="#0d2815" stroke="#4ade80" stroke-width="1.5"/>
       <text x="600" y="512" text-anchor="middle" font-size="13" fill="#4ade80" font-family="system-ui" letter-spacing="2" font-weight="700">MY PREDICTION</text>
@@ -221,19 +221,21 @@ export default async function handler(req, res) {
 
   // Venue row HTML — tappable, opens Maps (iOS detection via JS)
   const venueRowHtml = venueShort ? `
-  <div class="row tappable" onclick="
-    var ua=navigator.userAgent||'';
-    var isApple=/iPhone|iPad|iPod|Macintosh/.test(ua)&&'ontouchend' in document||/Mac/.test(ua);
-    window.open(isApple?'${appleMapsUrl}':'${googleMapsUrl}','_blank');
+  <a class="row tappable venue-link" href="${googleMapsUrl || appleMapsUrl}" target="_blank" rel="noopener noreferrer" onclick="
+    try {
+      var ua=navigator.userAgent||'';
+      var isApple=/iPhone|iPad|iPod|Macintosh/.test(ua)&&('ontouchend' in document || navigator.maxTouchPoints>1);
+      this.href=isApple?'${appleMapsUrl}':'${googleMapsUrl}';
+    } catch(e) {}
   ">
     <div class="ri">📍</div>
-    <div>
+    <div class="row-main">
       <div class="rl">VENUE</div>
-      <div class="rv tap-blue">${venueLabel}</div>
-      <div class="rs">Tap for directions</div>
+      <div class="rv venue-name">${venueLabel}</div>
+      <div class="rs">Open in Maps</div>
     </div>
     <div class="tap-arrow">›</div>
-  </div>` : "";
+  </a>` : "";
 
   // Weather row HTML — tappable, opens wttr.in
   const weatherRowHtml = weather ? `
@@ -294,6 +296,7 @@ export default async function handler(req, res) {
 <meta property="og:title" content="${titleSafe}"/>
 <meta property="og:description" content="${descSafe}"/>
 <meta property="og:image" content="${ogImg}"/>
+<meta property="og:image:secure_url" content="${ogImg}"/>
 <meta property="og:image:width" content="1200"/>
 <meta property="og:image:height" content="630"/>
 <meta property="og:image:alt" content="${titleSafe}"/>
@@ -302,40 +305,47 @@ export default async function handler(req, res) {
 <meta property="og:site_name" content="FIFA World Cup 2026"/>
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:image" content="${ogImg}"/>
+<meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <link rel="apple-touch-icon" href="${appUrl}/icons/icon-192.png"/>
 <link rel="apple-touch-icon" sizes="512x512" href="${appUrl}/icons/icon-512.png"/>
 <link rel="shortcut icon" href="${appUrl}/icons/icon-192.png"/>
 <meta name="apple-mobile-web-app-title" content="WC 2026"/>
-<meta property="og:image:type" content="image/png"/>
+<meta property="og:image:type" content="image/svg+xml"/>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-html,body{background:#060e0a;font-family:system-ui,sans-serif;color:#d4ead9}
-body{display:flex;flex-direction:column;align-items:center;padding-bottom:env(safe-area-inset-bottom,24px)}
-.top{width:100%;background:linear-gradient(180deg,#0c1a12,#060e0a);padding:16px 16px 0;display:flex;flex-direction:column;align-items:center}
+html,body{background:#060e0a;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#d4ead9;min-height:100%}
+body{display:flex;flex-direction:column;align-items:center;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 14px);overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+.top{width:100%;background:linear-gradient(180deg,#0c1a12,#060e0a);padding:12px 14px 0;display:flex;flex-direction:column;align-items:center}
 .card-wrap{width:100%;max-width:560px}
-.logo{margin-bottom:12px;align-self:flex-start}
-.logo-sm{font-size:10px;color:#3d6a4d;font-weight:700;letter-spacing:.2em}
-.logo-wc{font-size:18px;font-weight:900;color:#d4ead9;line-height:1}
-.logo-yr{font-size:18px;font-weight:900;color:#4ade80;line-height:1}
-.card{width:100%;border-radius:16px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.6)}
+.logo{margin-bottom:8px;align-self:flex-start}
+.logo-sm{font-size:10px;color:#3d6a4d;font-weight:800;letter-spacing:.22em}
+.logo-wc{font-size:18px;font-weight:950;color:#d4ead9;line-height:.96;letter-spacing:.01em}
+.logo-yr{font-size:19px;font-weight:950;color:#4ade80;line-height:.98}
+.card{width:100%;border-radius:16px;overflow:hidden;box-shadow:0 8px 34px rgba(0,0,0,.55);border:1px solid rgba(74,222,128,.10);background:#08140d}
 .card svg{width:100%;height:auto;display:block}
-.section{width:100%;max-width:560px;padding:12px 16px 0}
-.row{display:flex;align-items:center;gap:10px;padding:12px 14px;background:#0c1a12;border:1px solid #1a3828;border-radius:12px;margin-bottom:8px}
-.tappable{cursor:pointer;transition:background .15s,border-color .15s}
+.section{width:100%;max-width:560px;padding:10px 14px 0}
+.row{display:flex;align-items:center;gap:12px;padding:12px 14px;background:#0c1a12;border:1px solid #1a3828;border-radius:14px;margin-bottom:8px;min-height:72px}
+.row-main{min-width:0;flex:1}
+.tappable{cursor:pointer;transition:background .15s,border-color .15s,transform .1s}
 .tappable:hover{background:#0f2218;border-color:#2a4f38}
-.tappable:active{background:#142d1e}
-.tap-arrow{margin-left:auto;font-size:20px;color:#3d6a4d;flex-shrink:0}
-.ri{font-size:20px;flex-shrink:0}
-.rl{font-size:11px;color:#3d6a4d;font-weight:600;margin-bottom:2px}
-.rv{font-size:14px;color:#d4ead9;font-weight:600}
+.tappable:active{background:#142d1e;transform:scale(.995)}
+.tap-arrow{margin-left:auto;font-size:26px;color:#3d6a4d;flex-shrink:0;line-height:1}
+.ri{font-size:24px;flex-shrink:0;width:34px;text-align:center}
+.rl{font-size:12px;color:#6aa57a;font-weight:900;margin-bottom:4px;letter-spacing:.08em}
+.rv{font-size:17px;color:#d4ead9;font-weight:800;line-height:1.2}
+.venue-name{font-size:21px;color:#60a5fa;line-height:1.16;letter-spacing:.005em}
 .tap-blue{color:#60a5fa}
-.rs{font-size:12px;color:#7aaa8a;margin-top:2px}
-.btns{display:flex;gap:10px;padding:16px 16px 0;width:100%;max-width:560px}
-.btn{flex:1;padding:14px 0;border-radius:14px;font-weight:700;font-size:15px;cursor:pointer;border:none;text-align:center;text-decoration:none;display:block}
+.rs{font-size:14px;color:#7aaa8a;margin-top:4px;font-weight:500}
+.btns{display:flex;gap:10px;padding:14px 14px 0;width:100%;max-width:560px}
+.btn{flex:1;padding:15px 0;border-radius:18px;font-weight:900;font-size:17px;cursor:pointer;border:none;text-align:center;text-decoration:none;display:block;min-height:54px}
 .green{background:linear-gradient(135deg,#4ade80,#22c55e);color:#030a05}
-.outline{background:rgba(74,222,128,.1);color:#4ade80;border:1px solid rgba(74,222,128,.3)}
-.hint{font-size:12px;color:#3d6a4d;text-align:center;line-height:1.6;padding:12px 16px 0;max-width:560px}
+.outline{background:rgba(74,222,128,.1);color:#4ade80;border:1px solid rgba(74,222,128,.35)}
+.hint{font-size:13px;color:#3d6a4d;text-align:center;line-height:1.45;padding:10px 16px 0;max-width:560px}
+@media (max-width:420px){
+  .top{padding:10px 12px 0}.section{padding:9px 12px 0}.card{border-radius:14px}.row{padding:11px 12px;min-height:68px}.rv{font-size:16px}.venue-name{font-size:19px}.btn{font-size:16px}.hint{font-size:12px}
+}
 </style>
 </head>
 <body>
