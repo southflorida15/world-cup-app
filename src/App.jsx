@@ -2536,12 +2536,12 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
       <div style={{marginBottom:10,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>
         <div>
           <div style={{fontSize:10,color:C.gold,fontWeight:900,letterSpacing:"0.14em"}}>TOURNAMENT TREE</div>
-          <div style={{fontSize:12,color:C.mid,marginTop:3}}>Swipe horizontally to follow the official knockout path.</div>
+          <div style={{fontSize:12,color:C.mid,marginTop:3}}>Swipe horizontally to follow the knockout path.</div>
         </div>
         <div style={{fontSize:10,color:C.dim,background:C.s2,border:`1px solid ${C.b1}`,borderRadius:999,padding:"4px 8px",whiteSpace:"nowrap"}}>{completedCount}/31 picked</div>
       </div>
-      <div style={{width:"100%",overflowX:"auto",overflowY:"hidden",WebkitOverflowScrolling:"touch",padding:"6px 0 18px",scrollPaddingLeft:64}}>
-        <div style={{minWidth:1380,width:"max-content",padding:"6px 72px 14px",margin:"0"}}>
+      <div style={{width:"100%",overflowX:"auto",overflowY:"hidden",WebkitOverflowScrolling:"touch",padding:"6px 0 18px",scrollPaddingLeft:24,overscrollBehaviorX:"contain"}}>
+        <div style={{minWidth:1380,width:"max-content",padding:"6px 32px 14px 24px",margin:"0 auto"}}>
           <div style={{display:"flex",gap:16,alignItems:"flex-start",justifyContent:"center"}}>
             {left.map(r => renderColumn(r,"left"))}
             <div style={{width:190,flex:"0 0 190px",paddingTop:286,display:"flex",flexDirection:"column",alignItems:"center",position:"relative"}}>
@@ -2689,6 +2689,7 @@ function clearSavedMyBracket() {
 
 function MyBracketTab({ tabTop=116 }) {
   const savedBracket = useMemo(() => readSavedMyBracket(), []);
+  const isMobileBracket = typeof window !== "undefined" && window.innerWidth < 520;
   const [stage,setStage]=useState(()=>savedBracket.stage || (savedBracket.result ? "bracket" : "groups"));
   const [bracketMode,setBracketMode]=useState(()=>savedBracket.bracketMode || "simulation");
   const [playMode,setPlayMode]=useState(()=>savedBracket.playMode || "manual");
@@ -2925,20 +2926,20 @@ function MyBracketTab({ tabTop=116 }) {
 
   return (
     <div>
-      <div ref={_mbhRef} style={{position:"fixed",top:tabTop,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:700,willChange:"transform",zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
+      <div ref={_mbhRef} style={{position:"fixed",top:tabTop,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:700,willChange:"transform",zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:isMobileBracket?"7px 8px":"8px 13px"}}>
         <div style={{display:"flex",gap:8,marginBottom:8}}>
           <button onClick={()=>setBracketMode("simulation")} style={{flex:1,padding:"7px 8px",borderRadius:10,cursor:"pointer",background:bracketMode==="simulation"?`${C.green}22`:C.s1,border:`1px solid ${bracketMode==="simulation"?C.green:C.b1}`,color:bracketMode==="simulation"?C.green:C.mid,fontWeight:700,fontSize:12}}>🎮 Free Simulation</button>
           <button disabled title="Official mode will use live standings after the next integration step" style={{flex:1,padding:"7px 8px",borderRadius:10,cursor:"not-allowed",background:C.s1,border:`1px solid ${C.b1}`,color:C.dim,fontWeight:700,fontSize:12,opacity:0.65}}>🌐 Official Bracket · Soon</button>
         </div>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
-          <div style={{display:"flex",gap:8,flex:"1 1 auto",minWidth:0}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:6,minWidth:0}}>
+          <div style={{display:"flex",gap:6,flex:"1 1 auto",minWidth:0,overflowX:"auto",scrollbarWidth:"none",WebkitOverflowScrolling:"touch",paddingBottom:1}}>
             <Pill active={stage==="groups"} onClick={()=>setStage("groups")} color={C.green}>1 · Set Groups</Pill>
             <Pill active={stage==="thirds"} onClick={()=>setStage("thirds")} color={C.gold}>2 · Pick 3rds</Pill>
             <Pill active={stage==="bracket"} onClick={()=>setStage("bracket")} color={C.blue}>3 · Bracket</Pill>
           </div>
           {stage==="bracket" && result?.thirdGroupsKey && (
-            <div style={{flex:"0 0 auto",fontSize:9,color:result.fifaEngineStatus==="fifa-ready"?C.green:C.gold,fontWeight:900,letterSpacing:"0.04em",background:result.fifaEngineStatus==="fifa-ready"?`${C.green}18`:`${C.gold}18`,border:`1px solid ${result.fifaEngineStatus==="fifa-ready"?C.greenS:C.gold}55`,borderRadius:999,padding:"5px 8px",whiteSpace:"nowrap"}}>
-              {result.fifaEngineStatus==="fifa-ready"?"🏆 FIFA 2026 Bracket Generated":"⚠️ Fallback Bracket"}
+            <div style={{flex:"0 0 auto",fontSize:isMobileBracket?8:9,color:result.fifaEngineStatus==="fifa-ready"?C.green:C.gold,fontWeight:900,letterSpacing:"0.02em",background:result.fifaEngineStatus==="fifa-ready"?`${C.green}18`:`${C.gold}18`,border:`1px solid ${result.fifaEngineStatus==="fifa-ready"?C.greenS:C.gold}55`,borderRadius:999,padding:isMobileBracket?"5px 7px":"5px 8px",whiteSpace:"nowrap",maxWidth:isMobileBracket?86:240,overflow:"hidden",textOverflow:"ellipsis"}}>
+              {result.fifaEngineStatus==="fifa-ready"?(isMobileBracket?"🏆 Ready":"🏆 FIFA 2026 Bracket Generated"):(isMobileBracket?"⚠️ Fallback":"⚠️ Fallback Bracket")}
             </div>
           )}
         </div>
