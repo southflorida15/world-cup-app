@@ -901,11 +901,6 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="",
   const bc = getBroadcast(country);
   const isUS = country === "US" || !BROADCAST[country];
 
-  // Share card should mirror the in-app match modal. Resolve the same venue weather
-  // data here so /api/og receives the same facts the user sees in the modal.
-  const venueCityName = match ? VENUE_TO_CITY[match.venue] : null;
-  const venueCityData = venueCityName ? HOST_CITIES[venueCityName] : null;
-  const modalWx = useWeather(venueCityData?.lat, venueCityData?.lon, !!open && !!venueCityData);
 
   return (
     <div style={{marginBottom:8,background:C.s1,border:`1px solid ${live?C.green:isFav?`${C.gold}55`:C.b1}`,borderRadius:12,overflow:"hidden",opacity:finished?0.8:1}}>
