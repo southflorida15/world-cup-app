@@ -36,7 +36,7 @@ const MATCHES = [
   {id:5,  date:"Jun 13",time:"3PM ET",   home:"Qatar",         away:"Switzerland",    venue:"San Francisco Bay Area Stadium, San Francisco", group:"B",tv:"FS1 · Peacock · Telemundo"},
   {id:6,  date:"Jun 13",time:"6PM ET",   home:"Brazil",        away:"Morocco",        venue:"New York New Jersey Stadium, East Rutherford",  group:"C",tv:"FOX · Peacock · Telemundo"},
   {id:7,  date:"Jun 13",time:"9PM ET",   home:"Haiti",         away:"Scotland",       venue:"Boston Stadium, Boston",                        group:"C",tv:"FS1 · Peacock · Telemundo"},
-  {id:8,  date:"Jun 13",time:"11:59PM ET",home:"Australia",    away:"Turkiye",        venue:"BC Place, Vancouver",                          group:"D",tv:"FS1 · Peacock · Telemundo"},
+  {id:8,  date:"Jun 13",time:"12AM ET",home:"Australia",    away:"Turkiye",        venue:"BC Place, Vancouver",                          group:"D",tv:"FS1 · Peacock · Telemundo"},
   {id:9,  date:"Jun 14",time:"1PM ET",   home:"Germany",       away:"Curacao",        venue:"Houston Stadium, Houston",                     group:"E",tv:"FS1 · Peacock · Telemundo"},
   {id:10, date:"Jun 14",time:"4PM ET",   home:"Netherlands",   away:"Japan",          venue:"Dallas Stadium, Dallas",                       group:"F",tv:"FS1 · Peacock · Telemundo"},
   {id:11, date:"Jun 14",time:"7PM ET",   home:"Ivory Coast",   away:"Ecuador",        venue:"Philadelphia Stadium, Philadelphia",            group:"E",tv:"FS1 · Peacock · Telemundo"},
@@ -48,7 +48,7 @@ const MATCHES = [
   {id:17, date:"Jun 16",time:"3PM ET",   home:"France",        away:"Senegal",        venue:"New York New Jersey Stadium, East Rutherford",  group:"I",tv:"FOX · Peacock · Telemundo"},
   {id:18, date:"Jun 16",time:"6PM ET",   home:"Iraq",          away:"Norway",         venue:"Boston Stadium, Boston",                        group:"I",tv:"FS1 · Peacock · Telemundo"},
   {id:19, date:"Jun 16",time:"9PM ET",   home:"Argentina",     away:"Algeria",        venue:"Kansas City Stadium, Kansas City",              group:"J",tv:"FOX · Peacock · Telemundo"},
-  {id:20, date:"Jun 16",time:"11:59PM ET",home:"Austria",      away:"Jordan",         venue:"San Francisco Bay Area Stadium, San Francisco", group:"J",tv:"FS1 · Peacock · Telemundo"},
+  {id:20, date:"Jun 16",time:"12AM ET",home:"Austria",      away:"Jordan",         venue:"San Francisco Bay Area Stadium, San Francisco", group:"J",tv:"FS1 · Peacock · Telemundo"},
   {id:21, date:"Jun 17",time:"1PM ET",   home:"Portugal",      away:"DR Congo",       venue:"Houston Stadium, Houston",                     group:"K",tv:"FS1 · Peacock · Telemundo"},
   {id:22, date:"Jun 17",time:"4PM ET",   home:"England",       away:"Croatia",        venue:"Dallas Stadium, Dallas",                       group:"L",tv:"FOX · Peacock · Telemundo"},
   {id:23, date:"Jun 17",time:"7PM ET",   home:"Ghana",         away:"Panama",         venue:"Toronto Stadium, Toronto",                     group:"L",tv:"FS1 · Peacock · Telemundo"},
@@ -64,7 +64,7 @@ const MATCHES = [
   {id:33, date:"Jun 20",time:"1PM ET",   home:"Netherlands",   away:"Sweden",         venue:"Houston Stadium, Houston",                     group:"F",tv:"FOX · Peacock · Telemundo"},
   {id:34, date:"Jun 20",time:"4PM ET",   home:"Germany",       away:"Ivory Coast",    venue:"Toronto Stadium, Toronto",                     group:"E",tv:"FS1 · Peacock · Telemundo"},
   {id:35, date:"Jun 20",time:"8PM ET",   home:"Ecuador",       away:"Curacao",        venue:"Kansas City Stadium, Kansas City",              group:"E",tv:"FS1 · Peacock · Telemundo"},
-  {id:36, date:"Jun 20",time:"11:59PM ET",home:"Tunisia",      away:"Japan",          venue:"Estadio Monterrey, Guadalupe",                 group:"F",tv:"FS1 · Peacock · Telemundo"},
+  {id:36, date:"Jun 20",time:"12AM ET",home:"Tunisia",      away:"Japan",          venue:"Estadio Monterrey, Guadalupe",                 group:"F",tv:"FS1 · Peacock · Telemundo"},
   {id:37, date:"Jun 21",time:"12PM ET",  home:"Spain",         away:"Saudi Arabia",   venue:"Atlanta Stadium, Atlanta",                     group:"H",tv:"FOX · Peacock · Telemundo"},
   {id:38, date:"Jun 21",time:"3PM ET",   home:"Belgium",       away:"Iran",           venue:"SoFi Stadium, Los Angeles",                    group:"G",tv:"FS1 · Peacock · Telemundo"},
   {id:39, date:"Jun 21",time:"6PM ET",   home:"Uruguay",       away:"Cape Verde",     venue:"Miami Stadium, Miami",                         group:"H",tv:"FS1 · Peacock · Telemundo"},
@@ -4921,37 +4921,121 @@ function AskWorldCupTab({ tabTop=116 }) {
   const [loading, setLoading] = useState(false);
 
   const examples = [
+    "Next match",
+    "Next 5 matches",
+    "Next Brazil match",
+    "Next match involving Messi",
+    "Show matches at 12AM ET",
     "Show matches at 9PM ET",
     "Show matches in Miami",
-    "Brazil matches",
     "Group A matches",
+    "Brazil matches",
     "Final match",
-    "Matches on Jun 19",
     "Most yellow cards",
     "Brazil vs France history",
   ];
 
-  const norm = (v) => String(v || "").toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
+  const norm = (v) => String(v || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
   const fmtMatch = (m) => ({
     title: `${getFlag(m.home)} ${m.home} vs ${getFlag(m.away)} ${m.away}`,
-    meta: `${m.date} · ${m.time} · ${m.venue}${m.group ? ` · Group ${m.group}` : ""}`,
+    meta: `${m.date} · ${displayKickoffTime(m)} · ${m.venue}${m.group ? ` · Group ${m.group}` : ""}`,
     match: m,
   });
+
+  const displayKickoffTime = (m) => {
+    // Some midnight ET matches are intentionally grouped under the venue's previous-day schedule.
+    // Always display/search the real kickoff time to users.
+    const t = String(m?.time || "").trim();
+    if (/^(11:50|11:59)\s*PM\s*ET$/i.test(t)) return "12AM ET";
+    return t;
+  };
+
+  const timeKey = (value) => {
+    const text = norm(value).replace(/\s+/g, " ");
+    if (!text) return "";
+    if (text.includes("midnight")) return "00:00";
+    const m = text.match(/\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b/);
+    if (!m) return "";
+    let h = Number(m[1]);
+    let min = Number(m[2] || 0);
+    const ap = m[3];
+    // Historical display hack: questions about 11:50/11:59 PM should find true midnight games.
+    if (ap === "pm" && h === 11 && min >= 50) return "00:00";
+    if (ap === "am" && h === 12) h = 0;
+    else if (ap === "pm" && h < 12) h += 12;
+    return `${String(h).padStart(2,"0")}:${String(min).padStart(2,"0")}`;
+  };
+
+  const matchTimeKey = (m) => timeKey(displayKickoffTime(m));
+
+  const monthIndex = {jun:5,june:5,jul:6,july:6};
+  const matchDateObj = (m) => {
+    const dm = String(m.date || "").match(/^(Jun|Jul)\s+(\d{1,2})/i);
+    if (!dm) return new Date(9999,0,1);
+    const mon = monthIndex[dm[1].toLowerCase()];
+    const day = Number(dm[2]);
+    const [hh,mm] = (matchTimeKey(m) || "12:00").split(":").map(Number);
+    return new Date(2026, mon, day, hh || 0, mm || 0, 0);
+  };
+
+  const orderedMatches = () => [...MATCHES].sort((a,b)=> matchDateObj(a) - matchDateObj(b) || Number(a.id||0) - Number(b.id||0));
+  const upcomingMatches = () => {
+    const now = new Date();
+    const upcoming = orderedMatches().filter(m => matchDateObj(m) >= now);
+    return upcoming.length ? upcoming : orderedMatches();
+  };
+
+  const numberRequested = (text, fallback=5) => {
+    const m = text.match(/\bnext\s+(\d{1,2})\b/);
+    return Math.min(20, Math.max(1, Number(m?.[1] || fallback)));
+  };
+
+  const allTeams = () => Object.values(GROUPS).flatMap(g=>g.teams);
+  const findTeamInText = (text) => allTeams().find(t => text.includes(norm(t)) || norm(t).includes(text));
+  const findCityInText = (text) => {
+    const cityTerms = ["miami","dallas","houston","atlanta","seattle","philadelphia","boston","toronto","vancouver","mexico city","guadalajara","monterrey","los angeles","new york","new jersey","kansas city","san francisco"];
+    return cityTerms.find(c => text.includes(c));
+  };
+
+  const findPlayerInText = (text) => {
+    const players = Object.entries(TEAMS).flatMap(([team,info]) => (info.players || []).map(p => ({ team, name:p.name })));
+    return players.find(p => {
+      const pn = norm(p.name);
+      const parts = pn.split(" ").filter(x=>x.length>=4);
+      return text.includes(pn) || parts.some(part => text.includes(part));
+    });
+  };
 
   const answerLocal = (raw) => {
     const text = norm(raw);
     if (!text) return { title:"Ask anything about the World Cup", summary:"Try one of the popular questions below.", rows:[] };
 
-    // Time queries: "9pm", "9 pm", "21:00", etc.
-    const timeMatch = text.match(/(?:at |\b)(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\s*(?:et)?\b/);
-    if (timeMatch && (text.includes("match") || text.includes("game") || text.includes("show"))) {
-      let hour = Number(timeMatch[1]);
-      const mins = timeMatch[2] || "";
-      const ampm = timeMatch[3];
-      const targetA = `${hour}${mins ? `:${mins}` : ""}${ampm ? ampm.toUpperCase() : ""} ET`.replace(" ", "");
-      const targetB = `${hour}${mins ? `:${mins}` : ""} ${ampm ? ampm.toUpperCase() : ""} ET`;
-      const rows = MATCHES.filter(m => norm(m.time).replace(/\s/g, "").includes(norm(targetA).replace(/\s/g, "")) || norm(m.time).includes(norm(targetB))).map(fmtMatch);
-      return { title:`Matches at ${timeMatch[1]}${mins ? `:${mins}` : ""}${ampm ? ampm.toUpperCase() : ""} ET`, summary: rows.length ? `${rows.length} match${rows.length!==1?"es":""} found in the 2026 schedule.` : "No matches found for that time in the local schedule.", rows };
+    const player = findPlayerInText(text);
+    if (player && (text.includes("next") || text.includes("match") || text.includes("play") || text.includes("involving"))) {
+      const n = numberRequested(text, text.includes("matches") ? 5 : 1);
+      const rows = upcomingMatches().filter(m => m.home===player.team || m.away===player.team).slice(0,n).map(fmtMatch);
+      return { title:`${player.name} plays for ${getFlag(player.team)} ${player.team}`, summary: rows.length ? `Showing the next ${rows.length} ${player.team} match${rows.length!==1?"es":""}.` : `No scheduled ${player.team} matches found.`, rows };
+    }
+
+    const teamForNext = findTeamInText(text);
+    if (text.includes("next")) {
+      const n = numberRequested(text, text.includes("matches") ? 5 : 1);
+      let matches = upcomingMatches();
+      const city = findCityInText(text);
+      if (teamForNext) matches = matches.filter(m => m.home===teamForNext || m.away===teamForNext);
+      if (city) matches = matches.filter(m => norm(m.venue).includes(city));
+      const rows = matches.slice(0,n).map(fmtMatch);
+      const label = teamForNext ? `${getFlag(teamForNext)} ${teamForNext}` : city ? city.replace(/\b\w/g, c=>c.toUpperCase()) : "tournament";
+      return { title: teamForNext ? `Next ${teamForNext} match${n>1?"es":""}` : city ? `Next match${n>1?"es":""} in ${label}` : `Next ${n} World Cup match${n!==1?"es":""}`, summary: rows.length ? `${rows.length} upcoming match${rows.length!==1?"es":""} found.` : "No upcoming matches found.", rows };
+    }
+
+    // Time queries: "9pm", "9 pm", "21:00", "midnight", "12AM", and legacy 11:50/11:59 PM labels.
+    const hasTimeIntent = text.includes("match") || text.includes("game") || text.includes("show") || text.includes("at ") || text.includes("midnight");
+    const targetTime = (text.includes("midnight") || /\b\d{1,2}(:\d{2})?\s*(am|pm)\b/.test(text)) ? timeKey(text) : "";
+    if (targetTime && hasTimeIntent) {
+      const rows = MATCHES.filter(m => matchTimeKey(m) === targetTime).map(fmtMatch);
+      const label = targetTime === "00:00" ? "12AM ET" : `${Number(targetTime.split(":")[0]) > 12 ? Number(targetTime.split(":")[0])-12 : Number(targetTime.split(":")[0]) || 12}${targetTime.endsWith(":00") ? "" : `:${targetTime.split(":")[1]}`}${Number(targetTime.split(":")[0]) >= 12 ? "PM" : "AM"} ET`;
+      return { title:`Matches at ${label}`, summary: rows.length ? `${rows.length} match${rows.length!==1?"es":""} found in the 2026 schedule.` : "No matches found for that time in the local schedule.", rows };
     }
 
     // Date queries like Jun 19.
@@ -4972,15 +5056,14 @@ function AskWorldCupTab({ tabTop=116 }) {
     }
 
     // Venue / city queries.
-    const cityTerms = ["miami","dallas","houston","atlanta","seattle","philadelphia","boston","toronto","vancouver","mexico city","guadalajara","monterrey","los angeles","new york","new jersey","kansas city","san francisco"];
-    const city = cityTerms.find(c => text.includes(c));
+    const city = findCityInText(text);
     if (city) {
       const rows = MATCHES.filter(m => norm(m.venue).includes(city)).map(fmtMatch);
       return { title:`Matches in ${city.replace(/\b\w/g, c=>c.toUpperCase())}`, summary: rows.length ? `${rows.length} match${rows.length!==1?"es":""} found.` : "No matches found for that city/venue.", rows };
     }
 
     // Team queries.
-    const team = Object.values(GROUPS).flatMap(g=>g.teams).find(t => text.includes(norm(t)) || norm(t).includes(text));
+    const team = findTeamInText(text);
     if (team) {
       const rows = MATCHES.filter(m => m.home===team || m.away===team).map(fmtMatch);
       return { title:`${getFlag(team)} ${team} matches`, summary: rows.length ? `${rows.length} scheduled match${rows.length!==1?"es":""} found.` : "No scheduled matches found.", rows };
@@ -5002,7 +5085,7 @@ function AskWorldCupTab({ tabTop=116 }) {
       return { title:"Historical World Cup search", summary:"Historical match search is planned through the Zafronix data layer. Try schedule questions for 2026 now, like matches at 9PM ET, matches in Miami, or Brazil matches.", rows:[] };
     }
 
-    return { title:"I can answer schedule questions now", summary:"Try asking about teams, groups, dates, kickoff times, cities, or venues. Historical/player-event queries are on the roadmap.", rows:[] };
+    return { title:"I can answer schedule questions now", summary:"Try asking about teams, groups, dates, kickoff times, cities, players, or venues. Historical/player-event queries are on the roadmap.", rows:[] };
   };
 
   const runAsk = async (raw=q) => {
