@@ -2476,7 +2476,48 @@ function BracketMatchup({ match, t1, t2, winner, onPick, interactive=false, comp
   );
 }
 
-function VisualBracketTree({ bracket, pickMode="auto", onPick=()=>{} }) {
+function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick=()=>{}, completedCount=0 }) {
+  return (
+    <div style={{width:"100%",maxWidth:"100%",overflow:"hidden"}}>
+      <div style={{marginBottom:10,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>
+        <div>
+          <div style={{fontSize:10,color:C.gold,fontWeight:900,letterSpacing:"0.14em"}}>TOURNAMENT TREE</div>
+          <div style={{fontSize:12,color:C.mid,marginTop:3}}>Swipe horizontally to follow the bracket path.</div>
+        </div>
+        <div style={{fontSize:10,color:C.dim,background:C.s2,border:`1px solid ${C.b1}`,borderRadius:999,padding:"4px 8px",whiteSpace:"nowrap"}}>{completedCount}/31 picked</div>
+      </div>
+      <div style={{width:"100%",overflowX:"auto",overflowY:"hidden",WebkitOverflowScrolling:"touch",padding:"2px 2px 12px"}}>
+        <div style={{display:"flex",alignItems:"stretch",gap:14,minWidth:980,width:"max-content",padding:"0 4px"}}>
+          {rounds.map((round) => {
+            const matches = round.ids.map(id => matchesById[id] || {match:id,home:null,away:null,winner:null});
+            const gap = round.key==="r32"?7:round.key==="r16"?14:round.key==="qf"?32:round.key==="sf"?70:10;
+            return (
+              <div key={round.key} style={{width:round.key==="final"?180:190,display:"flex",flexDirection:"column",gap,justifyContent:"center",position:"relative"}}>
+                <div style={{position:"sticky",top:0,zIndex:1,textAlign:"center",fontSize:10,fontWeight:900,color:round.key==="final"?C.gold:C.green,letterSpacing:"0.12em",padding:"4px 0",background:C.bg}}>{round.short}</div>
+                {matches.map(m => (
+                  <div key={m.match} style={{position:"relative"}}>
+                    <BracketMatchup match={m.match} t1={m.home} t2={m.away} winner={m.winner} interactive={pickMode==="manual"} onPick={(team)=>onPick(m,team)} compact/>
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      <div style={{marginTop:8,background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${bracket?.champion?C.greenS:C.b1}`,borderRadius:14,padding:12,textAlign:"center"}}>
+        {bracket?.champion ? (
+          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
+            <span style={{fontSize:22}}>🏆</span><Crest team={bracket.champion} size={28}/><span style={{fontSize:16,fontWeight:900,color:C.green}}>{bracket.champion}</span>
+          </div>
+        ) : (
+          <div style={{fontSize:12,color:C.mid}}>Champion will appear after the Final pick.</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function VisualBracketTree({ bracket, pickMode="auto", onPick=()=>{}, view="compact" }) {
   const byId = (matches=[]) => Object.fromEntries((matches||[]).map(m => [Number(m.match), m]));
   const matchesById = {
     ...byId(bracket?.r32),
@@ -2496,6 +2537,10 @@ function VisualBracketTree({ bracket, pickMode="auto", onPick=()=>{} }) {
 
   const finalMatch = matchesById[104] || (bracket?.final || [])[0] || {match:104,home:null,away:null,winner:null};
   const completedCount = Object.values(matchesById).filter(m => m?.winner).length;
+
+  if (view === "tree") {
+    return <WideBracketView rounds={rounds} matchesById={matchesById} bracket={bracket} pickMode={pickMode} onPick={onPick} completedCount={completedCount}/>;
+  }
 
   return (
     <div style={{width:"100%",maxWidth:"100%",overflow:"hidden"}}>
@@ -2585,6 +2630,7 @@ function MyBracketTab({ tabTop=116 }) {
   const [stage,setStage]=useState(()=>savedBracket.stage || (savedBracket.result ? "bracket" : "groups"));
   const [bracketMode,setBracketMode]=useState(()=>savedBracket.bracketMode || "simulation");
   const [playMode,setPlayMode]=useState(()=>savedBracket.playMode || "manual");
+  const [bracketView,setBracketView]=useState(()=>savedBracket.bracketView || "compact");
   const [manualPicks,setManualPicks]=useState(()=>savedBracket.manualPicks || {});
   const [groups,setGroups]=useState(()=>savedBracket.groups || defaultBracketGroups());
   const [thirds,setThirds]=useState(()=>savedBracket.thirds || []);
@@ -2616,12 +2662,13 @@ function MyBracketTab({ tabTop=116 }) {
       stage,
       bracketMode,
       playMode,
+      bracketView,
       manualPicks,
       groups,
       thirds,
       result
     });
-  }, [stage, bracketMode, playMode, manualPicks, groups, thirds, result]);
+  }, [stage, bracketMode, playMode, bracketView, manualPicks, groups, thirds, result]);
 
   const resetMyBracket=()=>{
     clearSavedMyBracket();
@@ -2745,6 +2792,11 @@ function MyBracketTab({ tabTop=116 }) {
           <button onClick={()=>setBracketMode("simulation")} style={{flex:1,padding:"7px 8px",borderRadius:10,cursor:"pointer",background:bracketMode==="simulation"?`${C.green}22`:C.s1,border:`1px solid ${bracketMode==="simulation"?C.green:C.b1}`,color:bracketMode==="simulation"?C.green:C.mid,fontWeight:700,fontSize:12}}>🎮 Free Simulation</button>
           <button disabled title="Official mode will use live standings after the next integration step" style={{flex:1,padding:"7px 8px",borderRadius:10,cursor:"not-allowed",background:C.s1,border:`1px solid ${C.b1}`,color:C.dim,fontWeight:700,fontSize:12,opacity:0.65}}>🌐 Official Bracket · Soon</button>
         </div>
+        {stage==="bracket" && result?.thirdGroupsKey && (
+          <div style={{fontSize:10,color:result.fifaEngineStatus==="fifa-ready"?C.green:C.gold,fontWeight:800,margin:"-2px 0 7px",padding:"0 2px",textAlign:"center"}}>
+            {result.fifaEngineStatus==="fifa-ready"?"🏆 FIFA 2026 Bracket Generated":"⚠️ Fallback bracket generated"}
+          </div>
+        )}
         <div style={{display:"flex",gap:8}}>
           <Pill active={stage==="groups"} onClick={()=>setStage("groups")} color={C.green}>1 · Set Groups</Pill>
           <Pill active={stage==="thirds"} onClick={()=>setStage("thirds")} color={C.gold}>2 · Pick 3rds</Pill>
@@ -2809,17 +2861,14 @@ function MyBracketTab({ tabTop=116 }) {
             <button onClick={()=>{setPlayMode("manual");setManualPicks({});}} disabled={result.fifaEngineStatus!=="fifa-ready"} style={{padding:"7px 12px",borderRadius:10,background:playMode==="manual"?`${C.blue}22`:C.s1,border:`1px solid ${playMode==="manual"?C.blue:C.b1}`,color:playMode==="manual"?C.blue:C.mid,fontSize:12,fontWeight:700,cursor:result.fifaEngineStatus==="fifa-ready"?"pointer":"not-allowed",opacity:result.fifaEngineStatus==="fifa-ready"?1:0.55}}>👆 Manual Picks</button>
             <button disabled title="Prediction-based simulation will come later" style={{padding:"7px 12px",borderRadius:10,background:C.s1,border:`1px solid ${C.b1}`,color:C.dim,fontSize:12,fontWeight:700,cursor:"not-allowed",opacity:0.65}}>🔮 Prediction Sim · Soon</button>
           </div>
-          {result.thirdGroupsKey && <div style={{background:result.fifaEngineStatus==="fifa-ready"?`${C.green}14`:`${C.gold}14`,border:`1px solid ${result.fifaEngineStatus==="fifa-ready"?C.greenS:`${C.gold}55`}`,borderRadius:12,padding:"9px 11px",marginBottom:12}}>
-            <div style={{fontSize:11,fontWeight:800,color:result.fifaEngineStatus==="fifa-ready"?C.green:C.gold,marginBottom:3}}>{result.fifaEngineStatus==="fifa-ready"?"🏆 FIFA 2026 Bracket Generated":"⚠️ Bracket generated with fallback logic"}</div>
-            <div style={{fontSize:11,color:C.mid,lineHeight:1.45}}>{result.fifaEngineStatus==="fifa-ready"?"Select winners to build your path to the Final.":"Official FIFA bracket rules could not be applied for this selection."}</div>
-          </div>}
-          <div style={{background:`linear-gradient(135deg,${C.green}22,${C.gold}18)`,border:`1px solid ${C.greenS}`,borderRadius:14,padding:16,marginBottom:16,textAlign:"center"}}>
-            <div style={{fontSize:11,color:C.dim,letterSpacing:"0.15em",fontWeight:700,marginBottom:8}}>🏆 YOUR CHAMPION</div>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:12,marginBottom:6}}>{displayedResult?.champion ? <><Crest team={displayedResult.champion} size={52}/><span style={{fontWeight:900,fontSize:28,color:C.green}}>{displayedResult.champion}</span></> : <span style={{fontWeight:900,fontSize:22,color:C.gold}}>Pick the Final winner</span>}</div>
-            <div style={{fontSize:13,color:C.mid}}>{displayedResult?.runnerUp ? <>Runner-up: {getFlag(displayedResult.runnerUp)} {displayedResult.runnerUp}</> : playMode==="manual" ? "Manual bracket in progress" : "Runner-up TBD"}</div>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:10,flexWrap:"wrap"}}>
+            <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Interactive Bracket Path</div>
+            <div style={{display:"flex",gap:6,background:C.s1,border:`1px solid ${C.b1}`,borderRadius:999,padding:3}}>
+              <button onClick={()=>setBracketView("compact")} style={{border:"none",borderRadius:999,padding:"5px 9px",fontSize:10,fontWeight:800,cursor:"pointer",background:bracketView==="compact"?`${C.green}22`:"transparent",color:bracketView==="compact"?C.green:C.mid}}>📱 Compact</button>
+              <button onClick={()=>setBracketView("tree")} style={{border:"none",borderRadius:999,padding:"5px 9px",fontSize:10,fontWeight:800,cursor:"pointer",background:bracketView==="tree"?`${C.gold}22`:"transparent",color:bracketView==="tree"?C.gold:C.mid}}>🌳 Tree</button>
+            </div>
           </div>
-          <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10}}>Interactive Bracket Path</div>
-          <VisualBracketTree bracket={displayedResult} pickMode={playMode} onPick={handleManualPick}/>
+          <VisualBracketTree bracket={displayedResult} pickMode={playMode} onPick={handleManualPick} view={bracketView}/>
         </div>
       )}
     </div>
@@ -4728,13 +4777,13 @@ const TABS = [
   {id:"schedule",  icon:"📋", label:"Schedule"},
   {id:"groups",    icon:"🗂️", label:"Groups"},
   {id:"scorers",   icon:"⚽", label:"Scorers"},
+  {id:"bracket",   icon:"🏆", label:"My Bracket"},
   {id:"stats",     icon:"📊", label:"Stats"},
   {id:"h2h",       icon:"⚔️", label:"H2H"},
   {id:"news",      icon:"📰", label:"WC News"},
   {id:"predict",   icon:"🎯", label:"Odds"},
   {id:"predictor", icon:"🔮", label:"Predictor"},
   {id:"sim",       icon:"🎮", label:"Simulator"},
-  {id:"bracket",   icon:"🏆", label:"My Bracket"},
 ];
 
 // ── PWA INSTALL BANNER ────────────────────────────────────────────────────
