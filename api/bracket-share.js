@@ -8,12 +8,34 @@ const kv = new Redis({
 const APP_URL = process.env.APP_URL || "https://world-cup-app-iota.vercel.app";
 const TTL_SECONDS = 60 * 60 * 24 * 180;
 
+const FLAG = {
+  Spain:"🇪🇸", France:"🇫🇷", England:"🏴", Brazil:"🇧🇷", Argentina:"🇦🇷", Germany:"🇩🇪", Portugal:"🇵🇹", Netherlands:"🇳🇱",
+  Belgium:"🇧🇪", Uruguay:"🇺🇾", Colombia:"🇨🇴", Mexico:"🇲🇽", Morocco:"🇲🇦", "United States":"🇺🇸", USA:"🇺🇸", Croatia:"🇭🇷",
+  Japan:"🇯🇵", Senegal:"🇸🇳", Switzerland:"🇨🇭", Sweden:"🇸🇪", "South Korea":"🇰🇷", Ecuador:"🇪🇨", Norway:"🇳🇴", Australia:"🇦🇺",
+  Austria:"🇦🇹", Czechia:"🇨🇿", "Bosnia & Herz.":"🇧🇦", "Bosnia and Herzegovina":"🇧🇦", "Ivory Coast":"🇨🇮", Paraguay:"🇵🇾", Ghana:"🇬🇭",
+  Algeria:"🇩🇿", Iran:"🇮🇷", "DR Congo":"🇨🇩", Uzbekistan:"🇺🇿", "New Zealand":"🇳🇿", Jordan:"🇯🇴", Iraq:"🇮🇶", Panama:"🇵🇦",
+  Curacao:"🇨🇼", Curaçao:"🇨🇼", Haiti:"🇭🇹", "South Africa":"🇿🇦", "Cape Verde":"🇨🇻", Qatar:"🇶🇦", Tunisia:"🇹🇳", Turkiye:"🇹🇷",
+  Turkey:"🇹🇷", Egypt:"🇪🇬", Scotland:"🏴", "Saudi Arabia":"🇸🇦", Canada:"🇨🇦", Poland:"🇵🇱", Denmark:"🇩🇰", Serbia:"🇷🇸",
+  Nigeria:"🇳🇬", Cameroon:"🇨🇲", Mali:"🇲🇱", Jamaica:"🇯🇲", Honduras:"🇭🇳", Bolivia:"🇧🇴", Chile:"🇨🇱", Peru:"🇵🇪",
+  Romania:"🇷🇴", Yugoslavia:"🇷🇸", Belgium:"🇧🇪", France:"🇫🇷"
+};
+
 function esc(v = "") {
   return String(v)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+function teamFlag(team = "") {
+  return FLAG[team] || "🏳️";
+}
+
+function teamLabel(team = "", max = 22) {
+  const s = String(team || "TBD");
+  const clipped = s.length > max ? s.slice(0, max - 1) + "…" : s;
+  return `${teamFlag(s)} ${clipped}`;
 }
 
 function fit(text = "", max = 28) {
@@ -31,6 +53,15 @@ function originFromReq(req) {
   return host ? `${proto}://${host}` : APP_URL;
 }
 
+function normalizeMatch(m = {}) {
+  return {
+    match: Number(m.match || m.id || 0),
+    home: String(m.home || "TBD"),
+    away: String(m.away || "TBD"),
+    winner: String(m.winner || ""),
+  };
+}
+
 function normalizeSnapshot(raw = {}) {
   const rounds = raw.rounds || {};
   return {
@@ -43,53 +74,85 @@ function normalizeSnapshot(raw = {}) {
     thirdGroupsKey: String(raw.thirdGroupsKey || "").slice(0, 12),
     createdAt: Number(raw.createdAt || Date.now()),
     rounds: {
-      r32: Array.isArray(rounds.r32) ? rounds.r32.slice(0, 16) : [],
-      r16: Array.isArray(rounds.r16) ? rounds.r16.slice(0, 8) : [],
-      qf: Array.isArray(rounds.qf) ? rounds.qf.slice(0, 4) : [],
-      sf: Array.isArray(rounds.sf) ? rounds.sf.slice(0, 2) : [],
-      final: Array.isArray(rounds.final) ? rounds.final.slice(0, 1) : [],
+      r32: Array.isArray(rounds.r32) ? rounds.r32.slice(0, 16).map(normalizeMatch) : [],
+      r16: Array.isArray(rounds.r16) ? rounds.r16.slice(0, 8).map(normalizeMatch) : [],
+      qf: Array.isArray(rounds.qf) ? rounds.qf.slice(0, 4).map(normalizeMatch) : [],
+      sf: Array.isArray(rounds.sf) ? rounds.sf.slice(0, 2).map(normalizeMatch) : [],
+      final: Array.isArray(rounds.final) ? rounds.final.slice(0, 1).map(normalizeMatch) : [],
     }
   };
 }
 
+function roundMatches(snapshot, key) {
+  return (snapshot.rounds?.[key] || []).filter(Boolean);
+}
+
+function renderSvgMatch(m, x, y, w = 164, h = 38) {
+  const winner = m.winner || "";
+  const homeWin = winner && winner === m.home;
+  const awayWin = winner && winner === m.away;
+  const top = `${teamFlag(m.home)} ${fit(m.home || "TBD", 15)}`;
+  const bot = `${teamFlag(m.away)} ${fit(m.away || "TBD", 15)}`;
+  return `<g>
+    <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="8" fill="#06140c" stroke="#3d6a4d" stroke-width="1"/>
+    <text x="${x+8}" y="${y+12}" fill="#94a3b8" font-family="Arial,sans-serif" font-size="8" font-weight="900">M${m.match || ""}</text>
+    <text x="${x+8}" y="${y+25}" fill="${homeWin ? "#4ade80" : "#d4ead9"}" font-family="Arial,sans-serif" font-size="11" font-weight="${homeWin ? 900 : 700}">${esc(top)}${homeWin ? " ✓" : ""}</text>
+    <text x="${x+8}" y="${y+36}" fill="${awayWin ? "#4ade80" : "#d4ead9"}" font-family="Arial,sans-serif" font-size="11" font-weight="${awayWin ? 900 : 700}">${esc(bot)}${awayWin ? " ✓" : ""}</text>
+  </g>`;
+}
+
 function renderCardSvg(snapshot = {}) {
-  const title = fit(snapshot.title || "World Cup 2026 Bracket", 42);
-  const champion = fit(snapshot.champion || "TBD", 24);
-  const runnerUp = fit(snapshot.runnerUp || "TBD", 24);
-  const semis = (snapshot.semifinalists || []).slice(0, 4).map(t => fit(t, 18));
-  const semiText = semis.length ? semis.join(" · ") : "TBD";
+  const title = fit(snapshot.title || "World Cup 2026 Bracket", 38);
+  const champion = fit(snapshot.champion || "In progress", 24);
+  const r32 = roundMatches(snapshot, "r32");
+  const r16 = roundMatches(snapshot, "r16");
+  const qf = roundMatches(snapshot, "qf");
+  const sf = roundMatches(snapshot, "sf");
+  const final = roundMatches(snapshot, "final");
+  const leftR32 = r32.slice(0, 8), rightR32 = r32.slice(8, 16);
+  const leftR16 = r16.slice(0, 4), rightR16 = r16.slice(4, 8);
+  const leftQf = qf.slice(0, 2), rightQf = qf.slice(2, 4);
+  const leftSf = sf.slice(0, 1), rightSf = sf.slice(1, 2);
+  const spacing = (count, start, gap) => Array.from({length: count}, (_, i) => start + i * gap);
+  const parts = [];
+  spacing(leftR32.length, 78, 50).forEach((y,i)=>parts.push(renderSvgMatch(leftR32[i], 34, y, 154, 38)));
+  spacing(leftR16.length, 103, 100).forEach((y,i)=>parts.push(renderSvgMatch(leftR16[i], 218, y, 154, 38)));
+  spacing(leftQf.length, 153, 200).forEach((y,i)=>parts.push(renderSvgMatch(leftQf[i], 402, y, 154, 38)));
+  spacing(leftSf.length, 253, 200).forEach((y,i)=>parts.push(renderSvgMatch(leftSf[i], 586, y, 154, 38)));
+  spacing(rightSf.length, 253, 200).forEach((y,i)=>parts.push(renderSvgMatch(rightSf[i], 460, y+72, 154, 38)));
+  spacing(rightQf.length, 153, 200).forEach((y,i)=>parts.push(renderSvgMatch(rightQf[i], 644, y, 154, 38)));
+  spacing(rightR16.length, 103, 100).forEach((y,i)=>parts.push(renderSvgMatch(rightR16[i], 828, y, 154, 38)));
+  spacing(rightR32.length, 78, 50).forEach((y,i)=>parts.push(renderSvgMatch(rightR32[i], 1012, y, 154, 38)));
+  if (final[0]) parts.push(renderSvgMatch(final[0], 523, 410, 154, 38));
+
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0b3b20"/><stop offset="0.45" stop-color="#030a05"/><stop offset="1" stop-color="#010302"/></linearGradient>
-    <radialGradient id="gold" cx="78%" cy="18%" r="55%"><stop offset="0" stop-color="#facc15" stop-opacity="0.25"/><stop offset="1" stop-color="#facc15" stop-opacity="0"/></radialGradient>
-    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="22" stdDeviation="24" flood-color="#000" flood-opacity="0.5"/></filter>
-  </defs>
-  <rect width="1200" height="630" fill="url(#bg)"/>
-  <rect width="1200" height="630" fill="url(#gold)"/>
-  <rect x="54" y="48" width="1092" height="534" rx="34" fill="#06140c" fill-opacity="0.88" stroke="#4ade80" stroke-opacity="0.38" stroke-width="2" filter="url(#shadow)"/>
-  <text x="92" y="102" fill="#facc15" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="900" letter-spacing="5">WORLD CUP 2026 PREDICTOR</text>
-  <text x="92" y="166" fill="#ffffff" font-family="Inter, Arial, sans-serif" font-size="54" font-weight="900">${esc(title)}</text>
-  <rect x="92" y="214" width="1016" height="178" rx="28" fill="#4ade80" fill-opacity="0.12" stroke="#4ade80" stroke-opacity="0.42"/>
-  <text x="128" y="327" font-size="88">🏆</text>
-  <text x="236" y="274" fill="#94a3b8" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="900" letter-spacing="3">CHAMPION</text>
-  <text x="236" y="346" fill="#4ade80" font-family="Inter, Arial, sans-serif" font-size="72" font-weight="900">${esc(champion)}</text>
-  <rect x="92" y="424" width="482" height="98" rx="22" fill="#030a05" fill-opacity="0.78" stroke="#3d6a4d"/>
-  <text x="124" y="464" fill="#94a3b8" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="900" letter-spacing="3">RUNNER-UP</text>
-  <text x="124" y="504" fill="#d4ead9" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="800">${esc(runnerUp)}</text>
-  <rect x="626" y="424" width="482" height="98" rx="22" fill="#030a05" fill-opacity="0.78" stroke="#3d6a4d"/>
-  <text x="658" y="464" fill="#94a3b8" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="900" letter-spacing="3">SEMIFINALISTS</text>
-  <text x="658" y="504" fill="#facc15" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="800">${esc(semiText)}</text>
-  <text x="92" y="560" fill="#3d6a4d" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="800">Built with World Cup 2026 Predictor</text>
-  <text x="1108" y="560" text-anchor="end" fill="#4ade80" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="900">Create yours →</text>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0b3b20"/><stop offset="0.45" stop-color="#030a05"/><stop offset="1" stop-color="#010302"/></linearGradient><radialGradient id="gold" cx="50%" cy="15%" r="70%"><stop offset="0" stop-color="#facc15" stop-opacity="0.22"/><stop offset="1" stop-color="#facc15" stop-opacity="0"/></radialGradient></defs>
+  <rect width="1200" height="630" fill="url(#bg)"/><rect width="1200" height="630" fill="url(#gold)"/>
+  <text x="600" y="38" text-anchor="middle" fill="#facc15" font-family="Arial,sans-serif" font-size="22" font-weight="900" letter-spacing="4">WORLD CUP 2026 PREDICTOR</text>
+  <text x="600" y="66" text-anchor="middle" fill="#ffffff" font-family="Arial,sans-serif" font-size="30" font-weight="900">${esc(title)}</text>
+  ${parts.join("\n")}
+  <rect x="390" y="488" width="420" height="82" rx="22" fill="#4ade80" fill-opacity="0.13" stroke="#4ade80" stroke-opacity="0.45"/>
+  <text x="600" y="518" text-anchor="middle" fill="#94a3b8" font-family="Arial,sans-serif" font-size="14" font-weight="900" letter-spacing="3">CHAMPION</text>
+  <text x="600" y="555" text-anchor="middle" fill="#4ade80" font-family="Arial,sans-serif" font-size="34" font-weight="900">🏆 ${esc(teamLabel(champion, 25))}</text>
+  <text x="600" y="600" text-anchor="middle" fill="#3d6a4d" font-family="Arial,sans-serif" font-size="16" font-weight="800">Create your bracket at World Cup 2026 Predictor</text>
 </svg>`;
+}
+
+function renderHtmlMatch(m = {}) {
+  const winner = m.winner || "";
+  const row = (team) => `<div class="team ${winner === team ? "win" : ""}"><span>${esc(teamLabel(team, 26))}</span>${winner === team ? `<b>✓</b>` : ""}</div>`;
+  return `<div class="match"><div class="mno">M${esc(m.match || "")}</div>${row(m.home || "TBD")}${row(m.away || "TBD")}</div>`;
+}
+
+function renderRound(title, matches) {
+  return `<section class="round"><h2>${esc(title)}</h2>${(matches || []).map(renderHtmlMatch).join("")}</section>`;
 }
 
 function renderHtml(snapshot, pageUrl, imageUrl) {
   const title = snapshot.title || "World Cup 2026 Bracket";
-  const desc = snapshot.champion
+  const desc = snapshot.champion && snapshot.champion !== "In progress"
     ? `Champion: ${snapshot.champion}${snapshot.runnerUp ? ` · Runner-up: ${snapshot.runnerUp}` : ""}`
-    : "World Cup 2026 bracket picks";
-  const semis = snapshot.semifinalists || [];
+    : "World Cup 2026 bracket picks in progress";
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -101,6 +164,7 @@ function renderHtml(snapshot, pageUrl, imageUrl) {
   <meta property="og:title" content="${esc(title)}" />
   <meta property="og:description" content="${esc(desc)}" />
   <meta property="og:image" content="${esc(imageUrl)}" />
+  <meta property="og:image:type" content="image/svg+xml" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
   <meta name="twitter:card" content="summary_large_image" />
@@ -109,21 +173,19 @@ function renderHtml(snapshot, pageUrl, imageUrl) {
   <meta name="twitter:image" content="${esc(imageUrl)}" />
   <style>
     :root{color-scheme:dark;background:#030a05;color:#d4ead9;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-    *{box-sizing:border-box} body{margin:0;min-height:100vh;display:grid;place-items:center;padding:20px;background:radial-gradient(circle at 20% 0%,#174f2e 0,#030a05 34%,#020604 100%)}
-    .card{width:min(100%,760px);border:1px solid rgba(74,222,128,.35);border-radius:28px;padding:28px;background:linear-gradient(135deg,rgba(8,27,16,.96),rgba(3,10,5,.98));box-shadow:0 30px 80px rgba(0,0,0,.55);overflow:hidden;position:relative}
-    .card:before{content:"";position:absolute;inset:-80px -60px auto auto;width:250px;height:250px;background:radial-gradient(circle,rgba(250,204,21,.18),transparent 65%);pointer-events:none}
-    .eyebrow{font-size:12px;letter-spacing:.18em;color:#facc15;font-weight:900;text-transform:uppercase}.title{font-size:clamp(28px,6vw,54px);line-height:.95;font-weight:1000;margin:12px 0;color:#fff}.subtitle{color:#94a3b8;font-size:15px;margin-bottom:22px}.hero{display:flex;gap:16px;align-items:center;border:1px solid rgba(74,222,128,.3);background:rgba(74,222,128,.1);border-radius:22px;padding:18px;margin:18px 0}.trophy{font-size:54px}.champion{font-size:clamp(30px,7vw,62px);font-weight:1000;color:#4ade80;line-height:1}.label{font-size:11px;letter-spacing:.14em;color:#94a3b8;font-weight:900;text-transform:uppercase;margin-bottom:4px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}.box{border:1px solid rgba(61,106,77,.8);background:rgba(6,20,12,.78);border-radius:18px;padding:14px}.team{font-size:17px;font-weight:800;color:#d4ead9}.semi{display:flex;gap:8px;flex-wrap:wrap}.pill{border:1px solid rgba(250,204,21,.35);background:rgba(250,204,21,.1);color:#facc15;border-radius:999px;padding:7px 10px;font-weight:800;font-size:13px}.footer{margin-top:22px;display:flex;justify-content:space-between;gap:12px;align-items:center;color:#3d6a4d;font-size:12px;font-weight:800}.cta{color:#4ade80;text-decoration:none}@media(max-width:560px){.grid{grid-template-columns:1fr}.hero{align-items:flex-start}.trophy{font-size:42px}}
+    *{box-sizing:border-box} body{margin:0;min-height:100vh;padding:18px;background:radial-gradient(circle at 20% 0%,#174f2e 0,#030a05 34%,#020604 100%)}
+    .wrap{max-width:1220px;margin:0 auto}.hero{border:1px solid rgba(74,222,128,.35);border-radius:24px;padding:20px;background:linear-gradient(135deg,rgba(8,27,16,.96),rgba(3,10,5,.98));box-shadow:0 26px 70px rgba(0,0,0,.5);margin-bottom:16px}.eyebrow{font-size:11px;letter-spacing:.18em;color:#facc15;font-weight:900;text-transform:uppercase}.title{font-size:clamp(28px,6vw,54px);line-height:.98;font-weight:1000;margin:10px 0;color:#fff}.subtitle{color:#94a3b8;font-size:15px}.champ{display:inline-flex;align-items:center;gap:10px;margin-top:14px;border:1px solid rgba(74,222,128,.3);background:rgba(74,222,128,.1);border-radius:999px;padding:10px 14px;font-weight:1000;color:#4ade80}.tree{display:flex;gap:12px;align-items:flex-start;overflow-x:auto;padding:10px 8px 22px;scrollbar-color:#3d6a4d transparent}.round{min-width:190px;display:flex;flex-direction:column;gap:8px}.round h2{font-size:11px;letter-spacing:.14em;color:#94a3b8;text-align:center;margin:0 0 2px;text-transform:uppercase}.match{border:1px solid rgba(61,106,77,.9);border-radius:12px;background:rgba(6,20,12,.86);padding:7px;box-shadow:0 8px 24px rgba(0,0,0,.24)}.mno{font-size:9px;color:#94a3b8;font-weight:900;margin-bottom:4px}.team{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:24px;border-radius:8px;padding:3px 5px;font-size:12px;font-weight:750;color:#d4ead9}.team.win{background:rgba(74,222,128,.16);color:#4ade80}.team b{font-size:11px;color:#4ade80}.footer{margin:18px 0 4px;display:flex;justify-content:space-between;gap:12px;align-items:center;color:#3d6a4d;font-size:12px;font-weight:800}.cta{color:#4ade80;text-decoration:none}@media(max-width:760px){body{padding:12px}.round{min-width:180px}.hero{padding:16px}.tree{padding-left:0}.footer{flex-direction:column;align-items:flex-start}}
   </style>
 </head>
 <body>
-  <main class="card">
-    <div class="eyebrow">World Cup 2026 Predictor</div>
-    <div class="title">${esc(title)}</div>
-    <div class="subtitle">${esc(desc)}</div>
-    <section class="hero"><div class="trophy">🏆</div><div><div class="label">Champion</div><div class="champion">${esc(snapshot.champion || "TBD")}</div></div></section>
-    <div class="grid">
-      <div class="box"><div class="label">Runner-up</div><div class="team">${esc(snapshot.runnerUp || "TBD")}</div></div>
-      <div class="box"><div class="label">Semifinalists</div><div class="semi">${semis.length ? semis.map(t=>`<span class="pill">${esc(t)}</span>`).join("") : `<span class="team">TBD</span>`}</div></div>
+  <main class="wrap">
+    <section class="hero"><div class="eyebrow">World Cup 2026 Predictor</div><div class="title">${esc(title)}</div><div class="subtitle">${esc(desc)}</div><div class="champ">🏆 ${esc(teamLabel(snapshot.champion || "In progress", 32))}</div></section>
+    <div class="tree" aria-label="World Cup bracket tree">
+      ${renderRound("Round of 32", roundMatches(snapshot, "r32"))}
+      ${renderRound("Round of 16", roundMatches(snapshot, "r16"))}
+      ${renderRound("Quarterfinals", roundMatches(snapshot, "qf"))}
+      ${renderRound("Semifinals", roundMatches(snapshot, "sf"))}
+      ${renderRound("Final", roundMatches(snapshot, "final"))}
     </div>
     <div class="footer"><span>Built with World Cup 2026 Predictor</span><a class="cta" href="${esc(APP_URL)}">Create your bracket →</a></div>
   </main>
@@ -142,7 +204,8 @@ export default async function handler(req, res) {
   if (req.method === "POST") {
     try {
       const snapshot = normalizeSnapshot(req.body || {});
-      if (!snapshot.champion) return res.status(400).json({ error: "completed bracket with champion required" });
+      const hasAnyRound = Object.values(snapshot.rounds || {}).some(arr => Array.isArray(arr) && arr.length);
+      if (!hasAnyRound) return res.status(400).json({ error: "bracket rounds required" });
       const id = shortId();
       await kv.set(`bracket-share:${id}`, snapshot, { ex: TTL_SECONDS });
       const origin = originFromReq(req);
@@ -159,14 +222,14 @@ export default async function handler(req, res) {
       if (!id) return res.status(400).send("Missing bracket id");
       const snapshot = await getSnapshot(id);
       if (!snapshot) return res.status(404).send("Bracket card not found or expired.");
-      if (req.query.action === "card") {
+      if (req.query.action === "card" || req.query.action === "image") {
         res.setHeader("Content-Type", "image/svg+xml; charset=utf-8");
         res.setHeader("Cache-Control", "public, s-maxage=86400, stale-while-revalidate=604800");
         return res.status(200).send(renderCardSvg(snapshot));
       }
       const origin = originFromReq(req);
       const pageUrl = `${origin}/api/bracket-share?id=${encodeURIComponent(id)}`;
-      const imageUrl = `${origin}/api/bracket-share?action=card&id=${encodeURIComponent(id)}`;
+      const imageUrl = `${origin}/api/bracket-share?action=card&id=${encodeURIComponent(id)}&v=tree2`;
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       res.setHeader("Cache-Control", "public, s-maxage=3600, stale-while-revalidate=86400");
       return res.status(200).send(renderHtml(snapshot, pageUrl, imageUrl));
