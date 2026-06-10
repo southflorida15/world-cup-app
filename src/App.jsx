@@ -1178,11 +1178,8 @@ function SchedTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=
         </div>
       </div>
 
-      {/* Content follows filter header in normal flow */}
-      <div style={{height: (filterHeight || 140) + 8}}/>
-
-
       {/* Match list */}
+
       {shown.length===0 ? <div style={{textAlign:"center",padding:"32px",color:C.dim}}>{"No matches found"}</div> : Object.entries(byDate).map(([date,ms],idx)=>(
         <div key={date} style={{marginBottom:14}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:5,marginTop:10}}>
@@ -3881,6 +3878,9 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
   const live = sc ? statusIsLive(sc.status) : false;
   const finished = sc ? statusIsFinished(sc.status) : false;
   const { localTime } = match ? matchTimes(match) : {};
+  const modalCity = match ? VENUE_TO_CITY[match.venue] : null;
+  const modalCityData = modalCity ? HOST_CITIES[modalCity] : null;
+  const modalWx = useWeather(modalCityData?.lat, modalCityData?.lon, !!modalCityData);
 
   // Polymarket odds
   const p1 = match ? PREDS.find(x=>x.team===match.home) : null;
@@ -3900,7 +3900,8 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
 
   if (!match) return null;
 
-  const shareMatch = () => {
+  const shareMatch = async () => {
+    try {
     const base = window.location.origin;
     const keyEvents = events && events.length > 0
       ? events.filter(ev=>ev.type==="Goal"||ev.type==="Card").slice(0,5)
@@ -3992,15 +3993,31 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
     };
 
     if (navigator.share) {
-      navigator.share({ title, text: shareText, url: finalUrl })
-        .catch(err => {
-          // Ignore intentional user cancel, but fallback for real share failures.
-          if (err && err.name === "AbortError") return;
-          console.warn("Native share failed, using fallback:", err);
-          copyOrOpen();
-        });
+      try {
+        await navigator.share({ title, text: shareText, url: finalUrl });
+      } catch (err) {
+        // Ignore intentional user cancel, but fallback for real share failures.
+        if (err && err.name === "AbortError") return;
+        console.warn("Native share failed, using fallback:", err);
+        await copyOrOpen();
+      }
     } else {
-      copyOrOpen();
+      await copyOrOpen();
+    }
+    } catch (err) {
+      console.error("Share match failed:", err);
+      try {
+        const fallback = window.location.origin + "/api/og?" + new URLSearchParams({
+          home: match?.home || "Home",
+          away: match?.away || "Away",
+          ...(match?.group ? {group: match.group} : {}),
+          ...(match?.date ? {date: match.date} : {}),
+          ...(localTime ? {time: localTime} : {}),
+        }).toString();
+        window.open(fallback, "_blank", "noopener,noreferrer");
+      } catch (_) {
+        alert("Unable to share this match right now.");
+      }
     }
   };
 
@@ -4177,7 +4194,7 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
                 <StarIcon filled={isSaved} size={15}/>{isSaved?"Saved":"Save Match"}
               </button>
             ); })()}
-            <button onClick={shareMatch} style={{flex:1,padding:"11px 0",borderRadius:12,background:`${C.blue}22`,border:`1px solid ${C.blue}44`,color:C.blue,fontWeight:700,fontSize:14,cursor:"pointer"}}>{"📤 Share"}</button>
+            <button onClick={(e)=>{e.stopPropagation(); shareMatch();}} style={{flex:1,padding:"11px 0",borderRadius:12,background:`${C.blue}22`,border:`1px solid ${C.blue}44`,color:C.blue,fontWeight:700,fontSize:14,cursor:"pointer"}}>{"📤 Share"}</button>
           </div>
 
         </div>
