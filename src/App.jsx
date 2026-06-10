@@ -2532,7 +2532,7 @@ function VisualBracketTree({ bracket, pickMode="auto", onPick=()=>{} }) {
 function MyBracketTab({ tabTop=116 }) {
   const [stage,setStage]=useState("groups");
   const [bracketMode,setBracketMode]=useState("simulation");
-  const [playMode,setPlayMode]=useState("auto");
+  const [playMode,setPlayMode]=useState("manual");
   const [manualPicks,setManualPicks]=useState({});
   const [groups,setGroups]=useState(defaultBracketGroups);
   const [thirds,setThirds]=useState([]);
@@ -2569,47 +2569,49 @@ function MyBracketTab({ tabTop=116 }) {
       console.log("Annex C group key:", thirdGroupsKey);
 
       let r32=[];
-      let fifaR32=null;
       let roundTemplates=null;
       let fifaEngineStatus="fifa-fallback";
       let fifaEngineMessage=annexStatus.state==="ready"
-        ? "FIFA engine attempted to run, but this combination could not be resolved. Using legacy fallback."
-        : `${annexStatus.message} Using legacy fallback for this simulation.`;
+        ? "Official FIFA bracket rules could not be resolved."
+        : "Official FIFA bracket rules are still loading.";
 
       try {
         const fifaBracket = buildFifa2026Bracket({ groups, qualifiedThirds });
-        fifaR32 = fifaBracket.r32;
-        r32 = fifaR32.flatMap(m => [m.home, m.away]);
+        r32 = fifaBracket.r32.map(m => ({...m, winner:null}));
+        roundTemplates = {
+          r16: fifaBracket.r16,
+          qf: fifaBracket.qf,
+          sf: fifaBracket.sf,
+          final: fifaBracket.final
+        };
         fifaEngineStatus="fifa-ready";
-        fifaEngineMessage="FIFA 2026 Round of 32 structure generated using Annex C.";
+        fifaEngineMessage="FIFA 2026 bracket generated.";
       } catch(e) {
         console.warn("FIFA bracket engine fallback:", e);
         const qualifiers=[];
         Object.entries(groups).forEach(([,teams])=>{
           qualifiers.push(teams[0],teams[1]);
         });
-        r32=[...qualifiers,...qualifiedThirds.map(x=>x.team)];
+        const teams=[...qualifiers,...qualifiedThirds.map(x=>x.team)];
+        r32=[];
+        for(let i=0;i<teams.length;i+=2){
+          r32.push({match:73+(i/2),home:teams[i],away:teams[i+1]||"TBD",winner:null});
+        }
       }
 
-      const ko=(arr)=>{
-        const n=[];
-        for(let i=0;i<arr.length;i+=2)n.push(simKO(arr[i],arr[i+1]));
-        return n;
-      };
-
-      const r16=ko(r32),qf=ko(r16),sf=ko(qf),champ=simKO(sf[0],sf[1]);
-
+      setManualPicks({});
+      setPlayMode("manual");
       setResult({
         mode:bracketMode,
         r32,
-        r16,
-        qf,
-        sf,
-        champion:champ,
-        runnerUp:sf.find(x=>x!==champ),
+        r16:[],
+        qf:[],
+        sf:[],
+        final:[],
+        champion:null,
+        runnerUp:null,
         qualifiedThirds,
         thirdGroupsKey,
-        fifaR32,
         roundTemplates,
         fifaEngineStatus,
         fifaEngineMessage,
@@ -2663,9 +2665,6 @@ function MyBracketTab({ tabTop=116 }) {
           <button onClick={()=>setBracketMode("simulation")} style={{flex:1,padding:"7px 8px",borderRadius:10,cursor:"pointer",background:bracketMode==="simulation"?`${C.green}22`:C.s1,border:`1px solid ${bracketMode==="simulation"?C.green:C.b1}`,color:bracketMode==="simulation"?C.green:C.mid,fontWeight:700,fontSize:12}}>🎮 Free Simulation</button>
           <button disabled title="Official mode will use live standings after the next integration step" style={{flex:1,padding:"7px 8px",borderRadius:10,cursor:"not-allowed",background:C.s1,border:`1px solid ${C.b1}`,color:C.dim,fontWeight:700,fontSize:12,opacity:0.65}}>🌐 Official Bracket · Soon</button>
         </div>
-        <div style={{fontSize:10,color:annexStatus.state==="ready"?C.green:annexStatus.state==="error"?C.red:C.gold,marginBottom:7,fontWeight:700}}>
-          {annexStatus.state==="ready"?"✅ Annex C ready":annexStatus.state==="error"?"⚠️ Annex C unavailable":"⏳ Loading Annex C"}
-        </div>
         <div style={{display:"flex",gap:8}}>
           <Pill active={stage==="groups"} onClick={()=>setStage("groups")} color={C.green}>1 · Set Groups</Pill>
           <Pill active={stage==="thirds"} onClick={()=>setStage("thirds")} color={C.gold}>2 · Pick 3rds</Pill>
@@ -2677,7 +2676,7 @@ function MyBracketTab({ tabTop=116 }) {
       {stage==="groups" && (
         <div>
           <div style={{fontSize:12,color:C.mid,marginBottom:14,lineHeight:1.6}}>
-            <strong style={{color:C.green}}>Free Simulation:</strong> press and drag <span style={{color:C.dim,fontSize:14}}>⠿</span> to reorder teams. Top 2 qualify automatically. Official Bracket mode will use live standings in the next integration step.
+            <strong style={{color:C.green}}>Free Simulation:</strong> press and drag <span style={{color:C.dim,fontSize:14}}>⠿</span> to reorder teams. Top 2 qualify automatically. Generate the bracket, then tap winners match by match.
           </div>
           {Object.entries(groups).map(([g,teams])=>(
             <Card key={g} style={{marginBottom:10}}>
@@ -2717,7 +2716,7 @@ function MyBracketTab({ tabTop=116 }) {
           {allThirds.map(({group,team})=>{const sel=thirds.includes(team);return(<div key={team} onClick={()=>toggleThird(team)} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:10,marginBottom:6,cursor:"pointer",background:sel?`${C.green}18`:C.s1,border:`1px solid ${sel?C.green:C.b1}`}}><div style={{width:20,height:20,borderRadius:6,border:`2px solid ${sel?C.green:C.dim}`,background:sel?C.green:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{sel&&<span style={{color:"#030a05",fontSize:12,fontWeight:900}}>✓</span>}</div><Crest team={team} size={24}/><div style={{flex:1}}><div style={{fontSize:13,fontWeight:600,color:sel?C.green:C.text}}>{team}</div><div style={{fontSize:10,color:C.dim}}>3rd place Group {group} · STR {gs(team)}</div></div></div>);})}
           <div style={{display:"flex",gap:8,marginTop:8}}>
             <button onClick={()=>setStage("groups")} style={{flex:1,padding:"11px 0",borderRadius:12,background:"transparent",border:`1px solid ${C.b2}`,color:C.mid,fontWeight:600,fontSize:14,cursor:"pointer"}}>← Back</button>
-            <button onClick={runBracket} disabled={thirds.length!==8||running} style={{flex:2,padding:"11px 0",borderRadius:12,background:thirds.length===8?`linear-gradient(135deg,${C.green},#22c55e)`:C.b2,border:"none",color:thirds.length===8?"#030a05":C.dim,fontWeight:700,fontSize:14,cursor:thirds.length===8?"pointer":"default",opacity:running?0.6:1}}>{running?"Simulating...":"🎲 Simulate My Bracket →"}</button>
+            <button onClick={runBracket} disabled={thirds.length!==8||running} style={{flex:2,padding:"11px 0",borderRadius:12,background:thirds.length===8?`linear-gradient(135deg,${C.green},#22c55e)`:C.b2,border:"none",color:thirds.length===8?"#030a05":C.dim,fontWeight:700,fontSize:14,cursor:thirds.length===8?"pointer":"default",opacity:running?0.6:1}}>{running?"Generating...":"🏆 Generate FIFA Bracket →"}</button>
           </div>
         </div>
       )}
@@ -2725,28 +2724,22 @@ function MyBracketTab({ tabTop=116 }) {
         <div>
           <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap"}}>
             <button onClick={()=>setStage("groups")} style={{padding:"7px 12px",borderRadius:10,background:"transparent",border:`1px solid ${C.b2}`,color:C.mid,fontSize:12,cursor:"pointer"}}>← Edit</button>
-            <button onClick={runBracket} style={{padding:"7px 12px",borderRadius:10,background:`${C.green}22`,border:`1px solid ${C.greenS}`,color:C.green,fontSize:12,fontWeight:600,cursor:"pointer"}}>↻ Re-simulate</button>
-            <button onClick={()=>{setPlayMode("auto");setManualPicks({});}} style={{padding:"7px 12px",borderRadius:10,background:playMode==="auto"?`${C.gold}22`:C.s1,border:`1px solid ${playMode==="auto"?C.gold:C.b1}`,color:playMode==="auto"?C.gold:C.mid,fontSize:12,fontWeight:700,cursor:"pointer"}}>🤖 Auto</button>
+            <button onClick={runBracket} style={{padding:"7px 12px",borderRadius:10,background:`${C.green}22`,border:`1px solid ${C.greenS}`,color:C.green,fontSize:12,fontWeight:600,cursor:"pointer"}}>↻ Regenerate</button>
             <button onClick={()=>{setPlayMode("manual");setManualPicks({});}} disabled={result.fifaEngineStatus!=="fifa-ready"} style={{padding:"7px 12px",borderRadius:10,background:playMode==="manual"?`${C.blue}22`:C.s1,border:`1px solid ${playMode==="manual"?C.blue:C.b1}`,color:playMode==="manual"?C.blue:C.mid,fontSize:12,fontWeight:700,cursor:result.fifaEngineStatus==="fifa-ready"?"pointer":"not-allowed",opacity:result.fifaEngineStatus==="fifa-ready"?1:0.55}}>👆 Manual Picks</button>
+            <button disabled title="Prediction-based simulation will come later" style={{padding:"7px 12px",borderRadius:10,background:C.s1,border:`1px solid ${C.b1}`,color:C.dim,fontSize:12,fontWeight:700,cursor:"not-allowed",opacity:0.65}}>🔮 Prediction Sim · Soon</button>
           </div>
           {playMode==="manual" && <div style={{fontSize:11,color:C.mid,lineHeight:1.45,marginBottom:12,background:C.s1,border:`1px solid ${C.b1}`,borderRadius:10,padding:"8px 10px"}}>Tap a team in each unlocked match. Winners advance automatically to the next round.</div>}
           {result.thirdGroupsKey && <div style={{background:result.fifaEngineStatus==="fifa-ready"?`${C.green}14`:`${C.gold}14`,border:`1px solid ${result.fifaEngineStatus==="fifa-ready"?C.greenS:`${C.gold}55`}`,borderRadius:12,padding:"9px 11px",marginBottom:12}}>
-            <div style={{fontSize:11,fontWeight:800,color:result.fifaEngineStatus==="fifa-ready"?C.green:C.gold,marginBottom:3}}>FIFA ENGINE · Annex C key {result.thirdGroupsKey}</div>
-            <div style={{fontSize:11,color:C.mid,lineHeight:1.45}}>{result.fifaEngineMessage}</div>
+            <div style={{fontSize:11,fontWeight:800,color:result.fifaEngineStatus==="fifa-ready"?C.green:C.gold,marginBottom:3}}>{result.fifaEngineStatus==="fifa-ready"?"🏆 FIFA 2026 Bracket Generated":"⚠️ Bracket generated with fallback logic"}</div>
+            <div style={{fontSize:11,color:C.mid,lineHeight:1.45}}>{result.fifaEngineStatus==="fifa-ready"?"Tap winners in each unlocked match to build your path to the Final.":"Official FIFA bracket rules could not be applied for this selection."}</div>
           </div>}
           <div style={{background:`linear-gradient(135deg,${C.green}22,${C.gold}18)`,border:`1px solid ${C.greenS}`,borderRadius:14,padding:16,marginBottom:16,textAlign:"center"}}>
-            <div style={{fontSize:11,color:C.dim,letterSpacing:"0.15em",fontWeight:700,marginBottom:8}}>🏆 YOUR SIMULATED CHAMPION</div>
+            <div style={{fontSize:11,color:C.dim,letterSpacing:"0.15em",fontWeight:700,marginBottom:8}}>🏆 YOUR CHAMPION</div>
             <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:12,marginBottom:6}}>{displayedResult?.champion ? <><Crest team={displayedResult.champion} size={52}/><span style={{fontWeight:900,fontSize:28,color:C.green}}>{displayedResult.champion}</span></> : <span style={{fontWeight:900,fontSize:22,color:C.gold}}>Pick the Final winner</span>}</div>
             <div style={{fontSize:13,color:C.mid}}>{displayedResult?.runnerUp ? <>Runner-up: {getFlag(displayedResult.runnerUp)} {displayedResult.runnerUp}</> : playMode==="manual" ? "Manual bracket in progress" : "Runner-up TBD"}</div>
           </div>
           <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10}}>Interactive Bracket Path</div>
           <VisualBracketTree bracket={displayedResult} pickMode={playMode} onPick={handleManualPick}/>
-          {[["SEMI-FINALS",displayedResult?.sf],["QUARTER-FINALS",displayedResult?.qf],["ROUND OF 16",displayedResult?.r16]].map(([label,teams])=>(
-            <div key={label} style={{marginTop:14}}>
-              <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:7}}>{label}</div>
-              <div style={{display:"flex",flexWrap:"wrap",gap:6}}>{(teams||[]).map(t=><div key={t} style={{display:"flex",alignItems:"center",gap:5,background:C.s2,border:`1px solid ${C.b1}`,borderRadius:8,padding:"4px 9px"}}><Crest team={t} size={16}/><span style={{fontSize:12,color:C.text}}>{t}</span></div>)}</div>
-            </div>
-          ))}
         </div>
       )}
     </div>
