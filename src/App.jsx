@@ -4913,6 +4913,149 @@ function Onboarding({ onDone }) {
   );
 }
 
+
+// ── ASK WORLD CUP TAB ─────────────────────────────────────────────────────
+function AskWorldCupTab({ tabTop=116 }) {
+  const [q, setQ] = useState("");
+  const [answer, setAnswer] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const examples = [
+    "Show matches at 9PM ET",
+    "Show matches in Miami",
+    "Brazil matches",
+    "Group A matches",
+    "Final match",
+    "Matches on Jun 19",
+    "Most yellow cards",
+    "Brazil vs France history",
+  ];
+
+  const norm = (v) => String(v || "").toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
+  const fmtMatch = (m) => ({
+    title: `${getFlag(m.home)} ${m.home} vs ${getFlag(m.away)} ${m.away}`,
+    meta: `${m.date} · ${m.time} · ${m.venue}${m.group ? ` · Group ${m.group}` : ""}`,
+    match: m,
+  });
+
+  const answerLocal = (raw) => {
+    const text = norm(raw);
+    if (!text) return { title:"Ask anything about the World Cup", summary:"Try one of the popular questions below.", rows:[] };
+
+    // Time queries: "9pm", "9 pm", "21:00", etc.
+    const timeMatch = text.match(/(?:at |\b)(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\s*(?:et)?\b/);
+    if (timeMatch && (text.includes("match") || text.includes("game") || text.includes("show"))) {
+      let hour = Number(timeMatch[1]);
+      const mins = timeMatch[2] || "";
+      const ampm = timeMatch[3];
+      const targetA = `${hour}${mins ? `:${mins}` : ""}${ampm ? ampm.toUpperCase() : ""} ET`.replace(" ", "");
+      const targetB = `${hour}${mins ? `:${mins}` : ""} ${ampm ? ampm.toUpperCase() : ""} ET`;
+      const rows = MATCHES.filter(m => norm(m.time).replace(/\s/g, "").includes(norm(targetA).replace(/\s/g, "")) || norm(m.time).includes(norm(targetB))).map(fmtMatch);
+      return { title:`Matches at ${timeMatch[1]}${mins ? `:${mins}` : ""}${ampm ? ampm.toUpperCase() : ""} ET`, summary: rows.length ? `${rows.length} match${rows.length!==1?"es":""} found in the 2026 schedule.` : "No matches found for that time in the local schedule.", rows };
+    }
+
+    // Date queries like Jun 19.
+    const dateMatch = text.match(/\b(jun|june|jul|july)\s*(\d{1,2})\b/);
+    if (dateMatch) {
+      const mon = dateMatch[1].startsWith("jul") ? "Jul" : "Jun";
+      const day = String(Number(dateMatch[2]));
+      const rows = MATCHES.filter(m => norm(m.date) === norm(`${mon} ${day}`)).map(fmtMatch);
+      return { title:`Matches on ${mon} ${day}`, summary: rows.length ? `${rows.length} match${rows.length!==1?"es":""} found.` : "No matches found for that date.", rows };
+    }
+
+    // Group queries.
+    const groupMatch = text.match(/group\s*([a-l])\b/);
+    if (groupMatch) {
+      const g = groupMatch[1].toUpperCase();
+      const rows = MATCHES.filter(m => m.group === g).map(fmtMatch);
+      return { title:`Group ${g} matches`, summary:`${rows.length} group-stage matches found.`, rows };
+    }
+
+    // Venue / city queries.
+    const cityTerms = ["miami","dallas","houston","atlanta","seattle","philadelphia","boston","toronto","vancouver","mexico city","guadalajara","monterrey","los angeles","new york","new jersey","kansas city","san francisco"];
+    const city = cityTerms.find(c => text.includes(c));
+    if (city) {
+      const rows = MATCHES.filter(m => norm(m.venue).includes(city)).map(fmtMatch);
+      return { title:`Matches in ${city.replace(/\b\w/g, c=>c.toUpperCase())}`, summary: rows.length ? `${rows.length} match${rows.length!==1?"es":""} found.` : "No matches found for that city/venue.", rows };
+    }
+
+    // Team queries.
+    const team = Object.values(GROUPS).flatMap(g=>g.teams).find(t => text.includes(norm(t)) || norm(t).includes(text));
+    if (team) {
+      const rows = MATCHES.filter(m => m.home===team || m.away===team).map(fmtMatch);
+      return { title:`${getFlag(team)} ${team} matches`, summary: rows.length ? `${rows.length} scheduled match${rows.length!==1?"es":""} found.` : "No scheduled matches found.", rows };
+    }
+
+    // Final / knockout keywords.
+    if (text.includes("final")) {
+      const rows = MATCHES.filter(m => norm(m.round||m.stage||"").includes("final") || m.id===104).map(fmtMatch);
+      return { title:"Final / knockout matches", summary: rows.length ? `${rows.length} match${rows.length!==1?"es":""} found.` : "The final will appear here once the schedule data includes it.", rows };
+    }
+
+    // Cards / events placeholder.
+    if (text.includes("yellow") || text.includes("card")) {
+      return { title:"Yellow-card leaders", summary:"This question will become available once match-event feeds return player card data. The app already has a match-events API path ready for this type of query.", rows:[] };
+    }
+
+    // Historical placeholder.
+    if (text.includes("history") || text.includes("historical") || text.includes("past")) {
+      return { title:"Historical World Cup search", summary:"Historical match search is planned through the Zafronix data layer. Try schedule questions for 2026 now, like matches at 9PM ET, matches in Miami, or Brazil matches.", rows:[] };
+    }
+
+    return { title:"I can answer schedule questions now", summary:"Try asking about teams, groups, dates, kickoff times, cities, or venues. Historical/player-event queries are on the roadmap.", rows:[] };
+  };
+
+  const runAsk = async (raw=q) => {
+    const value = raw.trim();
+    setQ(value);
+    setLoading(true);
+    try {
+      setAnswer(answerLocal(value));
+    } finally {
+      setTimeout(()=>setLoading(false), 120);
+    }
+  };
+
+  return (
+    <div style={{paddingTop:14}}>
+      <Card style={{marginBottom:12,overflow:"visible"}}>
+        <div style={{padding:14}}>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+            <div style={{fontSize:24}}>🔎</div>
+            <div>
+              <div style={{fontSize:20,fontWeight:900,color:C.green,lineHeight:1}}>Ask World Cup</div>
+              <div style={{fontSize:12,color:C.mid,marginTop:3}}>Search the 2026 schedule now. Historical and live-event answers are next.</div>
+            </div>
+          </div>
+          <div style={{display:"flex",gap:8,marginTop:12}}>
+            <input value={q} onChange={e=>setQ(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")runAsk();}} placeholder="Ask about matches, teams, times, cities..." style={{flex:1,minWidth:0,background:C.bg,border:`1px solid ${C.b2}`,borderRadius:12,padding:"11px 12px",color:C.text,fontWeight:650,fontSize:14,outline:"none"}}/>
+            <button onClick={()=>runAsk()} style={{border:"none",borderRadius:12,padding:"0 14px",background:`linear-gradient(135deg,${C.green},#22c55e)`,color:"#031008",fontWeight:900,cursor:"pointer"}}>Ask</button>
+          </div>
+        </div>
+      </Card>
+
+      <div style={{fontSize:11,color:C.dim,fontWeight:800,letterSpacing:"0.12em",textTransform:"uppercase",margin:"12px 2px 8px"}}>Popular Questions</div>
+      <div style={{display:"flex",gap:8,overflowX:"auto",paddingBottom:8,scrollbarWidth:"none"}}>
+        {examples.map(ex=><button key={ex} onClick={()=>runAsk(ex)} style={{flex:"0 0 auto",border:`1px solid ${C.b2}`,background:C.s1,color:C.text,borderRadius:999,padding:"8px 11px",fontWeight:750,fontSize:12,cursor:"pointer"}}>{ex}</button>)}
+      </div>
+
+      {loading && <Card><div style={{padding:14,color:C.mid}}>Searching World Cup data...</div></Card>}
+      {!loading && answer && <Card style={{marginTop:10}}>
+        <div style={{padding:14,borderBottom:answer.rows?.length?`1px solid ${C.b1}`:"none"}}>
+          <div style={{fontWeight:900,color:C.green,fontSize:16,marginBottom:5}}>{answer.title}</div>
+          <div style={{fontSize:13,color:C.mid,lineHeight:1.45}}>{answer.summary}</div>
+        </div>
+        {!!answer.rows?.length && <div style={{padding:8}}>{answer.rows.map((r,i)=>(
+          <div key={i} style={{padding:"10px 9px",borderRadius:10,background:i%2?"transparent":`${C.green}08`,borderBottom:i===answer.rows.length-1?"none":`1px solid ${C.b1}`}}>
+            <div style={{fontSize:14,fontWeight:800,color:C.text,marginBottom:3}}>{r.title}</div>
+            <div style={{fontSize:12,color:C.mid,lineHeight:1.35}}>{r.meta}</div>
+          </div>
+        ))}</div>}
+      </Card>}
+    </div>
+  );
+}
+
 // ── APP ────────────────────────────────────────────────────────────────────
 const TABS = [
   {id:"live",      icon:"🔴", label:"Live"},
@@ -4920,6 +5063,7 @@ const TABS = [
   {id:"groups",    icon:"🗂️", label:"Groups"},
   {id:"scorers",   icon:"⚽", label:"Scorers"},
   {id:"bracket",   icon:"🏆", label:"My Bracket"},
+  {id:"ask",       icon:"🔎", label:"Ask"},
   {id:"stats",     icon:"📊", label:"Stats"},
   {id:"h2h",       icon:"⚔️", label:"H2H"},
   {id:"news",      icon:"📰", label:"WC News"},
@@ -5347,6 +5491,7 @@ export default function App() {
           {tab==="predictor" && <PredictorTab syncProfile={syncProfile} displayName={displayName} onShowSync={()=>setShowSyncModal(true)} userAvatar={userAvatar}/>}
           {tab==="sim"       && <SimTab tabTop={tabBarBottom}/>}
           {tab==="bracket"   && <MyBracketTab tabTop={tabBarBottom}/>}
+          {tab==="ask"       && <AskWorldCupTab tabTop={tabBarBottom}/>}
           {tab==="news"       && <WCNewsTab tabTop={tabBarBottom}/>}
           {tab==="saved"     && <div style={{paddingTop:14}}><SavedTab saved={saved} onRemove={onRemove}/></div>}
         </div>
