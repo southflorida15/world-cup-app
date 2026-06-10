@@ -3569,7 +3569,7 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
   if (userLoading) return (
     <div style={{textAlign:"center",padding:"48px 20px"}}>
       <div style={{width:28,height:28,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto 12px"}}/>
-      <div style={{fontSize:13,color:C.mid}}>Loading predictor...</div>
+      <div style={{fontSize:13,color:C.mid}}>Loading fantasy picks...</div>
     </div>
   );
 
@@ -3577,8 +3577,8 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
     <div style={{paddingTop:12}}>
       <div style={{background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b2}`,borderRadius:12,padding:14,marginBottom:14,textAlign:"center"}}>
         <div style={{fontSize:"1.6rem",marginBottom:4}}>🔮</div>
-        <div style={{fontWeight:700,fontSize:17,color:C.green,marginBottom:4}}>Match Predictor</div>
-        <div style={{fontSize:12,color:C.mid,lineHeight:1.5}}>Pick scores for every group match. Compete with friends on the leaderboard.</div>
+        <div style={{fontWeight:700,fontSize:17,color:C.green,marginBottom:4}}>Fantasy Picks / Bolão</div>
+        <div style={{fontSize:12,color:C.mid,lineHeight:1.5}}>Predict match scores for fun. Official scores come from the World Cup feed; your picks power points, rankings and leagues.</div>
       </div>
       {(syncProfile && displayName) ? (
         /* Signed in but name registration failed — show retry */
@@ -3589,7 +3589,7 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
             </div>
             <div>
               <div style={{fontWeight:700,color:C.text,fontSize:15}}>Join as {displayName}?</div>
-              <div style={{fontSize:11,color:C.dim}}>Tap to join the predictor</div>
+              <div style={{fontSize:11,color:C.dim}}>Tap to join Fantasy Picks</div>
             </div>
           </div>
           {nameErr && <div style={{fontSize:12,color:C.red,marginBottom:8}}>{nameErr}</div>}
@@ -3609,7 +3609,7 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
         <div>
           <Card style={{padding:18,marginBottom:12}}>
             <div style={{fontWeight:700,color:C.text,fontSize:15,marginBottom:4}}>Choose your display name</div>
-            <div style={{fontSize:12,color:C.dim,marginBottom:14}}>This is how you'll appear on the leaderboard.</div>
+            <div style={{fontSize:12,color:C.dim,marginBottom:14}}>This is how you'll appear on the Fantasy leaderboard.</div>
             <input value={nameInput} onChange={e=>{setNameInput(e.target.value.slice(0,20));setNameErr("");}}
               onKeyDown={e=>e.key==="Enter"&&handleRegister()}
               placeholder="e.g. Pablo, FootballFan99..." maxLength={20}
@@ -3618,7 +3618,7 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
             <div style={{fontSize:11,color:C.dim,marginBottom:14}}>{20-nameInput.length} characters remaining</div>
             <button onClick={handleRegister} disabled={nameSaving||!nameInput.trim()}
               style={{width:"100%",padding:"12px 0",borderRadius:12,background:nameInput.trim()?`linear-gradient(135deg,${C.green},#22c55e)`:C.b2,border:"none",color:nameInput.trim()?"#030a05":C.dim,fontWeight:700,fontSize:15,cursor:nameInput.trim()?"pointer":"default",opacity:nameSaving?0.6:1}}>
-              {nameSaving?"Saving...":"Join the Predictor →"}
+              {nameSaving?"Saving...":"Join Fantasy Picks →"}
             </button>
           </Card>
           <button onClick={onShowSync}
@@ -3636,7 +3636,7 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
       <div style={{background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b2}`,borderRadius:12,padding:14,marginBottom:14}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
           <div>
-            <div style={{fontWeight:700,fontSize:15,color:C.green}}>{"🔮 MATCH PREDICTOR"}</div>
+            <div style={{fontWeight:700,fontSize:15,color:C.green}}>{"🎯 FANTASY PICKS / BOLÃO"}</div>
             <div style={{fontSize:11,color:C.mid,marginTop:2}}>Playing as <strong style={{color:C.gold}}>{user.name}</strong></div>
           </div>
           <button onClick={()=>setShowInfo(v=>!v)} style={{background:"none",border:`1px solid ${C.b2}`,borderRadius:20,color:C.dim,fontSize:11,padding:"3px 10px",cursor:"pointer"}}>Scoring?</button>
@@ -3646,7 +3646,7 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
             <div>⚽⚽⚽ <strong style={{color:C.green}}>3 pts</strong> — Exact score</div>
             <div>⚽ <strong style={{color:C.gold}}>1 pt</strong> — Correct result (Win / Draw / Loss)</div>
             <div>❌ <strong style={{color:C.red}}>0 pts</strong> — Wrong result</div>
-            <div style={{marginTop:6,fontSize:11,color:C.dim}}>Predictions auto-save as you type. Lock-in before kick-off — no changes after!</div>
+            <div style={{marginTop:6,fontSize:11,color:C.dim}}>Fantasy picks auto-save as you type. Picks should lock before kickoff once match locks are enabled.</div>
           </div>
         )}
         {totalPossible > 0 && (
@@ -3666,12 +3666,19 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
         )}
       </div>
 
-      {/* Filter tabs */}
+      <Card style={{padding:12,marginBottom:12,background:`linear-gradient(135deg,${C.green}10,${C.s1})`,border:`1px solid ${C.green}33`}}>
+        <div style={{fontWeight:800,color:C.green,fontSize:12,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:6}}>Fantasy Picks are separate from official scores</div>
+        <div style={{fontSize:12,color:C.mid,lineHeight:1.55}}>
+          Official World Cup results drive Schedule, Groups, Stats and the official bracket. Your entered scores are Fantasy Picks only — used for points, leaderboard rankings and future private leagues.
+        </div>
+      </Card>
+
+      {/* Fantasy filters */}
       <div style={{display:"flex",gap:6,marginBottom:14,overflowX:"auto",scrollbarWidth:"none"}}>
-        <Pill active={filter==="upcoming"} onClick={()=>setFilter("upcoming")} color={C.green}>Upcoming ({upcoming.length})</Pill>
-        <Pill active={filter==="finished"} onClick={()=>setFilter("finished")} color={C.gold}>Finished ({finished.length})</Pill>
+        <Pill active={filter==="upcoming"} onClick={()=>setFilter("upcoming")} color={C.green}>Pending Picks ({upcoming.length})</Pill>
+        <Pill active={filter==="finished"} onClick={()=>setFilter("finished")} color={C.gold}>Scored ({finished.length})</Pill>
         {favTeams?.length > 0 && <Pill active={filter==="fav"} onClick={()=>setFilter("fav")} color={C.gold}>⭐ My Teams</Pill>}
-        <Pill active={filter==="board"} onClick={()=>setFilter("board")} color={C.rival}>🏅 Leaderboard</Pill>
+        <Pill active={filter==="board"} onClick={()=>setFilter("board")} color={C.rival}>🏅 Rankings</Pill>
       </div>
 
       {/* ── LEADERBOARD ── */}
@@ -3723,7 +3730,7 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
           {shownMatches.length===0 && (
             <div style={{textAlign:"center",padding:"32px 20px",color:C.dim}}>
               <div style={{fontSize:"2rem",marginBottom:8}}>⏳</div>
-              <div style={{fontSize:13}}>{filter==="upcoming"?"No upcoming matches yet — check back June 11!":"No finished matches yet."}</div>
+              <div style={{fontSize:13}}>{filter==="upcoming"?"No pending Fantasy Picks right now — check back when fixtures are available!":"No finished matches yet."}</div>
             </div>
           )}
           {shownMatches.map(m => {
@@ -5146,12 +5153,12 @@ const TABS = [
   {id:"groups",    icon:"🗂️", label:"Groups"},
   {id:"scorers",   icon:"⚽", label:"Scorers"},
   {id:"bracket",   icon:"🏆", label:"My Bracket"},
+  {id:"predictor", icon:"🎯", label:"Fantasy"},
   {id:"ask",       icon:"🔎", label:"Ask"},
   {id:"stats",     icon:"📊", label:"Stats"},
   {id:"h2h",       icon:"⚔️", label:"H2H"},
   {id:"news",      icon:"📰", label:"WC News"},
-  {id:"predict",   icon:"🎯", label:"Odds"},
-  {id:"predictor", icon:"🔮", label:"Predictor"},
+  {id:"predict",   icon:"📈", label:"Odds"},
   {id:"sim",       icon:"🎮", label:"Simulator"},
 ];
 
