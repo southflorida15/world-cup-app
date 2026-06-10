@@ -3862,6 +3862,12 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
   const bc = getBroadcast(country);
   const isUS = country === "US" || !BROADCAST[country];
 
+  // Weather data used by both the in-app modal and the share/OG URL.
+  // This must be declared in scope before shareMatch uses it.
+  const modalCityKey = match ? VENUE_TO_CITY[match.venue] : null;
+  const modalCity = modalCityKey ? HOST_CITIES[modalCityKey] : null;
+  const modalWx = useWeather(modalCity?.lat, modalCity?.lon, !!open && !!modalCity);
+
   useEffect(() => {
     if (!open || !match) return;
     setEvents(null); setLoading(true);
@@ -4056,7 +4062,13 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
               <div style={{fontSize:13,fontWeight:600,color:C.blue,textDecoration:"underline",textDecorationStyle:"dotted"}}>{match.venue.split(",")[0]}</div>
               <div style={{fontSize:11,color:C.dim,marginTop:2}}>{match.venue.split(",").slice(1).join(",").trim()} · Tap for directions</div>
             </div>
-            {(() => { const city = VENUE_TO_CITY[match.venue]; const cityData = city ? HOST_CITIES[city] : null; return cityData ? <WeatherBadge lat={cityData.lat} lon={cityData.lon}/> : null; })()}
+            {modalWx ? (
+              <div style={{textAlign:"center",flexShrink:0}}>
+                <div style={{fontSize:18,lineHeight:1}}>{modalWx.icon}</div>
+                <div style={{fontSize:11,fontWeight:700,color:C.text}}>{modalWx.temp}°F<span style={{color:C.dim}}> / {modalWx.tempC}°C</span></div>
+                <div style={{fontSize:9,color:C.dim}}>at venue</div>
+              </div>
+            ) : null}
           </div>
 
           {/* ── TV ── */}
