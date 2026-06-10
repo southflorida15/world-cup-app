@@ -2445,18 +2445,95 @@ function DragList({ items, onReorder, renderItem }) {
 
 // ── MY BRACKET TAB ────────────────────────────────────────────────────────
 const defaultBracketGroups=()=>Object.fromEntries(Object.entries(GROUPS).map(([g,{teams}])=>[g,[...teams]]));
-function BracketMatchup({ match, t1, t2, winner }) {
+function BracketMatchup({ match, t1, t2, winner, onPick, interactive=false }) {
+  const canPick = interactive && t1 && t2 && t1 !== "TBD" && t2 !== "TBD";
+  const teamRow = (team, i) => {
+    const isW = winner && team === winner;
+    const disabled = !canPick || !team || team === "TBD";
+    return (
+      <button
+        key={i}
+        onClick={() => !disabled && onPick?.(team)}
+        disabled={disabled}
+        title={canPick ? `Pick ${team}` : undefined}
+        style={{width:"100%",display:"flex",alignItems:"center",gap:6,padding:"7px 8px",background:isW?`${C.green}24`:"transparent",border:"none",borderBottom:i===0?`1px solid ${C.b1}`:"none",cursor:canPick?"pointer":"default",textAlign:"left",opacity:team?1:0.65}}
+      >
+        <Crest team={team||"TBD"} size={16}/>
+        <span style={{fontSize:12,color:isW?C.green:team?C.text:C.dim,fontWeight:isW?800:500,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",flex:1}}>{team||"TBD"}</span>
+        {isW && <span style={{fontSize:11,color:C.green,fontWeight:900}}>✓</span>}
+      </button>
+    );
+  };
   return (
-    <div style={{background:C.s1,border:`1px solid ${C.b1}`,borderRadius:8,overflow:"hidden",minWidth:120,maxWidth:160}}>
-      {match && <div style={{fontSize:9,color:C.gold,fontWeight:800,letterSpacing:"0.08em",padding:"4px 7px",borderBottom:`1px solid ${C.b1}`,background:`${C.gold}10`}}>MATCH {match}</div>}
-      {[t1,t2].map((t,i)=>{const isW=winner&&t===winner;return(<div key={i} style={{display:"flex",alignItems:"center",gap:5,padding:"4px 7px",background:isW?`${C.green}22`:"transparent",borderBottom:i===0?`1px solid ${C.b1}`:"none"}}><Crest team={t||"TBD"} size={13}/><span style={{fontSize:11,color:isW?C.green:t?C.text:C.dim,fontWeight:isW?700:400,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",flex:1}}>{t||"TBD"}</span>{isW&&<span style={{fontSize:9,color:C.green}}>✓</span>}</div>);})}
+    <div style={{position:"relative",background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${winner?C.greenS:C.b1}`,borderRadius:10,overflow:"hidden",minWidth:150,maxWidth:176,boxShadow:winner?`0 0 0 1px ${C.greenS}, 0 8px 20px rgba(0,0,0,0.25)`:"0 5px 16px rgba(0,0,0,0.22)"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 8px",borderBottom:`1px solid ${C.b1}`,background:`${C.gold}10`}}>
+        <span style={{fontSize:9,color:C.gold,fontWeight:900,letterSpacing:"0.08em"}}>M{match || "—"}</span>
+        {interactive && <span style={{fontSize:9,color:canPick?C.green:C.dim,fontWeight:800}}>{canPick?"TAP PICK":"LOCKED"}</span>}
+      </div>
+      {teamRow(t1,0)}
+      {teamRow(t2,1)}
     </div>
   );
 }
 
+function VisualBracketTree({ bracket, pickMode="auto", onPick=()=>{} }) {
+  const order = {
+    r32:[74,77,73,75,76,78,79,80,83,84,81,82,86,88,85,87],
+    r16:[89,90,91,92,93,94,95,96],
+    qf:[97,98,99,100],
+    sf:[101,102],
+    final:[104]
+  };
+  const sortRound = (matches=[], key) => {
+    const wanted = order[key] || [];
+    return [...matches].sort((a,b)=>{
+      const ai = wanted.indexOf(a.match), bi = wanted.indexOf(b.match);
+      return (ai===-1?999:ai) - (bi===-1?999:bi);
+    });
+  };
+  const rounds = [
+    {key:"r32", label:"Round of 32", short:"R32", matches:sortRound(bracket?.r32 || [], "r32"), gap:8, padTop:0},
+    {key:"r16", label:"Round of 16", short:"R16", matches:sortRound(bracket?.r16 || [], "r16"), gap:42, padTop:30},
+    {key:"qf", label:"Quarterfinals", short:"QF", matches:sortRound(bracket?.qf || [], "qf"), gap:110, padTop:82},
+    {key:"sf", label:"Semifinals", short:"SF", matches:sortRound(bracket?.sf || [], "sf"), gap:250, padTop:178},
+    {key:"final", label:"Final", short:"FINAL", matches:sortRound(bracket?.final || [], "final"), gap:0, padTop:330},
+  ];
+  return (
+    <div style={{overflowX:"auto",padding:"4px 0 14px",WebkitOverflowScrolling:"touch"}}>
+      <div style={{display:"flex",gap:18,minWidth:980,alignItems:"flex-start",padding:"4px 6px 8px"}}>
+        {rounds.map(round => (
+          <div key={round.key} style={{width:176,flex:"0 0 176px",paddingTop:round.padTop}}>
+            <div style={{position:"sticky",top:0,zIndex:1,textAlign:"center",marginBottom:10,background:C.bg,border:`1px solid ${C.b1}`,borderRadius:999,padding:"5px 8px"}}>
+              <div style={{fontSize:10,fontWeight:900,color:round.key==="final"?C.gold:C.green,letterSpacing:"0.08em"}}>{round.short}</div>
+              <div style={{fontSize:9,color:C.dim,whiteSpace:"nowrap"}}>{round.label}</div>
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:round.gap}}>
+              {round.matches.map((m, idx) => (
+                <div key={m.match || idx} style={{position:"relative"}}>
+                  {round.key !== "r32" && <div style={{position:"absolute",left:-18,top:"50%",width:18,borderTop:`1px solid ${C.b2}`}}/>}
+                  {round.key !== "final" && <div style={{position:"absolute",right:-18,top:"50%",width:18,borderTop:`1px solid ${C.b2}`}}/>}
+                  <BracketMatchup match={m.match} t1={m.home} t2={m.away} winner={m.winner} interactive={pickMode==="manual"} onPick={(team)=>onPick(m,team)}/>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+        <div style={{flex:"0 0 180px",paddingTop:304,display:"flex",flexDirection:"column",alignItems:"center",gap:10}}>
+          <div style={{fontSize:42,lineHeight:1}}>🏆</div>
+          <div style={{fontSize:10,color:C.gold,fontWeight:900,letterSpacing:"0.12em"}}>CHAMPION</div>
+          <div style={{background:`linear-gradient(135deg,${C.green}22,${C.gold}18)`,border:`1px solid ${C.greenS}`,borderRadius:14,padding:12,minWidth:160,textAlign:"center"}}>
+            {bracket?.champion ? <><Crest team={bracket.champion} size={42}/><div style={{fontWeight:900,fontSize:15,color:C.green,marginTop:6}}>{bracket.champion}</div></> : <div style={{fontSize:12,color:C.dim,lineHeight:1.5}}>Pick the Final winner</div>}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 function MyBracketTab({ tabTop=116 }) {
   const [stage,setStage]=useState("groups");
   const [bracketMode,setBracketMode]=useState("simulation");
+  const [playMode,setPlayMode]=useState("auto");
+  const [manualPicks,setManualPicks]=useState({});
   const [groups,setGroups]=useState(defaultBracketGroups);
   const [thirds,setThirds]=useState([]);
   const [result,setResult]=useState(null);
@@ -2491,36 +2568,9 @@ function MyBracketTab({ tabTop=116 }) {
       console.log("Qualified third-place teams:", qualifiedThirds);
       console.log("Annex C group key:", thirdGroupsKey);
 
-      const playMatch = (match, winnerMap) => {
-        const winner = simKO(match.home, match.away);
-        winnerMap[match.match] = winner;
-        return {...match, winner};
-      };
-
-      const resolveWinnerRef = (ref, winnerMap) => {
-        if (typeof ref === "string" && ref.startsWith("W")) return winnerMap[Number(ref.slice(1))] || ref;
-        return ref;
-      };
-
-      const buildRoundFromTemplate = (template, winnerMap) => template.map(t => playMatch({
-        match: t.match,
-        homeSlot: t.home,
-        awaySlot: t.away,
-        home: resolveWinnerRef(t.home, winnerMap),
-        away: resolveWinnerRef(t.away, winnerMap),
-      }, winnerMap));
-
-      const buildLegacyMatches = (teams, firstMatchNumber) => {
-        const winnerMap = {};
-        const matches = [];
-        for(let i=0;i<teams.length;i+=2){
-          matches.push(playMatch({match:firstMatchNumber+(i/2),home:teams[i],away:teams[i+1]}, winnerMap));
-        }
-        return {matches, winners:matches.map(m=>m.winner)};
-      };
-
-      let r32=[],r16=[],qf=[],sf=[],final=[];
+      let r32=[];
       let fifaR32=null;
+      let roundTemplates=null;
       let fifaEngineStatus="fifa-fallback";
       let fifaEngineMessage=annexStatus.state==="ready"
         ? "FIFA engine attempted to run, but this combination could not be resolved. Using legacy fallback."
@@ -2528,36 +2578,26 @@ function MyBracketTab({ tabTop=116 }) {
 
       try {
         const fifaBracket = buildFifa2026Bracket({ groups, qualifiedThirds });
-        const winnerMap = {};
         fifaR32 = fifaBracket.r32;
-        r32 = fifaBracket.r32.map(m => playMatch(m, winnerMap));
-        r16 = buildRoundFromTemplate(fifaBracket.r16, winnerMap);
-        qf = buildRoundFromTemplate(fifaBracket.qf, winnerMap);
-        sf = buildRoundFromTemplate(fifaBracket.sf, winnerMap);
-        final = buildRoundFromTemplate(fifaBracket.final, winnerMap);
+        r32 = fifaR32.flatMap(m => [m.home, m.away]);
         fifaEngineStatus="fifa-ready";
-        fifaEngineMessage="FIFA 2026 bracket path generated using official match-number progression.";
+        fifaEngineMessage="FIFA 2026 Round of 32 structure generated using Annex C.";
       } catch(e) {
         console.warn("FIFA bracket engine fallback:", e);
         const qualifiers=[];
         Object.entries(groups).forEach(([,teams])=>{
           qualifiers.push(teams[0],teams[1]);
         });
-        const seeds=[...qualifiers,...qualifiedThirds.map(x=>x.team)];
-        const r32Legacy=buildLegacyMatches(seeds,73);
-        r32=r32Legacy.matches;
-        const r16Legacy=buildLegacyMatches(r32Legacy.winners,89);
-        r16=r16Legacy.matches;
-        const qfLegacy=buildLegacyMatches(r16Legacy.winners,97);
-        qf=qfLegacy.matches;
-        const sfLegacy=buildLegacyMatches(qfLegacy.winners,101);
-        sf=sfLegacy.matches;
-        const finalLegacy=buildLegacyMatches(sfLegacy.winners,104);
-        final=finalLegacy.matches;
+        r32=[...qualifiers,...qualifiedThirds.map(x=>x.team)];
       }
 
-      const champion=final?.[0]?.winner;
-      const runnerUp=[final?.[0]?.home,final?.[0]?.away].find(t=>t&&t!==champion);
+      const ko=(arr)=>{
+        const n=[];
+        for(let i=0;i<arr.length;i+=2)n.push(simKO(arr[i],arr[i+1]));
+        return n;
+      };
+
+      const r16=ko(r32),qf=ko(r16),sf=ko(qf),champ=simKO(sf[0],sf[1]);
 
       setResult({
         mode:bracketMode,
@@ -2565,12 +2605,12 @@ function MyBracketTab({ tabTop=116 }) {
         r16,
         qf,
         sf,
-        final,
-        champion,
-        runnerUp,
+        champion:champ,
+        runnerUp:sf.find(x=>x!==champ),
         qualifiedThirds,
         thirdGroupsKey,
         fifaR32,
+        roundTemplates,
         fifaEngineStatus,
         fifaEngineMessage,
         annexStatus
@@ -2580,6 +2620,42 @@ function MyBracketTab({ tabTop=116 }) {
       setRunning(false);
     },80);
   };
+
+  const displayedResult = useMemo(() => {
+    if (!result || playMode !== "manual" || result.fifaEngineStatus !== "fifa-ready" || !result.roundTemplates) return result;
+    const winnerMap = {};
+    const applyPick = (match) => {
+      const picked = manualPicks[match.match];
+      const winner = picked && (picked === match.home || picked === match.away) ? picked : null;
+      if (winner) winnerMap[match.match] = winner;
+      return {...match, winner};
+    };
+    const resolveRef = (ref) => {
+      if (typeof ref === "string" && ref.startsWith("W")) return winnerMap[Number(ref.slice(1))] || null;
+      return ref;
+    };
+    const buildRound = (template=[]) => template.map(t => applyPick({match:t.match,homeSlot:t.home,awaySlot:t.away,home:resolveRef(t.home),away:resolveRef(t.away)}));
+    const r32 = (result.r32||[]).map(m => applyPick({...m, winner:null}));
+    const r16 = buildRound(result.roundTemplates.r16);
+    const qf = buildRound(result.roundTemplates.qf);
+    const sf = buildRound(result.roundTemplates.sf);
+    const final = buildRound(result.roundTemplates.final);
+    const champion = final?.[0]?.winner || null;
+    const runnerUp = champion ? [final?.[0]?.home, final?.[0]?.away].find(t=>t&&t!==champion) : null;
+    return {...result, r32, r16, qf, sf, final, champion, runnerUp};
+  }, [result, manualPicks, playMode]);
+
+  const handleManualPick = (match, team) => {
+    if (playMode !== "manual" || !match?.match || !team || team === "TBD") return;
+    setManualPicks(prev => {
+      const next = {...prev, [match.match]: team};
+      const m = Number(match.match);
+      const cutoff = m < 89 ? 89 : m < 97 ? 97 : m < 101 ? 101 : m < 104 ? 104 : 105;
+      Object.keys(next).forEach(k => { if (Number(k) >= cutoff) delete next[k]; });
+      return next;
+    });
+  };
+
   return (
     <div>
       <div ref={_mbhRef} style={{position:"fixed",top:tabTop,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:700,willChange:"transform",zIndex:90,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
@@ -2647,45 +2723,30 @@ function MyBracketTab({ tabTop=116 }) {
       )}
       {stage==="bracket" && result && (
         <div>
-          <div style={{display:"flex",gap:8,marginBottom:14}}>
+          <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap"}}>
             <button onClick={()=>setStage("groups")} style={{padding:"7px 12px",borderRadius:10,background:"transparent",border:`1px solid ${C.b2}`,color:C.mid,fontSize:12,cursor:"pointer"}}>← Edit</button>
             <button onClick={runBracket} style={{padding:"7px 12px",borderRadius:10,background:`${C.green}22`,border:`1px solid ${C.greenS}`,color:C.green,fontSize:12,fontWeight:600,cursor:"pointer"}}>↻ Re-simulate</button>
+            <button onClick={()=>{setPlayMode("auto");setManualPicks({});}} style={{padding:"7px 12px",borderRadius:10,background:playMode==="auto"?`${C.gold}22`:C.s1,border:`1px solid ${playMode==="auto"?C.gold:C.b1}`,color:playMode==="auto"?C.gold:C.mid,fontSize:12,fontWeight:700,cursor:"pointer"}}>🤖 Auto</button>
+            <button onClick={()=>{setPlayMode("manual");setManualPicks({});}} disabled={result.fifaEngineStatus!=="fifa-ready"} style={{padding:"7px 12px",borderRadius:10,background:playMode==="manual"?`${C.blue}22`:C.s1,border:`1px solid ${playMode==="manual"?C.blue:C.b1}`,color:playMode==="manual"?C.blue:C.mid,fontSize:12,fontWeight:700,cursor:result.fifaEngineStatus==="fifa-ready"?"pointer":"not-allowed",opacity:result.fifaEngineStatus==="fifa-ready"?1:0.55}}>👆 Manual Picks</button>
           </div>
+          {playMode==="manual" && <div style={{fontSize:11,color:C.mid,lineHeight:1.45,marginBottom:12,background:C.s1,border:`1px solid ${C.b1}`,borderRadius:10,padding:"8px 10px"}}>Tap a team in each unlocked match. Winners advance automatically to the next round.</div>}
           {result.thirdGroupsKey && <div style={{background:result.fifaEngineStatus==="fifa-ready"?`${C.green}14`:`${C.gold}14`,border:`1px solid ${result.fifaEngineStatus==="fifa-ready"?C.greenS:`${C.gold}55`}`,borderRadius:12,padding:"9px 11px",marginBottom:12}}>
-            <div style={{fontSize:11,fontWeight:800,color:result.fifaEngineStatus==="fifa-ready"?C.green:C.gold,marginBottom:3}}>{result.fifaEngineStatus==="fifa-ready"?"🏆 FIFA 2026 Bracket Generated":"⚠️ Legacy Bracket Fallback"}</div>
+            <div style={{fontSize:11,fontWeight:800,color:result.fifaEngineStatus==="fifa-ready"?C.green:C.gold,marginBottom:3}}>FIFA ENGINE · Annex C key {result.thirdGroupsKey}</div>
             <div style={{fontSize:11,color:C.mid,lineHeight:1.45}}>{result.fifaEngineMessage}</div>
           </div>}
           <div style={{background:`linear-gradient(135deg,${C.green}22,${C.gold}18)`,border:`1px solid ${C.greenS}`,borderRadius:14,padding:16,marginBottom:16,textAlign:"center"}}>
             <div style={{fontSize:11,color:C.dim,letterSpacing:"0.15em",fontWeight:700,marginBottom:8}}>🏆 YOUR SIMULATED CHAMPION</div>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:12,marginBottom:6}}><Crest team={result.champion} size={52}/><span style={{fontWeight:900,fontSize:28,color:C.green}}>{result.champion}</span></div>
-            <div style={{fontSize:13,color:C.mid}}>Runner-up: {getFlag(result.runnerUp)} {result.runnerUp}</div>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:12,marginBottom:6}}>{displayedResult?.champion ? <><Crest team={displayedResult.champion} size={52}/><span style={{fontWeight:900,fontSize:28,color:C.green}}>{displayedResult.champion}</span></> : <span style={{fontWeight:900,fontSize:22,color:C.gold}}>Pick the Final winner</span>}</div>
+            <div style={{fontSize:13,color:C.mid}}>{displayedResult?.runnerUp ? <>Runner-up: {getFlag(displayedResult.runnerUp)} {displayedResult.runnerUp}</> : playMode==="manual" ? "Manual bracket in progress" : "Runner-up TBD"}</div>
           </div>
-          <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10}}>Full Bracket</div>
-          <div style={{overflowX:"auto",paddingBottom:8}}>
-            <div style={{display:"flex",gap:10,minWidth:760}}>
-              {[
-                {label:"R32",rounds:result.r32},
-                {label:"R16",rounds:result.r16},
-                {label:"QF",rounds:result.qf},
-                {label:"SF",rounds:result.sf},
-                {label:"FINAL",rounds:result.final||[]}
-              ].map(({label,rounds})=>(
-                <div key={label} style={{flex:1,display:"flex",flexDirection:"column",gap:6}}>
-                  <div style={{fontSize:10,fontWeight:700,color:label==="FINAL"?C.gold:C.dim,textAlign:"center",marginBottom:4}}>{label}</div>
-                  {(rounds||[]).map((m,mi)=><BracketMatchup key={m.match||mi} match={m.match} t1={m.home} t2={m.away} winner={m.winner}/>) }
-                </div>
-              ))}
+          <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10}}>Interactive Bracket Path</div>
+          <VisualBracketTree bracket={displayedResult} pickMode={playMode} onPick={handleManualPick}/>
+          {[["SEMI-FINALS",displayedResult?.sf],["QUARTER-FINALS",displayedResult?.qf],["ROUND OF 16",displayedResult?.r16]].map(([label,teams])=>(
+            <div key={label} style={{marginTop:14}}>
+              <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:7}}>{label}</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:6}}>{(teams||[]).map(t=><div key={t} style={{display:"flex",alignItems:"center",gap:5,background:C.s2,border:`1px solid ${C.b1}`,borderRadius:8,padding:"4px 9px"}}><Crest team={t} size={16}/><span style={{fontSize:12,color:C.text}}>{t}</span></div>)}</div>
             </div>
-          </div>
-          {[["SEMI-FINALS",result.sf],["QUARTER-FINALS",result.qf],["ROUND OF 16",result.r16]].map(([label,matches])=>{
-            const teams=[...new Set((matches||[]).flatMap(m=>[m.home,m.away]).filter(Boolean))];
-            return (
-              <div key={label} style={{marginTop:14}}>
-                <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:7}}>{label}</div>
-                <div style={{display:"flex",flexWrap:"wrap",gap:6}}>{teams.map(t=><div key={t} style={{display:"flex",alignItems:"center",gap:5,background:C.s2,border:`1px solid ${C.b1}`,borderRadius:8,padding:"4px 9px"}}><Crest team={t} size={16}/><span style={{fontSize:12,color:C.text}}>{t}</span></div>)}</div>
-              </div>
-            );
-          })}
+          ))}
         </div>
       )}
     </div>
