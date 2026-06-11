@@ -1,3 +1,4 @@
+import FantasyStatsSummary from "./components/FantasyStatsSummary";
 import MatchHeader from "./components/MatchHeader";
 import MatchInfoSection from "./components/MatchInfoSection";
 import MatchDetailCard from "./components/MatchDetailCard";
@@ -3665,20 +3666,14 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
           </div>
         )}
         {totalPossible > 0 && (
-          <div style={{display:"flex",gap:8,marginTop:12}}>
-            {[
-              [totalPts,       "POINTS",   C.green],
-              [exact,          "EXACT",    C.gold],
-              [correct,        "CORRECT",  C.blue],
-              [totalPossible>0?Math.round((totalPts/totalPossible)*100):0, "ACCURACY %", C.mid],
-            ].map(([v,l,col])=>(
-              <div key={l} style={{flex:1,textAlign:"center",background:`${col}18`,border:`1px solid ${col}33`,borderRadius:10,padding:"8px 4px"}}>
-                <div style={{fontWeight:900,fontSize:22,color:col}}>{v}{l==="ACCURACY %"?"%":""}</div>
-                <div style={{fontSize:9,color:C.dim}}>{l}</div>
-              </div>
-            ))}
-          </div>
-        )}
+  <FantasyStatsSummary
+    totalPts={totalPts}
+    exact={exact}
+    correct={correct}
+    totalPossible={totalPossible}
+    C={C}
+  />
+)}
       </div>
 
       <Card style={{padding:12,marginBottom:12,background:`linear-gradient(135deg,${C.green}10,${C.s1})`,border:`1px solid ${C.green}33`}}>
