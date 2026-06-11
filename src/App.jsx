@@ -3714,7 +3714,7 @@ return (
                 lineHeight:1
               }}
             >
-              🏅 #{myRank}/{totalPlayers}
+              🏅 Rank #{myRank} of {totalPlayers}
             </div>
           )}
 
