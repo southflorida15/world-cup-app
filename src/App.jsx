@@ -3062,7 +3062,7 @@ function MyBracketTab({ tabTop=116 }) {
   )}
 </div>
 
-<div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none",WebkitOverflowScrolling:"touch",paddingBottom:4,marginBottom:11}}>
+<div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none",WebkitOverflowScrolling:"touch",paddingBottom:4,marginBottom:12}}>
   <Pill active={stage==="groups"} onClick={()=>setStage("groups")} color={C.green}>✓ Groups</Pill>
   <Pill active={stage==="thirds"} onClick={()=>setStage("thirds")} color={C.gold}>✓ Best 3rds</Pill>
   <Pill active={stage==="bracket"} onClick={()=>setStage("bracket")} color={C.blue}>● Bracket</Pill>
