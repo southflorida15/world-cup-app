@@ -3660,8 +3660,7 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
         </div>
         {showInfo && <FantasyScoringRules C={C} />}
         <div style={{color:"red"}}>
-  totalPossible: {totalPossible}
-</div>
+  </div>
 <FantasyStatsSummary
   totalPts={totalPts}
   exact={exact}
