@@ -3690,46 +3690,70 @@ const myRankIndex = Array.isArray(board)
 const myRank = myRankIndex >= 0 ? myRankIndex + 1 : 0;
 const totalPlayers = Array.isArray(board) ? board.length : 0;
   // ── Main predictor UI ───────────────────────────────────────────────────
-  return (
-    <div style={{paddingTop:12}}>
-      <div style={{background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b2}`,borderRadius:12,padding:14,marginBottom:14}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-          <div>
-            <div style={{fontWeight:700,fontSize:15,color:C.green}}>{"🎯 FANTASY PICKS / BOLÃO"}</div>
-            <div style={{fontSize:11,color:C.mid,marginTop:2}}>Playing as <strong style={{color:C.gold}}>{user.name}</strong></div>
-            {myRank > 0 && (
-  <div
-    style={{
-      fontSize:11,
-      color:C.green,
-      marginTop:4,
-      fontWeight:700
-    }}
-  >
-    🏅 Rank #{myRank} of {totalPlayers}
-  </div>
-)}
-          </div>
-         
-          <button onClick={()=>setShowInfo(v=>!v)} style={{background:"none",border:`1px solid ${C.b2}`,borderRadius:20,color:C.dim,fontSize:11,padding:"3px 10px",cursor:"pointer"}}>Scoring Criteria</button>
+return (
+  <div style={{paddingTop:12}}>
+    <div style={{background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b2}`,borderRadius:12,padding:14,marginBottom:14}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10}}>
+        <div style={{minWidth:0}}>
+          <div style={{fontWeight:700,fontSize:15,color:C.green}}>{"🎯 FANTASY PICKS / BOLÃO"}</div>
+          <div style={{fontSize:11,color:C.mid,marginTop:2}}>Playing as <strong style={{color:C.gold}}>{user.name}</strong></div>
         </div>
-        {showInfo && <FantasyScoringRules C={C} />}
-        
-        <FantasyStatsSummary
-  totalPts={totalPts}
-  exact={exact}
-  correct={correct}
-  totalPossible={totalPossible}
-  C={C}
-/>        
+
+        <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
+          {myRank > 0 && (
+            <div
+              style={{
+                padding:"6px 12px",
+                borderRadius:20,
+                background:`${C.gold}18`,
+                border:`1px solid ${C.gold}44`,
+                color:C.gold,
+                fontSize:13,
+                fontWeight:800,
+                whiteSpace:"nowrap",
+                lineHeight:1
+              }}
+            >
+              🏅 #{myRank}/{totalPlayers}
+            </div>
+          )}
+
+          <button
+            onClick={()=>setShowInfo(v=>!v)}
+            style={{
+              background:"none",
+              border:`1px solid ${C.b2}`,
+              borderRadius:20,
+              color:C.dim,
+              fontSize:11,
+              padding:"6px 10px",
+              cursor:"pointer",
+              lineHeight:1,
+              whiteSpace:"nowrap"
+            }}
+          >
+            Scoring Criteria
+          </button>
+        </div>
       </div>
 
-      <Card style={{padding:12,marginBottom:12,background:`linear-gradient(135deg,${C.green}10,${C.s1})`,border:`1px solid ${C.green}33`}}>
-        <div style={{fontWeight:800,color:C.green,fontSize:12,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:6}}>Fantasy Picks are separate from official scores</div>
-        <div style={{fontSize:12,color:C.mid,lineHeight:1.55}}>
-          Your entered scores are picks for Fantasy only — used for points and leaderboard rankings.
-        </div>
-      </Card>
+      {showInfo && <FantasyScoringRules C={C} />}
+
+      <FantasyStatsSummary
+        totalPts={totalPts}
+        exact={exact}
+        correct={correct}
+        totalPossible={totalPossible}
+        C={C}
+      />
+    </div>
+
+    <Card style={{padding:12,marginBottom:12,background:`linear-gradient(135deg,${C.green}10,${C.s1})`,border:`1px solid ${C.green}33`}}>
+      <div style={{fontWeight:800,color:C.green,fontSize:12,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:6}}>Fantasy Picks are separate from official scores</div>
+      <div style={{fontSize:12,color:C.mid,lineHeight:1.55}}>
+        Your entered scores are picks for Fantasy only — used for points and leaderboard rankings.
+      </div>
+    </Card>
 
       {/* Fantasy filters */}
       <div style={{display:"flex",gap:6,marginBottom:14,overflowX:"auto",scrollbarWidth:"none"}}>
