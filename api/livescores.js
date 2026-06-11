@@ -6,15 +6,6 @@
 
 import { Redis } from "@upstash/redis";
 
-const SCORE_OVERRIDES = {
-  "Mexico|South Africa": {
-    home: 2,
-    away: 0,
-    status: "2H",
-    elapsed: 78,
-  },
-};
-
 const kv = new Redis({
   url:   process.env.KV_REST_API_URL,
   token: process.env.KV_REST_API_TOKEN,
@@ -211,6 +202,89 @@ async function fetchFromFootballData() {
   return merged.map(mapFDMatch);
 }
 
+
+// ── ESPN public API mapper ────────────────────────────────────────────────
+// No key required. Uses ESPN's own internal API.
+const ESPN_BASE = "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world";
+
+const ESPN_STATUS_MAP = {
+  "STATUS_SCHEDULED": "NS",
+  "STATUS_IN_PROGRESS": "LIVE",
+  "STATUS_HALFTIME": "HT",
+  "STATUS_FINAL": "FT",
+  "STATUS_FULL_TIME": "FT",
+  "STATUS_EXTRA_TIME": "ET",
+  "STATUS_PENALTY": "P",
+  "STATUS_POSTPONED": "TBD",
+  "STATUS_CANCELED": "CANC",
+  "STATUS_SUSPENDED": "TBD",
+};
+
+const ESPN_NAME_MAP = {
+  "USA": "United States",
+  "Bosnia and Herzegovina": "Bosnia & Herz.",
+  "Cape Verde Islands": "Cape Verde",
+  "Turkey": "Turkiye",
+  "Curaçao": "Curacao",
+  "Congo, DR": "DR Congo",
+  "DR Congo": "DR Congo",
+  "Côte d'Ivoire": "Ivory Coast",
+  "Korea Republic": "South Korea",
+};
+const normESPN = n => ESPN_NAME_MAP[n] || n;
+
+function mapESPNEvent(event) {
+  const comp = event.competitions?.[0];
+  if (!comp) return null;
+  const home = comp.competitors?.find(c => c.homeAway === "home");
+  const away = comp.competitors?.find(c => c.homeAway === "away");
+  if (!home || !away) return null;
+
+  const statusType = comp.status?.type?.name || "STATUS_SCHEDULED";
+  const short = ESPN_STATUS_MAP[statusType] || "NS";
+  const clock = comp.status?.displayClock;
+  const elapsed = clock && clock !== "0:00" ? parseInt(clock.split(":")[0]) : null;
+  const hg = home.score !== undefined && home.score !== "" ? parseInt(home.score) : null;
+  const ag = away.score !== undefined && away.score !== "" ? parseInt(away.score) : null;
+
+  return {
+    fixture: {
+      id: event.id,
+      date: comp.date || event.date,
+      status: { short, elapsed },
+      venue: { name: comp.venue?.fullName || "", city: comp.venue?.address?.city || "" },
+    },
+    league: { id: 1635, season: 2026 },
+    teams: {
+      home: { id: home.team?.id, name: normESPN(home.team?.displayName || home.team?.name || "") },
+      away: { id: away.team?.id, name: normESPN(away.team?.displayName || away.team?.name || "") },
+    },
+    goals: {
+      home: hg,
+      away: ag,
+    },
+    score: { fulltime: { home: hg, away: ag } },
+    events: [],
+    _source: "espn",
+  };
+}
+
+async function fetchFromESPN() {
+  const r = await fetch(`${ESPN_BASE}/scoreboard`, {
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+      "Accept": "application/json",
+      "Origin": "https://www.espn.com",
+      "Referer": "https://www.espn.com/",
+    },
+  });
+  if (!r.ok) throw new Error(`ESPN ${r.status}`);
+  const data = await r.json();
+  const events = data.events || [];
+  console.log(`[livescores] ESPN: ${events.length} events`);
+  return events.map(mapESPNEvent).filter(Boolean);
+}
+
 // ── Highlightly mapper ─────────────────────────────────────────────────────
 function mapHLMatch(m) {
   const statusRaw = m.status || m.matchStatus || "NS";
@@ -302,24 +376,32 @@ export default async function handler(req, res) {
     }
   }
 
-  // Fetch — try football-data.org first, fall back to Highlightly
+  // Fetch — try Highlightly first (real-time scores), fall back to football-data.org (fixtures only)
   let fixtures = [];
   let source = "none";
   let errors = [];
 
   try {
-    fixtures = await fetchFromFootballData();
-    source = "football-data.org";
+    fixtures = await fetchFromHighlightly();
+    source = "highlightly";
   } catch(err) {
-    console.warn("[livescores] football-data.org failed:", err.message);
-    errors.push(`football-data.org: ${err.message}`);
+    console.warn("[livescores] Highlightly failed:", err.message);
+    errors.push(`highlightly: ${err.message}`);
 
     try {
-      fixtures = await fetchFromHighlightly();
-      source = "highlightly";
+      fixtures = await fetchFromESPN();
+      source = "espn";
     } catch(err2) {
-      console.error("[livescores] Highlightly also failed:", err2.message);
-      errors.push(`highlightly: ${err2.message}`);
+      console.warn("[livescores] ESPN failed:", err2.message);
+      errors.push(`espn: ${err2.message}`);
+
+      try {
+        fixtures = await fetchFromFootballData();
+        source = "football-data.org";
+      } catch(err3) {
+        console.error("[livescores] All sources failed:", err3.message);
+        errors.push(`football-data.org: ${err3.message}`);
+      }
     }
   }
 
