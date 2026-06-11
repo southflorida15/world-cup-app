@@ -25,9 +25,20 @@ export default function FantasyPickLockStatus({
     return () => clearInterval(id);
   }, []);
 
-  const kickoffMs = kickoffTime ? new Date(kickoffTime).getTime() : null;
-  const remaining = kickoffMs ? kickoffMs - now : 0;
-  const isLocked = locked || remaining <= 0;
+const kickoffMs = kickoffTime ? new Date(kickoffTime).getTime() : null;
+const remaining = kickoffMs ? kickoffMs - now : 0;
+const isLocked = locked || remaining <= 0;
+
+const TWO_HOURS = 2 * 60 * 60 * 1000;
+const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+
+const pillColor = isLocked
+  ? C.red
+  : remaining <= TWO_HOURS
+    ? C.red
+    : remaining <= TWENTY_FOUR_HOURS
+      ? C.gold
+      : C.green;
 
   return (
     <div
@@ -39,9 +50,11 @@ export default function FantasyPickLockStatus({
         borderRadius: 999,
         fontSize: 10,
         fontWeight: 700,
-        background: isLocked ? `${C.red}18` : `${C.green}18`,
-        border: `1px solid ${isLocked ? C.red : C.green}33`,
-        color: isLocked ? C.red : C.green,
+        background: `${pillColor}18`,
+border: `1px solid ${pillColor}33`,
+color: pillColor,
+lineHeight: 1,
+minHeight: 22,
         whiteSpace: "nowrap",
       }}
     >
