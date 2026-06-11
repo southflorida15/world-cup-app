@@ -11,8 +11,8 @@ export default function FantasyMyStats({
   return (
     <div
       style={{
-        background: linear-gradient(135deg,${C.s1},${C.s2}),
-        border: 1px solid ${C.b2},
+        background: `linear-gradient(135deg,${C.s1},${C.s2})`,
+        border: `1px solid ${C.b2}`,
         borderRadius: 12,
         padding: 12,
         marginBottom: 12,
