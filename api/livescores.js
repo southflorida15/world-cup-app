@@ -219,6 +219,16 @@ export default async function handler(req, res) {
 
   const debug = req.query.debug === "1";
 
+  // Flush cache
+  if (req.query.flush === "1") {
+    try {
+      await Promise.all([kv.del(CACHE_KEY), kv.del(CACHE_TS_KEY)]);
+      return res.status(200).json({ ok: true, flushed: true });
+    } catch(e) {
+      return res.status(500).json({ error: e.message });
+    }
+  }
+
   // Window guard
   if (!debug && !isMatchWindowActive()) {
     let frozen = null;
