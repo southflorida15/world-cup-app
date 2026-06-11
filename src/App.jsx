@@ -3675,6 +3675,11 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
             <div style={{fontWeight:700,fontSize:15,color:C.green}}>{"🎯 FANTASY PICKS / BOLÃO"}</div>
             <div style={{fontSize:11,color:C.mid,marginTop:2}}>Playing as <strong style={{color:C.gold}}>{user.name}</strong></div>
           </div>
+         {myRank > 0 && (
+  <div style={{fontSize:11,color:C.green,marginTop:4,fontWeight:700}}>
+    🏅 Rank #{myRank} of {totalPlayers}
+  </div>
+)} 
           <button onClick={()=>setShowInfo(v=>!v)} style={{background:"none",border:`1px solid ${C.b2}`,borderRadius:20,color:C.dim,fontSize:11,padding:"3px 10px",cursor:"pointer"}}>Scoring Criteria</button>
         </div>
         {showInfo && <FantasyScoringRules C={C} />}
