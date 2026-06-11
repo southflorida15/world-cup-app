@@ -1,3 +1,4 @@
+import FantasyPickLockStatus from "./components/FantasyPickLockStatus";
 import FantasyScoringRules from "./components/FantasyScoringRules";
 import FantasyStatsSummary from "./components/FantasyStatsSummary";
 import MatchHeader from "./components/MatchHeader";
@@ -3753,8 +3754,13 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
                     <div style={{display:"flex",alignItems:"center",gap:6}}>
                       {saving && <span style={{fontSize:10,color:C.dim}}>saving...</span>}
                       {!saving && hasPred && !done && !locked && <span style={{fontSize:10,color:C.green}}>✓ saved</span>}
-                      {!done && locked && <span style={{fontSize:10,color:C.gold}}>🔒 locked</span>}
-                      {!done && !locked && <span style={{fontSize:10,color:C.dim}}>{fantasyLockLabel(m)}</span>}
+                      {!done && (
+  <FantasyPickLockStatus
+    locked={locked}
+    kickoffTime={MATCH_UTC[m.id]}
+    C={C}
+  />
+)}
                       {pts !== null && <div style={{fontWeight:700,color:ptColor,fontSize:12}}>{pts===3?"⚽⚽⚽ +3":pts===1?"⚽ +1":"❌ 0"}pts</div>}
                     </div>
                   </div>
