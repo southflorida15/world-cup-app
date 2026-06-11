@@ -2723,6 +2723,7 @@ function MyBracketTab({ tabTop=116 }) {
   const [result,setResult]=useState(()=>savedBracket.result || null);
   const [running,setRunning]=useState(false);
   const [sharing,setSharing]=useState(false);
+  const [showBracketActions,setShowBracketActions]=useState(false);
   const [annexStatus,setAnnexStatus]=useState({state:"loading",message:"Loading FIFA Annex C table..."});
   const allThirds=Object.entries(groups).map(([g,teams])=>({group:g,team:teams[2]}));
   const toggleThird=(t)=>{setThirds(p=>p.includes(t)?p.filter(x=>x!==t):[...p,t].slice(0,8));};
@@ -2950,22 +2951,21 @@ function MyBracketTab({ tabTop=116 }) {
   return (
     <div>
       <div ref={_mbhRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:isMobileBracket?"7px 8px":"8px 13px"}}>
-        <div style={{display:"flex",gap:8,marginBottom:8}}>
-          <button onClick={()=>setBracketMode("simulation")} style={{flex:1,padding:"7px 8px",borderRadius:10,cursor:"pointer",background:bracketMode==="simulation"?`${C.green}22`:C.s1,border:`1px solid ${bracketMode==="simulation"?C.green:C.b1}`,color:bracketMode==="simulation"?C.green:C.mid,fontWeight:700,fontSize:12}}>🎮 Free Simulation</button>
-          <button disabled title="Official mode will use live standings after the next integration step" style={{flex:1,padding:"7px 8px",borderRadius:10,cursor:"not-allowed",background:C.s1,border:`1px solid ${C.b1}`,color:C.dim,fontWeight:700,fontSize:12,opacity:0.65}}>🌐 Official Bracket · Soon</button>
-        </div>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:6,minWidth:0}}>
-          <div style={{display:"flex",gap:6,flex:"1 1 auto",minWidth:0,overflowX:"auto",scrollbarWidth:"none",WebkitOverflowScrolling:"touch",paddingBottom:1}}>
-            <Pill active={stage==="groups"} onClick={()=>setStage("groups")} color={C.green}>1 · Set Groups</Pill>
-            <Pill active={stage==="thirds"} onClick={()=>setStage("thirds")} color={C.gold}>2 · Pick 3rds</Pill>
-            <Pill active={stage==="bracket"} onClick={()=>setStage("bracket")} color={C.blue}>3 · Bracket</Pill>
-          </div>
-          {stage==="bracket" && result?.thirdGroupsKey && (
-            <div style={{flex:"0 0 auto",fontSize:isMobileBracket?8:9,color:result.fifaEngineStatus==="fifa-ready"?C.green:C.gold,fontWeight:900,letterSpacing:"0.02em",background:result.fifaEngineStatus==="fifa-ready"?`${C.green}18`:`${C.gold}18`,border:`1px solid ${result.fifaEngineStatus==="fifa-ready"?C.greenS:C.gold}55`,borderRadius:999,padding:isMobileBracket?"5px 7px":"5px 8px",whiteSpace:"nowrap",maxWidth:isMobileBracket?86:240,overflow:"hidden",textOverflow:"ellipsis"}}>
-              {result.fifaEngineStatus==="fifa-ready"?(isMobileBracket?"🏆 Ready":"🏆 FIFA 2026 Bracket Generated"):(isMobileBracket?"⚠️ Fallback":"⚠️ Fallback Bracket")}
-            </div>
-          )}
-        </div>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:8}}>
+  <button onClick={()=>setBracketMode("simulation")} style={{flex:"1 1 auto",padding:"8px 10px",borderRadius:12,cursor:"pointer",background:bracketMode==="simulation"?`${C.green}22`:C.s1,border:`1px solid ${bracketMode==="simulation"?C.green:C.b1}`,color:bracketMode==="simulation"?C.green:C.mid,fontWeight:800,fontSize:12}}>🎮 Free Simulation</button>
+
+  {stage==="bracket" && result?.thirdGroupsKey && (
+    <div style={{flex:"0 0 auto",fontSize:10,color:result.fifaEngineStatus==="fifa-ready"?C.green:C.gold,fontWeight:900,background:result.fifaEngineStatus==="fifa-ready"?`${C.green}18`:`${C.gold}18`,border:`1px solid ${result.fifaEngineStatus==="fifa-ready"?C.greenS:C.gold}55`,borderRadius:999,padding:"6px 10px",whiteSpace:"nowrap"}}>
+      {result.fifaEngineStatus==="fifa-ready"?"🏆 Ready":"⚠️ Fallback"}
+    </div>
+  )}
+</div>
+
+<div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none",WebkitOverflowScrolling:"touch",paddingBottom:1}}>
+  <Pill active={stage==="groups"} onClick={()=>setStage("groups")} color={C.green}>✓ Groups</Pill>
+  <Pill active={stage==="thirds"} onClick={()=>setStage("thirds")} color={C.gold}>✓ Best 3rds</Pill>
+  <Pill active={stage==="bracket"} onClick={()=>setStage("bracket")} color={C.blue}>● Bracket</Pill>
+</div>
       </div>
       
       <div style={{height:0}}/>
@@ -3017,15 +3017,38 @@ function MyBracketTab({ tabTop=116 }) {
         </div>
       )}
       {stage==="bracket" && result && (
-        <div>
-          <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap"}}>
-            <button onClick={()=>setStage("groups")} style={{padding:"7px 12px",borderRadius:10,background:"transparent",border:`1px solid ${C.b2}`,color:C.mid,fontSize:12,cursor:"pointer"}}>← Edit</button>
-            <button onClick={resetWinners} style={{padding:"7px 12px",borderRadius:10,background:`${C.green}22`,border:`1px solid ${C.greenS}`,color:C.green,fontSize:12,fontWeight:700,cursor:"pointer"}}>🔄 Reset Winners</button>
-            <button onClick={resetMyBracket} style={{padding:"7px 12px",borderRadius:10,background:`${C.gold}12`,border:`1px solid ${C.gold}44`,color:C.gold,fontSize:12,fontWeight:700,cursor:"pointer"}}>🗑 Reset Bracket</button>
-            <button onClick={shareBracketCard} disabled={!displayedResult?.champion || sharing} title={!displayedResult?.champion?"Pick the Final winner before sharing":undefined} style={{padding:"7px 12px",borderRadius:10,background:displayedResult?.champion?`${C.blue}22`:C.s1,border:`1px solid ${displayedResult?.champion?C.blue:C.b1}`,color:displayedResult?.champion?C.blue:C.dim,fontSize:12,fontWeight:700,cursor:displayedResult?.champion&&!sharing?"pointer":"not-allowed",opacity:sharing?0.65:1}}>{sharing?"Creating...":"📤 Share Card"}</button>
-            <button onClick={()=>{setPlayMode("manual");setManualPicks({});}} disabled={result.fifaEngineStatus!=="fifa-ready"} style={{padding:"7px 12px",borderRadius:10,background:playMode==="manual"?`${C.blue}22`:C.s1,border:`1px solid ${playMode==="manual"?C.blue:C.b1}`,color:playMode==="manual"?C.blue:C.mid,fontSize:12,fontWeight:700,cursor:result.fifaEngineStatus==="fifa-ready"?"pointer":"not-allowed",opacity:result.fifaEngineStatus==="fifa-ready"?1:0.55}}>👆 Manual Picks</button>
-            <button disabled title="Prediction-based simulation will come later" style={{padding:"7px 12px",borderRadius:10,background:C.s1,border:`1px solid ${C.b1}`,color:C.dim,fontSize:12,fontWeight:700,cursor:"not-allowed",opacity:0.65}}>🔮 Prediction Sim · Soon</button>
-          </div>
+  <div>
+    <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap"}}>
+      <button
+        onClick={shareBracketCard}
+        disabled={!displayedResult?.champion || sharing}
+        title={!displayedResult?.champion?"Pick the Final winner before sharing":undefined}
+        style={{padding:"8px 12px",borderRadius:12,background:displayedResult?.champion?`${C.blue}22`:C.s1,border:`1px solid ${displayedResult?.champion?C.blue:C.b1}`,color:displayedResult?.champion?C.blue:C.dim,fontSize:12,fontWeight:800,cursor:displayedResult?.champion&&!sharing?"pointer":"not-allowed",opacity:sharing?0.65:1}}
+      >
+        {sharing?"Creating...":"📤 Share"}
+      </button>
+
+      <button
+        onClick={()=>setShowBracketActions(v=>!v)}
+        style={{padding:"8px 12px",borderRadius:12,background:showBracketActions?`${C.green}18`:C.s1,border:`1px solid ${showBracketActions?C.green:C.b1}`,color:showBracketActions?C.green:C.mid,fontSize:12,fontWeight:800,cursor:"pointer"}}
+      >
+        ⚙️ Actions
+      </button>
+    </div>
+
+    {showBracketActions && (
+      <Card style={{padding:10,marginBottom:10,background:C.s1,border:`1px solid ${C.b1}`}}>
+        <div style={{display:"grid",gridTemplateColumns:isMobileBracket?"1fr":"repeat(4,1fr)",gap:8}}>
+          <button onClick={()=>setStage("groups")} style={{padding:"8px 10px",borderRadius:10,background:"transparent",border:`1px solid ${C.b2}`,color:C.mid,fontSize:12,fontWeight:700,cursor:"pointer"}}>← Edit</button>
+
+          <button onClick={()=>{setPlayMode("manual");setManualPicks({});}} disabled={result.fifaEngineStatus!=="fifa-ready"} style={{padding:"8px 10px",borderRadius:10,background:playMode==="manual"?`${C.blue}22`:C.bg,border:`1px solid ${playMode==="manual"?C.blue:C.b2}`,color:playMode==="manual"?C.blue:C.mid,fontSize:12,fontWeight:700,cursor:result.fifaEngineStatus==="fifa-ready"?"pointer":"not-allowed",opacity:result.fifaEngineStatus==="fifa-ready"?1:0.55}}>👆 Manual Picks</button>
+
+          <button onClick={resetWinners} style={{padding:"8px 10px",borderRadius:10,background:`${C.green}16`,border:`1px solid ${C.greenS}`,color:C.green,fontSize:12,fontWeight:700,cursor:"pointer"}}>🔄 Reset Winners</button>
+
+          <button onClick={resetMyBracket} style={{padding:"8px 10px",borderRadius:10,background:`${C.gold}12`,border:`1px solid ${C.gold}44`,color:C.gold,fontSize:12,fontWeight:700,cursor:"pointer"}}>🗑 Reset Bracket</button>
+        </div>
+      </Card>
+    )}
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:10,flexWrap:"wrap"}}>
             <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Interactive Bracket Path</div>
             <div style={{display:"flex",gap:6,background:C.s1,border:`1px solid ${C.b1}`,borderRadius:999,padding:3}}>
