@@ -16,25 +16,6 @@ const C = {
   red:"#f87171", text:"#d4ead9", mid:"#7aaa8a", dim:"#3d6a4d",
 };
 
-// ── DESIGN SYSTEM TOKENS ──────────────────────────────────────────────────
-// Keep the app visually consistent by reusing this small spacing/elevation set.
-// Avoid one-off shadows, huge gradients, and random margins in feature tabs.
-const DS = {
-  space: { xs:4, sm:8, md:12, lg:16, xl:24 },
-  radius: { sm:8, md:12, lg:16, pill:999 },
-  shadow: {
-    none:"none",
-    card:"0 2px 8px rgba(0,0,0,0.12)",
-    panel:"0 4px 14px rgba(0,0,0,0.16)",
-    sticky:"0 2px 8px rgba(0,0,0,0.18)",
-    modal:"0 8px 28px rgba(0,0,0,0.30)"
-  },
-  border: {
-    subtle:`1px solid ${C.b1}`,
-    strong:`1px solid ${C.b2}`
-  }
-};
-
 // ── GROUPS ────────────────────────────────────────────────────────────────
 const GROUPS = {
   A:{teams:["Mexico","South Africa","South Korea","Czechia"],flags:["🇲🇽","🇿🇦","🇰🇷","🇨🇿"]},
@@ -731,38 +712,8 @@ function Crest({ team, size=26 }) {
 }
 
 // ── UI PRIMITIVES ─────────────────────────────────────────────────────────
-// Shared primitives: use these wherever possible so tabs feel like one product.
-const Card = ({children,style={}}) => (
-  <div
-    style={{
-      background:C.s1,
-      border:DS.border.subtle,
-      borderRadius:DS.radius.md,
-      boxShadow:DS.shadow.card,
-      overflow:"hidden",
-      ...style
-    }}
-  >
-    {children}
-  </div>
-);
-
-const Panel = ({children,style={}}) => (
-  <Card
-    style={{
-      padding:DS.space.md,
-      marginBottom:DS.space.md,
-      background:C.bg,
-      border:DS.border.strong,
-      boxShadow:DS.shadow.sticky,
-      ...style
-    }}
-  >
-    {children}
-  </Card>
-);
-
-const Badge = ({children,color=C.green,style={}}) => (
+const Card = ({children,style={}}) => <div style={{background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b1}`,borderRadius:12,overflow:"hidden",...style}}>{children}</div>;
+const Badge = ({children,color=C.green}) => (
   <span
     style={{
       display:"inline-flex",
@@ -771,81 +722,17 @@ const Badge = ({children,color=C.green,style={}}) => (
       minHeight:22,
       lineHeight:1,
       padding:"4px 8px",
-      borderRadius:DS.radius.pill,
-      background:`${color}16`,
-      border:`1px solid ${color}33`,
+      borderRadius:20,
+      background:`${color}18`,
       color,
       fontSize:11,
-      fontWeight:700,
-      whiteSpace:"nowrap",
-      ...style
+      fontWeight:600
     }}
   >
     {children}
   </span>
 );
-
-const Pill = ({children,active,onClick,color=C.green,style={}}) => (
-  <button
-    onClick={onClick}
-    style={{
-      display:"inline-flex",
-      alignItems:"center",
-      justifyContent:"center",
-      minHeight:30,
-      padding:"5px 12px",
-      borderRadius:DS.radius.pill,
-      border:`1px solid ${active?color:C.b1}`,
-      background:active?`${color}16`:C.bg,
-      color:active?color:C.mid,
-      fontSize:12,
-      fontWeight:700,
-      cursor:"pointer",
-      whiteSpace:"nowrap",
-      lineHeight:1,
-      ...style
-    }}
-  >
-    {children}
-  </button>
-);
-
-const SectionTitle = ({icon,children,meta,actions=null,style={}}) => (
-  <div
-    style={{
-      display:"flex",
-      alignItems:"center",
-      justifyContent:"space-between",
-      gap:DS.space.sm,
-      marginBottom:DS.space.sm,
-      ...style
-    }}
-  >
-    <div style={{minWidth:0}}>
-      <div style={{fontSize:15,color:C.green,fontWeight:900,lineHeight:1.15}}>
-        {icon ? `${icon} ` : ""}{children}
-        {meta && <span style={{marginLeft:6,fontSize:11,color:C.dim,fontWeight:700}}>{meta}</span>}
-      </div>
-    </div>
-    {actions}
-  </div>
-);
-
-const FilterBar = ({children,style={}}) => (
-  <div
-    style={{
-      display:"flex",
-      gap:6,
-      overflowX:"auto",
-      scrollbarWidth:"none",
-      WebkitOverflowScrolling:"touch",
-      paddingBottom:2,
-      ...style
-    }}
-  >
-    {children}
-  </div>
-);
+const Pill = ({children,active,onClick,color=C.green}) => <button onClick={onClick} style={{padding:"5px 12px",borderRadius:20,border:`1px solid ${active?color:C.b1}`,background:active?`${color}18`:"transparent",color:active?color:C.mid,fontSize:12,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap"}}>{children}</button>;
 const RC = ({v,sz=40}) => { const col=v>=8.5?C.green:v>=7.5?C.gold:v>=6.5?"#fb923c":C.red; return <div style={{width:sz,height:sz,borderRadius:"50%",background:`${col}22`,border:`2px solid ${col}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:sz*0.33,fontWeight:700,color:col,flexShrink:0}}>{v.toFixed(1)}</div>; };
 const Modal = ({open,onClose,title,children}) => { if(!open)return null; return <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.8)",zIndex:1000,display:"flex",alignItems:"flex-end",justifyContent:"center"}}><div onClick={e=>e.stopPropagation()} style={{background:C.s1,border:`1px solid ${C.b2}`,borderRadius:"18px 18px 0 0",width:"100%",maxWidth:620,maxHeight:"90vh",overflowY:"auto",paddingBottom:16}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 18px 12px",borderBottom:`1px solid ${C.b1}`,position:"sticky",top:0,background:C.s1}}><span style={{fontSize:17,fontWeight:700,color:C.green}}>{title}</span><button onClick={onClose} style={{background:"none",border:"none",color:C.mid,fontSize:22,cursor:"pointer"}}>×</button></div><div style={{padding:18}}>{children}</div></div></div>; };
 const Toast = ({msg,onDone}) => { useEffect(()=>{if(msg){const t=setTimeout(onDone,3000);return()=>clearTimeout(t);}},[msg]); if(!msg)return null; return <div style={{position:"fixed",bottom:80,left:"50%",transform:"translateX(-50%)",background:C.green,color:"#030a05",padding:"10px 20px",borderRadius:24,fontWeight:700,fontSize:13,zIndex:2000}}>{msg}</div>; };
@@ -1617,7 +1504,7 @@ function StatsTab({ initial="", tabTop=116 }) {
 
   return (
     <div>
-      <div ref={_shRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:DS.shadow.sticky,padding:"8px 13px"}}>
+      <div ref={_shRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
         <select value={sel} onChange={e=>setSel(e.target.value)} style={{width:"100%",padding:"10px 14px",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:10,color:C.text,fontSize:14,outline:"none"}}>
           <option value="">Select a team</option>
           {Object.keys(GROUPS).map(g=><optgroup key={g} label={`Group ${g}`}>{GROUPS[g].teams.map(t=><option key={t} value={t}>{getFlag(t)} {t}</option>)}</optgroup>)}
@@ -1858,7 +1745,7 @@ function PredTab({ tabTop=140, geoData={} }) {
   const _phRef = useRef(null); const _phH = useElemHeight(_phRef);
   return (
     <div>
-      <div ref={_phRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:DS.shadow.sticky,padding:"8px 13px"}}>
+      <div ref={_phRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <div>
             <span style={{fontWeight:700,fontSize:15,color:C.green}}>🎯 POLYMARKET ODDS</span>
@@ -1975,7 +1862,7 @@ function SimTab({ tabTop=116 }) {
 
   return (
     <div>
-      <div ref={_simhRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:DS.shadow.sticky,padding:"8px 13px"}}>
+      <div ref={_simhRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
           <div>
             <div style={{fontWeight:700,fontSize:15,color:C.green}}>{"🎲 WORLD CUP SIMULATOR"}</div>
@@ -2353,7 +2240,7 @@ function H2HTab({ tabTop=116 }) {
   return (
     <div>
       {/* Fixed team selector */}
-      <div ref={_h2hRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:DS.shadow.sticky,padding:"8px 13px"}}>
+      <div ref={_h2hRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
         <div style={{fontWeight:700,color:C.green,fontSize:15,marginBottom:8}}>{"⚔️ COMPARE TEAMS HEAD TO HEAD"}</div>
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:team1&&team2&&team1!==team2?8:0}}>
           <div style={{flex:1}}>
@@ -2607,7 +2494,7 @@ function BracketMatchup({ match, t1, t2, winner, onPick, interactive=false, comp
     );
   };
   return (
-    <div style={{position:"relative",background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${winner?C.greenS:C.b1}`,borderRadius:12,overflow:"hidden",width:"100%",boxShadow:winner?DS.shadow.panel:DS.shadow.card}}>
+    <div style={{position:"relative",background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${winner?C.greenS:C.b1}`,borderRadius:12,overflow:"hidden",width:"100%",boxShadow:winner?`0 0 0 1px ${C.greenS}, 0 8px 20px rgba(0,0,0,0.25)`:"0 5px 16px rgba(0,0,0,0.22)"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 10px",borderBottom:`1px solid ${C.b1}`,background:`${C.gold}10`}}>
         <span style={{fontSize:10,color:C.gold,fontWeight:900,letterSpacing:"0.08em"}}>M{match || "—"}</span>
         {interactive && <span style={{fontSize:9,color:canPick?C.green:C.dim,fontWeight:800}}>{canPick?"TAP PICK":"LOCKED"}</span>}
@@ -2627,13 +2514,17 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
 
     let isDown = false;
     let startX = 0;
+    let startY = 0;
     let scrollLeft = 0;
+    let scrollTop = 0;
 
     const down = (e) => {
       if (e.button !== 0) return;
       isDown = true;
       startX = e.pageX - el.offsetLeft;
+      startY = e.pageY - el.offsetTop;
       scrollLeft = el.scrollLeft;
+      scrollTop = el.scrollTop;
       el.style.cursor = "grabbing";
       el.style.userSelect = "none";
     };
@@ -2713,7 +2604,7 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
 
     return (
       <div key={round.key} style={{width:columnWidth,flex:`0 0 ${columnWidth}px`,paddingTop:round.padTop}}>
-        <div style={{position:"sticky",top:0,zIndex:2,textAlign:"center",marginBottom:10,background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b1}`,borderRadius:999,padding:"6px 8px",boxShadow:DS.shadow.card}}>
+        <div style={{position:"sticky",top:0,zIndex:2,textAlign:"center",marginBottom:10,background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b1}`,borderRadius:999,padding:"6px 8px",boxShadow:"0 6px 14px rgba(0,0,0,0.25)"}}>
           <div style={{fontSize:10,fontWeight:900,color:round.short==="FINAL"?C.gold:C.green,letterSpacing:"0.08em"}}>{round.short}</div>
           <div style={{fontSize:9,color:C.dim,whiteSpace:"nowrap"}}>{round.label}</div>
         </div>
@@ -2754,6 +2645,7 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
   ref={bracketScrollRef}
   style={{
     width:"100%",
+    maxHeight:"70vh",
     overflowX:"auto",
     overflowY:"hidden",
     cursor:"grab",
@@ -2864,7 +2756,7 @@ function VisualBracketTree({ bracket, pickMode="auto", onPick=()=>{}, view="comp
         })}
       </div>
 
-      <div style={{marginTop:16,background:`linear-gradient(135deg,${C.green}22,${C.gold}18)`,border:`1px solid ${bracket?.champion?C.greenS:C.gold}66`,borderRadius:18,padding:16,textAlign:"center",boxShadow:DS.shadow.panel}}>
+      <div style={{marginTop:16,background:`linear-gradient(135deg,${C.green}22,${C.gold}18)`,border:`1px solid ${bracket?.champion?C.greenS:C.gold}66`,borderRadius:18,padding:16,textAlign:"center",boxShadow:"0 10px 26px rgba(0,0,0,0.28)"}}>
         <div style={{fontSize:9,color:C.dim,fontWeight:900,letterSpacing:"0.15em",marginBottom:8}}>CHAMPION</div>
         {bracket?.champion ? (
           <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:12}}>
@@ -3171,7 +3063,7 @@ function MyBracketTab({ tabTop=116 }) {
         zIndex:2,
         background:C.bg,
         borderBottom:`1px solid ${C.b2}`,
-        boxShadow:DS.shadow.sticky,
+        boxShadow:`0 2px 8px rgba(0,0,0,0.55)`,
         padding:isMobileBracket?"9px 10px 10px":"10px 13px 11px",
         marginTop:8,
         marginBottom:12,
@@ -3447,7 +3339,7 @@ function SavedTab({ saved, onRemove, tabTop=116 }) {
   return (
     <div style={{maxWidth:700,margin:"0 auto"}}>
       {/* Sticky controls */}
-      <div ref={_ref} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:DS.shadow.sticky,padding:"8px 13px"}}>
+      <div ref={_ref} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
         {/* Master actions */}
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
           <span style={{fontSize:12,fontWeight:700,color:C.mid,letterSpacing:"0.06em"}}>ALL MATCHES ({saved.length}){(filterMode!=="all"&&filterVal.size>0)&&filtered.length!==saved.length?<span style={{color:C.dim,fontWeight:400}}> · {filtered.length} shown</span>:null}</span>
@@ -4545,7 +4437,7 @@ function TopScorersTab({ tabTop=116 }) {
 
   return (
     <div>
-      <div ref={_tshRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:DS.shadow.sticky,padding:"8px 13px"}}>
+      <div ref={_tshRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
         <div style={{fontWeight:700,fontSize:15,color:C.green,marginBottom:!hasLive?4:0}}>{"TOP SCORERS"} <span style={{fontSize:11,color:C.dim,fontWeight:400}}>{hasLive?"· "+"Live data":"· "+"Pre-tournament"}</span></div>
         {!hasLive && (
           <div style={{display:"flex",gap:6}}>
@@ -4736,7 +4628,7 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
   const homeContent = (
     <div style={{padding:isDesktop?"14px 24px 0":"16px 20px 0"}}>
       {/* Account card */}
-      <div style={{padding:isDesktop?"14px 18px":"16px 18px",background:`linear-gradient(135deg,${C.s2},${C.s1})`,borderRadius:18,marginBottom:12,border:`1px solid ${isSynced?C.green+"66":C.b1}`,boxShadow:DS.shadow.panel,maxWidth:isDesktop?380:"none",marginLeft:isDesktop?"auto":0,marginRight:isDesktop?"auto":0}}>
+      <div style={{padding:isDesktop?"14px 18px":"16px 18px",background:`linear-gradient(135deg,${C.s2},${C.s1})`,borderRadius:18,marginBottom:12,border:`1px solid ${isSynced?C.green+"66":C.b1}`,boxShadow:"0 10px 24px rgba(0,0,0,0.20)",maxWidth:isDesktop?380:"none",marginLeft:isDesktop?"auto":0,marginRight:isDesktop?"auto":0}}>
         <div style={{display:"flex",alignItems:"center",gap:isDesktop?14:14}}>
           <div onClick={()=>setShowAvatarPicker(true)} style={{position:"relative",width:isDesktop?58:62,height:isDesktop?58:62,borderRadius:"50%",flexShrink:0,background:isSynced?`${C.green}22`:C.bg,border:`3px solid ${isSynced?C.green:C.b2}`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",overflow:"hidden"}}>
             {renderAvatarImg(isDesktop?40:42)}
@@ -4911,7 +4803,7 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
     return (
       <>
         <div onClick={onClose} style={{position:"fixed",inset:0,zIndex:999}}/>
-        <div onClick={e=>e.stopPropagation()} style={{position:"fixed",top:58,right:14,width:440,maxWidth:"calc(100% - 28px)",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:18,boxShadow:DS.shadow.modal,zIndex:1000,overflow:"hidden",maxHeight:"calc(92dvh - env(safe-area-inset-bottom))",overflowY:"auto",WebkitOverflowScrolling:"touch",paddingBottom:"env(safe-area-inset-bottom)"}}>
+        <div onClick={e=>e.stopPropagation()} style={{position:"fixed",top:58,right:14,width:440,maxWidth:"calc(100% - 28px)",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:18,boxShadow:"0 8px 32px rgba(0,0,0,0.4)",zIndex:1000,overflow:"hidden",maxHeight:"calc(92dvh - env(safe-area-inset-bottom))",overflowY:"auto",WebkitOverflowScrolling:"touch",paddingBottom:"env(safe-area-inset-bottom)"}}>
           {header(!isHome)}
           {isHome ? homeContent : subScreenContent}
         </div>
@@ -5023,7 +4915,7 @@ function WCNewsTab({ tabTop=116 }) {
   return (
     <div>
       {/* Sticky header */}
-      <div ref={_ref} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:DS.shadow.sticky,padding:"8px 13px"}}>
+      <div ref={_ref} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <span style={{fontSize:15,fontWeight:700,color:C.green}}>{"📰 World Cup 2026 News"}</span>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
@@ -5210,7 +5102,7 @@ function PullToRefresh({ onRefresh, children }) {
             width:44, height:44, borderRadius:"50%",
             background:C.s1, border:`2px solid ${C.green}`,
             display:"flex", alignItems:"center", justifyContent:"center",
-            boxShadow:DS.shadow.panel,
+            boxShadow:"0 4px 20px rgba(0,0,0,.5)",
             opacity: Math.min(pullY / 20, 1),
           }}>
             {refreshing
@@ -5515,7 +5407,7 @@ function StatsHubTab({ initial="", tabTop=116 }) {
 
   return (
     <div>
-      <div ref={_statsHubRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:DS.shadow.sticky,padding:"8px 13px"}}>
+      <div ref={_statsHubRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
         <div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none"}}>
           <Pill active={mode==="team"} onClick={()=>setMode("team")} color={C.green}>📊 Team Stats</Pill>
           <Pill active={mode==="h2h"} onClick={()=>setMode("h2h")} color={C.rival}>⚔️ Head to Head</Pill>
@@ -5601,7 +5493,7 @@ function InstallBanner() {
   return (
     <>
       {/* Install banner */}
-      <div style={{position:"fixed",bottom:0,left:0,right:0,zIndex:500,maxWidth:700,margin:"0 auto",padding:"12px 14px",background:`linear-gradient(135deg,${C.s1},${C.s2})`,borderTop:`1px solid ${C.green}44`,display:"flex",alignItems:"center",gap:10,boxShadow:DS.shadow.panel}}>
+      <div style={{position:"fixed",bottom:0,left:0,right:0,zIndex:500,maxWidth:700,margin:"0 auto",padding:"12px 14px",background:`linear-gradient(135deg,${C.s1},${C.s2})`,borderTop:`1px solid ${C.green}44`,display:"flex",alignItems:"center",gap:10,boxShadow:"0 -4px 20px rgba(0,0,0,0.3)"}}>
         <img src="/icons/icon-192.png" alt="icon" style={{width:36,height:36,borderRadius:8,flexShrink:0}}/>
         <div style={{flex:1}}>
           <div style={{fontWeight:700,color:C.text,fontSize:13}}>Install World Cup 2026</div>
@@ -5899,7 +5791,7 @@ export default function App() {
     <div style={{position:"fixed",inset:0,background:"#060e0a",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",zIndex:9999}}>
       <div style={{animation:"splashIn .5s ease forwards",opacity:0}}>
         {/* App icon */}
-        <div style={{width:100,height:100,margin:"0 auto 24px",borderRadius:22,overflow:"hidden",boxShadow:DS.shadow.modal}}>
+        <div style={{width:100,height:100,margin:"0 auto 24px",borderRadius:22,overflow:"hidden",boxShadow:"0 8px 32px rgba(0,0,0,.5)"}}>
           <img src="/icons/icon-512.png" alt="WC 2026" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
         </div>
         <div style={{textAlign:"center",marginBottom:8}}>
