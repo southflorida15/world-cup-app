@@ -3691,7 +3691,7 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
       <Card style={{padding:12,marginBottom:12,background:`linear-gradient(135deg,${C.green}10,${C.s1})`,border:`1px solid ${C.green}33`}}>
         <div style={{fontWeight:800,color:C.green,fontSize:12,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:6}}>Fantasy Picks are separate from official scores</div>
         <div style={{fontSize:12,color:C.mid,lineHeight:1.55}}>
-          Official World Cup results drive Schedule, Groups, Stats and the official bracket. Your entered scores are Fantasy Picks only — used for points, leaderboard rankings and future private leagues.
+          Your entered scores are picks for Fantasy only — used for points and leaderboard rankings.
         </div>
       </Card>
 
