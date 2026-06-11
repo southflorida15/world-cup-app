@@ -1104,9 +1104,16 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=n
   const finishedToday = MATCHES.filter(m => { const s=getScore(m.home,m.away); return s&&statusIsFinished(s.status); });
 
   // Upcoming fav matches — grouped by date, sorted chronologically
-  const upcomingFavMatches = favTeams.length > 0
-    ? MATCHES.filter(m => (favTeams.includes(m.home)||favTeams.includes(m.away)) && !getScore(m.home,m.away))
-    : [];
+  const todayUTC = new Date().toISOString().slice(0,10);
+const upcomingFavMatches = favTeams.length > 0
+  ? MATCHES.filter(m => {
+      if (!favTeams.includes(m.home) && !favTeams.includes(m.away)) return false;
+      if (getScore(m.home, m.away)) return false;
+      const iso = MATCH_UTC[m.id];
+      if (!iso) return false;
+      return iso.slice(0,10) === todayUTC;
+    })
+  : [];
   const upcomingByDate = upcomingFavMatches.reduce((acc, m) => {
     const { dateLabel } = matchTimes(m);
     const key = dateLabel || m.date;
