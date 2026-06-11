@@ -72,6 +72,26 @@ function getSmartTTL(fixtures) {
   return 60 * 60;
 }
 
+// ── football-data.org team name normalization ─────────────────────────────
+const FD_NAME_MAP = {
+  "Bosnia-Herzegovina": "Bosnia & Herz.",
+  "Bosnia and Herzegovina": "Bosnia & Herz.",
+  "Cape Verde Islands": "Cape Verde",
+  "Turkey": "Turkiye",
+  "Curaçao": "Curacao",
+  "Congo DR": "DR Congo",
+  "DR Congo": "DR Congo",
+  "Côte d'Ivoire": "Ivory Coast",
+  "Cote d'Ivoire": "Ivory Coast",
+  "Korea Republic": "South Korea",
+  "Republic of Korea": "South Korea",
+  "IR Iran": "Iran",
+  "USA": "United States",
+  "Czech Republic": "Czechia",
+  "Cabo Verde": "Cape Verde",
+};
+const normFD = n => FD_NAME_MAP[n] || n;
+
 // ── football-data.org mapper ───────────────────────────────────────────────
 // Their status values: SCHEDULED, TIMED, IN_PLAY, PAUSED, FINISHED, AWARDED, CANCELLED, POSTPONED, SUSPENDED
 function mapFDMatch(m) {
@@ -79,21 +99,24 @@ function mapFDMatch(m) {
   const statusMap = {
     "IN_PLAY":"LIVE","PAUSED":"HT","FINISHED":"FT","AWARDED":"FT",
     "SCHEDULED":"NS","TIMED":"NS","CANCELLED":"CANC","POSTPONED":"TBD","SUSPENDED":"TBD",
+    "EXTRA_TIME":"ET","PENALTY_SHOOTOUT":"P",
   };
   const short = statusMap[fdStatus] || "NS";
+  // Extract elapsed minute from score object if available
+  const elapsed = m.minute ?? null;
   const hg = m.score?.fullTime?.home ?? m.score?.halfTime?.home ?? null;
   const ag = m.score?.fullTime?.away ?? m.score?.halfTime?.away ?? null;
   return {
     fixture: {
       id:     m.id,
       date:   m.utcDate,
-      status: { short, elapsed: m.minute ?? null },
+      status: { short, elapsed },
       venue:  { name: m.venue || "", city: "" },
     },
     league: { id: 1635, season: 2026 },
     teams: {
-      home: { id: m.homeTeam?.id, name: m.homeTeam?.name || m.homeTeam?.shortName || "" },
-      away: { id: m.awayTeam?.id, name: m.awayTeam?.name || m.awayTeam?.shortName || "" },
+      home: { id: m.homeTeam?.id, name: normFD(m.homeTeam?.name || m.homeTeam?.shortName || "") },
+      away: { id: m.awayTeam?.id, name: normFD(m.awayTeam?.name || m.awayTeam?.shortName || "") },
     },
     goals: {
       home: hg !== null && hg !== undefined ? parseInt(hg) : null,
