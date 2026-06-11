@@ -3051,7 +3051,9 @@ function MyBracketTab({ tabTop=116 }) {
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:10,flexWrap:"wrap"}}>
   <div>
     <div style={{fontSize:14,color:C.green,fontWeight:900}}>🏆 Tournament Bracket</div>
-    <div style={{fontSize:11,color:C.dim,marginTop:2}}>{completedCount}/31 matches picked</div>
+    <div style={{fontSize:11,color:C.dim,marginTop:2}}>
+  {displayedResult?.completedCount || 0}/31 matches picked
+</div>
   </div>
 
   <div style={{display:"flex",gap:6,background:C.s1,border:`1px solid ${C.b1}`,borderRadius:999,padding:3}}>
