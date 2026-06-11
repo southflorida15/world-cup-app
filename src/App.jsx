@@ -2647,7 +2647,7 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
     width:"100%",
     maxHeight:"70vh",
     overflowX:"auto",
-    overflowY:"auto",
+    overflowY:"hidden",
     cursor:"grab",
     WebkitOverflowScrolling:"touch",
     padding:"6px 0 18px",
