@@ -1,4 +1,3 @@
-import FantasyMyStats from "./components/FantasyMyStats";
 import FantasyScoringRules from "./components/FantasyScoringRules";
 import FantasyStatsSummary from "./components/FantasyStatsSummary";
 import MatchHeader from "./components/MatchHeader";
@@ -3660,17 +3659,8 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
           <button onClick={()=>setShowInfo(v=>!v)} style={{background:"none",border:`1px solid ${C.b2}`,borderRadius:20,color:C.dim,fontSize:11,padding:"3px 10px",cursor:"pointer"}}>Scoring Criteria</button>
         </div>
         {showInfo && <FantasyScoringRules C={C} />}
-        <FantasyMyStats
-  user={user}
-  totalPts={totalPts}
-  exact={exact}
-  correct={correct}
-  upcomingCount={upcoming.length}
-  C={C}
-/>
-        <div style={{color:"red"}}>
-  </div>
-<FantasyStatsSummary
+        
+        <FantasyStatsSummary
   totalPts={totalPts}
   exact={exact}
   correct={correct}
