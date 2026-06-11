@@ -3725,8 +3725,8 @@ return (
               border:`1px solid ${C.b2}`,
               borderRadius:20,
               color:C.dim,
-              fontSize:11,
-              padding:"6px 10px",
+              fontSize:15,
+              padding:"8px 14px",
               cursor:"pointer",
               lineHeight:1,
               whiteSpace:"nowrap"
