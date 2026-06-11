@@ -3112,65 +3112,24 @@ function MyBracketTab({ tabTop=116 }) {
     {stage==="bracket" && result && (
   <div>
     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:8,flexWrap:"wrap"}}>
-      <div style={{minWidth:0}}>
-        <div style={{fontSize:14,color:C.green,fontWeight:900,lineHeight:1.1}}>🏆 Tournament Bracket</div>
-        <div style={{fontSize:10,color:C.dim,marginTop:2}}>
-          {displayedResult?.completedCount || 0}/31 matches picked
-        </div>
+      <div style={{fontSize:15,color:C.green,fontWeight:900,lineHeight:1.1}}>
+        🏆 Tournament Bracket
+        <span style={{marginLeft:6,fontSize:11,color:C.dim,fontWeight:600}}>
+          ({displayedResult?.completedCount || 0}/31)
+        </span>
       </div>
 
       <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
         <div style={{display:"flex",gap:4,background:C.s1,border:`1px solid ${C.b1}`,borderRadius:999,padding:2}}>
-          <button
-            onClick={()=>setBracketView("compact")}
-            style={{
-              border:"none",
-              borderRadius:999,
-              padding:"4px 8px",
-              fontSize:10,
-              fontWeight:800,
-              cursor:"pointer",
-              background:bracketView==="compact"?`${C.green}22`:"transparent",
-              color:bracketView==="compact"?C.green:C.mid,
-              lineHeight:1
-            }}
-          >
+          <button onClick={()=>setBracketView("compact")} style={{border:"none",borderRadius:999,padding:"4px 8px",fontSize:10,fontWeight:800,cursor:"pointer",background:bracketView==="compact"?`${C.green}22`:"transparent",color:bracketView==="compact"?C.green:C.mid,lineHeight:1}}>
             📱 Compact
           </button>
-
-          <button
-            onClick={()=>setBracketView("tree")}
-            style={{
-              border:"none",
-              borderRadius:999,
-              padding:"4px 8px",
-              fontSize:10,
-              fontWeight:800,
-              cursor:"pointer",
-              background:bracketView==="tree"?`${C.gold}22`:"transparent",
-              color:bracketView==="tree"?C.gold:C.mid,
-              lineHeight:1
-            }}
-          >
+          <button onClick={()=>setBracketView("tree")} style={{border:"none",borderRadius:999,padding:"4px 8px",fontSize:10,fontWeight:800,cursor:"pointer",background:bracketView==="tree"?`${C.gold}22`:"transparent",color:bracketView==="tree"?C.gold:C.mid,lineHeight:1}}>
             🌳 Tree
           </button>
         </div>
 
-        <button
-          onClick={()=>setShowBracketActions(v=>!v)}
-          style={{
-            padding:"5px 9px",
-            borderRadius:999,
-            background:showBracketActions?`${C.green}18`:C.s1,
-            border:`1px solid ${showBracketActions?C.green:C.b1}`,
-            color:showBracketActions?C.green:C.mid,
-            fontSize:10,
-            fontWeight:800,
-            cursor:"pointer",
-            whiteSpace:"nowrap",
-            lineHeight:1
-          }}
-        >
+        <button onClick={()=>setShowBracketActions(v=>!v)} style={{padding:"5px 9px",borderRadius:999,background:showBracketActions?`${C.green}18`:C.s1,border:`1px solid ${showBracketActions?C.green:C.b1}`,color:showBracketActions?C.green:C.mid,fontSize:10,fontWeight:800,cursor:"pointer",whiteSpace:"nowrap",lineHeight:1}}>
           ⚙️ Actions
         </button>
       </div>
@@ -3179,105 +3138,26 @@ function MyBracketTab({ tabTop=116 }) {
     {showBracketActions && (
       <Card style={{padding:8,marginBottom:8,background:C.s1,border:`1px solid ${C.b1}`}}>
         <div style={{display:"grid",gridTemplateColumns:isMobileBracket?"1fr 1fr":"repeat(5,1fr)",gap:6}}>
-          <button
-            onClick={shareBracketCard}
-            disabled={!displayedResult?.champion || sharing}
-            title={!displayedResult?.champion?"Pick the Final winner before sharing":undefined}
-            style={{
-              padding:"6px 8px",
-              borderRadius:9,
-              background:displayedResult?.champion?`${C.blue}22`:C.bg,
-              border:`1px solid ${displayedResult?.champion?C.blue:C.b2}`,
-              color:displayedResult?.champion?C.blue:C.dim,
-              fontSize:11,
-              fontWeight:700,
-              cursor:displayedResult?.champion&&!sharing?"pointer":"not-allowed",
-              opacity:sharing?0.65:1,
-              lineHeight:1.1,
-              minHeight:30
-            }}
-          >
+          <button onClick={shareBracketCard} disabled={!displayedResult?.champion || sharing} title={!displayedResult?.champion?"Pick the Final winner before sharing":undefined} style={{padding:"6px 8px",borderRadius:9,background:displayedResult?.champion?`${C.blue}22`:C.bg,border:`1px solid ${displayedResult?.champion?C.blue:C.b2}`,color:displayedResult?.champion?C.blue:C.dim,fontSize:11,fontWeight:700,cursor:displayedResult?.champion&&!sharing?"pointer":"not-allowed",opacity:sharing?0.65:1,lineHeight:1.1,minHeight:30}}>
             {sharing?"Creating...":"📤 Share"}
           </button>
-
-          <button
-            onClick={()=>setStage("groups")}
-            style={{
-              padding:"6px 8px",
-              borderRadius:9,
-              background:"transparent",
-              border:`1px solid ${C.b2}`,
-              color:C.mid,
-              fontSize:11,
-              fontWeight:700,
-              cursor:"pointer",
-              lineHeight:1.1,
-              minHeight:30
-            }}
-          >
+          <button onClick={()=>setStage("groups")} style={{padding:"6px 8px",borderRadius:9,background:"transparent",border:`1px solid ${C.b2}`,color:C.mid,fontSize:11,fontWeight:700,cursor:"pointer",lineHeight:1.1,minHeight:30}}>
             ← Edit
           </button>
-
-          <button
-            onClick={()=>setPlayMode("manual")}
-            disabled={result.fifaEngineStatus!=="fifa-ready"}
-            style={{
-              padding:"6px 8px",
-              borderRadius:9,
-              background:playMode==="manual"?`${C.blue}22`:C.bg,
-              border:`1px solid ${playMode==="manual"?C.blue:C.b2}`,
-              color:playMode==="manual"?C.blue:C.mid,
-              fontSize:11,
-              fontWeight:700,
-              cursor:result.fifaEngineStatus==="fifa-ready"?"pointer":"not-allowed",
-              opacity:result.fifaEngineStatus==="fifa-ready"?1:0.55,
-              lineHeight:1.1,
-              minHeight:30
-            }}
-          >
+          <button onClick={()=>setPlayMode("manual")} disabled={result.fifaEngineStatus!=="fifa-ready"} style={{padding:"6px 8px",borderRadius:9,background:playMode==="manual"?`${C.blue}22`:C.bg,border:`1px solid ${playMode==="manual"?C.blue:C.b2}`,color:playMode==="manual"?C.blue:C.mid,fontSize:11,fontWeight:700,cursor:result.fifaEngineStatus==="fifa-ready"?"pointer":"not-allowed",opacity:result.fifaEngineStatus==="fifa-ready"?1:0.55,lineHeight:1.1,minHeight:30}}>
             👆 Manual
           </button>
-
-          <button
-            onClick={resetWinners}
-            style={{
-              padding:"6px 8px",
-              borderRadius:9,
-              background:`${C.green}16`,
-              border:`1px solid ${C.greenS}`,
-              color:C.green,
-              fontSize:11,
-              fontWeight:700,
-              cursor:"pointer",
-              lineHeight:1.1,
-              minHeight:30
-            }}
-          >
+          <button onClick={resetWinners} style={{padding:"6px 8px",borderRadius:9,background:`${C.green}16`,border:`1px solid ${C.greenS}`,color:C.green,fontSize:11,fontWeight:700,cursor:"pointer",lineHeight:1.1,minHeight:30}}>
             🔄 Reset
           </button>
-
-          <button
-            onClick={resetMyBracket}
-            style={{
-              padding:"6px 8px",
-              borderRadius:9,
-              background:`${C.gold}12`,
-              border:`1px solid ${C.gold}44`,
-              color:C.gold,
-              fontSize:11,
-              fontWeight:700,
-              cursor:"pointer",
-              lineHeight:1.1,
-              minHeight:30
-            }}
-          >
+          <button onClick={resetMyBracket} style={{padding:"6px 8px",borderRadius:9,background:`${C.gold}12`,border:`1px solid ${C.gold}44`,color:C.gold,fontSize:11,fontWeight:700,cursor:"pointer",lineHeight:1.1,minHeight:30}}>
             🗑 Bracket
           </button>
         </div>
       </Card>
     )}
 
-      <VisualBracketTree
+    <VisualBracketTree
       bracket={displayedResult}
       pickMode={playMode}
       onPick={handleManualPick}
@@ -3285,11 +3165,10 @@ function MyBracketTab({ tabTop=116 }) {
     />
   </div>
 )}
+
     </div>
   );
-}  
-   
-// ── SAVED TAB ──────────────────────────────────────────────────────────────
+}
 // ── SAVED TAB ──────────────────────────────────────────────────────────────
 function SavedMatchCard({ item, onRemove, notifiedIds=new Set(), onNotified=()=>{} }) {
   const isPWA = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
@@ -3872,7 +3751,7 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
 
   if (!user) return (
     <div style={{paddingTop:12}}>
-      <div style={{background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b2}`,borderRadius:12,padding:14,marginBottom:14,textAlign:"center"}}>
+      <div style={{background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b2}`,borderRadius:12,padding:14,marginBottom:6,textAlign:"center"}}>
         <div style={{fontSize:"1.6rem",marginBottom:4}}>🔮</div>
         <div style={{fontWeight:700,fontSize:17,color:C.green,marginBottom:4}}>Fantasy Picks / Bolão</div>
         <div style={{fontSize:12,color:C.mid,lineHeight:1.5}}>Predict match scores for fun. Official scores come from the World Cup feed; your picks power points, rankings and leagues.</div>
@@ -3948,7 +3827,7 @@ const rankColor =
   // ── Main predictor UI ───────────────────────────────────────────────────
 return (
   <div style={{paddingTop:12}}>
-    <div style={{background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b2}`,borderRadius:12,padding:14,marginBottom:14}}>
+    <div style={{background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b2}`,borderRadius:12,padding:14,marginBottom:8}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10}}>
         <div style={{minWidth:0}}>
           <div style={{fontWeight:700,fontSize:15,color:C.green}}>{"🎯 FANTASY PICKS / BOLÃO"}</div>
