@@ -3052,15 +3052,7 @@ function MyBracketTab({ tabTop=116 }) {
   return (
     <div>
       <div ref={_mbhRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:isMobileBracket?"7px 8px":"8px 13px"}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:8}}>
-  <button onClick={()=>setBracketMode("simulation")} style={{flex:"1 1 auto",padding:"8px 10px",borderRadius:12,cursor:"pointer",background:bracketMode==="simulation"?`${C.green}22`:C.s1,border:`1px solid ${bracketMode==="simulation"?C.green:C.b1}`,color:bracketMode==="simulation"?C.green:C.mid,fontWeight:800,fontSize:12}}>🎮 Free Simulation</button>
-
-  {stage==="bracket" && result?.thirdGroupsKey && (
-    <div style={{flex:"0 0 auto",fontSize:10,color:result.fifaEngineStatus==="fifa-ready"?C.green:C.gold,fontWeight:900,background:result.fifaEngineStatus==="fifa-ready"?`${C.green}18`:`${C.gold}18`,border:`1px solid ${result.fifaEngineStatus==="fifa-ready"?C.greenS:C.gold}55`,borderRadius:999,padding:"6px 10px",whiteSpace:"nowrap"}}>
-      {result.fifaEngineStatus==="fifa-ready"?"🏆 Ready":"⚠️ Fallback"}
-    </div>
-  )}
-</div>
+        
 
 <div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none",WebkitOverflowScrolling:"touch",paddingBottom:4,marginBottom:12}}>
   <Pill active={stage==="groups"} onClick={()=>setStage("groups")} color={C.green}>✓ Groups</Pill>
