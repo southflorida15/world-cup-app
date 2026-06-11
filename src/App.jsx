@@ -3689,6 +3689,13 @@ const myRankIndex = Array.isArray(board)
 
 const myRank = myRankIndex >= 0 ? myRankIndex + 1 : 0;
 const totalPlayers = Array.isArray(board) ? board.length : 0;
+
+const rankColor =
+  myRank === 1 ? "#fbbf24" :
+  myRank === 2 ? "#c0c0c0" :
+  myRank === 3 ? "#cd7f32" :
+  C.green;
+
   // ── Main predictor UI ───────────────────────────────────────────────────
 return (
   <div style={{paddingTop:12}}>
@@ -3702,20 +3709,20 @@ return (
         <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
           {myRank > 0 && (
             <div
-              style={{
-                padding:"10px 16px",
-                borderRadius:20,
-                background:`${C.gold}18`,
-                border:`1px solid ${C.gold}44`,
-                color:C.gold,
-                fontSize:16,
-                fontWeight:800,
-                whiteSpace:"nowrap",
-                lineHeight:1
-              }}
-            >
-              🏅 Rank #{myRank} of {totalPlayers}
-            </div>
+  style={{
+    padding:"6px 12px",
+    borderRadius:20,
+    background:`${rankColor}18`,
+    border:`1px solid ${rankColor}44`,
+    color:rankColor,
+    fontSize:13,
+    fontWeight:800,
+    whiteSpace:"nowrap",
+    lineHeight:1
+  }}
+>
+  🏅 Rank #{myRank}
+</div>
           )}
 
           <button
