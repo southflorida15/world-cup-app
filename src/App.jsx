@@ -3778,11 +3778,11 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
                       {saving && <span style={{fontSize:10,color:C.dim}}>saving...</span>}
                       {!saving && hasPred && !done && !locked && <span style={{fontSize:10,color:C.green}}>✓ saved</span>}
                       {!done && (
-  <FantasyPickLockStatus
-    locked={locked}
-    kickoffTime={MATCH_UTC[m.id]}
-    C={C}
-  />
+  locked ? (
+    <span style={{fontSize:10,color:C.gold}}>🔒 locked</span>
+  ) : (
+    <span style={{fontSize:10,color:C.dim}}>{fantasyLockLabel(m)}</span>
+  )
 )}
                       {pts !== null && <div style={{fontWeight:700,color:ptColor,fontSize:12}}>{pts===3?"⚽⚽⚽ +3":pts===1?"⚽ +1":"❌ 0"}pts</div>}
                     </div>
