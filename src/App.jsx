@@ -2514,13 +2514,17 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
 
     let isDown = false;
     let startX = 0;
+    let startY = 0;
     let scrollLeft = 0;
+    let scrollTop = 0;
 
     const down = (e) => {
       if (e.button !== 0) return;
       isDown = true;
       startX = e.pageX - el.offsetLeft;
+      startY = e.pageY - el.offsetTop;
       scrollLeft = el.scrollLeft;
+      scrollTop = el.scrollTop;
       el.style.cursor = "grabbing";
       el.style.userSelect = "none";
     };
@@ -2541,8 +2545,12 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
       if (!isDown) return;
       e.preventDefault();
       const x = e.pageX - el.offsetLeft;
-      const walk = (x - startX) * 1.4;
-      el.scrollLeft = scrollLeft - walk;
+      const y = e.pageY - el.offsetTop;
+      const walkX = (x - startX) * 1.4;
+      const walkY = (y - startY) * 1.4;
+      
+      el.scrollLeft = scrollLeft - walkX;
+      el.scrollTop = scrollTop - walkY;
     };
 
     const wheel = (e) => {
@@ -2634,18 +2642,19 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
   return (
     <div style={{width:"100%",maxWidth:"100%",overflow:"hidden"}}>
       <div
-        ref={bracketScrollRef}
-        style={{
-          width:"100%",
-          overflowX:"auto",
-          overflowY:"hidden",
-          cursor:"grab",
-          WebkitOverflowScrolling:"touch",
-          padding:"6px 0 18px",
-          scrollPaddingLeft:24,
-          overscrollBehaviorX:"contain"
-        }}
-      >
+  ref={bracketScrollRef}
+  style={{
+    width:"100%",
+    maxHeight:"70vh",
+    overflowX:"auto",
+    overflowY:"auto",
+    cursor:"grab",
+    WebkitOverflowScrolling:"touch",
+    padding:"6px 0 18px",
+    scrollPaddingLeft:24,
+    overscrollBehaviorX:"contain"
+  }}
+>
         <div style={{display:"flex",alignItems:"flex-start",gap:26,minWidth:1520,padding:"0 24px 8px"}}>
           {left.map(r => renderColumn(r, "left"))}
 
