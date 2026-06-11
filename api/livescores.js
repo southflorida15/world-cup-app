@@ -66,10 +66,10 @@ function isMatchWindowActive() {
 
 function getSmartTTL(fixtures) {
   const liveCount = fixtures.filter(f => LIVE_STATUSES.includes(f?.fixture?.status?.short)).length;
-  if (liveCount >= 4) return 8 * 60;
-  if (liveCount >= 2) return 5 * 60;
-  if (liveCount >= 1) return 2 * 60;
-  return 60 * 60;
+  if (liveCount >= 4) return 3 * 60;  // 3min — many live
+  if (liveCount >= 2) return 2 * 60;  // 2min — a few live
+  if (liveCount >= 1) return 60;      // 1min — one live (get fresh scores fast)
+  return 60 * 60;                     // 1hr  — nothing live
 }
 
 // ── football-data.org team name normalization ─────────────────────────────
@@ -149,18 +149,44 @@ function mapFDMatch(m) {
 
 async function fetchFromFootballData() {
   if (!FD_KEY) throw new Error("FOOTBALL_DATA_API_KEY not set");
-  // Fetch all WC 2026 matches — their free tier includes WC
-  const r = await fetch(`${FD_BASE}/competitions/${FD_COMPETITION}/matches?season=2026`, {
-    headers: { "X-Auth-Token": FD_KEY },
-  });
-  if (!r.ok) {
-    const body = await r.text().catch(() => "");
-    throw new Error(`football-data.org ${r.status}: ${body.slice(0, 200)}`);
+
+  const headers = { "X-Auth-Token": FD_KEY };
+
+  // Fetch all WC matches + live matches in parallel
+  // The live endpoint returns real-time scores for in-progress matches
+  const [allRes, liveRes] = await Promise.all([
+    fetch(`${FD_BASE}/competitions/${FD_COMPETITION}/matches?season=2026`, { headers }),
+    fetch(`${FD_BASE}/matches?competitions=${FD_COMPETITION}&status=IN_PLAY`, { headers }),
+  ]);
+
+  if (!allRes.ok) {
+    const body = await allRes.text().catch(() => "");
+    throw new Error(`football-data.org ${allRes.status}: ${body.slice(0, 200)}`);
   }
-  const data = await r.json();
-  const matches = data.matches || [];
-  console.log(`[livescores] football-data.org: ${matches.length} matches`);
-  return matches.map(mapFDMatch);
+
+  const allData = await allRes.json();
+  const allMatches = allData.matches || [];
+
+  // Merge live scores into the full list
+  let liveById = {};
+  if (liveRes.ok) {
+    const liveData = await liveRes.json();
+    const liveMatches = liveData.matches || [];
+    console.log(`[livescores] football-data.org live: ${liveMatches.length} in-play matches`);
+    liveMatches.forEach(m => { liveById[m.id] = m; });
+  }
+
+  // Also fetch PAUSED (half-time) matches
+  const pausedRes = await fetch(`${FD_BASE}/matches?competitions=${FD_COMPETITION}&status=PAUSED`, { headers });
+  if (pausedRes.ok) {
+    const pausedData = await pausedRes.json();
+    (pausedData.matches || []).forEach(m => { liveById[m.id] = m; });
+  }
+
+  // Override full list with live/paused data where available
+  const merged = allMatches.map(m => liveById[m.id] || m);
+  console.log(`[livescores] football-data.org: ${merged.length} total, ${Object.keys(liveById).length} with live scores`);
+  return merged.map(mapFDMatch);
 }
 
 // ── Highlightly mapper ─────────────────────────────────────────────────────
