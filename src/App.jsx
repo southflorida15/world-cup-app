@@ -3062,7 +3062,7 @@ function MyBracketTab({ tabTop=116 }) {
   )}
 </div>
 
-<div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none",WebkitOverflowScrolling:"touch",paddingBottom:4,marginBottom:6}}>
+<div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none",WebkitOverflowScrolling:"touch",paddingBottom:4,marginBottom:12}}>
   <Pill active={stage==="groups"} onClick={()=>setStage("groups")} color={C.green}>✓ Groups</Pill>
   <Pill active={stage==="thirds"} onClick={()=>setStage("thirds")} color={C.gold}>✓ Best 3rds</Pill>
   <Pill active={stage==="bracket"} onClick={()=>setStage("bracket")} color={C.blue}>● Bracket</Pill>
@@ -3073,7 +3073,7 @@ function MyBracketTab({ tabTop=116 }) {
       {stage==="groups" && (
         <div>
           <div style={{fontSize:12,color:C.mid,marginBottom:14,lineHeight:1.6}}>
-            <strong style={{color:C.green}}>Free Simulation:</strong> press and drag <span style={{color:C.dim,fontSize:14}}>⠿</span> to reorder teams. Top 2 qualify automatically. Generate the bracket, then tap winners match by match.
+            <strong style={{color:C.green}}>Build Your Bracket:</strong> Press and drag ⠿ to reorder teams. Top 2 qualify automatically. Generate the bracket, then pick winners match by match.
           </div>
           {Object.entries(groups).map(([g,teams])=>(
             <Card key={g} style={{marginBottom:10}}>
