@@ -3544,13 +3544,25 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
 
   // ── Load leaderboard when that tab is active ────────────────────────────
   useEffect(() => {
-    if (filter !== "board") return;
-    setBL(true);
-    apiPred("leaderboard")
-      .then(b => setBoard(b))
-      .catch(() => setBoard([]))
-      .finally(() => setBL(false));
-  }, [filter]);
+  let cancelled = false;
+
+  if (filter === "board") setBL(true);
+
+  apiPred("leaderboard")
+    .then(b => {
+      if (!cancelled) setBoard(Array.isArray(b) ? b : []);
+    })
+    .catch(() => {
+      if (!cancelled) setBoard([]);
+    })
+    .finally(() => {
+      if (!cancelled && filter === "board") setBL(false);
+    });
+
+  return () => {
+    cancelled = true;
+  };
+}, [filter, fantasyUserId, user?.name]);
 
   // ── Register ────────────────────────────────────────────────────────────
   const handleRegister = async () => {
@@ -3665,7 +3677,18 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
       )}
     </div>
   );
+const myName = String(user?.name || displayName || "").trim().toLowerCase();
 
+const myRankIndex = Array.isArray(board)
+  ? board.findIndex(r => {
+      const rowName = String(r.name || r.displayName || "").trim().toLowerCase();
+      const rowUserId = String(r.userId || r.id || "");
+      return rowUserId === String(fantasyUserId) || (!!myName && rowName === myName);
+    })
+  : -1;
+
+const myRank = myRankIndex >= 0 ? myRankIndex + 1 : 0;
+const totalPlayers = Array.isArray(board) ? board.length : 0;
   // ── Main predictor UI ───────────────────────────────────────────────────
   return (
     <div style={{paddingTop:12}}>
@@ -3674,6 +3697,18 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
           <div>
             <div style={{fontWeight:700,fontSize:15,color:C.green}}>{"🎯 FANTASY PICKS / BOLÃO"}</div>
             <div style={{fontSize:11,color:C.mid,marginTop:2}}>Playing as <strong style={{color:C.gold}}>{user.name}</strong></div>
+            {myRank > 0 && (
+  <div
+    style={{
+      fontSize:11,
+      color:C.green,
+      marginTop:4,
+      fontWeight:700
+    }}
+  >
+    🏅 Rank #{myRank} of {totalPlayers}
+  </div>
+)}
           </div>
          
           <button onClick={()=>setShowInfo(v=>!v)} style={{background:"none",border:`1px solid ${C.b2}`,borderRadius:20,color:C.dim,fontSize:11,padding:"3px 10px",cursor:"pointer"}}>Scoring Criteria</button>
