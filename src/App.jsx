@@ -2561,8 +2561,7 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
           <div style={{fontSize:10,color:C.gold,fontWeight:900,letterSpacing:"0.14em"}}>TOURNAMENT TREE</div>
           <div style={{fontSize:12,color:C.mid,marginTop:3}}>Swipe horizontally to follow the knockout path.</div>
         </div>
-        <div style={{fontSize:10,color:C.dim,background:C.s2,border:`1px solid ${C.b1}`,borderRadius:999,padding:"4px 8px",whiteSpace:"nowrap"}}>{completedCount}/31 picked</div>
-      </div>
+        </div>
       <div style={{width:"100%",overflowX:"auto",overflowY:"hidden",WebkitOverflowScrolling:"touch",padding:"6px 0 18px",scrollPaddingLeft:24,overscrollBehaviorX:"contain"}}>
         <div style={{minWidth:1380,width:"max-content",padding:"6px 32px 14px 24px",margin:"0 auto"}}>
           <div style={{display:"flex",gap:16,alignItems:"flex-start",justifyContent:"center"}}>
@@ -3049,13 +3048,17 @@ function MyBracketTab({ tabTop=116 }) {
         </div>
       </Card>
     )}
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:10,flexWrap:"wrap"}}>
-            <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>Interactive Bracket Path</div>
-            <div style={{display:"flex",gap:6,background:C.s1,border:`1px solid ${C.b1}`,borderRadius:999,padding:3}}>
-              <button onClick={()=>setBracketView("compact")} style={{border:"none",borderRadius:999,padding:"5px 9px",fontSize:10,fontWeight:800,cursor:"pointer",background:bracketView==="compact"?`${C.green}22`:"transparent",color:bracketView==="compact"?C.green:C.mid}}>📱 Compact</button>
-              <button onClick={()=>setBracketView("tree")} style={{border:"none",borderRadius:999,padding:"5px 9px",fontSize:10,fontWeight:800,cursor:"pointer",background:bracketView==="tree"?`${C.gold}22`:"transparent",color:bracketView==="tree"?C.gold:C.mid}}>🌳 Tree</button>
-            </div>
-          </div>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:10,flexWrap:"wrap"}}>
+  <div>
+    <div style={{fontSize:14,color:C.green,fontWeight:900}}>🏆 Tournament Bracket</div>
+    <div style={{fontSize:11,color:C.dim,marginTop:2}}>{completedCount}/31 matches picked</div>
+  </div>
+
+  <div style={{display:"flex",gap:6,background:C.s1,border:`1px solid ${C.b1}`,borderRadius:999,padding:3}}>
+    <button onClick={()=>setBracketView("compact")} style={{border:"none",borderRadius:999,padding:"5px 9px",fontSize:10,fontWeight:800,cursor:"pointer",background:bracketView==="compact"?`${C.green}22`:"transparent",color:bracketView==="compact"?C.green:C.mid}}>📱 Compact</button>
+    <button onClick={()=>setBracketView("tree")} style={{border:"none",borderRadius:999,padding:"5px 9px",fontSize:10,fontWeight:800,cursor:"pointer",background:bracketView==="tree"?`${C.gold}22`:"transparent",color:bracketView==="tree"?C.gold:C.mid}}>🌳 Tree</button>
+  </div>
+</div>  
           <VisualBracketTree bracket={displayedResult} pickMode={playMode} onPick={handleManualPick} view={bracketView}/>
         </div>
       )}
