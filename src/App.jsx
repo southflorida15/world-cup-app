@@ -1,3 +1,4 @@
+import FantasyMyStats from "./components/FantasyMyStats";
 import FantasyScoringRules from "./components/FantasyScoringRules";
 import FantasyStatsSummary from "./components/FantasyStatsSummary";
 import MatchHeader from "./components/MatchHeader";
