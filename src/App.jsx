@@ -2506,14 +2506,73 @@ function BracketMatchup({ match, t1, t2, winner, onPick, interactive=false, comp
 }
 
 function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick=()=>{}, completedCount=0 }) {
-  // Official FIFA 2026 knockout path, arranged visually around the Final.
-  // Left side feeds M101; right side feeds M102.
+  const bracketScrollRef = useRef(null);
+
+  useEffect(() => {
+    const el = bracketScrollRef.current;
+    if (!el) return;
+
+    let isDown = false;
+    let startX = 0;
+    let scrollLeft = 0;
+
+    const down = (e) => {
+      if (e.button !== 0) return;
+      isDown = true;
+      startX = e.pageX - el.offsetLeft;
+      scrollLeft = el.scrollLeft;
+      el.style.cursor = "grabbing";
+      el.style.userSelect = "none";
+    };
+
+    const leave = () => {
+      isDown = false;
+      el.style.cursor = "grab";
+      el.style.userSelect = "auto";
+    };
+
+    const up = () => {
+      isDown = false;
+      el.style.cursor = "grab";
+      el.style.userSelect = "auto";
+    };
+
+    const move = (e) => {
+      if (!isDown) return;
+      e.preventDefault();
+      const x = e.pageX - el.offsetLeft;
+      const walk = (x - startX) * 1.4;
+      el.scrollLeft = scrollLeft - walk;
+    };
+
+    const wheel = (e) => {
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+        el.scrollLeft += e.deltaY;
+      }
+    };
+
+    el.addEventListener("mousedown", down);
+    el.addEventListener("mouseleave", leave);
+    el.addEventListener("mouseup", up);
+    el.addEventListener("mousemove", move);
+    el.addEventListener("wheel", wheel, { passive: true });
+
+    return () => {
+      el.removeEventListener("mousedown", down);
+      el.removeEventListener("mouseleave", leave);
+      el.removeEventListener("mouseup", up);
+      el.removeEventListener("mousemove", move);
+      el.removeEventListener("wheel", wheel);
+    };
+  }, []);
+
   const left = [
     {key:"r32L", short:"R32", label:"Round of 32", ids:[74,77,73,75,83,84,81,82], gap:8, padTop:0},
     {key:"r16L", short:"R16", label:"Round of 16", ids:[89,90,93,94], gap:70, padTop:38},
     {key:"qfL", short:"QF", label:"Quarterfinals", ids:[97,98], gap:224, padTop:130},
     {key:"sfL", short:"SF", label:"Semifinal", ids:[101], gap:0, padTop:318},
   ];
+
   const right = [
     {key:"sfR", short:"SF", label:"Semifinal", ids:[102], gap:0, padTop:318},
     {key:"qfR", short:"QF", label:"Quarterfinals", ids:[99,100], gap:224, padTop:130},
@@ -2522,7 +2581,8 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
   ];
 
   const columnWidth = 166;
-  const connector = (side, m, kind) => ({
+
+  const connector = (side, m) => ({
     position:"absolute",
     [side]:-16,
     top:"50%",
@@ -2533,23 +2593,34 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
 
   const renderColumn = (round, side="left") => {
     const ids = round.ids || [];
+
     return (
       <div key={round.key} style={{width:columnWidth,flex:`0 0 ${columnWidth}px`,paddingTop:round.padTop}}>
         <div style={{position:"sticky",top:0,zIndex:2,textAlign:"center",marginBottom:10,background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b1}`,borderRadius:999,padding:"6px 8px",boxShadow:"0 6px 14px rgba(0,0,0,0.25)"}}>
           <div style={{fontSize:10,fontWeight:900,color:round.short==="FINAL"?C.gold:C.green,letterSpacing:"0.08em"}}>{round.short}</div>
           <div style={{fontSize:9,color:C.dim,whiteSpace:"nowrap"}}>{round.label}</div>
         </div>
+
         <div style={{display:"flex",flexDirection:"column",gap:round.gap}}>
           {ids.map((id) => {
             const m = matchesById[id] || {match:id,home:null,away:null,winner:null};
             const locked = !(m.home && m.away);
+
             return (
               <div key={id} style={{position:"relative",opacity:locked?0.58:1}}>
                 {side === "left" && round.key !== "sfL" && <div style={connector("right", m)}/>}
                 {side === "left" && round.key !== "r32L" && <div style={connector("left", m)}/>}
                 {side === "right" && round.key !== "sfR" && <div style={connector("left", m)}/>}
                 {side === "right" && round.key !== "r32R" && <div style={connector("right", m)}/>}
-                <BracketMatchup match={m.match} t1={m.home} t2={m.away} winner={m.winner} interactive={pickMode==="manual"} onPick={(team)=>onPick(m,team)}/>
+
+                <BracketMatchup
+                  match={m.match}
+                  t1={m.home}
+                  t2={m.away}
+                  winner={m.winner}
+                  interactive={pickMode==="manual"}
+                  onPick={(team)=>onPick(m,team)}
+                />
               </div>
             );
           })}
@@ -2562,29 +2633,47 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
 
   return (
     <div style={{width:"100%",maxWidth:"100%",overflow:"hidden"}}>
-      <div style={{marginBottom:10,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>
-        <div>
-        </div>
-        </div>
-      <div style={{width:"100%",overflowX:"auto",overflowY:"hidden",WebkitOverflowScrolling:"touch",padding:"6px 0 18px",scrollPaddingLeft:24,overscrollBehaviorX:"contain"}}>
-        <div style={{minWidth:1380,width:"max-content",padding:"6px 32px 14px 24px",margin:"0 auto"}}>
-          <div style={{display:"flex",gap:16,alignItems:"flex-start",justifyContent:"center"}}>
-            {left.map(r => renderColumn(r,"left"))}
-            <div style={{width:190,flex:"0 0 190px",paddingTop:286,display:"flex",flexDirection:"column",alignItems:"center",position:"relative"}}>
-              <div style={{fontSize:46,lineHeight:1,filter:"drop-shadow(0 10px 18px rgba(0,0,0,0.45))"}}>🏆</div>
-              <div style={{fontSize:10,color:C.gold,fontWeight:900,letterSpacing:"0.14em",margin:"5px 0 10px"}}>FINAL</div>
-              <div style={{position:"relative"}}>
-                <div style={{position:"absolute",left:-16,top:"50%",width:16,borderTop:`2px solid ${finalMatch.winner?C.greenS:C.b2}`}}/>
-                <div style={{position:"absolute",right:-16,top:"50%",width:16,borderTop:`2px solid ${finalMatch.winner?C.greenS:C.b2}`}}/>
-                <BracketMatchup match={104} t1={finalMatch.home} t2={finalMatch.away} winner={finalMatch.winner} interactive={pickMode==="manual"} onPick={(team)=>onPick(finalMatch,team)}/>
-              </div>
-              <div style={{marginTop:14,background:`linear-gradient(135deg,${C.green}22,${C.gold}18)`,border:`1px solid ${bracket?.champion?C.greenS:C.gold}66`,borderRadius:16,padding:12,minWidth:168,textAlign:"center",boxShadow:"0 10px 26px rgba(0,0,0,0.28)"}}>
-                <div style={{fontSize:9,color:C.dim,fontWeight:900,letterSpacing:"0.12em",marginBottom:6}}>CHAMPION</div>
-                {bracket?.champion ? <><Crest team={bracket.champion} size={44}/><div style={{fontWeight:900,fontSize:15,color:C.green,marginTop:6}}>{bracket.champion}</div></> : <div style={{fontSize:12,color:C.dim,lineHeight:1.5}}>Pick the Final winner</div>}
-              </div>
+      <div
+        ref={bracketScrollRef}
+        style={{
+          width:"100%",
+          overflowX:"auto",
+          overflowY:"hidden",
+          cursor:"grab",
+          WebkitOverflowScrolling:"touch",
+          padding:"6px 0 18px",
+          scrollPaddingLeft:24,
+          overscrollBehaviorX:"contain"
+        }}
+      >
+        <div style={{display:"flex",alignItems:"flex-start",gap:26,minWidth:1520,padding:"0 24px 8px"}}>
+          {left.map(r => renderColumn(r, "left"))}
+
+          <div style={{width:190,flex:"0 0 190px",paddingTop:310}}>
+            <div style={{textAlign:"center",marginBottom:12}}>
+              <div style={{fontSize:12,color:C.gold,fontWeight:900,letterSpacing:"0.12em"}}>FINAL</div>
+              <div style={{fontSize:10,color:C.dim}}>Jul 19 · New York/New Jersey</div>
             </div>
-            {right.map(r => renderColumn(r,"right"))}
+
+            <BracketMatchup
+              match={finalMatch.match}
+              t1={finalMatch.home}
+              t2={finalMatch.away}
+              winner={finalMatch.winner}
+              interactive={pickMode==="manual"}
+              onPick={(team)=>onPick(finalMatch,team)}
+            />
+
+            {finalMatch.winner && (
+              <div style={{marginTop:14,textAlign:"center",background:`${C.gold}16`,border:`1px solid ${C.gold}44`,borderRadius:14,padding:"10px 8px"}}>
+                <div style={{fontSize:10,color:C.dim,fontWeight:800,letterSpacing:"0.08em"}}>CHAMPION</div>
+                <div style={{fontSize:28,marginTop:4}}><Crest team={finalMatch.winner} size={34}/></div>
+                <div style={{fontSize:14,color:C.gold,fontWeight:900,marginTop:4}}>{finalMatch.winner}</div>
+              </div>
+            )}
           </div>
+
+          {right.map(r => renderColumn(r, "right"))}
         </div>
       </div>
     </div>
