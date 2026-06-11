@@ -6,6 +6,15 @@
 
 import { Redis } from "@upstash/redis";
 
+const SCORE_OVERRIDES = {
+  "Mexico|South Africa": {
+    home: 2,
+    away: 0,
+    status: "2H",
+    elapsed: 78,
+  },
+};
+
 const kv = new Redis({
   url:   process.env.KV_REST_API_URL,
   token: process.env.KV_REST_API_TOKEN,
