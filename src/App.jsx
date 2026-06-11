@@ -3050,18 +3050,42 @@ function MyBracketTab({ tabTop=116 }) {
   };
 
   return (
-    <div>
-      <div ref={_mbhRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:isMobileBracket?"7px 8px":"8px 13px"}}>
-        
-
-<div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none",WebkitOverflowScrolling:"touch",paddingBottom:4,marginBottom:4}}>
-  <Pill active={stage==="groups"} onClick={()=>setStage("groups")} color={C.green}>✓ Groups</Pill>
-  <Pill active={stage==="thirds"} onClick={()=>setStage("thirds")} color={C.gold}>✓ Best 3rds</Pill>
-  <Pill active={stage==="bracket"} onClick={()=>setStage("bracket")} color={C.blue}>● Bracket</Pill>
-</div>
+  <div>
+    <div
+      ref={_mbhRef}
+      style={{
+        position:"relative",
+        top:0,
+        left:"auto",
+        transform:"none",
+        width:"100%",
+        maxWidth:700,
+        zIndex:2,
+        background:C.bg,
+        borderBottom:`1px solid ${C.b2}`,
+        boxShadow:`0 2px 8px rgba(0,0,0,0.55)`,
+        padding:isMobileBracket?"9px 10px 10px":"10px 13px 11px",
+        marginTop:8,
+        marginBottom:12,
+        borderRadius:"0 0 10px 10px"
+      }}
+    >
+      <div
+        style={{
+          display:"flex",
+          gap:6,
+          overflowX:"auto",
+          scrollbarWidth:"none",
+          WebkitOverflowScrolling:"touch",
+          paddingBottom:2,
+          marginBottom:0
+        }}
+      >
+        <Pill active={stage==="groups"} onClick={()=>setStage("groups")} color={C.green}>✓ Groups</Pill>
+        <Pill active={stage==="thirds"} onClick={()=>setStage("thirds")} color={C.gold}>✓ Best 3rds</Pill>
+        <Pill active={stage==="bracket"} onClick={()=>setStage("bracket")} color={C.blue}>● Bracket</Pill>
       </div>
-      
-      <div style={{height:0}}/>
+    </div>
       {stage==="groups" && (
         <div>
           <div style={{fontSize:12,color:C.mid,marginBottom:14,lineHeight:1.6}}>
