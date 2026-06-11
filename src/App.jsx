@@ -1103,26 +1103,28 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=n
   const liveMatches = MATCHES.filter(m => { const s=getScore(m.home,m.away); return s&&statusIsLive(s.status); });
   const finishedToday = MATCHES.filter(m => { const s=getScore(m.home,m.away); return s&&statusIsFinished(s.status); });
 
-  // Upcoming fav matches — grouped by date, sorted chronologically
-  const now = new Date();
-  const todayLocal = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
-  const upcomingFavMatches = favTeams.length > 0
-    ? MATCHES.filter(m => {
-        if (!favTeams.includes(m.home) && !favTeams.includes(m.away)) return false;
-        if (getScore(m.home, m.away)) return false;
-        const iso = MATCH_UTC[m.id];
-        if (!iso) return false;
-        const matchLocal = new Date(iso);
-        const matchLocalStr = `${matchLocal.getFullYear()}-${String(matchLocal.getMonth()+1).padStart(2,'0')}-${String(matchLocal.getDate()).padStart(2,'0')}`;
-        return matchLocalStr === todayLocal;
-      })
-    : [];
-  const upcomingByDate = upcomingFavMatches.reduce((acc, m) => {
-    const { dateLabel } = matchTimes(m);
-    const key = dateLabel || m.date;
-    (acc[key] = acc[key] || []).push(m);
-    return acc;
-  }, {});
+  // Today's date in local timezone
+  const _now = new Date();
+  const todayLocal = `${_now.getFullYear()}-${String(_now.getMonth()+1).padStart(2,'0')}-${String(_now.getDate()).padStart(2,'0')}`;
+  const isToday = (iso) => {
+    if (!iso) return false;
+    const d = new Date(iso);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` === todayLocal;
+  };
+
+  // All upcoming matches today (not yet started)
+  const upcomingToday = MATCHES.filter(m => {
+    const iso = MATCH_UTC[m.id];
+    if (!isToday(iso)) return false;
+    const s = getScore(m.home, m.away);
+    // Not yet started — no score entry or NS status
+    return !s || s.status === "NS";
+  });
+
+  // Upcoming fav matches today
+  const upcomingFavMatches = upcomingToday.filter(m =>
+    favTeams.includes(m.home) || favTeams.includes(m.away)
+  );
 
   return (
     <div>
@@ -1136,27 +1138,28 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=n
       </div>
       
       <div style={{height:10}}/>
-      {Object.keys(upcomingByDate).length > 0 && (
+      {upcomingToday.length > 0 && (
         <div style={{marginBottom:16}}>
-          <div style={{fontSize:11,color:C.gold,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>
-            {"UPCOMING — YOUR TEAMS"}
+          <div style={{fontSize:11,color:C.blue,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>
+            TODAY — UPCOMING
           </div>
-          {Object.entries(upcomingByDate).map(([date, matches]) => (
-            <div key={date} style={{marginBottom:10}}>
-              <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:5}}>{date}</div>
-              {matches.map(m => <MatchCard key={m.id} m={m} onAction={onAction} onMatchTap={onMatchTap} savedIds={savedIds}/>)}
+          {upcomingToday.map(m => (
+            <div key={m.id} style={{opacity:0.75}}>
+              <MatchCard m={m} onAction={onAction} onMatchTap={onMatchTap} savedIds={savedIds}
+                favTeam={favTeams.includes(m.home)||favTeams.includes(m.away) ? (favTeams.find(t=>t===m.home||t===m.away)||"") : ""}
+              />
             </div>
           ))}
         </div>
       )}
       {liveMatches.length>0 && <div><div style={{fontSize:11,color:C.green,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>{"Live"} — {"Today's Results".split("'")[0]}</div>{liveMatches.map(m=><MatchCard key={m.id} m={m} onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} savedIds={savedIds}/> )}</div>}
       {finishedToday.length>0 && <div style={{marginTop:liveMatches.length?16:0}}><div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>{"Today's Results"}</div>{finishedToday.map(m=><MatchCard key={m.id} m={m} onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} savedIds={savedIds}/> )}</div>}
-      {liveMatches.length===0 && finishedToday.length===0 && Object.keys(upcomingByDate).length===0 && !lastFetch && (
+      {liveMatches.length===0 && finishedToday.length===0 && upcomingToday.length===0 && !lastFetch && (
         <div style={{marginTop:8}}>
           {[1,2,3].map(i=><SkeletonMatchCard key={i}/>)}
         </div>
       )}
-      {liveMatches.length===0 && finishedToday.length===0 && Object.keys(upcomingByDate).length===0 && lastFetch && (
+      {liveMatches.length===0 && finishedToday.length===0 && upcomingToday.length===0 && lastFetch && (
         <div style={{textAlign:"center",padding:"28px 20px"}}>
           <div style={{fontSize:"2.5rem",marginBottom:10}}>⚽</div>
           <div style={{fontWeight:700,fontSize:16,color:C.mid,marginBottom:6}}>{"No matches today"}</div>
