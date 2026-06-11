@@ -3703,12 +3703,12 @@ return (
           {myRank > 0 && (
             <div
               style={{
-                padding:"6px 12px",
+                padding:"10px 16px",
                 borderRadius:20,
                 background:`${C.gold}18`,
                 border:`1px solid ${C.gold}44`,
                 color:C.gold,
-                fontSize:13,
+                fontSize:16,
                 fontWeight:800,
                 whiteSpace:"nowrap",
                 lineHeight:1
@@ -3725,8 +3725,8 @@ return (
               border:`1px solid ${C.b2}`,
               borderRadius:20,
               color:C.dim,
-              fontSize:15,
-              padding:"8px 14px",
+              fontSize:11,
+              padding:"6px 10px",
               cursor:"pointer",
               lineHeight:1,
               whiteSpace:"nowrap"
