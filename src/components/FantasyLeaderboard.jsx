@@ -31,7 +31,7 @@ export default function FantasyLeaderboard({
     },
     {
       label: "Accuracy",
-      value: ${accuracy}%,
+      value: `${accuracy}%`,
       icon: "📈",
     },
   ];
