@@ -1,8 +1,7 @@
 // /api/livescores.js
-// Live scores via Highlightly API (football-highlights-api.p.rapidapi.com)
+// Live scores via Highlightly API
 // League ID 1635 = FIFA World Cup 2026
-// Fetches by DATE (required by Highlightly) — today + yesterday to catch late finishers.
-// KV-backed shared cache keeps calls well under 100/day.
+// KV-backed shared cache
 
 import { Redis } from "@upstash/redis";
 
@@ -19,7 +18,10 @@ const LEAGUE_ID     = "1635";
 const CACHE_KEY    = "wc2026:livescores";
 const CACHE_TS_KEY = "wc2026:livescores:ts";
 
-// ── Match window guard ─────────────────────────────────────────────────────
+const LIVE_STATUSES     = ["LIVE","1H","HT","2H","ET","BT","P","INT","inprogress","first_half","halftime","second_half","extra_time","penalties"];
+const FINISHED_STATUSES = ["FT","AET","PEN","AWD","WO","finished","ended","after_extra_time","after_penalties"];
+
+// Match window guard
 const KICKOFFS = [
   "2026-06-11T19:00:00Z","2026-06-12T02:00:00Z","2026-06-12T19:00:00Z","2026-06-13T01:00:00Z",
   "2026-06-13T19:00:00Z","2026-06-13T22:00:00Z","2026-06-14T01:00:00Z","2026-06-14T03:59:00Z",
@@ -48,7 +50,7 @@ const KICKOFFS = [
   "2026-07-09T20:00:00Z","2026-07-10T19:00:00Z","2026-07-11T21:00:00Z","2026-07-12T01:00:00Z",
   "2026-07-14T19:00:00Z","2026-07-15T19:00:00Z","2026-07-18T21:00:00Z","2026-07-19T19:00:00Z"
 ];
-const WINDOW_MS = 150 * 60 * 1000; // 2.5 hrs
+const WINDOW_MS = 150 * 60 * 1000;
 
 function isMatchWindowActive() {
   const now = Date.now();
@@ -58,28 +60,19 @@ function isMatchWindowActive() {
   });
 }
 
-// Smart TTLs based on how many matches are live
-const LIVE_STATUSES     = ["LIVE","1H","HT","2H","ET","BT","P","INT","inprogress","first_half","halftime","second_half","extra_time","penalties"];
-const FINISHED_STATUSES = ["FT","AET","PEN","AWD","WO","finished","ended","after_extra_time","after_penalties"];
-
 function getSmartTTL(fixtures) {
   const liveCount = fixtures.filter(f => LIVE_STATUSES.includes(f?.fixture?.status?.short)).length;
   if (liveCount >= 4) return 8 * 60;
   if (liveCount >= 2) return 5 * 60;
   if (liveCount >= 1) return 2 * 60;
-  return 60 * 60; // 1hr off-peak
-}
-
-function toDateStr(d) {
-  // Returns YYYY-MM-DD in UTC
-  return d.toISOString().slice(0, 10);
+  return 60 * 60;
 }
 
 function mapMatch(m) {
   const statusRaw = m.status || m.matchStatus || "NS";
   const statusMap = {
     "LIVE":"LIVE","1H":"1H","HT":"HT","2H":"2H","ET":"ET","PEN":"P","BT":"BT",
-    "FT":"FT","AET":"AET","NS":"NS","TBD":"NS","PST":"TBD","CANC":"CANC","ABD":"CANC",
+    "FT":"FT","AET":"AET","NS":"NS","TBD":"NS","PST":"TBD","CANC":"CANC",
     "finished":"FT","inprogress":"LIVE","first_half":"1H","halftime":"HT",
     "second_half":"2H","extra_time":"ET","penalties":"P",
     "ended":"FT","after_extra_time":"AET","after_penalties":"PEN",
@@ -108,19 +101,18 @@ function mapMatch(m) {
   };
 }
 
-async function fetchMatchesForDate(dateStr) {
+async function fetchDate(dateStr) {
+  // Try both date param formats
   const url = `${BASE}/matches?leagueId=${LEAGUE_ID}&date=${dateStr}&limit=50&timezone=Etc%2FUTC`;
+  console.log(`[livescores] fetching: ${url}`);
   const r = await fetch(url, {
-    headers: {
-      "X-RapidAPI-Key":  RAPIDAPI_KEY,
-      "X-RapidAPI-Host": RAPIDAPI_HOST,
-    },
+    headers: { "X-RapidAPI-Key": RAPIDAPI_KEY, "X-RapidAPI-Host": RAPIDAPI_HOST },
   });
-  if (!r.ok) {
-    const body = await r.text().catch(() => "");
-    throw new Error(`Highlightly ${r.status}: ${body.slice(0, 200)}`);
-  }
-  const data = await r.json();
+  const body = await r.text();
+  console.log(`[livescores] status=${r.status} body_preview=${body.slice(0,300)}`);
+  if (!r.ok) throw new Error(`Highlightly ${r.status}: ${body.slice(0, 200)}`);
+  const data = JSON.parse(body);
+  // Handle { data: [...] }, { matches: [...] }, { response: [...] }, or raw array
   const raw = Array.isArray(data) ? data : (data.data || data.matches || data.response || []);
   return raw.map(mapMatch);
 }
@@ -129,48 +121,47 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   if (req.method === "OPTIONS") return res.status(200).end();
 
-  // ── Window guard ──────────────────────────────────────────────────────────
-  if (!isMatchWindowActive()) {
+  // Debug mode: ?debug=1 bypasses window guard and cache
+  const debug = req.query.debug === "1";
+
+  // Window guard
+  if (!debug && !isMatchWindowActive()) {
     let frozen = null;
     try { frozen = await kv.get(CACHE_KEY); } catch(e) {}
     res.setHeader("Cache-Control", "no-cache");
     return res.status(200).json({ response: frozen || [], cached: true, windowActive: false });
   }
 
-  // ── Read KV cache ─────────────────────────────────────────────────────────
-  let cached = null, cachedTs = 0;
-  try {
-    const [raw, ts] = await Promise.all([kv.get(CACHE_KEY), kv.get(CACHE_TS_KEY)]);
-    if (raw) { cached = raw; cachedTs = parseInt(ts || "0"); }
-  } catch(e) { console.warn("[livescores] KV read:", e.message); }
+  // KV cache check (skip in debug mode)
+  if (!debug) {
+    let cached = null, cachedTs = 0;
+    try {
+      const [raw, ts] = await Promise.all([kv.get(CACHE_KEY), kv.get(CACHE_TS_KEY)]);
+      if (raw) { cached = raw; cachedTs = parseInt(ts || "0"); }
+    } catch(e) { console.warn("[livescores] KV read:", e.message); }
 
-  if (cached) {
-    const ttlMs = getSmartTTL(cached) * 1000;
-    if (Date.now() - cachedTs < ttlMs) {
-      res.setHeader("Cache-Control", "no-cache");
-      return res.status(200).json({ response: cached, cached: true, age: Math.round((Date.now() - cachedTs) / 1000) });
+    if (cached) {
+      const ttlMs = getSmartTTL(cached) * 1000;
+      if (Date.now() - cachedTs < ttlMs) {
+        res.setHeader("Cache-Control", "no-cache");
+        return res.status(200).json({ response: cached, cached: true, age: Math.round((Date.now() - cachedTs) / 1000) });
+      }
     }
   }
 
-  // ── Fetch from Highlightly ─────────────────────────────────────────────────
+  // Fetch from Highlightly
   try {
     const now = new Date();
-    const todayStr = toDateStr(now);
-
-    // Also fetch yesterday in case of late-night matches crossing midnight UTC
+    const todayStr = now.toISOString().slice(0, 10);
     const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-    const yesterdayStr = toDateStr(yesterday);
-
-    // Fetch today (required). Fetch yesterday only if within 3hrs of midnight UTC.
+    const yesterdayStr = yesterday.toISOString().slice(0, 10);
     const hourUTC = now.getUTCHours();
-    const fetchYesterday = hourUTC < 3; // before 3am UTC, yesterday's late games may still be live
 
     const [todayFixtures, yesterdayFixtures] = await Promise.all([
-      fetchMatchesForDate(todayStr),
-      fetchYesterday ? fetchMatchesForDate(yesterdayStr) : Promise.resolve([]),
+      fetchDate(todayStr),
+      hourUTC < 3 ? fetchDate(yesterdayStr) : Promise.resolve([]),
     ]);
 
-    // Merge, deduplicate by fixture ID
     const seen = new Set();
     const fixtures = [...todayFixtures, ...yesterdayFixtures].filter(f => {
       const id = f.fixture?.id;
@@ -179,7 +170,9 @@ export default async function handler(req, res) {
       return true;
     });
 
-    // Write to KV
+    console.log(`[livescores] total fixtures: ${fixtures.length}`);
+
+    // Write KV cache
     const kvTtl = getSmartTTL(fixtures);
     try {
       await Promise.all([
@@ -189,11 +182,11 @@ export default async function handler(req, res) {
     } catch(e) { console.warn("[livescores] KV write:", e.message); }
 
     res.setHeader("Cache-Control", "no-cache");
-    return res.status(200).json({ response: fixtures, cached: false });
+    return res.status(200).json({ response: fixtures, cached: false, debug: debug ? { today: todayStr, count: fixtures.length } : undefined });
 
   } catch(err) {
     console.error("[livescores] error:", err.message);
-    if (cached) return res.status(200).json({ response: cached, cached: true, stale: true, error: err.message });
-    return res.status(500).json({ error: err.message, response: [] });
+    // Return error details so we can diagnose
+    return res.status(200).json({ error: err.message, response: [], debug: true });
   }
 }
