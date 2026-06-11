@@ -1311,7 +1311,7 @@ function GrpTab({ onTeam, onMatchTap, tabTop=116 }) {
       <div style={{height:10}}/>
       {view==="standings" && (
         <div>
-          <Card style={{marginBottom:12}}>
+          <Card style={{marginBottom:6}}>
             <div style={{padding:"8px 13px",borderBottom:`1px solid ${C.b1}`,background:C.s1,display:"flex",justifyContent:"space-between"}}>
               <span style={{fontWeight:700,color:C.green,fontSize:15}}>GROUP {sel}</span>
               <div style={{display:"flex",alignItems:"center",gap:8}}>
