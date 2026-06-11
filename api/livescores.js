@@ -172,15 +172,28 @@ async function fetchFromFootballData() {
   if (liveRes.ok) {
     const liveData = await liveRes.json();
     const liveMatches = liveData.matches || [];
-    console.log(`[livescores] football-data.org live: ${liveMatches.length} in-play matches`);
+    console.log(`[livescores] football-data.org live: ${liveMatches.length} in-play matches`, JSON.stringify(liveMatches.map(m=>({id:m.id,status:m.status,score:m.score?.fullTime}))));
     liveMatches.forEach(m => { liveById[m.id] = m; });
+  } else {
+    const errBody = await liveRes.text().catch(()=>"");
+    console.warn(`[livescores] IN_PLAY fetch failed: ${liveRes.status} ${errBody.slice(0,200)}`);
   }
 
-  // Also fetch PAUSED (half-time) matches
-  const pausedRes = await fetch(`${FD_BASE}/matches?competitions=${FD_COMPETITION}&status=PAUSED`, { headers });
+  // Also fetch PAUSED (half-time) and FINISHED today
+  const today = new Date().toISOString().slice(0, 10);
+  const [pausedRes, finishedRes] = await Promise.all([
+    fetch(`${FD_BASE}/matches?competitions=${FD_COMPETITION}&status=PAUSED`, { headers }),
+    fetch(`${FD_BASE}/matches?competitions=${FD_COMPETITION}&status=FINISHED&dateFrom=${today}&dateTo=${today}`, { headers }),
+  ]);
   if (pausedRes.ok) {
     const pausedData = await pausedRes.json();
     (pausedData.matches || []).forEach(m => { liveById[m.id] = m; });
+  }
+  if (finishedRes.ok) {
+    const finishedData = await finishedRes.json();
+    const finishedMatches = finishedData.matches || [];
+    console.log(`[livescores] football-data.org finished today: ${finishedMatches.length}`);
+    finishedMatches.forEach(m => { liveById[m.id] = m; });
   }
 
   // Override full list with live/paused data where available
