@@ -3062,7 +3062,7 @@ function MyBracketTab({ tabTop=116 }) {
   )}
 </div>
 
-<div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none",WebkitOverflowScrolling:"touch",paddingBottom:10,marginBottom:8}}>
+<div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none",WebkitOverflowScrolling:"touch",paddingBottom:4,marginBottom:6}}>
   <Pill active={stage==="groups"} onClick={()=>setStage("groups")} color={C.green}>✓ Groups</Pill>
   <Pill active={stage==="thirds"} onClick={()=>setStage("thirds")} color={C.gold}>✓ Best 3rds</Pill>
   <Pill active={stage==="bracket"} onClick={()=>setStage("bracket")} color={C.blue}>● Bracket</Pill>
@@ -3117,25 +3117,67 @@ function MyBracketTab({ tabTop=116 }) {
           </div>
         </div>
       )}
-      {stage==="bracket" && result && (
+    {stage==="bracket" && result && (
   <div>
-    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:10,flexWrap:"wrap"}}>
+    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:8,flexWrap:"wrap"}}>
       <div style={{minWidth:0}}>
-        <div style={{fontSize:14,color:C.green,fontWeight:900}}>🏆 Tournament Bracket</div>
-        <div style={{fontSize:11,color:C.dim,marginTop:2}}>
+        <div style={{fontSize:14,color:C.green,fontWeight:900,lineHeight:1.1}}>🏆 Tournament Bracket</div>
+        <div style={{fontSize:10,color:C.dim,marginTop:2}}>
           {displayedResult?.completedCount || 0}/31 matches picked
         </div>
       </div>
 
-      <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-        <div style={{display:"flex",gap:6,background:C.s1,border:`1px solid ${C.b1}`,borderRadius:999,padding:3}}>
-          <button onClick={()=>setBracketView("compact")} style={{border:"none",borderRadius:999,padding:"5px 9px",fontSize:10,fontWeight:800,cursor:"pointer",background:bracketView==="compact"?`${C.green}22`:"transparent",color:bracketView==="compact"?C.green:C.mid}}>📱 Compact</button>
-          <button onClick={()=>setBracketView("tree")} style={{border:"none",borderRadius:999,padding:"5px 9px",fontSize:10,fontWeight:800,cursor:"pointer",background:bracketView==="tree"?`${C.gold}22`:"transparent",color:bracketView==="tree"?C.gold:C.mid}}>🌳 Tree</button>
+      <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+        <div style={{display:"flex",gap:4,background:C.s1,border:`1px solid ${C.b1}`,borderRadius:999,padding:2}}>
+          <button
+            onClick={()=>setBracketView("compact")}
+            style={{
+              border:"none",
+              borderRadius:999,
+              padding:"4px 8px",
+              fontSize:10,
+              fontWeight:800,
+              cursor:"pointer",
+              background:bracketView==="compact"?`${C.green}22`:"transparent",
+              color:bracketView==="compact"?C.green:C.mid,
+              lineHeight:1
+            }}
+          >
+            📱 Compact
+          </button>
+
+          <button
+            onClick={()=>setBracketView("tree")}
+            style={{
+              border:"none",
+              borderRadius:999,
+              padding:"4px 8px",
+              fontSize:10,
+              fontWeight:800,
+              cursor:"pointer",
+              background:bracketView==="tree"?`${C.gold}22`:"transparent",
+              color:bracketView==="tree"?C.gold:C.mid,
+              lineHeight:1
+            }}
+          >
+            🌳 Tree
+          </button>
         </div>
 
         <button
           onClick={()=>setShowBracketActions(v=>!v)}
-          style={{padding:"6px 10px",borderRadius:999,background:showBracketActions?`${C.green}18`:C.s1,border:`1px solid ${showBracketActions?C.green:C.b1}`,color:showBracketActions?C.green:C.mid,fontSize:11,fontWeight:800,cursor:"pointer",whiteSpace:"nowrap"}}
+          style={{
+            padding:"5px 9px",
+            borderRadius:999,
+            background:showBracketActions?`${C.green}18`:C.s1,
+            border:`1px solid ${showBracketActions?C.green:C.b1}`,
+            color:showBracketActions?C.green:C.mid,
+            fontSize:10,
+            fontWeight:800,
+            cursor:"pointer",
+            whiteSpace:"nowrap",
+            lineHeight:1
+          }}
         >
           ⚙️ Actions
         </button>
@@ -3143,41 +3185,118 @@ function MyBracketTab({ tabTop=116 }) {
     </div>
 
     {showBracketActions && (
-      <Card style={{padding:10,marginBottom:10,background:C.s1,border:`1px solid ${C.b1}`}}>
-        <div style={{display:"grid",gridTemplateColumns:isMobileBracket?"1fr":"repeat(5,1fr)",gap:8}}>
+      <Card style={{padding:8,marginBottom:8,background:C.s1,border:`1px solid ${C.b1}`}}>
+        <div style={{display:"grid",gridTemplateColumns:isMobileBracket?"1fr 1fr":"repeat(5,1fr)",gap:6}}>
           <button
             onClick={shareBracketCard}
             disabled={!displayedResult?.champion || sharing}
             title={!displayedResult?.champion?"Pick the Final winner before sharing":undefined}
-            style={{padding:"8px 10px",borderRadius:10,background:displayedResult?.champion?`${C.blue}22`:C.bg,border:`1px solid ${displayedResult?.champion?C.blue:C.b2}`,color:displayedResult?.champion?C.blue:C.dim,fontSize:12,fontWeight:700,cursor:displayedResult?.champion&&!sharing?"pointer":"not-allowed",opacity:sharing?0.65:1}}
+            style={{
+              padding:"6px 8px",
+              borderRadius:9,
+              background:displayedResult?.champion?`${C.blue}22`:C.bg,
+              border:`1px solid ${displayedResult?.champion?C.blue:C.b2}`,
+              color:displayedResult?.champion?C.blue:C.dim,
+              fontSize:11,
+              fontWeight:700,
+              cursor:displayedResult?.champion&&!sharing?"pointer":"not-allowed",
+              opacity:sharing?0.65:1,
+              lineHeight:1.1,
+              minHeight:30
+            }}
           >
             {sharing?"Creating...":"📤 Share"}
           </button>
 
-          <button onClick={()=>setStage("groups")} style={{padding:"8px 10px",borderRadius:10,background:"transparent",border:`1px solid ${C.b2}`,color:C.mid,fontSize:12,fontWeight:700,cursor:"pointer"}}>← Edit</button>
+          <button
+            onClick={()=>setStage("groups")}
+            style={{
+              padding:"6px 8px",
+              borderRadius:9,
+              background:"transparent",
+              border:`1px solid ${C.b2}`,
+              color:C.mid,
+              fontSize:11,
+              fontWeight:700,
+              cursor:"pointer",
+              lineHeight:1.1,
+              minHeight:30
+            }}
+          >
+            ← Edit
+          </button>
 
-          <button onClick={()=>setPlayMode("manual")} disabled={result.fifaEngineStatus!=="fifa-ready"} style={{padding:"8px 10px",borderRadius:10,background:playMode==="manual"?`${C.blue}22`:C.bg,border:`1px solid ${playMode==="manual"?C.blue:C.b2}`,color:playMode==="manual"?C.blue:C.mid,fontSize:12,fontWeight:700,cursor:result.fifaEngineStatus==="fifa-ready"?"pointer":"not-allowed",opacity:result.fifaEngineStatus==="fifa-ready"?1:0.55}}>👆 Manual Picks</button>
+          <button
+            onClick={()=>setPlayMode("manual")}
+            disabled={result.fifaEngineStatus!=="fifa-ready"}
+            style={{
+              padding:"6px 8px",
+              borderRadius:9,
+              background:playMode==="manual"?`${C.blue}22`:C.bg,
+              border:`1px solid ${playMode==="manual"?C.blue:C.b2}`,
+              color:playMode==="manual"?C.blue:C.mid,
+              fontSize:11,
+              fontWeight:700,
+              cursor:result.fifaEngineStatus==="fifa-ready"?"pointer":"not-allowed",
+              opacity:result.fifaEngineStatus==="fifa-ready"?1:0.55,
+              lineHeight:1.1,
+              minHeight:30
+            }}
+          >
+            👆 Manual
+          </button>
 
-          <button onClick={resetWinners} style={{padding:"8px 10px",borderRadius:10,background:`${C.green}16`,border:`1px solid ${C.greenS}`,color:C.green,fontSize:12,fontWeight:700,cursor:"pointer"}}>🔄 Reset Winners</button>
+          <button
+            onClick={resetWinners}
+            style={{
+              padding:"6px 8px",
+              borderRadius:9,
+              background:`${C.green}16`,
+              border:`1px solid ${C.greenS}`,
+              color:C.green,
+              fontSize:11,
+              fontWeight:700,
+              cursor:"pointer",
+              lineHeight:1.1,
+              minHeight:30
+            }}
+          >
+            🔄 Reset
+          </button>
 
-          <button onClick={resetMyBracket} style={{padding:"8px 10px",borderRadius:10,background:`${C.gold}12`,border:`1px solid ${C.gold}44`,color:C.gold,fontSize:12,fontWeight:700,cursor:"pointer"}}>🗑 Reset Bracket</button>
+          <button
+            onClick={resetMyBracket}
+            style={{
+              padding:"6px 8px",
+              borderRadius:9,
+              background:`${C.gold}12`,
+              border:`1px solid ${C.gold}44`,
+              color:C.gold,
+              fontSize:11,
+              fontWeight:700,
+              cursor:"pointer",
+              lineHeight:1.1,
+              minHeight:30
+            }}
+          >
+            🗑 Bracket
+          </button>
         </div>
       </Card>
     )}
 
-    <VisualBracketTree
-    bracket={displayedResult}
-    pickMode={playMode}
-    onPick={handleManualPick}
-    view={bracketView}
+      <VisualBracketTree
+      bracket={displayedResult}
+      pickMode={playMode}
+      onPick={handleManualPick}
+      view={bracketView}
     />
-    </div>
+  </div>
 )}
-
     </div>
   );
-}
-
+}  
+   
 // ── SAVED TAB ──────────────────────────────────────────────────────────────
 // ── SAVED TAB ──────────────────────────────────────────────────────────────
 function SavedMatchCard({ item, onRemove, notifiedIds=new Set(), onNotified=()=>{} }) {
