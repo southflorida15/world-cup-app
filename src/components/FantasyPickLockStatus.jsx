@@ -30,13 +30,13 @@ const remaining = kickoffMs ? kickoffMs - now : 0;
 const isLocked = locked || remaining <= 0;
 
 const TWO_HOURS = 2 * 60 * 60 * 1000;
-const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+const TWELVE_HOURS = 12 * 60 * 60 * 1000;
 
 const pillColor = isLocked
   ? C.red
   : remaining <= TWO_HOURS
     ? C.red
-    : remaining <= TWENTY_FOUR_HOURS
+    : remaining <= TWELVE_HOURS
       ? C.gold
       : C.green;
 
