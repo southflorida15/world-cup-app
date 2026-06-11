@@ -3659,15 +3659,16 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
           <button onClick={()=>setShowInfo(v=>!v)} style={{background:"none",border:`1px solid ${C.b2}`,borderRadius:20,color:C.dim,fontSize:11,padding:"3px 10px",cursor:"pointer"}}>Scoring?</button>
         </div>
         {showInfo && <FantasyScoringRules C={C} />}
-        {totalPossible > 0 && (
-  <FantasyStatsSummary
-    totalPts={totalPts}
-    exact={exact}
-    correct={correct}
-    totalPossible={totalPossible}
-    C={C}
-  />
-)}
+        <div style={{color:"red"}}>
+  totalPossible: {totalPossible}
+</div>
+<FantasyStatsSummary
+  totalPts={totalPts}
+  exact={exact}
+  correct={correct}
+  totalPossible={totalPossible}
+  C={C}
+/>        
       </div>
 
       <Card style={{padding:12,marginBottom:12,background:`linear-gradient(135deg,${C.green}10,${C.s1})`,border:`1px solid ${C.green}33`}}>
