@@ -106,11 +106,30 @@ function mapFDMatch(m) {
   const elapsed = m.minute ?? null;
   const hg = m.score?.fullTime?.home ?? m.score?.halfTime?.home ?? null;
   const ag = m.score?.fullTime?.away ?? m.score?.halfTime?.away ?? null;
+  // Override NS with time-based status so the app shows matches as live
+  // even when football-data.org free tier hasn't updated the status yet
+  const now = Date.now();
+  const ko = m.utcDate ? new Date(m.utcDate).getTime() : 0;
+  let finalShort = short;
+  if (ko > 0) {
+    const minsElapsed = (now - ko) / 60000;
+    if (short === "NS" && minsElapsed >= 0 && minsElapsed < 105) {
+      // Match should be in progress based on time
+      if (minsElapsed < 45) finalShort = "1H";
+      else if (minsElapsed < 50) finalShort = "HT";
+      else if (minsElapsed < 95) finalShort = "2H";
+      else finalShort = "ET";
+    } else if (short === "NS" && minsElapsed >= 105) {
+      // Should be finished
+      finalShort = "FT";
+    }
+  }
+
   return {
     fixture: {
       id:     m.id,
       date:   m.utcDate,
-      status: { short, elapsed },
+      status: { short: finalShort, elapsed },
       venue:  { name: m.venue || "", city: "" },
     },
     league: { id: 1635, season: 2026 },
