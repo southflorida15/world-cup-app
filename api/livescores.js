@@ -1,7 +1,8 @@
 // /api/livescores.js
-// Live scores via Highlightly API
-// League ID 1635 = FIFA World Cup 2026
-// KV-backed shared cache
+// Live scores — two-source architecture:
+//   Primary:  football-data.org (free, no daily cap issues, WC competition code "WC")
+//   Fallback: Highlightly via RapidAPI (100/day — used only if primary fails)
+// KV-backed shared cache keeps real API calls minimal.
 
 import { Redis } from "@upstash/redis";
 
@@ -10,18 +11,24 @@ const kv = new Redis({
   token: process.env.KV_REST_API_TOKEN,
 });
 
-const RAPIDAPI_KEY  = process.env.RAPIDAPI_KEY;
-const RAPIDAPI_HOST = process.env.RAPIDAPI_HOST || "football-highlights-api.p.rapidapi.com";
-const BASE          = `https://${RAPIDAPI_HOST}`;
-const LEAGUE_ID     = "1635";
+// ── Source 1: football-data.org ───────────────────────────────────────────
+const FD_KEY  = process.env.FOOTBALL_DATA_API_KEY;
+const FD_BASE = "https://api.football-data.org/v4";
+const FD_COMPETITION = "WC"; // FIFA World Cup
+
+// ── Source 2: Highlightly (RapidAPI) ─────────────────────────────────────
+const HL_KEY  = process.env.RAPIDAPI_KEY;
+const HL_HOST = process.env.RAPIDAPI_HOST || "football-highlights-api.p.rapidapi.com";
+const HL_BASE = `https://${HL_HOST}`;
+const HL_LEAGUE_ID = "1635";
 
 const CACHE_KEY    = "wc2026:livescores";
 const CACHE_TS_KEY = "wc2026:livescores:ts";
 
-const LIVE_STATUSES     = ["LIVE","1H","HT","2H","ET","BT","P","INT","inprogress","first_half","halftime","second_half","extra_time","penalties"];
-const FINISHED_STATUSES = ["FT","AET","PEN","AWD","WO","finished","ended","after_extra_time","after_penalties"];
+const LIVE_STATUSES = ["LIVE","1H","HT","2H","ET","BT","P","INT","IN_PLAY","PAUSED"];
+const FINISHED_STATUSES = ["FT","AET","PEN","AWD","WO","FINISHED","AWARDED"];
 
-// Match window guard
+// Match window guard — all 104 WC 2026 kickoffs
 const KICKOFFS = [
   "2026-06-11T19:00:00Z","2026-06-12T02:00:00Z","2026-06-12T19:00:00Z","2026-06-13T01:00:00Z",
   "2026-06-13T19:00:00Z","2026-06-13T22:00:00Z","2026-06-14T01:00:00Z","2026-06-14T03:59:00Z",
@@ -54,10 +61,7 @@ const WINDOW_MS = 150 * 60 * 1000;
 
 function isMatchWindowActive() {
   const now = Date.now();
-  return KICKOFFS.some(k => {
-    const ko = new Date(k).getTime();
-    return now >= ko && now <= ko + WINDOW_MS;
-  });
+  return KICKOFFS.some(k => { const ko = new Date(k).getTime(); return now >= ko && now <= ko + WINDOW_MS; });
 }
 
 function getSmartTTL(fixtures) {
@@ -68,7 +72,57 @@ function getSmartTTL(fixtures) {
   return 60 * 60;
 }
 
-function mapMatch(m) {
+// ── football-data.org mapper ───────────────────────────────────────────────
+// Their status values: SCHEDULED, TIMED, IN_PLAY, PAUSED, FINISHED, AWARDED, CANCELLED, POSTPONED, SUSPENDED
+function mapFDMatch(m) {
+  const fdStatus = m.status || "SCHEDULED";
+  const statusMap = {
+    "IN_PLAY":"LIVE","PAUSED":"HT","FINISHED":"FT","AWARDED":"FT",
+    "SCHEDULED":"NS","TIMED":"NS","CANCELLED":"CANC","POSTPONED":"TBD","SUSPENDED":"TBD",
+  };
+  const short = statusMap[fdStatus] || "NS";
+  const hg = m.score?.fullTime?.home ?? m.score?.halfTime?.home ?? null;
+  const ag = m.score?.fullTime?.away ?? m.score?.halfTime?.away ?? null;
+  return {
+    fixture: {
+      id:     m.id,
+      date:   m.utcDate,
+      status: { short, elapsed: m.minute ?? null },
+      venue:  { name: m.venue || "", city: "" },
+    },
+    league: { id: 1635, season: 2026 },
+    teams: {
+      home: { id: m.homeTeam?.id, name: m.homeTeam?.name || m.homeTeam?.shortName || "" },
+      away: { id: m.awayTeam?.id, name: m.awayTeam?.name || m.awayTeam?.shortName || "" },
+    },
+    goals: {
+      home: hg !== null && hg !== undefined ? parseInt(hg) : null,
+      away: ag !== null && ag !== undefined ? parseInt(ag) : null,
+    },
+    score: { fulltime: { home: hg, away: ag } },
+    events: [],
+    _source: "football-data.org",
+  };
+}
+
+async function fetchFromFootballData() {
+  if (!FD_KEY) throw new Error("FOOTBALL_DATA_API_KEY not set");
+  // Fetch all WC 2026 matches — their free tier includes WC
+  const r = await fetch(`${FD_BASE}/competitions/${FD_COMPETITION}/matches?season=2026`, {
+    headers: { "X-Auth-Token": FD_KEY },
+  });
+  if (!r.ok) {
+    const body = await r.text().catch(() => "");
+    throw new Error(`football-data.org ${r.status}: ${body.slice(0, 200)}`);
+  }
+  const data = await r.json();
+  const matches = data.matches || [];
+  console.log(`[livescores] football-data.org: ${matches.length} matches`);
+  return matches.map(mapFDMatch);
+}
+
+// ── Highlightly mapper ─────────────────────────────────────────────────────
+function mapHLMatch(m) {
   const statusRaw = m.status || m.matchStatus || "NS";
   const statusMap = {
     "LIVE":"LIVE","1H":"1H","HT":"HT","2H":"2H","ET":"ET","PEN":"P","BT":"BT",
@@ -78,50 +132,49 @@ function mapMatch(m) {
     "ended":"FT","after_extra_time":"AET","after_penalties":"PEN",
   };
   const short = statusMap[statusRaw] || statusRaw;
-  const homeGoals = m.homeScore ?? m.homeGoals ?? m.score?.home ?? null;
-  const awayGoals = m.awayScore ?? m.awayGoals ?? m.score?.away ?? null;
+  const hg = m.homeScore ?? m.homeGoals ?? m.score?.home ?? null;
+  const ag = m.awayScore ?? m.awayGoals ?? m.score?.away ?? null;
   return {
     fixture: {
-      id:     m.id || m.matchId,
-      date:   m.date || m.startTime || m.kickoff,
+      id: m.id || m.matchId,
+      date: m.date || m.startTime || m.kickoff,
       status: { short, elapsed: m.elapsed ?? m.minute ?? null },
-      venue:  { name: m.venue || m.stadium || "", city: m.city || "" },
+      venue: { name: m.venue || m.stadium || "", city: m.city || "" },
     },
-    league: { id: parseInt(LEAGUE_ID), season: 2026 },
+    league: { id: 1635, season: 2026 },
     teams: {
       home: { id: m.homeTeam?.id, name: m.homeTeam?.name || m.home || "" },
       away: { id: m.awayTeam?.id, name: m.awayTeam?.name || m.away || "" },
     },
     goals: {
-      home: homeGoals !== null && homeGoals !== undefined ? parseInt(homeGoals) : null,
-      away: awayGoals !== null && awayGoals !== undefined ? parseInt(awayGoals) : null,
+      home: hg !== null && hg !== undefined ? parseInt(hg) : null,
+      away: ag !== null && ag !== undefined ? parseInt(ag) : null,
     },
-    score: { fulltime: { home: homeGoals, away: awayGoals } },
+    score: { fulltime: { home: hg, away: ag } },
     events: m.events || [],
+    _source: "highlightly",
   };
 }
 
-async function fetchDate(dateStr) {
-  // Try both date param formats
-  const url = `${BASE}/matches?leagueId=${LEAGUE_ID}&date=${dateStr}&limit=50&timezone=Etc%2FUTC`;
-  console.log(`[livescores] fetching: ${url}`);
-  const r = await fetch(url, {
-    headers: { "X-RapidAPI-Key": RAPIDAPI_KEY, "X-RapidAPI-Host": RAPIDAPI_HOST },
+async function fetchFromHighlightly() {
+  const dateStr = new Date().toISOString().slice(0, 10);
+  const r = await fetch(`${HL_BASE}/matches?leagueId=${HL_LEAGUE_ID}&date=${dateStr}&limit=50&timezone=Etc%2FUTC`, {
+    headers: { "X-RapidAPI-Key": HL_KEY, "X-RapidAPI-Host": HL_HOST },
   });
-  const body = await r.text();
-  console.log(`[livescores] status=${r.status} body_preview=${body.slice(0,300)}`);
-  if (!r.ok) throw new Error(`Highlightly ${r.status}: ${body.slice(0, 200)}`);
-  const data = JSON.parse(body);
-  // Handle { data: [...] }, { matches: [...] }, { response: [...] }, or raw array
+  if (!r.ok) {
+    const body = await r.text().catch(() => "");
+    throw new Error(`Highlightly ${r.status}: ${body.slice(0, 200)}`);
+  }
+  const data = await r.json();
   const raw = Array.isArray(data) ? data : (data.data || data.matches || data.response || []);
-  return raw.map(mapMatch);
+  console.log(`[livescores] Highlightly: ${raw.length} matches`);
+  return raw.map(mapHLMatch);
 }
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   if (req.method === "OPTIONS") return res.status(200).end();
 
-  // Debug mode: ?debug=1 bypasses window guard and cache
   const debug = req.query.debug === "1";
 
   // Window guard
@@ -132,7 +185,7 @@ export default async function handler(req, res) {
     return res.status(200).json({ response: frozen || [], cached: true, windowActive: false });
   }
 
-  // KV cache check (skip in debug mode)
+  // KV cache check
   if (!debug) {
     let cached = null, cachedTs = 0;
     try {
@@ -149,30 +202,28 @@ export default async function handler(req, res) {
     }
   }
 
-  // Fetch from Highlightly
+  // Fetch — try football-data.org first, fall back to Highlightly
+  let fixtures = [];
+  let source = "none";
+  let errors = [];
+
   try {
-    const now = new Date();
-    const todayStr = now.toISOString().slice(0, 10);
-    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-    const yesterdayStr = yesterday.toISOString().slice(0, 10);
-    const hourUTC = now.getUTCHours();
+    fixtures = await fetchFromFootballData();
+    source = "football-data.org";
+  } catch(err) {
+    console.warn("[livescores] football-data.org failed:", err.message);
+    errors.push(`football-data.org: ${err.message}`);
 
-    const [todayFixtures, yesterdayFixtures] = await Promise.all([
-      fetchDate(todayStr),
-      hourUTC < 3 ? fetchDate(yesterdayStr) : Promise.resolve([]),
-    ]);
+    try {
+      fixtures = await fetchFromHighlightly();
+      source = "highlightly";
+    } catch(err2) {
+      console.error("[livescores] Highlightly also failed:", err2.message);
+      errors.push(`highlightly: ${err2.message}`);
+    }
+  }
 
-    const seen = new Set();
-    const fixtures = [...todayFixtures, ...yesterdayFixtures].filter(f => {
-      const id = f.fixture?.id;
-      if (!id || seen.has(id)) return false;
-      seen.add(id);
-      return true;
-    });
-
-    console.log(`[livescores] total fixtures: ${fixtures.length}`);
-
-    // Write KV cache
+  if (fixtures.length > 0) {
     const kvTtl = getSmartTTL(fixtures);
     try {
       await Promise.all([
@@ -180,13 +231,25 @@ export default async function handler(req, res) {
         kv.set(CACHE_TS_KEY, String(Date.now()), { ex: kvTtl * 2 }),
       ]);
     } catch(e) { console.warn("[livescores] KV write:", e.message); }
-
-    res.setHeader("Cache-Control", "no-cache");
-    return res.status(200).json({ response: fixtures, cached: false, debug: debug ? { today: todayStr, count: fixtures.length } : undefined });
-
-  } catch(err) {
-    console.error("[livescores] error:", err.message);
-    // Return error details so we can diagnose
-    return res.status(200).json({ error: err.message, response: [], debug: true });
   }
+
+  // If both failed, return stale cache or empty
+  if (fixtures.length === 0 && errors.length > 0) {
+    let stale = null;
+    try { stale = await kv.get(CACHE_KEY); } catch(e) {}
+    return res.status(200).json({
+      response: stale || [],
+      cached: !!stale,
+      stale: true,
+      errors,
+    });
+  }
+
+  res.setHeader("Cache-Control", "no-cache");
+  return res.status(200).json({
+    response: fixtures,
+    cached: false,
+    source,
+    ...(debug ? { errors } : {}),
+  });
 }
