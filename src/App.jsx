@@ -1660,7 +1660,13 @@ function OddsLineChart() {
   const [hover, setHover] = useState(null); // index into pts
 
   return (
-    <div style={{position:"relative"}}>
+    <div
+  style={{
+    position:"relative",
+    padding:"0 13px",
+    marginBottom:0
+  }}
+>
       <svg viewBox={`0 0 ${W} ${H}`} style={{width:"100%",height:"auto",display:"block"}}>
         {/* Grid lines */}
         {[0,0.25,0.5,0.75,1].map(f => {
@@ -2558,8 +2564,6 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
     <div style={{width:"100%",maxWidth:"100%",overflow:"hidden"}}>
       <div style={{marginBottom:10,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>
         <div>
-          <div style={{fontSize:10,color:C.gold,fontWeight:900,letterSpacing:"0.14em"}}>TOURNAMENT TREE</div>
-          <div style={{fontSize:12,color:C.mid,marginTop:3}}>Swipe horizontally to follow the knockout path.</div>
         </div>
         </div>
       <div style={{width:"100%",overflowX:"auto",overflowY:"hidden",WebkitOverflowScrolling:"touch",padding:"6px 0 18px",scrollPaddingLeft:24,overscrollBehaviorX:"contain"}}>
@@ -2960,7 +2964,7 @@ function MyBracketTab({ tabTop=116 }) {
   )}
 </div>
 
-<div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none",WebkitOverflowScrolling:"touch",paddingBottom:1}}>
+<div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none",WebkitOverflowScrolling:"touch",paddingBottom:10,marginBottom:8}}>
   <Pill active={stage==="groups"} onClick={()=>setStage("groups")} color={C.green}>✓ Groups</Pill>
   <Pill active={stage==="thirds"} onClick={()=>setStage("thirds")} color={C.gold}>✓ Best 3rds</Pill>
   <Pill active={stage==="bracket"} onClick={()=>setStage("bracket")} color={C.blue}>● Bracket</Pill>
@@ -3017,7 +3021,8 @@ function MyBracketTab({ tabTop=116 }) {
       )}
       {stage==="bracket" && result && (
   <div>
-    <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap"}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,marginBottom:12,flexWrap:"wrap"}}>
+  <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
       <button
         onClick={shareBracketCard}
         disabled={!displayedResult?.champion || sharing}
@@ -3033,6 +3038,16 @@ function MyBracketTab({ tabTop=116 }) {
       >
         ⚙️ Actions
       </button>
+        </div>
+
+  <div style={{textAlign:"right",marginLeft:"auto"}}>
+    <div style={{fontSize:12,color:C.gold,fontWeight:900,letterSpacing:"0.08em",textTransform:"uppercase"}}>
+      Tournament Tree
+    </div>
+    <div style={{fontSize:11,color:C.mid,marginTop:2}}>
+      Swipe horizontally to follow the knockout path.
+    </div>
+  </div>
     </div>
 
     {showBracketActions && (
@@ -4679,7 +4694,7 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
     return (
       <>
         <div onClick={onClose} style={{position:"fixed",inset:0,zIndex:999}}/>
-        <div onClick={e=>e.stopPropagation()} style={{position:"fixed",top:58,right:14,width:440,maxWidth:"calc(100vw - 28px)",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:18,boxShadow:"0 8px 32px rgba(0,0,0,0.4)",zIndex:1000,overflow:"hidden",maxHeight:"calc(92dvh - env(safe-area-inset-bottom))",overflowY:"auto",WebkitOverflowScrolling:"touch",paddingBottom:"env(safe-area-inset-bottom)"}}>
+        <div onClick={e=>e.stopPropagation()} style={{position:"fixed",top:58,right:14,width:440,maxWidth:"calc(100% - 28px)",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:18,boxShadow:"0 8px 32px rgba(0,0,0,0.4)",zIndex:1000,overflow:"hidden",maxHeight:"calc(92dvh - env(safe-area-inset-bottom))",overflowY:"auto",WebkitOverflowScrolling:"touch",paddingBottom:"env(safe-area-inset-bottom)"}}>
           {header(!isHome)}
           {isHome ? homeContent : subScreenContent}
         </div>
@@ -5719,7 +5734,7 @@ export default function App() {
           <div style={{position:"relative"}}>
             <div style={{display:"flex",overflowX:"auto",scrollbarWidth:"none",marginBottom:-1}}>
               {TABS.map(t=>(
-                <button key={t.id} onClick={()=>setTab(t.id)} style={{flex:"0 0 auto",padding:"8px 10px",background:"none",border:"none",borderBottom:`2px solid ${tab===t.id?C.green:"transparent"}`,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,color:tab===t.id?C.green:C.dim,position:"relative"}}>
+                <button key={t.id} onClick={()=>setTab(t.id)} style={{flex:"0 0 auto",padding:"8px 8px",background:"none",border:"none",borderBottom:`2px solid ${tab===t.id?C.green:"transparent"}`,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,color:tab===t.id?C.green:C.dim,position:"relative"}}>
                   <span style={{fontSize:14}}>{t.icon}</span>
                   <span style={{fontSize:9,fontWeight:600,whiteSpace:"nowrap"}}>{t.label}</span>
                   {t.id==="live" && hasLiveMatches && tab!=="live" && (
@@ -5729,7 +5744,7 @@ export default function App() {
               ))}
             </div>
             {/* Right fade hint */}
-            <div style={{position:"absolute",top:0,right:0,bottom:0,width:40,background:`linear-gradient(to left,${C.bg} 0%,transparent 100%)`,pointerEvents:"none",zIndex:2}}/>
+            <div style={{position:"absolute",top:0,right:0,bottom:0,width:10,background:`linear-gradient(to left,${C.bg} 0%,transparent 100%)`,pointerEvents:"none",zIndex:2}}/>
           </div>
         </div>
         <PullToRefresh onRefresh={async()=>{ if(refreshScores) await refreshScores(); }}>
