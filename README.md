@@ -2,194 +2,224 @@
 
 ## Overview
 
-World Cup 2026 Predictor & Companion App is a comprehensive fan platform built for the FIFA World Cup 2026™. It combines live tournament tracking, historical World Cup data, predictive tools, a FIFA-compliant knockout bracket engine, cross-device synchronization, notifications, and rich sharing into a single Progressive Web App (PWA).
+World Cup 2026 Predictor & Companion App is a Progressive Web App (PWA) built specifically for the FIFA World Cup 2026™.
+
+The application combines:
+
+- Live tournament tracking
+- Official FIFA 2026 bracket generation
+- Fantasy Picks (Bolão)
+- Team and player intelligence
+- Match tracking and notifications
+- Historical World Cup data
+- Cross-device synchronization
+
+into a single fan-focused experience.
 
 > Disclaimer: Unofficial fan project. Not affiliated with, endorsed by, or sponsored by FIFA.
-
-Live App: https://world-cup-app-iota.vercel.app
 
 ---
 
 # Vision
 
-The goal is to create the ultimate World Cup companion experience:
+Build the ultimate World Cup companion application:
 
-- Follow the tournament live
-- Track teams, players, standings, and news
-- Build your own bracket
-- Compare predictions
-- Sync across devices
-- Share your bracket visually
-- Explore historical World Cup data
-- Eventually query the tournament using natural language
+- Follow every match live
+- Track teams, players and standings
+- Generate official tournament brackets
+- Make score predictions
+- Compete on leaderboards
+- Save and track favorite matches
+- Sync seamlessly across devices
+- Explore historical World Cup information
 
 ---
 
-# Major Features
+# Current Product Modules
 
-## Live Tournament Experience
+## Live Tournament
 
 ### Live Scores
-- Real-time match scores
-- Automatic refresh
+- Real-time match updates
 - Match status indicators
-- Goal and event updates
-- Cached to protect API quotas
+- Match events
+- Cached API responses
+- Mobile-optimized UI
 
 ### Schedule
-- Full 104-match schedule
-- Group-stage and knockout-stage matches
-- Date filtering
-- Venue filtering
-- Round filtering
-- Match counters
-- Local time conversion
+- Full 104-match World Cup schedule
+- Group stage
+- Round of 32
+- Round of 16
+- Quarter-finals
+- Semi-finals
+- Third-place match
+- Final
 
 ### Groups & Standings
-- Group tables
-- Team rankings
+- 12-group format
 - Points
 - Goal difference
 - Goals scored
+- Qualification tracking
+
+### Teams
+- All qualified nations
+- Squad information
+- Team profiles
+- Historical context
+- World Cup records
+
+### Players
+- Squad rosters
+- Player profiles
+- Club information
+- Tournament context
 
 ### News
-- World Cup-focused news feed
+- World Cup-specific news feed
 - Cached updates
 - Mobile-friendly cards
 
-### Team & Player Statistics
-- 48 participating teams
-- Squad rosters
-- Player information
-- Historical data support
+---
+
+# Fantasy Picks (Bolão)
+
+The Fantasy Picks module allows users to predict every World Cup match score and compete against other participants.
+
+## Features
+
+### Match Predictions
+- Predict exact scores
+- Edit predictions before kickoff
+- Automatic save
+- Cross-device sync
+
+### Pick Locking
+- Picks lock automatically at kickoff
+- Locked picks become read-only
+- Visual lock indicators
+- Lock countdown support
+
+### Scoring
+
+| Outcome | Points |
+|----------|----------|
+| Exact score | 3 |
+| Correct result | 1 |
+| Incorrect result | 0 |
+
+### Rankings
+- Global leaderboard
+- User ranking
+- Total points
+- Exact-score tracking
+- Correct-result tracking
+
+### Current Scope (MVP)
+
+- Predictions
+- Locking
+- Scoring
+- Rankings
+- User rank
+
+### Future Roadmap
+
+#### Private Leagues
+- League creation
+- Invite codes
+- League-specific rankings
+
+#### Weekly Competitions
+- Matchday winners
+- Weekly winners
+
+#### Bonus Challenges
+- Match of the Day
+- Upset picks
+- Golden Boot predictions
+
+#### Achievements
+- Exact-score streaks
+- Perfect-round badges
+- Tournament milestones
+
+#### Social Features
+- Friend comparisons
+- Prediction sharing
+- Community features
 
 ---
 
-# My Bracket
+# Bracket Engine
 
 One of the flagship features of the application.
 
 ## FIFA World Cup 2026 Format
 
-The application supports the official tournament structure:
+The engine fully supports the official tournament format:
 
 - 48 teams
 - 12 groups
-- Top 2 teams from each group qualify
-- Best 8 third-placed teams qualify
+- Top 2 qualify automatically
+- Best 8 third-place teams qualify
 - Round of 32
 - Round of 16
 - Quarter-finals
 - Semi-finals
 - Final
 
-## FIFA Annex C Implementation
+## FIFA Annex C Support
 
-The bracket engine implements FIFA's Annex C logic.
+The bracket engine implements FIFA Annex C qualification logic.
 
-Features:
+Capabilities:
 
-- Official third-place qualification handling
-- Full Annex C mapping support
-- 495 possible third-place combinations
-- Automatic Round-of-32 assignment
-
-## Manual Picks Mode
-
-Users can:
-
-- Build groups
-- Select qualifying third-place teams
-- Generate the official knockout bracket
-- Pick winners match-by-match
-- Advance teams through every round
-- Select a champion
-
-## Official Mode (Roadmap)
-
-Official Mode will:
-
-- Pull live standings
-- Determine qualified teams
-- Apply Annex C
-- Generate the official tournament bracket automatically
+- Third-place qualification calculations
+- Annex C mapping
+- 495 possible qualification combinations
+- Automatic Round-of-32 placement
+- Official FIFA bracket generation
 
 ## Bracket Views
 
-### Tree View
-Visual tournament tree with progression through every round.
+### Interactive Tree View
+Visual tournament progression.
 
-### Compact View
-Mobile-optimized bracket layout.
+### Compact Mobile View
+Optimized for smaller screens.
 
-## Bracket Sharing
+## Sharing
 
 Users can share:
 
-- In-progress brackets
-- Completed brackets
+- Tournament brackets
 - Champion picks
-
-Shared cards include:
-
-- Bracket tree
-- Country flags
-- Champion
-- Runner-up
-- Semifinalists
-
----
-
-# Predictor
-
-Users can:
-
-- Predict match scores
-- Compete with other users
-- Earn points automatically
-- Appear on leaderboards
-
-Future improvements:
-
-- Public leagues
-- Friends leagues
-- Prediction analytics
-
----
-
-# Simulator
-
-Tournament simulation engine:
-
-- Monte Carlo simulations
-- Probability-based outcomes
-- Alternative tournament paths
-
-Future:
-
-- Team strength weighting
-- FIFA ranking integration
-- Form-based simulation
+- Tournament outcomes
 
 ---
 
 # My Matches
 
-Users can:
+Personalized match tracking.
+
+## Features
 
 - Save matches
-- Receive reminders
-- Export matches to calendar
-- Filter by teams
-- Filter by groups
+- Favorite teams
+- Match reminders
+- Calendar export
+- Team filtering
+- Group filtering
 
 ## Notifications
 
-Push notifications support:
+Push notification support:
 
-- Upcoming match reminders
+- Upcoming matches
 - Saved matches
-- PWA notifications
+- Key tournament moments
 
 Supported platforms:
 
@@ -201,19 +231,19 @@ Supported platforms:
 
 # Cross-Device Sync
 
-Users can create an account using:
+Users can create lightweight accounts using:
 
 - Display name
-- Email (optional)
-- 6-digit PIN
+- Optional email
+- PIN
 
-Synced data:
+## Synced Data
 
-- My Matches
-- Notifications
-- Predictor entries
+- Fantasy Picks
 - Bracket selections
-- User preferences
+- Saved matches
+- Preferences
+- Notifications
 
 Goal:
 
@@ -232,19 +262,54 @@ Natural-language search across:
 - Stadiums
 - Statistics
 
-Examples:
+Example queries:
 
-- Which player has the most yellow cards?
-- Show matches at 9 PM ET.
+- Which player scored the most goals?
+- Show all matches in Miami.
 - Brazil vs France World Cup history.
 - Which stadium hosted the most World Cup matches?
 
 ---
 
-# API Architecture
+# Architecture
 
-Current serverless functions:
+## Frontend
 
+### Core Stack
+
+- React 18
+- Vite
+- Progressive Web App (PWA)
+
+### Major UI Modules
+
+Recent refactoring extracted major UI areas into reusable components:
+
+#### Match Experience
+- MatchHeader
+- MatchInfoSection
+- MatchDetailCard
+
+#### Fantasy Module
+- FantasyPickLockStatus
+- FantasyScoringRules
+- FantasyStatsSummary
+
+#### Bracket Engine
+- fifa2026Bracket.js
+- Annex C support utilities
+
+This modular architecture reduces App.jsx complexity and makes feature development significantly easier.
+
+---
+
+# Backend Architecture
+
+Serverless architecture deployed on Vercel.
+
+## API Functions
+
+```text
 api/
 ├── admin.js
 ├── annexc.js
@@ -258,158 +323,133 @@ api/
 ├── sync.js
 └── zafronix.js
 
-## Responsibilities
+Responsibilities
 
-### livescores.js
-Live score aggregation and caching.
+predictor.js -> Fantasy Picks storage and rankings.
 
-### zafronix.js
-World Cup statistics, teams, squads, fixtures, and historical data.
+annexc.js -> FIFA Annex C lookup and qualification support.
 
-### annexc.js
-FIFA Annex C lookup support.
+bracket-share.js -> Bracket sharing and rendering.
 
-### bracket-share.js
-Bracket sharing and share-page generation.
+sync.js -> Cross-device synchronization.
 
-### predictor.js
-Prediction storage and leaderboard logic.
+push.js -> Push notifications.
 
-### sync.js
-Cross-device synchronization.
+livescores.js -> Live score aggregation and caching.
 
-### push.js
-Notification subscription and delivery.
+zafronix.js -> Teams, fixtures, statistics and historical data.
 
-### news.js
-World Cup news feed.
+⸻
 
-### og.js
-Open Graph card generation.
+Data Sources
 
-### matchevents.js
-Detailed match-event data.
+* RapidAPI providers
+* Zafronix
+* Highlightly
+* GNews
+* Open-Meteo
 
-### admin.js
-Administration and analytics.
+⸻
 
----
+Storage
 
-# Tech Stack
+* Upstash Redis
+* Local browser caching
+* Session persistence
 
-Frontend:
-- React 18
-- Vite
+⸻
 
-Hosting:
-- Vercel
+Performance Strategy
 
-Storage:
-- Upstash Redis
+Designed to operate within API limits.
 
-Data Providers:
-- RapidAPI services
-- Zafronix
-- Highlightly
-- GNews
-- Open-Meteo
+Techniques:
 
-Notifications:
-- Web Push
-- VAPID
-
-CI/CD:
-- GitHub
-- Vercel Auto Deploy
-
----
-
-# Progressive Web App
-
-Install on:
-
-- iPhone
-- iPad
-- Android
-- Desktop
-
-Benefits:
-
-- Home-screen icon
-- Full-screen experience
-- Push notifications
-- Fast startup
-
----
-
-# Performance Strategy
-
-The application uses aggressive caching to remain within API limits.
-
-Methods:
-
-- Redis KV caching
-- Memory caching
-- Scheduled refreshes
-- Shared cache layers
+* Redis caching
+* In-memory caching
+* Shared cache layers
+* Scheduled refreshes
+* Optimized API aggregation
 
 Goals:
 
-- Lower API costs
-- Faster responses
-- Better mobile experience
+* Fast mobile experience
+* Low API cost
+* Reliable live updates
 
----
+⸻
 
-# Roadmap
+Progressive Web App
 
-## Version 1.0
-- Live Scores
-- Schedule
-- Groups
-- Stats
-- Predictor
-- My Matches
-- Bracket Engine
-- Sync
-- Sharing
+Installable on:
 
-## Version 1.1
-- Ask World Cup
-- Improved sharing
-- Enhanced notifications
+* iPhone
+* iPad
+* Android
+* Desktop
 
-## Version 1.2
-- Official Mode
-- Automatic standings-to-bracket generation
+Benefits:
 
-## Version 2.0
-- AI insights
-- Advanced analytics
-- Public leagues
-- Community features
+* Home screen installation
+* Full-screen experience
+* Push notifications
+* Offline-ready architecture
 
----
+Deployment
 
-# Development Story
+Development
 
-This project was built almost entirely through conversational AI and browser-based development.
+* Local Vite environment
+* Component-based development
+* GitHub source control
 
-Workflow:
+Production
 
-1. Define feature
-2. Generate implementation
-3. Edit through GitHub Web
-4. Deploy through Vercel
-5. Test on live environment
-6. Iterate
+* Vercel hosting
+* Automatic deployments
+* Serverless APIs
+* Edge delivery
 
-No traditional local development workflow was required.
+⸻
 
----
+Roadmap
 
-# License
+Version 1.0
+
+* Live Scores
+* Schedule
+* Groups
+* Teams
+* Stats
+* Fantasy Picks
+* Bracket Engine
+* Notifications
+* Sync
+* Sharing
+
+Version 1.1
+
+* Ask World Cup
+* Enhanced sharing
+* Expanded statistics
+
+Version 1.2
+
+* Official standings-to-bracket automation
+* Official tournament mode
+
+Long-Term
+
+* Private leagues
+* Social features
+* AI insights
+* Advanced analytics
+* Community experiences
+
+⸻
+
+License
 
 Unofficial fan project.
 
-All World Cup trademarks, logos, team names, and related intellectual property belong to their respective owners.
+All World Cup trademarks, logos, team names and related intellectual property belong to their respective owners.
