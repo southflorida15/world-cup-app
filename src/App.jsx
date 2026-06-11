@@ -3055,7 +3055,7 @@ function MyBracketTab({ tabTop=116 }) {
         <div style={{display:"grid",gridTemplateColumns:isMobileBracket?"1fr":"repeat(4,1fr)",gap:8}}>
           <button onClick={()=>setStage("groups")} style={{padding:"8px 10px",borderRadius:10,background:"transparent",border:`1px solid ${C.b2}`,color:C.mid,fontSize:12,fontWeight:700,cursor:"pointer"}}>← Edit</button>
 
-          <button onClick={()=>{setPlayMode("manual");setManualPicks({});}} disabled={result.fifaEngineStatus!=="fifa-ready"} style={{padding:"8px 10px",borderRadius:10,background:playMode==="manual"?`${C.blue}22`:C.bg,border:`1px solid ${playMode==="manual"?C.blue:C.b2}`,color:playMode==="manual"?C.blue:C.mid,fontSize:12,fontWeight:700,cursor:result.fifaEngineStatus==="fifa-ready"?"pointer":"not-allowed",opacity:result.fifaEngineStatus==="fifa-ready"?1:0.55}}>👆 Manual Picks</button>
+          <button onClick={()=>{setPlayMode("manual");}} disabled={result.fifaEngineStatus!=="fifa-ready"} style={{padding:"8px 10px",borderRadius:10,background:playMode==="manual"?`${C.blue}22`:C.bg,border:`1px solid ${playMode==="manual"?C.blue:C.b2}`,color:playMode==="manual"?C.blue:C.mid,fontSize:12,fontWeight:700,cursor:result.fifaEngineStatus==="fifa-ready"?"pointer":"not-allowed",opacity:result.fifaEngineStatus==="fifa-ready"?1:0.55}}>👆 Manual Picks</button>
 
           <button onClick={resetWinners} style={{padding:"8px 10px",borderRadius:10,background:`${C.green}16`,border:`1px solid ${C.greenS}`,color:C.green,fontSize:12,fontWeight:700,cursor:"pointer"}}>🔄 Reset Winners</button>
 
