@@ -3898,7 +3898,7 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
       setPSaving(p => ({...p, [matchId]: true}));
       try {
         await apiPred("savePred", {}, { userId: fantasyUserIdRef.current, matchId, hg, ag });
-      } catch(e) { console.error("savePred", e); }
+      } catch(e) { console.error("savePred", e); alert("Save failed: " + e.message); }
       finally { setPSaving(p => ({...p, [matchId]: false})); }
     }, 800);
   }, []);
@@ -3909,8 +3909,10 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
     predsRef.current = next;
     setPreds(next);
     const updated = next[id];
-    if (updated?.hg !== undefined && updated?.ag !== undefined && updated.hg !== "" && updated.ag !== "") {
-      debouncedSave(id, parseInt(updated.hg), parseInt(updated.ag));
+    const hg = updated?.hg;
+    const ag = updated?.ag;
+    if (hg !== undefined && hg !== null && hg !== "" && ag !== undefined && ag !== null && ag !== "") {
+      debouncedSave(id, parseInt(hg), parseInt(ag));
     }
   };
 
