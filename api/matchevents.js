@@ -63,12 +63,31 @@ async function saveToKV(home, away, events, stats) {
 }
 
 // ── ESPN event ID lookup ───────────────────────────────────────────────────
-// Also stores a separate ESPN ID map so we can look up old matches
-// even after they age out of the livescores feed.
 const ESPN_ID_MAP_KEY = "wc2026:espn_ids";
 
+// Hardcoded ESPN IDs for all group stage matches — never ages out
+const HARDCODED_ESPN_IDS = {
+  "Mexico|South Africa":"760415","South Korea|Czechia":"760414",
+  "Canada|Bosnia & Herz.":"760416","United States|Paraguay":"760417",
+  "Qatar|Switzerland":"760418","Brazil|Morocco":"760419",
+  "Haiti|Scotland":"760420","Australia|Turkiye":"760421",
+  "Germany|Curacao":"760422","Netherlands|Japan":"760423",
+  "Ivory Coast|Ecuador":"760424","Sweden|Tunisia":"760425",
+  "Spain|Cape Verde":"760426","Belgium|Egypt":"760427",
+  "Saudi Arabia|Uruguay":"760428","Iran|New Zealand":"760429",
+  "France|Senegal":"760430","Iraq|Norway":"760431",
+  "Argentina|Algeria":"760432","Austria|Jordan":"760433",
+  "Portugal|DR Congo":"760434","England|Croatia":"760435",
+  "Ghana|Panama":"760436","Uzbekistan|Colombia":"760437",
+};
+
 async function getESPNEventId(home, away) {
-  // 1. Try livescores cache first (works for recent/live matches)
+  const key = `${home}|${away}`;
+
+  // 1. Hardcoded map (fastest, always works for known matches)
+  if (HARDCODED_ESPN_IDS[key]) return HARDCODED_ESPN_IDS[key];
+
+  // 2. Try livescores cache (works for recent/live matches)
   try {
     const cached = await kv.get("wc2026:livescores");
     if (cached) {
@@ -79,7 +98,6 @@ async function getESPNEventId(home, away) {
         return h === home && a === away;
       });
       if (match?.fixture?.id) {
-        // Also persist this ID mapping for future use
         saveESPNId(home, away, match.fixture.id);
         return match.fixture.id;
       }
@@ -88,10 +106,9 @@ async function getESPNEventId(home, away) {
     console.warn("[matchevents] livescores KV lookup:", e.message);
   }
 
-  // 2. Fall back to persisted ID map (works for old matches)
+  // 3. Fall back to persisted ID map
   try {
     const idMap = await kv.get(ESPN_ID_MAP_KEY) || {};
-    const key = `${home}|${away}`;
     if (idMap[key]) return idMap[key];
   } catch(e) {
     console.warn("[matchevents] ESPN ID map lookup:", e.message);
