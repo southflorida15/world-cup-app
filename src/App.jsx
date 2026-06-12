@@ -3884,16 +3884,24 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
   };
 
   // ── Save a single prediction to KV (debounced) ──────────────────────────
-  const savePredToKV = useCallback(async (matchId, hg, ag) => {
-    if (!user) return;
-    setPSaving(p => ({...p, [matchId]: true}));
-    try {
-      await apiPred("savePred", {}, { userId: fantasyUserId, matchId, hg, ag });
-    } catch(e) { console.error("savePred", e); }
-    finally { setPSaving(p => ({...p, [matchId]: false})); }
-  }, [fantasyUserId, user]);
+  // Use refs so the debounce timer never gets invalidated by re-renders
+  const userRef = useRef(user);
+  const fantasyUserIdRef = useRef(fantasyUserId);
+  useEffect(() => { userRef.current = user; }, [user]);
+  useEffect(() => { fantasyUserIdRef.current = fantasyUserId; }, [fantasyUserId]);
 
-  const debouncedSave = useDebounce(savePredToKV, 800);
+  const saveTimerRef = useRef(null);
+  const debouncedSave = useCallback((matchId, hg, ag) => {
+    clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(async () => {
+      if (!userRef.current) return;
+      setPSaving(p => ({...p, [matchId]: true}));
+      try {
+        await apiPred("savePred", {}, { userId: fantasyUserIdRef.current, matchId, hg, ag });
+      } catch(e) { console.error("savePred", e); }
+      finally { setPSaving(p => ({...p, [matchId]: false})); }
+    }, 800);
+  }, []);
 
   const upd = (id, field, val) => {
     const clean = val.replace(/\D/,"");
