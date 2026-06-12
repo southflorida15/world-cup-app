@@ -1118,6 +1118,11 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=n
   const _lhRef = useRef(null); const _lhH = useElemHeight(_lhRef);
   const lastUpdate = lastFetch ? lastFetch.toLocaleTimeString() : null;
   const liveMatches = MATCHES.filter(m => { const s=getScore(m.home,m.away); return s&&statusIsLive(s.status); });
+
+
+  // All upcoming matches today (local timezone)
+  const _nowLive = new Date();
+  const _todayLive = `${_nowLive.getFullYear()}-${String(_nowLive.getMonth()+1).padStart(2,'0')}-${String(_nowLive.getDate()).padStart(2,'0')}`;
   const finishedToday = MATCHES.filter(m => {
     const s = getScore(m.home, m.away);
     if (!s || !statusIsFinished(s.status)) return false;
@@ -1127,10 +1132,6 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=n
     const dStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     return dStr === _todayLive;
   });
-
-  // All upcoming matches today (local timezone)
-  const _nowLive = new Date();
-  const _todayLive = `${_nowLive.getFullYear()}-${String(_nowLive.getMonth()+1).padStart(2,'0')}-${String(_nowLive.getDate()).padStart(2,'0')}`;
   const upcomingToday = MATCHES.filter(m => {
     const iso = MATCH_UTC[m.id];
     if (!iso) return false;
