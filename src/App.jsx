@@ -3809,6 +3809,26 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
     })();
   }, [fantasyUserId, displayName, userAvatar, syncProfile?.uid]);
 
+  // ── Auto-score finished matches ─────────────────────────────────────────
+  useEffect(() => {
+    const finishedWithScores = MATCHES
+      .filter(m => m.group && isFinished(m.home, m.away))
+      .map(m => {
+        const sc = getScore(m.home, m.away);
+        if (!sc || sc.hg === null || sc.ag === null) return null;
+        return { id: m.id, hg: sc.hg, ag: sc.ag };
+      })
+      .filter(Boolean);
+
+    if (!finishedWithScores.length) return;
+
+    fetch("/api/score-matches", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ matches: finishedWithScores }),
+    }).catch(e => console.warn("[score-matches]", e.message));
+  }, [getScore, isFinished]);
+
   // ── Load leaderboard when that tab is active ────────────────────────────
   useEffect(() => {
   let cancelled = false;
@@ -4457,7 +4477,7 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
                   <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 0",borderBottom:`1px solid ${C.b1}`}}>
                     <div style={{flex:1,textAlign:"right"}}>
                       {isHome && <span style={{fontSize:13,color:C.text,fontWeight:ev.type==="Goal"?700:400}}>{ev.player?.name||""}</span>}
-                      {isHome && ev.type==="subst" && <div style={{fontSize:13}}><span style={{color:C.green,fontWeight:600}}>↑ {ev.player?.name||""}</span>{" "}<span style={{color:C.red,fontWeight:600}}>↓ {ev.assist?.name||""}</span></div>}
+                      {isHome && ev.type==="subst" && <div style={{fontSize:10,color:C.dim}}>↑ {ev.assist?.name||""}</div>}
                     </div>
                     <div style={{display:"flex",flexDirection:"column",alignItems:"center",minWidth:52,flexShrink:0}}>
                       <div style={{fontSize:11,fontWeight:700,color:C.gold}}>{ev.time?.elapsed}{ev.time?.extra?`+${ev.time.extra}`:""}'</div>
@@ -4465,7 +4485,7 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
                     </div>
                     <div style={{flex:1}}>
                       {!isHome && <span style={{fontSize:13,color:C.text,fontWeight:ev.type==="Goal"?700:400}}>{ev.player?.name||""}</span>}
-                      {!isHome && ev.type==="subst" && <div style={{fontSize:13}}><span style={{color:C.green,fontWeight:600}}>↑ {ev.player?.name||""}</span>{" "}<span style={{color:C.red,fontWeight:600}}>↓ {ev.assist?.name||""}</span></div>}
+                      {!isHome && ev.type==="subst" && <div style={{fontSize:10,color:C.dim}}>↑ {ev.assist?.name||""}</div>}
                     </div>
                   </div>
                 );
