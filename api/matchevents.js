@@ -88,52 +88,48 @@ function parseStats(boxscore, homeTeam) {
 function parseEvents(data, homeTeam) {
   const events = [];
 
-  // Method 1: scoringPlays (goals only, most reliable)
-  const scoringPlays = data.scoringPlays || [];
-  for (const play of scoringPlays) {
-    const teamName = normESPN(play.team?.displayName || play.team?.name || "");
-    const elapsed = play.clock?.value 
-      ? Math.round(play.clock.value / 60) 
-      : (play.period?.number === 2 ? 90 : 45);
-    const text = (play.text || "").toLowerCase();
-    const detail = text.includes("own goal") ? "Own Goal" 
-                 : text.includes("penalty")  ? "Penalty" 
-                 : "Normal Goal";
-    const athletes = play.athletesInvolved || [];
-    events.push({
-      time: { elapsed, extra: null },
-      team: { name: teamName },
-      player: { name: athletes[0]?.displayName || "" },
-      assist: { name: athletes[1]?.displayName || null },
-      type: "Goal",
-      detail,
-    });
-  }
+  // Method 1: scoringPlays — ESPN often returns empty; keyEvents handles goals instead
 
-  // Method 2: keyEvents (cards, subs, goals not in scoringPlays)
+  // Method 2: keyEvents — goals, cards, subs
+  // ESPN puts everything here: goals have scoringPlay=true, cards/subs have scoringPlay=false
+  // participants[] uses .athlete.displayName (not athletesInvolved)
   const keyEvents = data.keyEvents || [];
   for (const ev of keyEvents) {
     const teamName = normESPN(ev.team?.displayName || ev.team?.name || "");
-    const elapsed = ev.clock?.value 
-      ? Math.round(ev.clock.value / 60)
-      : null;
+    const elapsed = ev.clock?.displayValue
+      ? parseInt(ev.clock.displayValue)
+      : ev.clock?.value ? Math.round(ev.clock.value / 60) : null;
     const text = (ev.text || ev.type?.text || "").toLowerCase();
+    const typeText = (ev.type?.text || "").toLowerCase();
+    const typeType = (ev.type?.type || "").toLowerCase();
 
-    // Skip goals already captured from scoringPlays
-    if (ev.scoringPlay || text.includes("goal")) continue;
+    // Get participants — ESPN uses participants[].athlete
+    const participants = ev.participants || ev.athletesInvolved || [];
+    const p0 = participants[0]?.athlete?.displayName || participants[0]?.displayName || "";
+    const p1 = participants[1]?.athlete?.displayName || participants[1]?.displayName || null;
 
     let type = null, detail = "";
-    if (text.includes("yellow") || text.includes("caution")) { type = "Card"; detail = "Yellow Card"; }
-    else if (text.includes("red card") || text.includes("ejection")) { type = "Card"; detail = "Red Card"; }
-    else if (text.includes("substitut") || text.includes(" sub ")) { type = "subst"; detail = "Substitution"; }
 
-    if (!type) continue;
-    const athletes = ev.athletesInvolved || [];
+    if (ev.scoringPlay || typeType === "goal" || typeText === "goal") {
+      type = "Goal";
+      detail = text.includes("own goal") ? "Own Goal"
+             : text.includes("penalty")  ? "Penalty"
+             : "Normal Goal";
+    } else if (typeType === "yellow-card" || typeText.includes("yellow")) {
+      type = "Card"; detail = "Yellow Card";
+    } else if (typeType === "red-card" || typeText.includes("red card") || typeText.includes("ejection")) {
+      type = "Card"; detail = "Red Card";
+    } else if (typeType === "substitution" || typeText.includes("substitut")) {
+      type = "subst"; detail = "Substitution";
+    }
+
+    if (!type || !teamName) continue;
+
     events.push({
       time: { elapsed, extra: null },
       team: { name: teamName },
-      player: { name: athletes[0]?.displayName || "" },
-      assist: { name: athletes[1]?.displayName || null },
+      player: { name: p0 },
+      assist: { name: type === "Goal" ? p1 : null },
       type,
       detail,
     });
