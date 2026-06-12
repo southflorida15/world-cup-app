@@ -1,4 +1,3 @@
-// ── IMPORT COMPONENTS ──────────────────────────────────────────────────
 import FantasyPickLockStatus from "./components/FantasyPickLockStatus";
 import FantasyScoringRules from "./components/FantasyScoringRules";
 import FantasyStatsSummary from "./components/FantasyStatsSummary";
@@ -1041,7 +1040,7 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="",
 
 
   return (
-    <div style={{marginBottom:8,background:C.s1,border:`1px solid ${live?C.green:isFav?`${C.gold}55`:C.b1}`,borderRadius:12,overflow:"hidden",opacity:finished?0.45:1}}>
+    <div style={{marginBottom:8,background:C.s1,border:`1px solid ${live?C.green:isFav?`${C.gold}55`:C.b1}`,borderRadius:12,overflow:"hidden",opacity:finished?0.8:1}}>
       {/* Header: group/stage + venue + time */}
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 13px",borderBottom:`1px solid ${C.b1}`,background:C.s2}}>
         <div style={{display:"flex",alignItems:"center",gap:6,minWidth:0,flex:1}}>
@@ -1104,18 +1103,23 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=n
   const liveMatches = MATCHES.filter(m => { const s=getScore(m.home,m.away); return s&&statusIsLive(s.status); });
   const finishedToday = MATCHES.filter(m => { const s=getScore(m.home,m.away); return s&&statusIsFinished(s.status); });
 
-  // All upcoming matches today (local timezone)
-  const _nowLive = new Date();
-  const _todayLive = `${_nowLive.getFullYear()}-${String(_nowLive.getMonth()+1).padStart(2,'0')}-${String(_nowLive.getDate()).padStart(2,'0')}`;
-  const upcomingToday = MATCHES.filter(m => {
-    const iso = MATCH_UTC[m.id];
-    if (!iso) return false;
-    const d = new Date(iso);
-    const dStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    if (dStr !== _todayLive) return false;
-    const s = getScore(m.home, m.away);
-    return !s || s.status === "NS";
-  });
+  // Upcoming fav matches — grouped by date, sorted chronologically
+  const todayUTC = new Date().toISOString().slice(0,10);
+const upcomingFavMatches = favTeams.length > 0
+  ? MATCHES.filter(m => {
+      if (!favTeams.includes(m.home) && !favTeams.includes(m.away)) return false;
+      if (getScore(m.home, m.away)) return false;
+      const iso = MATCH_UTC[m.id];
+      if (!iso) return false;
+      return iso.slice(0,10) === todayUTC;
+    })
+  : [];
+  const upcomingByDate = upcomingFavMatches.reduce((acc, m) => {
+    const { dateLabel } = matchTimes(m);
+    const key = dateLabel || m.date;
+    (acc[key] = acc[key] || []).push(m);
+    return acc;
+  }, {});
 
   return (
     <div>
@@ -1129,26 +1133,27 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=n
       </div>
       
       <div style={{height:10}}/>
-      {upcomingToday.length > 0 && (
+      {Object.keys(upcomingByDate).length > 0 && (
         <div style={{marginBottom:16}}>
-          <div style={{fontSize:11,color:C.blue,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>
-            TODAY — UPCOMING
+          <div style={{fontSize:11,color:C.gold,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>
+            {"UPCOMING — YOUR TEAMS"}
           </div>
-          {upcomingToday.map(m => (
-            <div key={m.id} style={{opacity:0.75}}>
-              <MatchCard m={m} onAction={onAction} onMatchTap={onMatchTap} savedIds={savedIds}/>
+          {Object.entries(upcomingByDate).map(([date, matches]) => (
+            <div key={date} style={{marginBottom:10}}>
+              <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:5}}>{date}</div>
+              {matches.map(m => <MatchCard key={m.id} m={m} onAction={onAction} onMatchTap={onMatchTap} savedIds={savedIds}/>)}
             </div>
           ))}
         </div>
       )}
       {liveMatches.length>0 && <div><div style={{fontSize:11,color:C.green,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>{"Live"} — {"Today's Results".split("'")[0]}</div>{liveMatches.map(m=><MatchCard key={m.id} m={m} onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} savedIds={savedIds}/> )}</div>}
       {finishedToday.length>0 && <div style={{marginTop:liveMatches.length?16:0}}><div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>{"Today's Results"}</div>{finishedToday.map(m=><MatchCard key={m.id} m={m} onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} savedIds={savedIds}/> )}</div>}
-      {liveMatches.length===0 && finishedToday.length===0 && upcomingToday.length===0 && !lastFetch && (
+      {liveMatches.length===0 && finishedToday.length===0 && Object.keys(upcomingByDate).length===0 && !lastFetch && (
         <div style={{marginTop:8}}>
           {[1,2,3].map(i=><SkeletonMatchCard key={i}/>)}
         </div>
       )}
-      {liveMatches.length===0 && finishedToday.length===0 && upcomingToday.length===0 && lastFetch && (
+      {liveMatches.length===0 && finishedToday.length===0 && Object.keys(upcomingByDate).length===0 && lastFetch && (
         <div style={{textAlign:"center",padding:"28px 20px"}}>
           <div style={{fontSize:"2.5rem",marginBottom:10}}>⚽</div>
           <div style={{fontWeight:700,fontSize:16,color:C.mid,marginBottom:6}}>{"No matches today"}</div>
@@ -4451,16 +4456,16 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
                 return (
                   <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 0",borderBottom:`1px solid ${C.b1}`}}>
                     <div style={{flex:1,textAlign:"right"}}>
-                      {isHome && <span style={{fontSize:13,color:C.text,fontWeight:ev.type==="Goal"?700:400}}>{ev.player?.name||""}</span>}
-                      {isHome && ev.type==="subst" && <div style={{fontSize:10,color:C.dim}}>↑ {ev.assist?.name||""}</div>}
+                      {isHome && ev.type!=="subst" && <span style={{fontSize:13,color:C.text,fontWeight:ev.type==="Goal"?700:400}}>{ev.player?.name||""}</span>}
+                      {isHome && ev.type==="subst" && <div style={{fontSize:10,color:C.dim}}><span style={{color:C.green}}>↑</span> {ev.player?.name||""} <span style={{color:C.red}}>↓</span> {ev.assist?.name||""}</div>}
                     </div>
                     <div style={{display:"flex",flexDirection:"column",alignItems:"center",minWidth:52,flexShrink:0}}>
                       <div style={{fontSize:11,fontWeight:700,color:C.gold}}>{ev.time?.elapsed}{ev.time?.extra?`+${ev.time.extra}`:""}'</div>
                       <div style={{fontSize:16}}>{icon}</div>
                     </div>
                     <div style={{flex:1}}>
-                      {!isHome && <span style={{fontSize:13,color:C.text,fontWeight:ev.type==="Goal"?700:400}}>{ev.player?.name||""}</span>}
-                      {!isHome && ev.type==="subst" && <div style={{fontSize:10,color:C.dim}}>↑ {ev.assist?.name||""}</div>}
+                      {!isHome && ev.type!=="subst" && <span style={{fontSize:13,color:C.text,fontWeight:ev.type==="Goal"?700:400}}>{ev.player?.name||""}</span>}
+                      {!isHome && ev.type==="subst" && <div style={{fontSize:10,color:C.dim}}><span style={{color:C.green}}>↑</span> {ev.player?.name||""} <span style={{color:C.red}}>↓</span> {ev.assist?.name||""}</div>}
                     </div>
                   </div>
                 );

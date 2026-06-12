@@ -129,7 +129,7 @@ function parseEvents(data, homeTeam) {
       time: { elapsed, extra: null },
       team: { name: teamName },
       player: { name: p0 },
-      assist: { name: type === "Goal" ? p1 : null },
+      assist: { name: (type === "Goal" || type === "subst") ? p1 : null },
       type,
       detail,
     });
