@@ -77,7 +77,7 @@ function parseStats(boxscore, homeTeam) {
       else if (name.includes("redcard") || name === "redcards") stats.redCards = val;
       else if (name.includes("offside")) stats.offsides = val;
       else if (name.includes("save")) stats.saves = val;
-      else if (name.includes("pass") && name.includes("acc")) stats.passAcc = val;
+      else if (name.includes("pass") && name.includes("acc")) stats.passAcc = (val > 0 && val <= 100) ? val : null;
     });
     result[side] = stats;
   });
