@@ -217,6 +217,88 @@ function parseEvents(data, homeTeam) {
 }
 
 // ── Scorers aggregator ────────────────────────────────────────────────────
+// Hardcoded events for matches that may have aged out of ESPN feed
+const SEEDED_EVENTS = {
+  "Mexico|South Africa": {
+    events: [
+      {time:{elapsed:9},team:{name:"Mexico"},player:{name:"Julián Quiñones"},assist:{name:"Érik Lira"},type:"Goal",detail:"Normal Goal"},
+      {time:{elapsed:17},team:{name:"South Africa"},player:{name:"Teboho Mokoena"},assist:{name:null},type:"Card",detail:"Yellow Card"},
+      {time:{elapsed:23},team:{name:"Mexico"},player:{name:"Brian Gutiérrez"},assist:{name:null},type:"Card",detail:"Yellow Card"},
+      {time:{elapsed:49},team:{name:"South Africa"},player:{name:"Sphephelo Sithole"},assist:{name:null},type:"Card",detail:"Red Card"},
+      {time:{elapsed:56},team:{name:"South Africa"},player:{name:"Thalente Mbatha"},assist:{name:"Lyle Foster"},type:"subst",detail:"Substitution"},
+      {time:{elapsed:61},team:{name:"South Africa"},player:{name:"Themba Zwane"},assist:{name:"Jayden Adams"},type:"subst",detail:"Substitution"},
+      {time:{elapsed:66},team:{name:"Mexico"},player:{name:"Luis Chávez"},assist:{name:"Brian Gutiérrez"},type:"subst",detail:"Substitution"},
+      {time:{elapsed:66},team:{name:"Mexico"},player:{name:"Gilberto Mora"},assist:{name:"Álvaro Fidalgo"},type:"subst",detail:"Substitution"},
+      {time:{elapsed:67},team:{name:"Mexico"},player:{name:"Raúl Jiménez"},assist:{name:"Roberto Alvarado"},type:"Goal",detail:"Normal Goal"},
+      {time:{elapsed:74},team:{name:"South Africa"},player:{name:"Nkosinathi Sibisi"},assist:{name:null},type:"Card",detail:"Yellow Card"},
+      {time:{elapsed:76},team:{name:"Mexico"},player:{name:"Edson Álvarez"},assist:{name:"Érik Lira"},type:"subst",detail:"Substitution"},
+      {time:{elapsed:76},team:{name:"Mexico"},player:{name:"Armando González"},assist:{name:"Raúl Jiménez"},type:"subst",detail:"Substitution"},
+      {time:{elapsed:76},team:{name:"South Africa"},player:{name:"Evidence Makgopa"},assist:{name:"Iqraam Rayners"},type:"subst",detail:"Substitution"},
+      {time:{elapsed:77},team:{name:"South Africa"},player:{name:"Oswin Appollis"},assist:{name:"Aubrey Modiba"},type:"subst",detail:"Substitution"},
+      {time:{elapsed:79},team:{name:"Mexico"},player:{name:"Alexis Vega"},assist:{name:"Julián Quiñones"},type:"subst",detail:"Substitution"},
+      {time:{elapsed:84},team:{name:"South Africa"},player:{name:"Themba Zwane"},assist:{name:null},type:"Card",detail:"Red Card"},
+      {time:{elapsed:90},team:{name:"Mexico"},player:{name:"César Montes"},assist:{name:null},type:"Card",detail:"Red Card"},
+    ],
+    stats: {
+      home:{possession:58,shots:12,shotsOn:5,corners:6,fouls:5,yellowCards:2,redCards:1},
+      away:{possession:42,shots:4,shotsOn:1,corners:2,fouls:8,yellowCards:2,redCards:2}
+    }
+  },
+  "South Korea|Czechia": {
+    events: [
+      {time:{elapsed:26},team:{name:"Czechia"},player:{name:"Patrik Schick"},assist:{name:"Tomáš Souček"},type:"Goal",detail:"Normal Goal"},
+      {time:{elapsed:34},team:{name:"South Korea"},player:{name:"Hwang In-beom"},assist:{name:"Son Heung-min"},type:"Goal",detail:"Normal Goal"},
+      {time:{elapsed:71},team:{name:"South Korea"},player:{name:"Oh Hyeon-gyu"},assist:{name:"Hwang In-beom"},type:"Goal",detail:"Normal Goal"},
+    ],
+    stats: {
+      home:{possession:46,shots:13,shotsOn:6,corners:5,fouls:9},
+      away:{possession:54,shots:8,shotsOn:3,corners:3,fouls:7}
+    }
+  }
+};
+
+const KNOWN_FINISHED = [
+  { home: "Mexico",      away: "South Africa", espnId: "760415" },
+  { home: "South Korea", away: "Czechia",      espnId: "760414" },
+];
+
+async function autoSeedEvents() {
+  for (const { home, away, espnId } of KNOWN_FINISHED) {
+    const existing = await loadFromKV(home, away);
+    if (existing?.events?.length) continue;
+
+    // Try ESPN first
+    let seeded = false;
+    try {
+      const r = await fetch(`${ESPN_BASE}/summary?event=${espnId}`, { headers: ESPN_HEADERS });
+      if (r.ok) {
+        const data = await r.json();
+        const events = parseEvents(data, home);
+        const stats = parseStats(data.boxscore, home);
+        if (events.length > 0) {
+          await saveToKV(home, away, events, stats);
+          await saveESPNId(home, away, espnId);
+          console.log(`[scorers] ESPN-seeded ${home} vs ${away}: ${events.length} events`);
+          seeded = true;
+        }
+      }
+    } catch(e) {
+      console.warn(`[scorers] ESPN seed failed for ${home} vs ${away}:`, e.message);
+    }
+
+    // Fall back to hardcoded data
+    if (!seeded) {
+      const key = `${home}|${away}`;
+      const fallback = SEEDED_EVENTS[key];
+      if (fallback) {
+        await saveToKV(home, away, fallback.events, fallback.stats);
+        await saveESPNId(home, away, espnId);
+        console.log(`[scorers] hardcoded-seeded ${home} vs ${away}: ${fallback.events.length} events`);
+      }
+    }
+  }
+}
+
 async function getScorers() {
   let allKeys = [];
   let cursor = 0;
@@ -226,7 +308,20 @@ async function getScorers() {
     allKeys.push(...batch);
   } while (cursor !== 0);
   const keys = allKeys;
-  if (!keys.length) return { scorers: [], cards: [] };
+
+  // Auto-seed if no events persisted yet
+  if (!keys.length) {
+    await autoSeedEvents();
+    // Re-scan after seeding
+    let cursor2 = 0;
+    do {
+      const [next, batch] = await kv.scan(cursor2, { match: "wc2026:events:*", count: 200 });
+      cursor2 = parseInt(next) || 0;
+      allKeys.push(...batch);
+    } while (cursor2 !== 0);
+  }
+
+  if (!allKeys.length) return { scorers: [], cards: [] };
 
   const records = await Promise.all(keys.map(k => kv.get(k).catch(() => null)));
   const goals = {};
