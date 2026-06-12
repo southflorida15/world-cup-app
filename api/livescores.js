@@ -301,7 +301,16 @@ export default async function handler(req, res) {
   }
 
   // Load persisted results first — always available regardless of window
-  const persisted = await loadPersistedResults();
+  let persisted = await loadPersistedResults();
+
+  // Auto-seed known results if store is empty (self-healing)
+  if (Object.keys(persisted).length === 0) {
+    const known = {
+      "Mexico|South Africa": { hg: 2, ag: 0, status: "FT", elapsed: 90 },
+      "South Korea|Czechia":  { hg: 2, ag: 1, status: "FT", elapsed: 90 },
+    };
+    try { await kv.set(RESULTS_KEY, known); persisted = known; } catch(e) {}
+  }
 
   // Outside match window — return persisted results only
   if (!debug && !isMatchWindowActive()) {

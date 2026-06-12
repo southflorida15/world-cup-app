@@ -218,8 +218,14 @@ function parseEvents(data, homeTeam) {
 
 // ── Scorers aggregator ────────────────────────────────────────────────────
 async function getScorers() {
-  const result = await kv.scan(0, { match: "wc2026:events:*", count: 200 });
-  const keys = result?.keys || result?.[1] || [];
+  let allKeys = [];
+  let cursor = 0;
+  do {
+    const [next, batch] = await kv.scan(cursor, { match: "wc2026:events:*", count: 200 });
+    cursor = parseInt(next) || 0;
+    allKeys.push(...batch);
+  } while (cursor !== 0);
+  const keys = allKeys;
   if (!keys.length) return { scorers: [], cards: [] };
 
   const records = await Promise.all(keys.map(k => kv.get(k).catch(() => null)));
