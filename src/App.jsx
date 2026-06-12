@@ -3897,12 +3897,18 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
     const clean = val.replace(/\D/,"");
     setPreds(prev => {
       const next = { ...prev, [id]: { ...(prev[id]||{}), [field]: clean }};
-      const updated = next[id];
-      if (updated?.hg !== undefined && updated?.ag !== undefined && updated.hg !== "" && updated.ag !== "") {
-        debouncedSave(id, parseInt(updated.hg), parseInt(updated.ag));
-      }
       return next;
     });
+    // Use timeout so state is committed before we read it
+    setTimeout(() => {
+      setPreds(current => {
+        const updated = current[id];
+        if (updated?.hg !== undefined && updated?.ag !== undefined && updated.hg !== "" && updated.ag !== "") {
+          debouncedSave(id, parseInt(updated.hg), parseInt(updated.ag));
+        }
+        return current;
+      });
+    }, 0);
   };
 
   // ── Score totals ────────────────────────────────────────────────────────
