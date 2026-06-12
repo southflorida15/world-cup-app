@@ -170,7 +170,11 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   if (req.method === "OPTIONS") return res.status(200).end();
 
-  const { home, away, debug } = req.query;
+  let { home, away, debug, fixtureId } = req.query;
+  // Support legacy ?fixtureId=Home|Away format from App.jsx
+  if ((!home || !away) && fixtureId && fixtureId.includes("|")) {
+    [home, away] = fixtureId.split("|");
+  }
   if (!home || !away) return res.status(400).json({ error: "home and away required" });
 
   const cacheKey = `${home}|${away}`;
