@@ -175,9 +175,9 @@ export default async function handler(req, res) {
 
   const cacheKey = `${home}|${away}`;
 
-  // Check mem cache
+  // Check mem cache (skip for debug or if empty result was cached)
   const cached = memCache[cacheKey];
-  if (cached && debug !== "1") {
+  if (cached && debug !== "1" && cached.events.length > 0) {
     const ttl = cached.isDone ? TTL_DONE : TTL_LIVE;
     if (Date.now() - cached.ts < ttl) {
       return res.status(200).json({ events: cached.events, stats: cached.stats });
@@ -214,7 +214,7 @@ export default async function handler(req, res) {
         playsCount: data.plays?.length || 0,
         boxscoreTeams: data.boxscore?.teams?.map(t => t.team?.displayName) || [],
         scoringPlays: data.scoringPlays || [],
-        keyEvents: (data.keyEvents || []),
+        keyEvents: (data.keyEvents || []).slice(0, 5),
       });
     }
 
