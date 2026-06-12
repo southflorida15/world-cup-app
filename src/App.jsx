@@ -3786,9 +3786,7 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
 
   // Predictions: { [matchId]: { hg, ag } }
   const [preds, setPreds]       = useState({});
-  const predsRef = useRef({});
   const [predSaving, setPSaving]= useState({});  // { [matchId]: bool }
-  useEffect(() => { predsRef.current = preds; }, [preds]);
 
   // Leaderboard
   const [board, setBoard]       = useState(null);
@@ -3884,36 +3882,26 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
   };
 
   // ── Save a single prediction to KV (debounced) ──────────────────────────
-  // Use refs so the debounce timer never gets invalidated by re-renders
-  const userRef = useRef(user);
-  const fantasyUserIdRef = useRef(fantasyUserId);
-  useEffect(() => { userRef.current = user; }, [user]);
-  useEffect(() => { fantasyUserIdRef.current = fantasyUserId; }, [fantasyUserId]);
-
-  const saveTimerRef = useRef(null);
-  const debouncedSave = useCallback((matchId, hg, ag) => {
-    clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = setTimeout(async () => {
-      if (!userRef.current) return;
-      setPSaving(p => ({...p, [matchId]: true}));
-      try {
-        await apiPred("savePred", {}, { userId: fantasyUserIdRef.current, matchId, hg, ag });
-      } catch(e) { console.error("savePred", e); alert("Save failed: " + e.message); }
-      finally { setPSaving(p => ({...p, [matchId]: false})); }
-    }, 800);
-  }, []);
+  const saveTimerRef = useRef({});
 
   const upd = (id, field, val) => {
     const clean = val.replace(/\D/,"");
-    const next = { ...predsRef.current, [id]: { ...(predsRef.current[id]||{}), [field]: clean }};
-    predsRef.current = next;
-    setPreds(next);
-    const updated = next[id];
-    const hg = updated?.hg;
-    const ag = updated?.ag;
-    if (hg !== undefined && hg !== null && hg !== "" && ag !== undefined && ag !== null && ag !== "") {
-      debouncedSave(id, parseInt(hg), parseInt(ag));
-    }
+    setPreds(prev => {
+      const next = { ...prev, [id]: { ...(prev[id]||{}), [field]: clean }};
+      // Debounce save using a per-match timer
+      clearTimeout(saveTimerRef.current[id]);
+      saveTimerRef.current[id] = setTimeout(async () => {
+        if (!user) return;
+        const latest = next[id];
+        if (!latest || latest.hg === "" || latest.ag === "" || latest.hg === undefined || latest.ag === undefined) return;
+        setPSaving(p => ({...p, [id]: true}));
+        try {
+          await apiPred("savePred", {}, { userId: fantasyUserId, matchId: id, hg: parseInt(latest.hg), ag: parseInt(latest.ag) });
+        } catch(e) { console.error("savePred", e); }
+        finally { setPSaving(p => ({...p, [id]: false})); }
+      }, 600);
+      return next;
+    });
   };
 
   // ── Score totals ────────────────────────────────────────────────────────

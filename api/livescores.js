@@ -344,16 +344,17 @@ export default async function handler(req, res) {
   let source = "none";
   let errors = [];
 
+  // ESPN first — more reliable for live scores
   try {
-    fixtures = await fetchFromHighlightly();
-    source = "highlightly";
+    fixtures = await fetchFromESPN();
+    source = "espn";
   } catch(err) {
-    errors.push(`highlightly: ${err.message}`);
+    errors.push(`espn: ${err.message}`);
     try {
-      fixtures = await fetchFromESPN();
-      source = "espn";
+      fixtures = await fetchFromHighlightly();
+      source = "highlightly";
     } catch(err2) {
-      errors.push(`espn: ${err2.message}`);
+      errors.push(`highlightly: ${err2.message}`);
     }
   }
 
