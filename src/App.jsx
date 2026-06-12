@@ -7,13 +7,11 @@ import MatchInfoSection from "./components/MatchInfoSection";
 import MatchDetailCard from "./components/MatchDetailCard";
 import React, { useState, useEffect, useContext, createContext, useCallback, useMemo, useRef } from "react";
 import { buildFifa2026Bracket, buildQualifiedThirdsFromSelectedTeams, buildThirdGroupsKey } from "./engine/fifa2026Bracket";
-// loadAnnexCFromRemote inline — calls merged bracket-share endpoint
+// loadAnnexCFromRemote — calls merged bracket-share endpoint
 async function loadAnnexCFromRemote() {
   const r = await fetch("/api/bracket-share?action=annexc");
   if (!r.ok) throw new Error("annexc " + r.status);
   return r.text().then(html => {
-    // Parse the annex C table from Wikipedia HTML
-    // Returns { [groupKey]: winner } map
     const table = {};
     const rows = [...html.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)];
     for (const row of rows) {
@@ -1120,7 +1118,15 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=n
   const _lhRef = useRef(null); const _lhH = useElemHeight(_lhRef);
   const lastUpdate = lastFetch ? lastFetch.toLocaleTimeString() : null;
   const liveMatches = MATCHES.filter(m => { const s=getScore(m.home,m.away); return s&&statusIsLive(s.status); });
-  const finishedToday = MATCHES.filter(m => { const s=getScore(m.home,m.away); return s&&statusIsFinished(s.status); });
+  const finishedToday = MATCHES.filter(m => {
+    const s = getScore(m.home, m.away);
+    if (!s || !statusIsFinished(s.status)) return false;
+    const iso = MATCH_UTC[m.id];
+    if (!iso) return false;
+    const d = new Date(iso);
+    const dStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    return dStr === _todayLive;
+  });
 
   // All upcoming matches today (local timezone)
   const _nowLive = new Date();
@@ -3888,12 +3894,14 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
 
   const upd = (id, field, val) => {
     const clean = val.replace(/\D/,"");
-    const next = { ...preds, [id]: { ...(preds[id]||{}), [field]: clean }};
-    setPreds(next);
-    const updated = next[id];
-    if (updated?.hg !== undefined && updated?.ag !== undefined && updated.hg !== "" && updated.ag !== "") {
-      debouncedSave(id, parseInt(updated.hg), parseInt(updated.ag));
-    }
+    setPreds(prev => {
+      const next = { ...prev, [id]: { ...(prev[id]||{}), [field]: clean }};
+      const updated = next[id];
+      if (updated?.hg !== undefined && updated?.ag !== undefined && updated.hg !== "" && updated.ag !== "") {
+        debouncedSave(id, parseInt(updated.hg), parseInt(updated.ag));
+      }
+      return next;
+    });
   };
 
   // ── Score totals ────────────────────────────────────────────────────────
@@ -4101,7 +4109,7 @@ return (
                     <div style={{fontSize:9,color:C.dim}}>pts</div>
                   </div>
                 </div>
-                {i===0&&entry.pts>0&&<div style={{height:2,background:`linear-gradient(90deg,${C.gold},transparent)`}}/>}
+
               </Card>
             );
           })}
@@ -4487,16 +4495,16 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
                 return (
                   <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 0",borderBottom:`1px solid ${C.b1}`}}>
                     <div style={{flex:1,textAlign:"right"}}>
-                      {isHome && <span style={{fontSize:13,color:C.text,fontWeight:ev.type==="Goal"?700:400}}>{ev.player?.name||""}</span>}
-                      {isHome && ev.type==="subst" && <div style={{fontSize:10,color:C.dim}}>↑ {ev.assist?.name||""}</div>}
+                      {isHome && ev.type!=="subst" && <span style={{fontSize:13,color:C.text,fontWeight:ev.type==="Goal"?700:400}}>{ev.player?.name||""}</span>}
+                      {isHome && ev.type==="subst" && <div style={{fontSize:13}}><span style={{color:C.green,fontWeight:600}}>↑ {ev.player?.name||""}</span>{" "}<span style={{color:C.red,fontWeight:600}}>↓ {ev.assist?.name||""}</span></div>}
                     </div>
                     <div style={{display:"flex",flexDirection:"column",alignItems:"center",minWidth:52,flexShrink:0}}>
                       <div style={{fontSize:11,fontWeight:700,color:C.gold}}>{ev.time?.elapsed}{ev.time?.extra?`+${ev.time.extra}`:""}'</div>
                       <div style={{fontSize:16}}>{icon}</div>
                     </div>
                     <div style={{flex:1}}>
-                      {!isHome && <span style={{fontSize:13,color:C.text,fontWeight:ev.type==="Goal"?700:400}}>{ev.player?.name||""}</span>}
-                      {!isHome && ev.type==="subst" && <div style={{fontSize:10,color:C.dim}}>↑ {ev.assist?.name||""}</div>}
+                      {!isHome && ev.type!=="subst" && <span style={{fontSize:13,color:C.text,fontWeight:ev.type==="Goal"?700:400}}>{ev.player?.name||""}</span>}
+                      {!isHome && ev.type==="subst" && <div style={{fontSize:13}}><span style={{color:C.green,fontWeight:600}}>↑ {ev.player?.name||""}</span>{" "}<span style={{color:C.red,fontWeight:600}}>↓ {ev.assist?.name||""}</span></div>}
                     </div>
                   </div>
                 );
