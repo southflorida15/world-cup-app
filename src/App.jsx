@@ -1,3 +1,4 @@
+// ── IMPORT COMPONENTS ──────────────────────────────────────────────────
 import FantasyPickLockStatus from "./components/FantasyPickLockStatus";
 import FantasyScoringRules from "./components/FantasyScoringRules";
 import FantasyStatsSummary from "./components/FantasyStatsSummary";
@@ -1040,7 +1041,7 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="",
 
 
   return (
-    <div style={{marginBottom:8,background:C.s1,border:`1px solid ${live?C.green:isFav?`${C.gold}55`:C.b1}`,borderRadius:12,overflow:"hidden",opacity:finished?0.45:1}}>
+    <div style={{marginBottom:8,background:C.s1,border:`1px solid ${live?C.green:isFav?`${C.gold}55`:C.b1}`,borderRadius:12,overflow:"hidden",opacity:finished?0.8:1}}>
       {/* Header: group/stage + venue + time */}
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 13px",borderBottom:`1px solid ${C.b1}`,background:C.s2}}>
         <div style={{display:"flex",alignItems:"center",gap:6,minWidth:0,flex:1}}>
@@ -1054,7 +1055,7 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="",
           </span>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
-          {live && <span style={{fontSize:10,fontWeight:700,color:C.green,display:"flex",alignItems:"center",gap:4}}><span style={{width:7,height:7,borderRadius:"50%",background:C.red,display:"inline-block",animation:"pulse 1.5s infinite",flexShrink:0}}/>{statusLabel(sc.status,sc.elapsed)}</span>}
+          {live && <span style={{fontSize:10,fontWeight:700,color:C.green}}>🔴 {statusLabel(sc.status,sc.elapsed)}</span>}
           {!live && <span style={{fontSize:12,fontWeight:600,color:timeMode==="venue"?C.gold:C.text}}>{displayTime}</span>}
           {!live && <span style={{fontSize:10,color:C.dim}}>{tzLabel}</span>}
           {finished && <span style={{fontSize:10,color:C.dim,marginLeft:2}}>· {"FT"}</span>}
@@ -1103,23 +1104,18 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=n
   const liveMatches = MATCHES.filter(m => { const s=getScore(m.home,m.away); return s&&statusIsLive(s.status); });
   const finishedToday = MATCHES.filter(m => { const s=getScore(m.home,m.away); return s&&statusIsFinished(s.status); });
 
-  // Upcoming fav matches — grouped by date, sorted chronologically
-  const todayUTC = new Date().toISOString().slice(0,10);
-const upcomingFavMatches = favTeams.length > 0
-  ? MATCHES.filter(m => {
-      if (!favTeams.includes(m.home) && !favTeams.includes(m.away)) return false;
-      if (getScore(m.home, m.away)) return false;
-      const iso = MATCH_UTC[m.id];
-      if (!iso) return false;
-      return iso.slice(0,10) === todayUTC;
-    })
-  : [];
-  const upcomingByDate = upcomingFavMatches.reduce((acc, m) => {
-    const { dateLabel } = matchTimes(m);
-    const key = dateLabel || m.date;
-    (acc[key] = acc[key] || []).push(m);
-    return acc;
-  }, {});
+  // All upcoming matches today (local timezone)
+  const _nowLive = new Date();
+  const _todayLive = `${_nowLive.getFullYear()}-${String(_nowLive.getMonth()+1).padStart(2,'0')}-${String(_nowLive.getDate()).padStart(2,'0')}`;
+  const upcomingToday = MATCHES.filter(m => {
+    const iso = MATCH_UTC[m.id];
+    if (!iso) return false;
+    const d = new Date(iso);
+    const dStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    if (dStr !== _todayLive) return false;
+    const s = getScore(m.home, m.away);
+    return !s || s.status === "NS";
+  });
 
   return (
     <div>
@@ -1133,27 +1129,26 @@ const upcomingFavMatches = favTeams.length > 0
       </div>
       
       <div style={{height:10}}/>
-      {Object.keys(upcomingByDate).length > 0 && (
+      {upcomingToday.length > 0 && (
         <div style={{marginBottom:16}}>
-          <div style={{fontSize:11,color:C.gold,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>
-            {"UPCOMING — YOUR TEAMS"}
+          <div style={{fontSize:11,color:C.blue,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>
+            TODAY — UPCOMING
           </div>
-          {Object.entries(upcomingByDate).map(([date, matches]) => (
-            <div key={date} style={{marginBottom:10}}>
-              <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:5}}>{date}</div>
-              {matches.map(m => <MatchCard key={m.id} m={m} onAction={onAction} onMatchTap={onMatchTap} savedIds={savedIds}/>)}
+          {upcomingToday.map(m => (
+            <div key={m.id} style={{opacity:0.75}}>
+              <MatchCard m={m} onAction={onAction} onMatchTap={onMatchTap} savedIds={savedIds}/>
             </div>
           ))}
         </div>
       )}
       {liveMatches.length>0 && <div><div style={{fontSize:11,color:C.green,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>{"Live"} — {"Today's Results".split("'")[0]}</div>{liveMatches.map(m=><MatchCard key={m.id} m={m} onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} savedIds={savedIds}/> )}</div>}
       {finishedToday.length>0 && <div style={{marginTop:liveMatches.length?16:0}}><div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>{"Today's Results"}</div>{finishedToday.map(m=><MatchCard key={m.id} m={m} onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} savedIds={savedIds}/> )}</div>}
-      {liveMatches.length===0 && finishedToday.length===0 && Object.keys(upcomingByDate).length===0 && !lastFetch && (
+      {liveMatches.length===0 && finishedToday.length===0 && upcomingToday.length===0 && !lastFetch && (
         <div style={{marginTop:8}}>
           {[1,2,3].map(i=><SkeletonMatchCard key={i}/>)}
         </div>
       )}
-      {liveMatches.length===0 && finishedToday.length===0 && Object.keys(upcomingByDate).length===0 && lastFetch && (
+      {liveMatches.length===0 && finishedToday.length===0 && upcomingToday.length===0 && lastFetch && (
         <div style={{textAlign:"center",padding:"28px 20px"}}>
           <div style={{fontSize:"2.5rem",marginBottom:10}}>⚽</div>
           <div style={{fontWeight:700,fontSize:16,color:C.mid,marginBottom:6}}>{"No matches today"}</div>
@@ -1435,7 +1430,7 @@ function GrpTab({ onTeam, onMatchTap, tabTop=116 }) {
             <div style={{padding:"8px 13px",borderBottom:`1px solid ${C.b1}`,background:C.s1,display:"flex",justifyContent:"space-between"}}>
               <span style={{fontWeight:700,color:C.green,fontSize:15}}>GROUP {sel}</span>
               <div style={{display:"flex",alignItems:"center",gap:8}}>
-                {liveCount>0 && <Badge color={C.green}><span style={{width:7,height:7,borderRadius:"50%",background:C.red,display:"inline-block",animation:"pulse 1.5s infinite",marginRight:4}}/> Live</Badge>}
+                {liveCount>0 && <Badge color={C.green}>🔴 Live</Badge>}
                 {lastFetch && <span style={{fontSize:10,color:C.dim}}>Updated {lastFetch.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}</span>}
                 <span style={{fontSize:10,color:C.dim}}>{"Tap for stats"}</span>
               </div>
@@ -2594,22 +2589,8 @@ function DragList({ items, onReorder, renderItem }) {
 
 // ── MY BRACKET TAB ────────────────────────────────────────────────────────
 const defaultBracketGroups=()=>Object.fromEntries(Object.entries(GROUPS).map(([g,{teams}])=>[g,[...teams]]));
-const KO_VENUE_CITY = {
-  73:"Los Angeles",74:"Houston",75:"Boston",76:"Guadalupe",
-  77:"Dallas",78:"East Rutherford",79:"Mexico City",80:"Atlanta",
-  81:"Seattle",82:"San Francisco",83:"Los Angeles",84:"Toronto",
-  85:"Vancouver",86:"Dallas",87:"Miami",88:"Kansas City",
-  89:"Houston",90:"Philadelphia",91:"East Rutherford",92:"Mexico City",
-  93:"Dallas",94:"Seattle",95:"Atlanta",96:"Vancouver",
-  97:"Boston",98:"Los Angeles",99:"Miami",100:"Kansas City",
-  101:"Dallas",102:"Atlanta",103:"Miami",104:"East Rutherford",
-};
-
-function BracketMatchup({ match, t1, t2, winner, onPick, interactive=false, compact=false, onMatchTap=null }) {
+function BracketMatchup({ match, t1, t2, winner, onPick, interactive=false, compact=false }) {
   const canPick = interactive && t1 && t2 && t1 !== "TBD" && t2 !== "TBD";
-  const hasTeams = !!(t1 && t2 && t1 !== "TBD" && t2 !== "TBD");
-  const city = KO_VENUE_CITY[match] || "";
-  const fullMatch = match ? MATCHES.find(m => m.id === match) : null;
   const teamRow = (team, i) => {
     const isW = winner && team === winner;
     const disabled = !canPick || !team || team === "TBD";
@@ -2629,15 +2610,9 @@ function BracketMatchup({ match, t1, t2, winner, onPick, interactive=false, comp
   };
   return (
     <div style={{position:"relative",background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${winner?C.greenS:C.b1}`,borderRadius:12,overflow:"hidden",width:"100%",boxShadow:winner?DS.shadow.panel:DS.shadow.card}}>
-      <div
-        onClick={()=>hasTeams&&fullMatch&&onMatchTap?.(fullMatch)}
-        style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 10px",borderBottom:`1px solid ${C.b1}`,background:`${C.gold}10`,cursor:hasTeams&&onMatchTap?"pointer":"default",gap:4}}
-      >
-        <span style={{fontSize:10,color:C.gold,fontWeight:900,letterSpacing:"0.08em",flexShrink:0}}>M{match||"—"}</span>
-        {city && <span style={{fontSize:9,color:C.dim,flex:1,textAlign:"center",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>📍 {city}</span>}
-        <span style={{fontSize:9,flexShrink:0,color:hasTeams&&onMatchTap?C.blue:canPick?C.green:C.dim,fontWeight:800}}>
-          {hasTeams&&onMatchTap?"Details ›":interactive?(canPick?"TAP PICK":"LOCKED"):""}
-        </span>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 10px",borderBottom:`1px solid ${C.b1}`,background:`${C.gold}10`}}>
+        <span style={{fontSize:10,color:C.gold,fontWeight:900,letterSpacing:"0.08em"}}>M{match || "—"}</span>
+        {interactive && <span style={{fontSize:9,color:canPick?C.green:C.dim,fontWeight:800}}>{canPick?"TAP PICK":"LOCKED"}</span>}
       </div>
       {teamRow(t1,0)}
       {teamRow(t2,1)}
@@ -2645,7 +2620,7 @@ function BracketMatchup({ match, t1, t2, winner, onPick, interactive=false, comp
   );
 }
 
-function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick=()=>{}, completedCount=0, onMatchTap=null }) {
+function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick=()=>{}, completedCount=0 }) {
   const bracketScrollRef = useRef(null);
 
   useEffect(() => {
@@ -2711,17 +2686,17 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
   }, []);
 
   const left = [
-    {key:"r32L", short:"R32", label:"Round of 32", ids:[73,74,75,76,77,78,83,84], gap:8, padTop:0},
+    {key:"r32L", short:"R32", label:"Round of 32", ids:[74,77,73,75,83,84,81,82], gap:8, padTop:0},
     {key:"r16L", short:"R16", label:"Round of 16", ids:[89,90,93,94], gap:70, padTop:38},
-    {key:"qfL", short:"QF", label:"Quarterfinals", ids:[97,99], gap:224, padTop:130},
+    {key:"qfL", short:"QF", label:"Quarterfinals", ids:[97,98], gap:224, padTop:130},
     {key:"sfL", short:"SF", label:"Semifinal", ids:[101], gap:0, padTop:318},
   ];
 
   const right = [
     {key:"sfR", short:"SF", label:"Semifinal", ids:[102], gap:0, padTop:318},
-    {key:"qfR", short:"QF", label:"Quarterfinals", ids:[98,100], gap:224, padTop:130},
+    {key:"qfR", short:"QF", label:"Quarterfinals", ids:[99,100], gap:224, padTop:130},
     {key:"r16R", short:"R16", label:"Round of 16", ids:[91,92,95,96], gap:70, padTop:38},
-    {key:"r32R", short:"R32", label:"Round of 32", ids:[79,80,81,82,85,86,87,88], gap:8, padTop:0},
+    {key:"r32R", short:"R32", label:"Round of 32", ids:[76,78,79,80,86,88,85,87], gap:8, padTop:0},
   ];
 
   const columnWidth = 166;
@@ -2764,7 +2739,6 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
                   winner={m.winner}
                   interactive={pickMode==="manual"}
                   onPick={(team)=>onPick(m,team)}
-                  onMatchTap={onMatchTap}
                 />
               </div>
             );
@@ -2807,7 +2781,6 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
               winner={finalMatch.winner}
               interactive={pickMode==="manual"}
               onPick={(team)=>onPick(finalMatch,team)}
-              onMatchTap={onMatchTap}
             />
 
             {finalMatch.winner && (
@@ -2826,7 +2799,7 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
   );
 }
 
-function VisualBracketTree({ bracket, pickMode="auto", onPick=()=>{}, view="compact", onMatchTap=null }) {
+function VisualBracketTree({ bracket, pickMode="auto", onPick=()=>{}, view="compact" }) {
   const byId = (matches=[]) => Object.fromEntries((matches||[]).map(m => [Number(m.match), m]));
   const matchesById = {
     ...byId(bracket?.r32),
@@ -2848,7 +2821,7 @@ function VisualBracketTree({ bracket, pickMode="auto", onPick=()=>{}, view="comp
   const completedCount = Object.values(matchesById).filter(m => m?.winner).length;
 
   if (view === "tree") {
-    return <WideBracketView rounds={rounds} matchesById={matchesById} bracket={bracket} pickMode={pickMode} onPick={onPick} completedCount={completedCount} onMatchTap={onMatchTap}/>;
+    return <WideBracketView rounds={rounds} matchesById={matchesById} bracket={bracket} pickMode={pickMode} onPick={onPick} completedCount={completedCount}/>;
   }
 
   return (
@@ -2883,7 +2856,7 @@ function VisualBracketTree({ bracket, pickMode="auto", onPick=()=>{}, view="comp
                   const locked = !(m.home && m.away);
                   return (
                     <div key={m.match} style={{opacity:locked?0.55:1,position:"relative"}}>
-                      <BracketMatchup match={m.match} t1={m.home} t2={m.away} winner={m.winner} interactive={pickMode==="manual"} onPick={(team)=>onPick(m,team)} onMatchTap={onMatchTap}/>
+                      <BracketMatchup match={m.match} t1={m.home} t2={m.away} winner={m.winner} interactive={pickMode==="manual"} onPick={(team)=>onPick(m,team)}/>
                     </div>
                   );
                 })}
@@ -2948,7 +2921,7 @@ function clearSavedMyBracket() {
   } catch {}
 }
 
-function MyBracketTab({ tabTop=116, onMatchTap=null }) {
+function MyBracketTab({ tabTop=116 }) {
   const savedBracket = useMemo(() => readSavedMyBracket(), []);
   const isMobileBracket = typeof window !== "undefined" && window.innerWidth < 520;
   const [stage,setStage]=useState(()=>savedBracket.stage || (savedBracket.result ? "bracket" : "groups"));
@@ -3323,7 +3296,6 @@ function MyBracketTab({ tabTop=116, onMatchTap=null }) {
       pickMode={playMode}
       onPick={handleManualPick}
       view={bracketView}
-      onMatchTap={onMatchTap}
     />
   </div>
 )}
@@ -3685,7 +3657,7 @@ function MatchdayCard({ m, onAction, favTeam }) {
           {hasScore ? (
             <div style={{textAlign:"center",minWidth:64}}>
               <div style={{fontWeight:900,fontSize:22,color:live?C.green:C.text,fontFamily:"monospace",lineHeight:1}}>{sc.hg} – {sc.ag}</div>
-              {statusLabel(sc.status,sc.elapsed) && <div style={{fontSize:10,fontWeight:700,marginTop:2,color:live?C.green:C.dim}}>{live?<span style={{width:7,height:7,borderRadius:"50%",background:C.red,display:"inline-block",animation:"pulse 1.5s infinite",marginRight:3,verticalAlign:"middle"}}/>:""}{statusLabel(sc.status,sc.elapsed)}</div>}
+              {statusLabel(sc.status,sc.elapsed) && <div style={{fontSize:10,fontWeight:700,marginTop:2,color:live?C.green:C.dim}}>{live?"🔴 ":""}{statusLabel(sc.status,sc.elapsed)}</div>}
             </div>
           ) : (
             <span style={{fontSize:11,color:C.dim,fontWeight:700,minWidth:40,textAlign:"center"}}>VS</span>
@@ -3831,24 +3803,6 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
       finally { setUL(false); }
     })();
   }, [fantasyUserId, displayName, userAvatar, syncProfile?.uid]);
-
-  // ── Auto-score finished matches ─────────────────────────────────────────
-  useEffect(() => {
-    const finishedWithScores = MATCHES
-      .filter(m => m.group && isFinished(m.home, m.away))
-      .map(m => {
-        const sc = getScore(m.home, m.away);
-        if (!sc || sc.hg === null || sc.ag === null) return null;
-        return { id: m.id, hg: sc.hg, ag: sc.ag };
-      })
-      .filter(Boolean);
-    if (!finishedWithScores.length) return;
-    fetch("/api/score-matches", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ matches: finishedWithScores }),
-    }).catch(e => console.warn("[score-matches]", e.message));
-  }, [getScore, isFinished]);
 
   // ── Load leaderboard when that tab is active ────────────────────────────
   useEffect(() => {
@@ -4111,7 +4065,7 @@ return (
                     <div style={{fontSize:9,color:C.dim}}>pts</div>
                   </div>
                 </div>
-                {i===0&&entry.pts>0&&<div style={{height:2,background:`linear-gradient(90deg,${C.gold},transparent)`}}/>}
+
               </Card>
             );
           })}
@@ -4246,7 +4200,6 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
   const [events, setEvents] = useState(null);
   const [matchStats, setMatchStats] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [timelineOpen, setTimelineOpen] = useState(true);
   const { getScore } = useContext(LiveScoresCtx);
   const { favTeams=[] } = useContext(FavCtx);
   const country = useContext(CountryCtx);
@@ -4485,37 +4438,34 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
           {/* ── MATCH EVENTS ── */}
           {(live || finished) && (
             <div style={{marginBottom:12}}>
-              <button onClick={()=>setTimelineOpen(v=>!v)} style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",background:"none",border:"none",cursor:"pointer",padding:"0 0 8px 0"}}>
-                <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em"}}>MATCH TIMELINE {events&&events.length>0&&<span style={{color:C.dim,fontWeight:400}}>({events.length} events)</span>}</div>
-                <span style={{fontSize:16,color:C.dim,transition:"transform .2s",display:"inline-block",transform:timelineOpen?"rotate(90deg)":"rotate(0deg)"}}>›</span>
-              </button>
-              {timelineOpen && loading && (
+              <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",marginBottom:8}}>MATCH TIMELINE</div>
+              {loading && (
                 <div style={{textAlign:"center",padding:"20px 0"}}>
                   <div style={{width:22,height:22,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto 8px"}}/>
                   <div style={{fontSize:12,color:C.mid}}>Loading events…</div>
                 </div>
               )}
-              {timelineOpen && !loading && events && events.length > 0 && events.map((ev,i)=>{
+              {!loading && events && events.length > 0 && events.map((ev,i)=>{
                 const isHome = normTeam(ev.team?.name||"")=== match.home;
                 const icon = ev.type==="Goal"?(ev.detail==="Own Goal"?"⚽🔴":ev.detail==="Penalty"?"⚽🎯":"⚽"):ev.type==="Card"?(ev.detail==="Yellow Card"?"🟨":"🟥"):ev.type==="subst"?"🔄":"•";
                 return (
                   <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 0",borderBottom:`1px solid ${C.b1}`}}>
                     <div style={{flex:1,textAlign:"right"}}>
-                      {isHome && ev.type!=="subst" && <span style={{fontSize:13,color:C.text,fontWeight:ev.type==="Goal"?700:400}}>{ev.player?.name||""}</span>}
-                      {isHome && ev.type==="subst" && <div style={{fontSize:13}}><span style={{color:C.green,fontWeight:600}}>↑ {ev.player?.name||""}</span>{" "}<span style={{color:C.red,fontWeight:600}}>↓ {ev.assist?.name||""}</span></div>}
+                      {isHome && <span style={{fontSize:13,color:C.text,fontWeight:ev.type==="Goal"?700:400}}>{ev.player?.name||""}</span>}
+                      {isHome && ev.type==="subst" && <div style={{fontSize:10,color:C.dim}}>↑ {ev.assist?.name||""}</div>}
                     </div>
                     <div style={{display:"flex",flexDirection:"column",alignItems:"center",minWidth:52,flexShrink:0}}>
                       <div style={{fontSize:11,fontWeight:700,color:C.gold}}>{ev.time?.elapsed}{ev.time?.extra?`+${ev.time.extra}`:""}'</div>
                       <div style={{fontSize:16}}>{icon}</div>
                     </div>
                     <div style={{flex:1}}>
-                      {!isHome && ev.type!=="subst" && <span style={{fontSize:13,color:C.text,fontWeight:ev.type==="Goal"?700:400}}>{ev.player?.name||""}</span>}
-                      {!isHome && ev.type==="subst" && <div style={{fontSize:13}}><span style={{color:C.green,fontWeight:600}}>↑ {ev.player?.name||""}</span>{" "}<span style={{color:C.red,fontWeight:600}}>↓ {ev.assist?.name||""}</span></div>}
+                      {!isHome && <span style={{fontSize:13,color:C.text,fontWeight:ev.type==="Goal"?700:400}}>{ev.player?.name||""}</span>}
+                      {!isHome && ev.type==="subst" && <div style={{fontSize:10,color:C.dim}}>↑ {ev.assist?.name||""}</div>}
                     </div>
                   </div>
                 );
               })}
-              {timelineOpen && !loading && events && events.length === 0 && <div style={{fontSize:12,color:C.dim,textAlign:"center",padding:"16px 0"}}>No events yet.</div>}
+              {!loading && events && events.length === 0 && <div style={{fontSize:12,color:C.dim,textAlign:"center",padding:"16px 0"}}>No events yet.</div>}
             </div>
           )}
 
@@ -6025,7 +5975,7 @@ export default function App() {
           {tab==="predict"   && <PredTab tabTop={tabBarBottom} geoData={geoData}/>}
           {tab==="predictor" && <PredictorTab syncProfile={syncProfile} displayName={displayName} onShowSync={()=>setShowSyncModal(true)} userAvatar={userAvatar}/>}
           {tab==="sim"       && <SimTab tabTop={tabBarBottom}/>}
-          {tab==="bracket"   && <MyBracketTab tabTop={tabBarBottom} onMatchTap={onMatchTap}/>}
+          {tab==="bracket"   && <MyBracketTab tabTop={tabBarBottom}/>}
           {tab==="ask"       && <AskWorldCupTab tabTop={tabBarBottom}/>}
           {tab==="news"       && <WCNewsTab tabTop={tabBarBottom}/>}
           {tab==="saved"     && <div style={{paddingTop:14}}><SavedTab saved={saved} onRemove={onRemove}/></div>}
@@ -6079,4 +6029,3 @@ export default function App() {
     </LiveScoresProvider>
   );
 }
-

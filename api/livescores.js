@@ -1,8 +1,7 @@
 // /api/livescores.js
-// Live scores — two-source architecture:
-//   Primary:  football-data.org (free, no daily cap issues, WC competition code "WC")
-//   Fallback: Highlightly via RapidAPI (100/day — used only if primary fails)
-// KV-backed shared cache keeps real API calls minimal.
+// Live scores — ESPN primary (no quota), Highlightly fallback.
+// Finished results are persisted permanently in KV so they survive
+// beyond ESPN's feed window (which only returns today's matches).
 
 import { Redis } from "@upstash/redis";
 
@@ -11,24 +10,19 @@ const kv = new Redis({
   token: process.env.KV_REST_API_TOKEN,
 });
 
-// ── Source 1: football-data.org ───────────────────────────────────────────
-const FD_KEY  = process.env.FOOTBALL_DATA_API_KEY;
-const FD_BASE = "https://api.football-data.org/v4";
-const FD_COMPETITION = "WC"; // FIFA World Cup
-
-// ── Source 2: Highlightly (RapidAPI) ─────────────────────────────────────
-const HL_KEY  = process.env.RAPIDAPI_KEY;
-const HL_HOST = process.env.RAPIDAPI_HOST || "football-highlights-api.p.rapidapi.com";
-const HL_BASE = `https://${HL_HOST}`;
+const ESPN_BASE = "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world";
+const HL_KEY    = process.env.RAPIDAPI_KEY;
+const HL_HOST   = process.env.RAPIDAPI_HOST || "football-highlights-api.p.rapidapi.com";
+const HL_BASE   = `https://${HL_HOST}`;
 const HL_LEAGUE_ID = "1635";
 
-const CACHE_KEY    = "wc2026:livescores";
-const CACHE_TS_KEY = "wc2026:livescores:ts";
+const CACHE_KEY        = "wc2026:livescores";
+const CACHE_TS_KEY     = "wc2026:livescores:ts";
+const RESULTS_KEY      = "wc2026:results"; // permanent finished scores
 
-const LIVE_STATUSES = ["LIVE","1H","HT","2H","ET","BT","P","INT","IN_PLAY","PAUSED"];
+const LIVE_STATUSES     = ["LIVE","1H","HT","2H","ET","BT","P","INT","IN_PLAY","PAUSED"];
 const FINISHED_STATUSES = ["FT","AET","PEN","AWD","WO","FINISHED","AWARDED"];
 
-// Match window guard — all 104 WC 2026 kickoffs
 const KICKOFFS = [
   "2026-06-11T19:00:00Z","2026-06-12T02:00:00Z","2026-06-12T19:00:00Z","2026-06-13T01:00:00Z",
   "2026-06-13T19:00:00Z","2026-06-13T22:00:00Z","2026-06-14T01:00:00Z","2026-06-14T03:59:00Z",
@@ -66,147 +60,84 @@ function isMatchWindowActive() {
 
 function getSmartTTL(fixtures) {
   const liveCount = fixtures.filter(f => LIVE_STATUSES.includes(f?.fixture?.status?.short)).length;
-  if (liveCount >= 4) return 3 * 60;  // 3min — many live
-  if (liveCount >= 2) return 2 * 60;  // 2min — a few live
-  if (liveCount >= 1) return 60;      // 1min — one live (get fresh scores fast)
-  return 60 * 60;                     // 1hr  — nothing live
+  if (liveCount >= 4) return 3 * 60;
+  if (liveCount >= 2) return 2 * 60;
+  if (liveCount >= 1) return 60;
+  return 60 * 60;
 }
 
-// ── football-data.org team name normalization ─────────────────────────────
-const FD_NAME_MAP = {
-  "Bosnia-Herzegovina": "Bosnia & Herz.",
-  "Bosnia and Herzegovina": "Bosnia & Herz.",
-  "Cape Verde Islands": "Cape Verde",
-  "Turkey": "Turkiye",
-  "Curaçao": "Curacao",
-  "Congo DR": "DR Congo",
-  "DR Congo": "DR Congo",
-  "Côte d'Ivoire": "Ivory Coast",
-  "Cote d'Ivoire": "Ivory Coast",
-  "Korea Republic": "South Korea",
-  "Republic of Korea": "South Korea",
-  "IR Iran": "Iran",
-  "USA": "United States",
-  "Czech Republic": "Czechia",
-  "Cabo Verde": "Cape Verde",
-};
-const normFD = n => FD_NAME_MAP[n] || n;
+// ── Persistent results store ───────────────────────────────────────────────
+// Saves finished match scores permanently to KV (no expiry).
+// Key: wc2026:results → { "Home|Away": { hg, ag, status, elapsed } }
+async function loadPersistedResults() {
+  try {
+    const r = await kv.get(RESULTS_KEY);
+    return r || {};
+  } catch(e) {
+    console.warn("[livescores] load persisted results:", e.message);
+    return {};
+  }
+}
 
-// ── football-data.org mapper ───────────────────────────────────────────────
-// Their status values: SCHEDULED, TIMED, IN_PLAY, PAUSED, FINISHED, AWARDED, CANCELLED, POSTPONED, SUSPENDED
-function mapFDMatch(m) {
-  const fdStatus = m.status || "SCHEDULED";
-  const statusMap = {
-    "IN_PLAY":"LIVE","PAUSED":"HT","FINISHED":"FT","AWARDED":"FT",
-    "SCHEDULED":"NS","TIMED":"NS","CANCELLED":"CANC","POSTPONED":"TBD","SUSPENDED":"TBD",
-    "EXTRA_TIME":"ET","PENALTY_SHOOTOUT":"P",
-  };
-  const short = statusMap[fdStatus] || "NS";
-  // Extract elapsed minute from score object if available
-  const elapsed = m.minute ?? null;
-  const hg = m.score?.fullTime?.home ?? m.score?.halfTime?.home ?? null;
-  const ag = m.score?.fullTime?.away ?? m.score?.halfTime?.away ?? null;
-  // Override NS with time-based status so the app shows matches as live
-  // even when football-data.org free tier hasn't updated the status yet
-  const now = Date.now();
-  const ko = m.utcDate ? new Date(m.utcDate).getTime() : 0;
-  let finalShort = short;
-  if (ko > 0) {
-    const minsElapsed = (now - ko) / 60000;
-    if (short === "NS" && minsElapsed >= 0 && minsElapsed < 105) {
-      // Match should be in progress based on time
-      if (minsElapsed < 45) finalShort = "1H";
-      else if (minsElapsed < 50) finalShort = "HT";
-      else if (minsElapsed < 95) finalShort = "2H";
-      else finalShort = "ET";
-    } else if (short === "NS" && minsElapsed >= 105) {
-      // Should be finished
-      finalShort = "FT";
+async function persistFinishedResults(fixtures) {
+  try {
+    const existing = await loadPersistedResults();
+    let changed = false;
+    fixtures.forEach(f => {
+      const h = f?.teams?.home?.name;
+      const a = f?.teams?.away?.name;
+      const status = f?.fixture?.status?.short;
+      if (!h || !a) return;
+      if (!FINISHED_STATUSES.includes(status)) return;
+      const key = `${h}|${a}`;
+      const hg = f?.goals?.home;
+      const ag = f?.goals?.away;
+      if (hg === null || ag === null) return;
+      // Only persist if we have actual scores and it's an improvement
+      if (!existing[key] || existing[key].hg !== hg || existing[key].ag !== ag) {
+        existing[key] = { hg, ag, status, elapsed: f?.fixture?.status?.elapsed || 90 };
+        changed = true;
+      }
+    });
+    if (changed) {
+      await kv.set(RESULTS_KEY, existing); // no expiry — permanent
+      console.log(`[livescores] Persisted ${Object.keys(existing).length} finished results`);
     }
+    return existing;
+  } catch(e) {
+    console.warn("[livescores] persist results:", e.message);
+    return {};
   }
-
-  return {
-    fixture: {
-      id:     m.id,
-      date:   m.utcDate,
-      status: { short: finalShort, elapsed },
-      venue:  { name: m.venue || "", city: "" },
-    },
-    league: { id: 1635, season: 2026 },
-    teams: {
-      home: { id: m.homeTeam?.id, name: normFD(m.homeTeam?.name || m.homeTeam?.shortName || "") },
-      away: { id: m.awayTeam?.id, name: normFD(m.awayTeam?.name || m.awayTeam?.shortName || "") },
-    },
-    goals: {
-      home: hg !== null && hg !== undefined ? parseInt(hg) : null,
-      away: ag !== null && ag !== undefined ? parseInt(ag) : null,
-    },
-    score: { fulltime: { home: hg, away: ag } },
-    events: [],
-    _source: "football-data.org",
-  };
 }
 
-async function fetchFromFootballData() {
-  if (!FD_KEY) throw new Error("FOOTBALL_DATA_API_KEY not set");
-
-  const headers = { "X-Auth-Token": FD_KEY };
-
-  // Fetch all WC matches + live matches in parallel
-  // The live endpoint returns real-time scores for in-progress matches
-  const [allRes, liveRes] = await Promise.all([
-    fetch(`${FD_BASE}/competitions/${FD_COMPETITION}/matches?season=2026`, { headers }),
-    fetch(`${FD_BASE}/matches?competitions=${FD_COMPETITION}&status=IN_PLAY`, { headers }),
-  ]);
-
-  if (!allRes.ok) {
-    const body = await allRes.text().catch(() => "");
-    throw new Error(`football-data.org ${allRes.status}: ${body.slice(0, 200)}`);
-  }
-
-  const allData = await allRes.json();
-  const allMatches = allData.matches || [];
-
-  // Merge live scores into the full list
-  let liveById = {};
-  if (liveRes.ok) {
-    const liveData = await liveRes.json();
-    const liveMatches = liveData.matches || [];
-    console.log(`[livescores] football-data.org live: ${liveMatches.length} in-play matches`, JSON.stringify(liveMatches.map(m=>({id:m.id,status:m.status,score:m.score?.fullTime}))));
-    liveMatches.forEach(m => { liveById[m.id] = m; });
-  } else {
-    const errBody = await liveRes.text().catch(()=>"");
-    console.warn(`[livescores] IN_PLAY fetch failed: ${liveRes.status} ${errBody.slice(0,200)}`);
-  }
-
-  // Also fetch PAUSED (half-time) and FINISHED today
-  const today = new Date().toISOString().slice(0, 10);
-  const [pausedRes, finishedRes] = await Promise.all([
-    fetch(`${FD_BASE}/matches?competitions=${FD_COMPETITION}&status=PAUSED`, { headers }),
-    fetch(`${FD_BASE}/matches?competitions=${FD_COMPETITION}&status=FINISHED&dateFrom=${today}&dateTo=${today}`, { headers }),
-  ]);
-  if (pausedRes.ok) {
-    const pausedData = await pausedRes.json();
-    (pausedData.matches || []).forEach(m => { liveById[m.id] = m; });
-  }
-  if (finishedRes.ok) {
-    const finishedData = await finishedRes.json();
-    const finishedMatches = finishedData.matches || [];
-    console.log(`[livescores] football-data.org finished today: ${finishedMatches.length}`);
-    finishedMatches.forEach(m => { liveById[m.id] = m; });
-  }
-
-  // Override full list with live/paused data where available
-  const merged = allMatches.map(m => liveById[m.id] || m);
-  console.log(`[livescores] football-data.org: ${merged.length} total, ${Object.keys(liveById).length} with live scores`);
-  return merged.map(mapFDMatch);
+// Merge persisted results back into fixture list
+// Persisted results fill in any gaps where ESPN feed has dropped old matches
+function mergePersistedResults(fixtures, persisted) {
+  if (!persisted || Object.keys(persisted).length === 0) return fixtures;
+  const seen = new Set(fixtures.map(f => `${f?.teams?.home?.name}|${f?.teams?.away?.name}`));
+  const extra = [];
+  Object.entries(persisted).forEach(([key, r]) => {
+    if (seen.has(key)) return; // already in live feed
+    const [home, away] = key.split("|");
+    extra.push({
+      fixture: {
+        id: key,
+        date: "",
+        status: { short: r.status || "FT", elapsed: r.elapsed || 90 },
+        venue: { name: "", city: "" },
+      },
+      league: { id: 1635, season: 2026 },
+      teams: { home: { name: home }, away: { name: away } },
+      goals: { home: r.hg, away: r.ag },
+      score: { fulltime: { home: r.hg, away: r.ag } },
+      events: [],
+      _source: "persisted",
+    });
+  });
+  return [...fixtures, ...extra];
 }
 
-
-// ── ESPN public API mapper ────────────────────────────────────────────────
-// No key required. Uses ESPN's own internal API.
-const ESPN_BASE = "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world";
-
+// ── ESPN mapper ────────────────────────────────────────────────────────────
 const ESPN_STATUS_MAP = {
   "STATUS_SCHEDULED": "NS",
   "STATUS_IN_PROGRESS": "LIVE",
@@ -230,6 +161,7 @@ const ESPN_NAME_MAP = {
   "DR Congo": "DR Congo",
   "Côte d'Ivoire": "Ivory Coast",
   "Korea Republic": "South Korea",
+  "Czech Republic": "Czechia",
 };
 const normESPN = n => ESPN_NAME_MAP[n] || n;
 
@@ -244,7 +176,7 @@ function mapESPNEvent(event) {
   let short = ESPN_STATUS_MAP[statusType] || "NS";
   const clock = comp.status?.displayClock;
   const elapsed = clock && clock !== "0:00" ? parseInt(clock.split(":")[0]) : null;
-  // ESPN sometimes returns NS with elapsed time — fix it
+  // ESPN sometimes returns NS with elapsed > 0 — fix it
   if (short === "NS" && elapsed && elapsed > 0) {
     short = elapsed <= 45 ? "1H" : elapsed <= 50 ? "HT" : elapsed <= 95 ? "2H" : "ET";
   }
@@ -263,10 +195,7 @@ function mapESPNEvent(event) {
       home: { id: home.team?.id, name: normESPN(home.team?.displayName || home.team?.name || "") },
       away: { id: away.team?.id, name: normESPN(away.team?.displayName || away.team?.name || "") },
     },
-    goals: {
-      home: hg,
-      away: ag,
-    },
+    goals: { home: hg, away: ag },
     score: { fulltime: { home: hg, away: ag } },
     events: [],
     _source: "espn",
@@ -345,7 +274,7 @@ export default async function handler(req, res) {
 
   const debug = req.query.debug === "1";
 
-  // Flush cache
+  // Flush cache (not results — those are permanent)
   if (req.query.flush === "1") {
     try {
       await Promise.all([kv.del(CACHE_KEY), kv.del(CACHE_TS_KEY)]);
@@ -355,12 +284,16 @@ export default async function handler(req, res) {
     }
   }
 
-  // Window guard
+  // Load persisted results first — always available regardless of window
+  const persisted = await loadPersistedResults();
+
+  // Outside match window — return persisted results only
   if (!debug && !isMatchWindowActive()) {
     let frozen = null;
     try { frozen = await kv.get(CACHE_KEY); } catch(e) {}
+    const combined = mergePersistedResults(frozen || [], persisted);
     res.setHeader("Cache-Control", "no-cache");
-    return res.status(200).json({ response: frozen || [], cached: true, windowActive: false });
+    return res.status(200).json({ response: combined, cached: true, windowActive: false });
   }
 
   // KV cache check
@@ -374,13 +307,14 @@ export default async function handler(req, res) {
     if (cached) {
       const ttlMs = getSmartTTL(cached) * 1000;
       if (Date.now() - cachedTs < ttlMs) {
+        const combined = mergePersistedResults(cached, persisted);
         res.setHeader("Cache-Control", "no-cache");
-        return res.status(200).json({ response: cached, cached: true, age: Math.round((Date.now() - cachedTs) / 1000) });
+        return res.status(200).json({ response: combined, cached: true, age: Math.round((Date.now() - cachedTs) / 1000) });
       }
     }
   }
 
-  // Fetch — try Highlightly first (real-time scores), fall back to football-data.org (fixtures only)
+  // Fetch fresh data
   let fixtures = [];
   let source = "none";
   let errors = [];
@@ -389,27 +323,19 @@ export default async function handler(req, res) {
     fixtures = await fetchFromHighlightly();
     source = "highlightly";
   } catch(err) {
-    console.warn("[livescores] Highlightly failed:", err.message);
     errors.push(`highlightly: ${err.message}`);
-
     try {
       fixtures = await fetchFromESPN();
       source = "espn";
     } catch(err2) {
-      console.warn("[livescores] ESPN failed:", err2.message);
       errors.push(`espn: ${err2.message}`);
-
-      try {
-        fixtures = await fetchFromFootballData();
-        source = "football-data.org";
-      } catch(err3) {
-        console.error("[livescores] All sources failed:", err3.message);
-        errors.push(`football-data.org: ${err3.message}`);
-      }
     }
   }
 
   if (fixtures.length > 0) {
+    // Persist any newly finished results permanently
+    await persistFinishedResults(fixtures);
+
     const kvTtl = getSmartTTL(fixtures);
     try {
       await Promise.all([
@@ -419,23 +345,22 @@ export default async function handler(req, res) {
     } catch(e) { console.warn("[livescores] KV write:", e.message); }
   }
 
-  // If both failed, return stale cache or empty
+  // If fetch failed, return stale + persisted
   if (fixtures.length === 0 && errors.length > 0) {
     let stale = null;
     try { stale = await kv.get(CACHE_KEY); } catch(e) {}
-    return res.status(200).json({
-      response: stale || [],
-      cached: !!stale,
-      stale: true,
-      errors,
-    });
+    const combined = mergePersistedResults(stale || [], persisted);
+    return res.status(200).json({ response: combined, cached: !!stale, stale: true, errors });
   }
+
+  // Merge persisted results for any matches not in today's feed
+  const combined = mergePersistedResults(fixtures, persisted);
 
   res.setHeader("Cache-Control", "no-cache");
   return res.status(200).json({
-    response: fixtures,
+    response: combined,
     cached: false,
     source,
-    ...(debug ? { errors } : {}),
+    ...(debug ? { errors, persistedCount: Object.keys(persisted).length } : {}),
   });
 }
