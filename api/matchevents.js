@@ -214,7 +214,7 @@ export default async function handler(req, res) {
         playsCount: data.plays?.length || 0,
         boxscoreTeams: data.boxscore?.teams?.map(t => t.team?.displayName) || [],
         scoringPlays: data.scoringPlays || [],
-        keyEvents: (data.keyEvents || []).slice(0, 5),
+        keyEvents: (data.keyEvents || []),
       });
     }
 
