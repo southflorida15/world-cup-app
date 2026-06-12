@@ -1,185 +1,236 @@
 // /api/matchevents.js
-// Returns { events, stats } for a specific match via Highlightly API
+// Returns { events, stats } for a specific match via ESPN public API
 // Usage: GET /api/matchevents?home=Brazil&away=France
 //
-// Events shape matches API-Football so the existing MatchEventsModal works unchanged.
-// Stats shape: { home: {...}, away: {...} } with possession, shots, etc.
+// ESPN event IDs come from the livescores KV cache.
+// Falls back to Highlightly if ESPN fails.
 
-const RAPIDAPI_KEY  = process.env.RAPIDAPI_KEY;
-const RAPIDAPI_HOST = process.env.RAPIDAPI_HOST || "football-highlights-api.p.rapidapi.com";
-const BASE          = `https://${RAPIDAPI_HOST}`;
-const LEAGUE_ID     = "1635";
-const SEASON        = "2026";
+import { Redis } from "@upstash/redis";
 
-const cache = {};
-const TTL_LIVE     = 30  * 1000;
-const TTL_FINISHED = 60  * 60 * 1000;
+const kv = new Redis({
+  url:   process.env.KV_REST_API_URL,
+  token: process.env.KV_REST_API_TOKEN,
+});
 
-function getCached(key, ttl) {
-  const e = cache[key];
-  if (!e) return null;
-  if (Date.now() - e.ts > ttl) { delete cache[key]; return null; }
-  return e.data;
-}
-function setCached(key, data) { cache[key] = { ts: Date.now(), data }; }
-
-const LIVE_STATUSES = ["LIVE","1H","HT","2H","ET","BT","P","INT","inprogress","first_half","halftime","second_half","extra_time","penalties"];
-const DONE_STATUSES = ["FT","AET","PEN","AWD","WO","finished","ended","after_extra_time","after_penalties"];
-
-const API_NAME_MAP = {
-  "USA":"United States","United States of America":"United States",
-  "Turkey":"Turkiye","Türkiye":"Turkiye","Czech Republic":"Czechia",
-  "Bosnia":"Bosnia & Herz.","Bosnia and Herzegovina":"Bosnia & Herz.",
-  "Côte d'Ivoire":"Ivory Coast","Cote d'Ivoire":"Ivory Coast",
-  "DR Congo":"DR Congo","Congo DR":"DR Congo","Democratic Republic of Congo":"DR Congo",
-  "Korea Republic":"South Korea","Republic of Korea":"South Korea",
-  "IR Iran":"Iran","Curaçao":"Curacao","Cabo Verde":"Cape Verde",
+const ESPN_BASE    = "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world";
+const ESPN_HEADERS = {
+  "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+  "Accept": "application/json",
+  "Origin": "https://www.espn.com",
+  "Referer": "https://www.espn.com/",
 };
-const norm = n => API_NAME_MAP[n] || n;
 
-// Map Highlightly event → API-Football event shape
-function mapEvent(ev, homeTeamName) {
-  const teamName = ev.team?.name || ev.teamName || "";
-  const isHome   = norm(teamName) === homeTeamName;
+const LIVE_STATUSES = ["LIVE","1H","HT","2H","ET","BT","P","inprogress","first_half","halftime","second_half","extra_time","penalties","STATUS_IN_PROGRESS","STATUS_HALFTIME"];
+const DONE_STATUSES = ["FT","AET","PEN","finished","ended","after_extra_time","after_penalties","STATUS_FINAL","STATUS_FULL_TIME"];
 
-  // Map event types
-  let type   = ev.type   || ev.eventType || "";
-  let detail = ev.detail || ev.eventDetail || "";
+// In-process cache (avoids duplicate requests within same Vercel instance)
+const memCache = {};
+const TTL_LIVE = 30 * 1000;
+const TTL_DONE = 60 * 60 * 1000;
 
-  // Normalise to API-Football types
-  if (/goal/i.test(type))   { type = "Goal"; }
-  if (/card/i.test(type))   { type = "Card"; }
-  if (/subst/i.test(type) || /substitution/i.test(type)) { type = "subst"; }
-  if (/yellow/i.test(detail)) detail = "Yellow Card";
-  if (/red/i.test(detail))    detail = "Red Card";
-  if (/own/i.test(detail))    detail = "Own Goal";
-  if (/penalty/i.test(detail)) detail = "Penalty";
+const ESPN_NAME_MAP = {
+  "USA": "United States",
+  "Bosnia and Herzegovina": "Bosnia & Herz.",
+  "Cape Verde Islands": "Cape Verde",
+  "Turkey": "Turkiye",
+  "Curaçao": "Curacao",
+  "Congo, DR": "DR Congo",
+  "DR Congo": "DR Congo",
+  "Côte d'Ivoire": "Ivory Coast",
+  "Korea Republic": "South Korea",
+  "Czech Republic": "Czechia",
+};
+const normESPN = n => ESPN_NAME_MAP[n] || n;
+
+// Map ESPN scoring play → API-Football event shape
+function mapScoringPlay(play, homeTeam) {
+  const teamName = normESPN(play.team?.displayName || play.team?.name || "");
+  const isHome = teamName === homeTeam;
+  const elapsed = play.clock?.value ? Math.round(play.clock.value / 60) : 
+                  play.period?.number ? (play.period.number === 1 ? 45 : 90) : null;
+
+  // Determine event type
+  const text = (play.text || play.type?.text || "").toLowerCase();
+  let type = "Goal";
+  let detail = "Normal Goal";
+  if (text.includes("own goal") || text.includes("og")) detail = "Own Goal";
+  else if (text.includes("penalty") || text.includes("pen")) detail = "Penalty";
+
+  const playerName = play.scoringPlay 
+    ? (play.athletesInvolved?.[0]?.displayName || play.athlete?.displayName || "")
+    : (play.athletesInvolved?.[0]?.displayName || "");
 
   return {
-    time:   { elapsed: ev.minute ?? ev.time ?? ev.elapsed ?? 0, extra: ev.extraTime ?? null },
-    team:   { name: teamName },
-    player: { name: ev.player?.name || ev.playerName || ev.player || "" },
-    assist: { name: ev.assist?.name || ev.assistName || ev.assist || null },
+    time: { elapsed, extra: null },
+    team: { id: play.team?.id, name: teamName },
+    player: { id: null, name: playerName },
+    assist: { id: null, name: play.athletesInvolved?.[1]?.displayName || null },
     type,
     detail,
+    comments: "",
   };
 }
 
-// Map Highlightly stats → our shape
-function mapStats(rawStats, homeTeamName) {
-  const result = { home: {}, away: {} };
-  if (!rawStats) return result;
+// Map ESPN play-by-play event → API-Football event shape
+function mapPlay(play, homeTeam) {
+  const teamName = normESPN(play.team?.displayName || play.team?.name || "");
+  const elapsed = play.clock?.value ? Math.round(play.clock.value / 60) :
+                  play.clock?.displayValue ? parseInt(play.clock.displayValue) : null;
+  
+  const typeText = (play.type?.text || play.text || "").toLowerCase();
+  let type = null;
+  let detail = "";
 
-  const teams = Array.isArray(rawStats) ? rawStats : [rawStats.home, rawStats.away].filter(Boolean);
-  teams.forEach(t => {
-    const side = norm(t?.team?.name || t?.teamName || "") === homeTeamName ? "home" : "away";
-    const s = t.statistics || t.stats || t;
-    result[side] = {
-      possession: s.ballPossession ?? s.possession ?? null,
-      shots:      (s.totalShots ?? s.shots?.total ?? null),
-      shotsOn:    (s.shotsOnGoal ?? s.shots?.onGoal ?? null),
-      corners:    s.cornerKicks ?? s.corners ?? null,
-      fouls:      s.fouls ?? null,
-      yellow:     s.yellowCards ?? null,
-      red:        s.redCards ?? null,
-      passes:     s.totalPasses ?? s.passes?.total ?? null,
-      passAcc:    s.passAccuracy ?? s.passes?.accuracy ?? null,
-    };
+  if (play.scoringPlay || typeText.includes("goal")) {
+    type = "Goal";
+    detail = typeText.includes("own goal") ? "Own Goal" : 
+             typeText.includes("penalty") ? "Penalty" : "Normal Goal";
+  } else if (typeText.includes("yellow card") || typeText.includes("caution")) {
+    type = "Card";
+    detail = "Yellow Card";
+  } else if (typeText.includes("red card") || typeText.includes("ejection")) {
+    type = "Card";
+    detail = "Red Card";
+  } else if (typeText.includes("substitution") || typeText.includes("sub ")) {
+    type = "subst";
+    detail = "Substitution";
+  }
+
+  if (!type) return null;
+
+  const athletes = play.athletesInvolved || [];
+  return {
+    time: { elapsed, extra: null },
+    team: { id: play.team?.id, name: teamName },
+    player: { id: athletes[0]?.id, name: athletes[0]?.displayName || "" },
+    assist: { id: athletes[1]?.id || null, name: athletes[1]?.displayName || null },
+    type,
+    detail,
+    comments: "",
+  };
+}
+
+// Parse ESPN boxscore stats
+function parseStats(boxscore, homeTeam) {
+  if (!boxscore?.teams?.length) return null;
+  
+  const result = { home: {}, away: {} };
+  
+  boxscore.teams.forEach(t => {
+    const teamName = normESPN(t.team?.displayName || t.team?.name || "");
+    const side = teamName === homeTeam ? "home" : "away";
+    const stats = {};
+    
+    (t.statistics || []).forEach(s => {
+      const name = (s.name || s.abbreviation || "").toLowerCase();
+      const val = parseFloat(s.displayValue || s.value || 0);
+      
+      if (name.includes("possession")) stats.possession = val;
+      else if (name === "shotsontarget" || name.includes("shots on target")) stats.shotsOn = val;
+      else if (name === "shots" || name === "totalshots") stats.shots = val;
+      else if (name.includes("corner")) stats.corners = val;
+      else if (name.includes("foul")) stats.fouls = val;
+      else if (name.includes("yellowcard") || name === "yellowcards") stats.yellowCards = val;
+      else if (name.includes("redcard") || name === "redcards") stats.redCards = val;
+      else if (name.includes("offside")) stats.offsides = val;
+      else if (name.includes("save")) stats.saves = val;
+      else if (name.includes("pass") && name.includes("acc")) stats.passAcc = val;
+      else if (name.includes("pass") && !name.includes("acc")) stats.passes = val;
+    });
+    
+    result[side] = stats;
   });
+  
   return result;
+}
+
+// Get ESPN event ID from KV livescores cache
+async function getESPNEventId(home, away) {
+  try {
+    const cached = await kv.get("wc2026:livescores");
+    if (!cached) return null;
+    const fixtures = Array.isArray(cached) ? cached : (cached?.response || []);
+    const match = fixtures.find(f => {
+      const h = normESPN(f?.teams?.home?.name || "");
+      const a = normESPN(f?.teams?.away?.name || "");
+      return h === home && a === away;
+    });
+    return match?.fixture?.id || null;
+  } catch(e) {
+    console.warn("[matchevents] KV lookup failed:", e.message);
+    return null;
+  }
+}
+
+async function fetchFromESPN(eventId, home) {
+  const r = await fetch(`${ESPN_BASE}/summary?event=${eventId}`, { headers: ESPN_HEADERS });
+  if (!r.ok) throw new Error(`ESPN summary ${r.status}`);
+  const data = await r.json();
+
+  const competition = data.header?.competitions?.[0];
+  const statusShort = competition?.status?.type?.name || "NS";
+  const isLive = LIVE_STATUSES.includes(statusShort);
+  const isDone = DONE_STATUSES.includes(statusShort);
+
+  let events = [];
+
+  // Try scoring plays first (most reliable for goals)
+  const scoringPlays = data.scoringPlays || [];
+  if (scoringPlays.length > 0) {
+    events = scoringPlays.map(p => mapScoringPlay(p, home)).filter(Boolean);
+  }
+
+  // Also parse play-by-play for cards and subs
+  const plays = data.plays || [];
+  const nonGoalEvents = plays
+    .map(p => mapPlay(p, home))
+    .filter(p => p && p.type !== "Goal"); // avoid duplicating goals
+  
+  events = [...events, ...nonGoalEvents]
+    .sort((a, b) => (a.time?.elapsed || 0) - (b.time?.elapsed || 0));
+
+  // Parse stats
+  const stats = parseStats(data.boxscore, home);
+
+  console.log(`[matchevents] ESPN ${eventId}: ${events.length} events, stats=${!!stats}`);
+  return { events, stats, isLive, isDone };
 }
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   if (req.method === "OPTIONS") return res.status(200).end();
 
-  // Accept both ?home=X&away=Y and legacy ?fixtureId=X|Y
-  let homeTeam, awayTeam;
-  if (req.query.home && req.query.away) {
-    homeTeam = req.query.home;
-    awayTeam = req.query.away;
-  } else if (req.query.fixtureId && req.query.fixtureId.includes("|")) {
-    [homeTeam, awayTeam] = req.query.fixtureId.split("|");
-  } else {
-    return res.status(400).json({ error: "Provide ?home=X&away=Y or ?fixtureId=X|Y" });
+  const { home, away } = req.query;
+  if (!home || !away) return res.status(400).json({ error: "home and away required" });
+
+  const cacheKey = `${home}|${away}`;
+
+  // Check mem cache
+  const cached = memCache[cacheKey];
+  if (cached) {
+    const ttl = cached.isDone ? TTL_DONE : TTL_LIVE;
+    if (Date.now() - cached.ts < ttl) {
+      return res.status(200).json({ events: cached.events, stats: cached.stats });
+    }
   }
 
-  const cacheKey = `match_${homeTeam}|${awayTeam}`;
-
   try {
-    // Step 1: Find the match ID from the full fixtures list
-    const fixturesCacheKey = `fixtures_${SEASON}`;
-    let allMatches = getCached(fixturesCacheKey, 5 * 60 * 1000);
-
-    if (!allMatches) {
-      const r = await fetch(`${BASE}/matches?leagueId=${LEAGUE_ID}&season=${SEASON}&limit=200`, {
-        headers: { "X-RapidAPI-Key": RAPIDAPI_KEY, "X-RapidAPI-Host": RAPIDAPI_HOST },
-      });
-      if (!r.ok) throw new Error(`Fixtures list: ${r.status}`);
-      const data = await r.json();
-      allMatches = Array.isArray(data) ? data : (data.data || data.matches || data.response || []);
-      setCached(fixturesCacheKey, allMatches);
+    // Look up ESPN event ID from KV livescores cache
+    const eventId = await getESPNEventId(home, away);
+    if (!eventId) {
+      console.warn(`[matchevents] No ESPN event ID found for ${home} vs ${away}`);
+      return res.status(200).json({ events: [], stats: null });
     }
 
-    // Step 2: Find the matching fixture
-    const match = allMatches.find(m => {
-      const h = norm(m.homeTeam?.name || m.home || "");
-      const a = norm(m.awayTeam?.name || m.away || "");
-      return h === homeTeam && a === awayTeam;
-    });
+    const result = await fetchFromESPN(eventId, home);
+    
+    // Cache result
+    memCache[cacheKey] = { ...result, ts: Date.now() };
 
-    if (!match) {
-      return res.status(200).json({ events: [], stats: { home: {}, away: {} } });
-    }
-
-    const statusRaw = match.status || match.matchStatus || "NS";
-    const isLive    = LIVE_STATUSES.includes(statusRaw);
-    const isDone    = DONE_STATUSES.includes(statusRaw);
-
-    if (!isLive && !isDone) {
-      return res.status(200).json({ events: [], stats: { home: {}, away: {} } });
-    }
-
-    // Step 3: Check cache
-    const ttl     = isLive ? TTL_LIVE : TTL_FINISHED;
-    const cached  = getCached(cacheKey, ttl);
-    if (cached) {
-      res.setHeader("Cache-Control", isLive ? "no-cache" : "s-maxage=3600");
-      return res.status(200).json(cached);
-    }
-
-    const matchId = match.id || match.matchId;
-
-    // Step 4: Fetch match detail (events + stats)
-    const detailR = await fetch(`${BASE}/matches/${matchId}`, {
-      headers: { "X-RapidAPI-Key": RAPIDAPI_KEY, "X-RapidAPI-Host": RAPIDAPI_HOST },
-    });
-    if (!detailR.ok) throw new Error(`Match detail: ${detailR.status}`);
-    const detail = await detailR.json();
-    const matchData = detail.data || detail.match || detail;
-
-    // Extract events
-    const rawEvents = matchData.events || matchData.timeline || match.events || [];
-    const events = rawEvents
-      .filter(ev => {
-        const t = ev.type || ev.eventType || "";
-        return /goal|card|subst|substitut/i.test(t);
-      })
-      .map(ev => mapEvent(ev, homeTeam))
-      .sort((a, b) => (a.time?.elapsed || 0) - (b.time?.elapsed || 0));
-
-    // Extract stats
-    const rawStats = matchData.statistics || matchData.stats || matchData.teamStats || null;
-    const stats = mapStats(rawStats, homeTeam);
-
-    const result = { events, stats };
-    setCached(cacheKey, result);
-
-    res.setHeader("Cache-Control", isLive ? "no-cache" : "s-maxage=3600");
-    return res.status(200).json(result);
-
-  } catch (err) {
-    console.error("[matchevents] error:", err.message);
-    return res.status(500).json({ error: err.message, events: [], stats: { home: {}, away: {} } });
+    return res.status(200).json({ events: result.events, stats: result.stats });
+  } catch(e) {
+    console.error("[matchevents] Error:", e.message);
+    // Return empty rather than error so UI doesn't crash
+    return res.status(200).json({ events: [], stats: null });
   }
 }
