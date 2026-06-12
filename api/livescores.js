@@ -241,9 +241,13 @@ function mapESPNEvent(event) {
   if (!home || !away) return null;
 
   const statusType = comp.status?.type?.name || "STATUS_SCHEDULED";
-  const short = ESPN_STATUS_MAP[statusType] || "NS";
+  let short = ESPN_STATUS_MAP[statusType] || "NS";
   const clock = comp.status?.displayClock;
   const elapsed = clock && clock !== "0:00" ? parseInt(clock.split(":")[0]) : null;
+  // ESPN sometimes returns NS with elapsed time — fix it
+  if (short === "NS" && elapsed && elapsed > 0) {
+    short = elapsed <= 45 ? "1H" : elapsed <= 50 ? "HT" : elapsed <= 95 ? "2H" : "ET";
+  }
   const hg = home.score !== undefined && home.score !== "" ? parseInt(home.score) : null;
   const ag = away.score !== undefined && away.score !== "" ? parseInt(away.score) : null;
 
