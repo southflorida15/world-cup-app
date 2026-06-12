@@ -3786,7 +3786,9 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
 
   // Predictions: { [matchId]: { hg, ag } }
   const [preds, setPreds]       = useState({});
+  const predsRef = useRef({});
   const [predSaving, setPSaving]= useState({});  // { [matchId]: bool }
+  useEffect(() => { predsRef.current = preds; }, [preds]);
 
   // Leaderboard
   const [board, setBoard]       = useState(null);
@@ -3895,20 +3897,13 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
 
   const upd = (id, field, val) => {
     const clean = val.replace(/\D/,"");
-    setPreds(prev => {
-      const next = { ...prev, [id]: { ...(prev[id]||{}), [field]: clean }};
-      return next;
-    });
-    // Use timeout so state is committed before we read it
-    setTimeout(() => {
-      setPreds(current => {
-        const updated = current[id];
-        if (updated?.hg !== undefined && updated?.ag !== undefined && updated.hg !== "" && updated.ag !== "") {
-          debouncedSave(id, parseInt(updated.hg), parseInt(updated.ag));
-        }
-        return current;
-      });
-    }, 0);
+    const next = { ...predsRef.current, [id]: { ...(predsRef.current[id]||{}), [field]: clean }};
+    predsRef.current = next;
+    setPreds(next);
+    const updated = next[id];
+    if (updated?.hg !== undefined && updated?.ag !== undefined && updated.hg !== "" && updated.ag !== "") {
+      debouncedSave(id, parseInt(updated.hg), parseInt(updated.ag));
+    }
   };
 
   // ── Score totals ────────────────────────────────────────────────────────
