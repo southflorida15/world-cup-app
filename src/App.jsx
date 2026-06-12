@@ -1,3 +1,4 @@
+// ── IMPORT COMPONENTS ──────────────────────────────────────────────────
 import FantasyPickLockStatus from "./components/FantasyPickLockStatus";
 import FantasyScoringRules from "./components/FantasyScoringRules";
 import FantasyStatsSummary from "./components/FantasyStatsSummary";
