@@ -158,7 +158,37 @@ async function buildDashboard() {
   };
 }
 
+// ── Score-matches (fantasy auto-scoring) ─────────────────────────────────
+async function handleScoreMatches(req, res) {
+  const { matches } = req.body || {};
+  if (!Array.isArray(matches) || !matches.length) {
+    return res.status(400).json({ error: "matches array required" });
+  }
+  const secret = process.env.PREDICTOR_ADMIN_SECRET || process.env.CRON_SECRET;
+  const host = req.headers.host;
+  const proto = req.headers["x-forwarded-proto"] || "https";
+  const base = proto + "://" + host;
+  let scored = 0, skipped = 0;
+  for (const { id: matchId, hg, ag } of matches) {
+    if (!matchId || hg === undefined || ag === undefined) { skipped++; continue; }
+    try {
+      const r = await fetch(base + "/api/predictor?action=score", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-admin-secret": secret },
+        body: JSON.stringify({ matchId, hg: parseInt(hg), ag: parseInt(ag) }),
+      });
+      if (r.status === 403) { skipped++; continue; }
+      if (r.ok) scored++; else skipped++;
+    } catch(e) { skipped++; }
+  }
+  return res.status(200).json({ ok: true, scored, skipped });
+}
+
 export default async function handler(req, res) {
+  if (req.method === "POST" && req.query.action === "score-matches") {
+    return handleScoreMatches(req, res);
+  }
+
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization");

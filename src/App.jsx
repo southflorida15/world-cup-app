@@ -7,7 +7,25 @@ import MatchInfoSection from "./components/MatchInfoSection";
 import MatchDetailCard from "./components/MatchDetailCard";
 import React, { useState, useEffect, useContext, createContext, useCallback, useMemo, useRef } from "react";
 import { buildFifa2026Bracket, buildQualifiedThirdsFromSelectedTeams, buildThirdGroupsKey } from "./engine/fifa2026Bracket";
-import { loadAnnexCFromRemote } from "./engine/annexC";
+// loadAnnexCFromRemote inline — calls merged bracket-share endpoint
+async function loadAnnexCFromRemote() {
+  const r = await fetch("/api/bracket-share?action=annexc");
+  if (!r.ok) throw new Error("annexc " + r.status);
+  return r.text().then(html => {
+    // Parse the annex C table from Wikipedia HTML
+    // Returns { [groupKey]: winner } map
+    const table = {};
+    const rows = [...html.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)];
+    for (const row of rows) {
+      const cells = [...row[1].matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map(m => m[1].replace(/<[^>]+>/g,"").trim());
+      if (cells.length >= 2) {
+        const key = cells[0].toUpperCase().replace(/\s+/g,"");
+        if (/^[A-F]{4,6}$/.test(key)) table[key] = cells[1] || "";
+      }
+    }
+    return table;
+  });
+}
 
 // ── THEME ─────────────────────────────────────────────────────────────────
 const C = {
@@ -3804,6 +3822,24 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
     })();
   }, [fantasyUserId, displayName, userAvatar, syncProfile?.uid]);
 
+  // ── Auto-score finished matches ─────────────────────────────────────────
+  useEffect(() => {
+    const finishedWithScores = MATCHES
+      .filter(m => m.group && isFinished(m.home, m.away))
+      .map(m => {
+        const sc = getScore(m.home, m.away);
+        if (!sc || sc.hg === null || sc.ag === null) return null;
+        return { id: m.id, hg: sc.hg, ag: sc.ag };
+      })
+      .filter(Boolean);
+    if (!finishedWithScores.length) return;
+    fetch("/api/admin?action=score-matches", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ matches: finishedWithScores }),
+    }).catch(e => console.warn("[score-matches]", e.message));
+  }, [getScore, isFinished]);
+
   // ── Load leaderboard when that tab is active ────────────────────────────
   useEffect(() => {
   let cancelled = false;
@@ -4517,11 +4553,9 @@ function TopScorersTab({ tabTop=116 }) {
 
   useEffect(() => {
     setLoading(true);
-    fetch("/api/scorers")
+    fetch("/api/matchevents?action=scorers")
       .then(r => r.json())
-      .then(d => {
-        if (d.scorers?.length) setLiveScorers(d.scorers);
-      })
+      .then(d => { if (d.scorers?.length) setLiveScorers(d.scorers); })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);

@@ -216,9 +216,61 @@ function parseEvents(data, homeTeam) {
   return events.sort((a, b) => (a.time?.elapsed || 0) - (b.time?.elapsed || 0));
 }
 
+// ── Scorers aggregator ────────────────────────────────────────────────────
+async function getScorers() {
+  const result = await kv.scan(0, { match: "wc2026:events:*", count: 200 });
+  const keys = result?.keys || result?.[1] || [];
+  if (!keys.length) return { scorers: [], cards: [] };
+
+  const records = await Promise.all(keys.map(k => kv.get(k).catch(() => null)));
+  const goals = {};
+  const cards = {};
+
+  records.forEach(record => {
+    if (!record?.events?.length) return;
+    record.events.forEach(ev => {
+      if (ev.type === "Goal" && ev.detail !== "Own Goal") {
+        const name = ev.player?.name;
+        const team = ev.team?.name;
+        if (!name) return;
+        if (!goals[name]) goals[name] = { name, team, goals: 0, assists: 0 };
+        goals[name].goals++;
+        const assist = ev.assist?.name;
+        if (assist) {
+          if (!goals[assist]) goals[assist] = { name: assist, team, goals: 0, assists: 0 };
+          goals[assist].assists++;
+        }
+      }
+      if (ev.type === "Card") {
+        const name = ev.player?.name;
+        const team = ev.team?.name;
+        if (!name) return;
+        if (!cards[name]) cards[name] = { name, team, yellow: 0, red: 0 };
+        if (ev.detail === "Yellow Card") cards[name].yellow++;
+        if (ev.detail === "Red Card") cards[name].red++;
+      }
+    });
+  });
+
+  return {
+    scorers: Object.values(goals).sort((a,b) => b.goals-a.goals || b.assists-a.assists).slice(0,30),
+    cards: Object.values(cards).sort((a,b) => (b.red*2+b.yellow)-(a.red*2+a.yellow)).slice(0,20),
+    matchCount: keys.length,
+  };
+}
+
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   if (req.method === "OPTIONS") return res.status(200).end();
+
+  // Scorers aggregation
+  if (req.query.action === "scorers") {
+    try {
+      return res.status(200).json(await getScorers());
+    } catch(e) {
+      return res.status(200).json({ scorers: [], cards: [], error: e.message });
+    }
+  }
 
   let { home, away, debug, fixtureId } = req.query;
   if ((!home || !away) && fixtureId && fixtureId.includes("|")) {

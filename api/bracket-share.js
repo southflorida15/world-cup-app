@@ -197,7 +197,35 @@ async function getSnapshot(id) {
   return kv.get(`bracket-share:${id}`);
 }
 
+// ── Annex C proxy ─────────────────────────────────────────────────────────
+const ANNEXC_SOURCES = [
+  "https://en.wikipedia.org/wiki/Template:2026_FIFA_World_Cup_third-place_table",
+  "https://en.wikipedia.org/api/rest_v1/page/html/Template:2026_FIFA_World_Cup_third-place_table",
+];
+
+async function handleAnnexC(res) {
+  for (const url of ANNEXC_SOURCES) {
+    try {
+      const response = await fetch(url, {
+        headers: {
+          "User-Agent": "world-cup-app/1.0 (Annex C bracket loader)",
+          "Accept": "text/html,text/plain,*/*",
+        },
+      });
+      if (!response.ok) continue;
+      const text = await response.text();
+      if (!text || text.length < 1000) continue;
+      res.setHeader("Cache-Control", "s-maxage=86400, stale-while-revalidate=604800");
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      return res.status(200).send(text);
+    } catch (e) { /* try next */ }
+  }
+  return res.status(502).json({ error: "Unable to load Annex C source." });
+}
+
 export default async function handler(req, res) {
+  if (req.query.action === "annexc") return handleAnnexC(res);
+
   res.setHeader("Access-Control-Allow-Origin", "*");
   if (req.method === "OPTIONS") return res.status(200).end();
 
