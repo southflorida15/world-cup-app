@@ -4065,7 +4065,7 @@ return (
                     <div style={{fontSize:9,color:C.dim}}>pts</div>
                   </div>
                 </div>
-
+                {i===0&&entry.pts>0&&<div style={{height:2,background:`linear-gradient(90deg,${C.gold},transparent)`}}/>}
               </Card>
             );
           })}
@@ -4511,36 +4511,20 @@ const ONES_TO_WATCH = [
 ];
 
 function TopScorersTab({ tabTop=116 }) {
-  const { allFixtures } = useContext(LiveScoresCtx);
   const [filter, setFilter] = useState("all");
+  const [liveScorers, setLiveScorers] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Try to build live scorers from allFixtures events
-  const liveScorers = useMemo(() => {
-    if (!allFixtures?.length) return [];
-    const scorers = {};
-    allFixtures.forEach(f => {
-      const events = f.events || [];
-      events.forEach(ev => {
-        if (ev.type !== "Goal" || ev.detail === "Own Goal") return;
-        const player = ev.player?.name;
-        const teamName = normTeam(ev.team?.name || "");
-        if (!player) return;
-        const key = player;
-        if (!scorers[key]) scorers[key] = { name:player, team:teamName, goals:0, assists:0 };
-        scorers[key].goals++;
-      });
-      // Assists
-      events.forEach(ev => {
-        if (ev.type !== "Goal" || ev.detail === "Own Goal") return;
-        const player = ev.assist?.name;
-        const teamName = normTeam(ev.team?.name || "");
-        if (!player) return;
-        if (!scorers[player]) scorers[player] = { name:player, team:teamName, goals:0, assists:0 };
-        scorers[player].assists++;
-      });
-    });
-    return Object.values(scorers).sort((a,b)=>b.goals-a.goals||(b.goals+b.assists)-(a.goals+a.assists));
-  }, [allFixtures]);
+  useEffect(() => {
+    setLoading(true);
+    fetch("/api/scorers")
+      .then(r => r.json())
+      .then(d => {
+        if (d.scorers?.length) setLiveScorers(d.scorers);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
 
   const hasLive = liveScorers.length > 0;
   const _tshRef = useRef(null); const _tshH = useElemHeight(_tshRef);

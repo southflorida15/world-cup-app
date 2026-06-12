@@ -284,6 +284,22 @@ export default async function handler(req, res) {
     }
   }
 
+  // Seed known results that predate the persistence system
+  if (req.query.seed === "1") {
+    const known = {
+      "Mexico|South Africa": { hg: 2, ag: 0, status: "FT", elapsed: 90 },
+      "South Korea|Czechia":  { hg: 2, ag: 1, status: "FT", elapsed: 90 },
+    };
+    try {
+      const existing = await loadPersistedResults();
+      const merged = { ...known, ...existing }; // existing takes priority (don't overwrite newer data)
+      await kv.set(RESULTS_KEY, merged);
+      return res.status(200).json({ ok: true, seeded: Object.keys(known), total: Object.keys(merged).length });
+    } catch(e) {
+      return res.status(500).json({ error: e.message });
+    }
+  }
+
   // Load persisted results first — always available regardless of window
   const persisted = await loadPersistedResults();
 

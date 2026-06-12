@@ -1,7 +1,7 @@
 // /api/matchevents.js
-// Returns { events, stats } for a specific match via ESPN public API
-// Usage: GET /api/matchevents?home=Brazil&away=France
-// Debug: GET /api/matchevents?home=Mexico&away=South+Africa&debug=1
+// Returns { events, stats } for a specific match via ESPN public API.
+// Finished match data is persisted permanently in KV so it's always
+// available even after ESPN drops the match from their feed.
 
 import { Redis } from "@upstash/redis";
 
@@ -39,25 +39,81 @@ const ESPN_NAME_MAP = {
 };
 const normESPN = n => ESPN_NAME_MAP[n] || n;
 
-// Get ESPN event ID from KV livescores cache
-async function getESPNEventId(home, away) {
+// ── KV persistence ────────────────────────────────────────────────────────
+// Finished match events+stats stored permanently, no expiry.
+const kvKey = (home, away) => `wc2026:events:${home}|${away}`;
+
+async function loadFromKV(home, away) {
   try {
-    const cached = await kv.get("wc2026:livescores");
-    if (!cached) return null;
-    const fixtures = Array.isArray(cached) ? cached : (cached?.response || []);
-    const match = fixtures.find(f => {
-      const h = normESPN(f?.teams?.home?.name || "");
-      const a = normESPN(f?.teams?.away?.name || "");
-      return h === home && a === away;
-    });
-    return match?.fixture?.id || null;
+    const data = await kv.get(kvKey(home, away));
+    return data || null;
   } catch(e) {
-    console.warn("[matchevents] KV lookup failed:", e.message);
+    console.warn("[matchevents] KV load:", e.message);
     return null;
   }
 }
 
-// Parse ESPN stats from boxscore
+async function saveToKV(home, away, events, stats) {
+  try {
+    await kv.set(kvKey(home, away), { events, stats, savedAt: Date.now() });
+    console.log(`[matchevents] Persisted ${events.length} events for ${home} vs ${away}`);
+  } catch(e) {
+    console.warn("[matchevents] KV save:", e.message);
+  }
+}
+
+// ── ESPN event ID lookup ───────────────────────────────────────────────────
+// Also stores a separate ESPN ID map so we can look up old matches
+// even after they age out of the livescores feed.
+const ESPN_ID_MAP_KEY = "wc2026:espn_ids";
+
+async function getESPNEventId(home, away) {
+  // 1. Try livescores cache first (works for recent/live matches)
+  try {
+    const cached = await kv.get("wc2026:livescores");
+    if (cached) {
+      const fixtures = Array.isArray(cached) ? cached : (cached?.response || []);
+      const match = fixtures.find(f => {
+        const h = normESPN(f?.teams?.home?.name || "");
+        const a = normESPN(f?.teams?.away?.name || "");
+        return h === home && a === away;
+      });
+      if (match?.fixture?.id) {
+        // Also persist this ID mapping for future use
+        saveESPNId(home, away, match.fixture.id);
+        return match.fixture.id;
+      }
+    }
+  } catch(e) {
+    console.warn("[matchevents] livescores KV lookup:", e.message);
+  }
+
+  // 2. Fall back to persisted ID map (works for old matches)
+  try {
+    const idMap = await kv.get(ESPN_ID_MAP_KEY) || {};
+    const key = `${home}|${away}`;
+    if (idMap[key]) return idMap[key];
+  } catch(e) {
+    console.warn("[matchevents] ESPN ID map lookup:", e.message);
+  }
+
+  return null;
+}
+
+async function saveESPNId(home, away, id) {
+  try {
+    const idMap = await kv.get(ESPN_ID_MAP_KEY) || {};
+    const key = `${home}|${away}`;
+    if (!idMap[key]) {
+      idMap[key] = id;
+      await kv.set(ESPN_ID_MAP_KEY, idMap);
+    }
+  } catch(e) {
+    // non-critical
+  }
+}
+
+// ── Stats parser ──────────────────────────────────────────────────────────
 function parseStats(boxscore, homeTeam) {
   if (!boxscore?.teams?.length) return null;
   const result = { home: {}, away: {} };
@@ -84,15 +140,10 @@ function parseStats(boxscore, homeTeam) {
   return result;
 }
 
-// Parse all events from ESPN summary response
+// ── Events parser ─────────────────────────────────────────────────────────
 function parseEvents(data, homeTeam) {
   const events = [];
 
-  // Method 1: scoringPlays — ESPN often returns empty; keyEvents handles goals instead
-
-  // Method 2: keyEvents — goals, cards, subs
-  // ESPN puts everything here: goals have scoringPlay=true, cards/subs have scoringPlay=false
-  // participants[] uses .athlete.displayName (not athletesInvolved)
   const keyEvents = data.keyEvents || [];
   for (const ev of keyEvents) {
     const teamName = normESPN(ev.team?.displayName || ev.team?.name || "");
@@ -103,7 +154,6 @@ function parseEvents(data, homeTeam) {
     const typeText = (ev.type?.text || "").toLowerCase();
     const typeType = (ev.type?.type || "").toLowerCase();
 
-    // Get participants — ESPN uses participants[].athlete
     const participants = ev.participants || ev.athletesInvolved || [];
     const p0 = participants[0]?.athlete?.displayName || participants[0]?.displayName || "";
     const p1 = participants[1]?.athlete?.displayName || participants[1]?.displayName || null;
@@ -135,7 +185,7 @@ function parseEvents(data, homeTeam) {
     });
   }
 
-  // Method 3: plays array (fallback — full play by play)
+  // Fallback: plays array
   if (events.length === 0 && data.plays?.length) {
     for (const play of data.plays) {
       const teamName = normESPN(play.team?.displayName || play.team?.name || "");
@@ -171,7 +221,6 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
 
   let { home, away, debug, fixtureId } = req.query;
-  // Support legacy ?fixtureId=Home|Away format from App.jsx
   if ((!home || !away) && fixtureId && fixtureId.includes("|")) {
     [home, away] = fixtureId.split("|");
   }
@@ -179,17 +228,27 @@ export default async function handler(req, res) {
 
   const cacheKey = `${home}|${away}`;
 
-  // Check mem cache (skip for debug or if empty result was cached)
-  const cached = memCache[cacheKey];
-  if (cached && debug !== "1" && cached.events.length > 0) {
-    const ttl = cached.isDone ? TTL_DONE : TTL_LIVE;
-    if (Date.now() - cached.ts < ttl) {
-      return res.status(200).json({ events: cached.events, stats: cached.stats });
+  // 1. Check mem cache (skip if empty or debug)
+  const memCached = memCache[cacheKey];
+  if (memCached && debug !== "1" && memCached.events.length > 0) {
+    const ttl = memCached.isDone ? TTL_DONE : TTL_LIVE;
+    if (Date.now() - memCached.ts < ttl) {
+      return res.status(200).json({ events: memCached.events, stats: memCached.stats });
     }
   }
 
+  // 2. Check KV persistent store (finished matches only)
+  if (debug !== "1") {
+    const persisted = await loadFromKV(home, away);
+    if (persisted && persisted.events?.length > 0) {
+      console.log(`[matchevents] Serving ${home} vs ${away} from KV (${persisted.events.length} events)`);
+      memCache[cacheKey] = { ...persisted, isDone: true, ts: Date.now() };
+      return res.status(200).json({ events: persisted.events, stats: persisted.stats });
+    }
+  }
+
+  // 3. Fetch from ESPN
   try {
-    // Look up ESPN event ID from KV
     const eventId = await getESPNEventId(home, away);
 
     if (!eventId) {
@@ -208,7 +267,6 @@ export default async function handler(req, res) {
     const data = await r.json();
 
     if (debug === "1") {
-      // Return raw ESPN data for debugging
       return res.status(200).json({
         _debug: true,
         eventId,
@@ -217,7 +275,6 @@ export default async function handler(req, res) {
         keyEventsCount: data.keyEvents?.length || 0,
         playsCount: data.plays?.length || 0,
         boxscoreTeams: data.boxscore?.teams?.map(t => t.team?.displayName) || [],
-        scoringPlays: data.scoringPlays || [],
         keyEvents: (data.keyEvents || []).slice(0, 5),
       });
     }
@@ -230,6 +287,11 @@ export default async function handler(req, res) {
     const stats = parseStats(data.boxscore, home);
 
     console.log(`[matchevents] ${home} vs ${away}: ${events.length} events, stats=${!!stats}, status=${statusType}`);
+
+    // Persist to KV if match is finished and we have data
+    if (isDone && events.length > 0) {
+      await saveToKV(home, away, events, stats);
+    }
 
     memCache[cacheKey] = { events, stats, isDone, isLive, ts: Date.now() };
     return res.status(200).json({ events, stats });
