@@ -1040,7 +1040,7 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="",
 
 
   return (
-    <div style={{marginBottom:8,background:C.s1,border:`1px solid ${live?C.green:isFav?`${C.gold}55`:C.b1}`,borderRadius:12,overflow:"hidden",opacity:finished?0.8:1}}>
+    <div style={{marginBottom:8,background:C.s1,border:`1px solid ${live?C.green:isFav?`${C.gold}55`:C.b1}`,borderRadius:12,overflow:"hidden",opacity:finished?0.45:1}}>
       {/* Header: group/stage + venue + time */}
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 13px",borderBottom:`1px solid ${C.b1}`,background:C.s2}}>
         <div style={{display:"flex",alignItems:"center",gap:6,minWidth:0,flex:1}}>
@@ -2633,7 +2633,7 @@ function BracketMatchup({ match, t1, t2, winner, onPick, interactive=false, comp
         onClick={()=>hasTeams&&fullMatch&&onMatchTap?.(fullMatch)}
         style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 10px",borderBottom:`1px solid ${C.b1}`,background:`${C.gold}10`,cursor:hasTeams&&onMatchTap?"pointer":"default",gap:4}}
       >
-        <span style={{fontSize:10,color:C.gold,fontWeight:900,letterSpacing:"0.08em",flexShrink:0}}>M{match || "—"}</span>
+        <span style={{fontSize:10,color:C.gold,fontWeight:900,letterSpacing:"0.08em",flexShrink:0}}>M{match||"—"}</span>
         {city && <span style={{fontSize:9,color:C.dim,flex:1,textAlign:"center",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>📍 {city}</span>}
         <span style={{fontSize:9,flexShrink:0,color:hasTeams&&onMatchTap?C.blue:canPick?C.green:C.dim,fontWeight:800}}>
           {hasTeams&&onMatchTap?"Details ›":interactive?(canPick?"TAP PICK":"LOCKED"):""}
@@ -2710,8 +2710,6 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
     };
   }, []);
 
-  // Left half: R32 pairs that feed into R16 M89,M90,M93,M94 → QF M97,M99 → SF M101
-  // Pairs: (73,74)→89, (75,76)→90, (77,78)→93, (83,84)→94
   const left = [
     {key:"r32L", short:"R32", label:"Round of 32", ids:[73,74,75,76,77,78,83,84], gap:8, padTop:0},
     {key:"r16L", short:"R16", label:"Round of 16", ids:[89,90,93,94], gap:70, padTop:38},
@@ -2719,8 +2717,6 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
     {key:"sfL", short:"SF", label:"Semifinal", ids:[101], gap:0, padTop:318},
   ];
 
-  // Right half: R32 pairs that feed into R16 M91,M92,M95,M96 → QF M98,M100 → SF M102
-  // Pairs: (79,80)→91, (81,82)→92, (85,86)→95, (87,88)→96
   const right = [
     {key:"sfR", short:"SF", label:"Semifinal", ids:[102], gap:0, padTop:318},
     {key:"qfR", short:"QF", label:"Quarterfinals", ids:[98,100], gap:224, padTop:130},
@@ -4250,6 +4246,7 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
   const [events, setEvents] = useState(null);
   const [matchStats, setMatchStats] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [timelineOpen, setTimelineOpen] = useState(true);
   const { getScore } = useContext(LiveScoresCtx);
   const { favTeams=[] } = useContext(FavCtx);
   const country = useContext(CountryCtx);
@@ -4488,34 +4485,37 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
           {/* ── MATCH EVENTS ── */}
           {(live || finished) && (
             <div style={{marginBottom:12}}>
-              <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",marginBottom:8}}>MATCH TIMELINE</div>
-              {loading && (
+              <button onClick={()=>setTimelineOpen(v=>!v)} style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",background:"none",border:"none",cursor:"pointer",padding:"0 0 8px 0"}}>
+                <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em"}}>MATCH TIMELINE {events&&events.length>0&&<span style={{color:C.dim,fontWeight:400}}>({events.length} events)</span>}</div>
+                <span style={{fontSize:16,color:C.dim,transition:"transform .2s",display:"inline-block",transform:timelineOpen?"rotate(90deg)":"rotate(0deg)"}}>›</span>
+              </button>
+              {timelineOpen && loading && (
                 <div style={{textAlign:"center",padding:"20px 0"}}>
                   <div style={{width:22,height:22,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto 8px"}}/>
                   <div style={{fontSize:12,color:C.mid}}>Loading events…</div>
                 </div>
               )}
-              {!loading && events && events.length > 0 && events.map((ev,i)=>{
+              {timelineOpen && !loading && events && events.length > 0 && events.map((ev,i)=>{
                 const isHome = normTeam(ev.team?.name||"")=== match.home;
                 const icon = ev.type==="Goal"?(ev.detail==="Own Goal"?"⚽🔴":ev.detail==="Penalty"?"⚽🎯":"⚽"):ev.type==="Card"?(ev.detail==="Yellow Card"?"🟨":"🟥"):ev.type==="subst"?"🔄":"•";
                 return (
                   <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 0",borderBottom:`1px solid ${C.b1}`}}>
                     <div style={{flex:1,textAlign:"right"}}>
-                      {isHome && <span style={{fontSize:13,color:C.text,fontWeight:ev.type==="Goal"?700:400}}>{ev.player?.name||""}</span>}
-                      {isHome && ev.type==="subst" && <div style={{fontSize:10,color:C.dim}}>↑ {ev.assist?.name||""}</div>}
+                      {isHome && ev.type!=="subst" && <span style={{fontSize:13,color:C.text,fontWeight:ev.type==="Goal"?700:400}}>{ev.player?.name||""}</span>}
+                      {isHome && ev.type==="subst" && <div style={{fontSize:13}}><span style={{color:C.green,fontWeight:600}}>↑ {ev.player?.name||""}</span>{" "}<span style={{color:C.red,fontWeight:600}}>↓ {ev.assist?.name||""}</span></div>}
                     </div>
                     <div style={{display:"flex",flexDirection:"column",alignItems:"center",minWidth:52,flexShrink:0}}>
                       <div style={{fontSize:11,fontWeight:700,color:C.gold}}>{ev.time?.elapsed}{ev.time?.extra?`+${ev.time.extra}`:""}'</div>
                       <div style={{fontSize:16}}>{icon}</div>
                     </div>
                     <div style={{flex:1}}>
-                      {!isHome && <span style={{fontSize:13,color:C.text,fontWeight:ev.type==="Goal"?700:400}}>{ev.player?.name||""}</span>}
-                      {!isHome && ev.type==="subst" && <div style={{fontSize:10,color:C.dim}}>↑ {ev.assist?.name||""}</div>}
+                      {!isHome && ev.type!=="subst" && <span style={{fontSize:13,color:C.text,fontWeight:ev.type==="Goal"?700:400}}>{ev.player?.name||""}</span>}
+                      {!isHome && ev.type==="subst" && <div style={{fontSize:13}}><span style={{color:C.green,fontWeight:600}}>↑ {ev.player?.name||""}</span>{" "}<span style={{color:C.red,fontWeight:600}}>↓ {ev.assist?.name||""}</span></div>}
                     </div>
                   </div>
                 );
               })}
-              {!loading && events && events.length === 0 && <div style={{fontSize:12,color:C.dim,textAlign:"center",padding:"16px 0"}}>No events yet.</div>}
+              {timelineOpen && !loading && events && events.length === 0 && <div style={{fontSize:12,color:C.dim,textAlign:"center",padding:"16px 0"}}>No events yet.</div>}
             </div>
           )}
 
