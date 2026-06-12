@@ -1103,28 +1103,18 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=n
   const liveMatches = MATCHES.filter(m => { const s=getScore(m.home,m.away); return s&&statusIsLive(s.status); });
   const finishedToday = MATCHES.filter(m => { const s=getScore(m.home,m.away); return s&&statusIsFinished(s.status); });
 
-  // Today's date in local timezone
-  const _now = new Date();
-  const todayLocal = `${_now.getFullYear()}-${String(_now.getMonth()+1).padStart(2,'0')}-${String(_now.getDate()).padStart(2,'0')}`;
-  const isToday = (iso) => {
-    if (!iso) return false;
-    const d = new Date(iso);
-    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` === todayLocal;
-  };
-
-  // All upcoming matches today (not yet started)
+  // All upcoming matches today (local timezone)
+  const _nowLive = new Date();
+  const _todayLive = `${_nowLive.getFullYear()}-${String(_nowLive.getMonth()+1).padStart(2,'0')}-${String(_nowLive.getDate()).padStart(2,'0')}`;
   const upcomingToday = MATCHES.filter(m => {
     const iso = MATCH_UTC[m.id];
-    if (!isToday(iso)) return false;
+    if (!iso) return false;
+    const d = new Date(iso);
+    const dStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    if (dStr !== _todayLive) return false;
     const s = getScore(m.home, m.away);
-    // Not yet started — no score entry or NS status
     return !s || s.status === "NS";
   });
-
-  // Upcoming fav matches today
-  const upcomingFavMatches = upcomingToday.filter(m =>
-    favTeams.includes(m.home) || favTeams.includes(m.away)
-  );
 
   return (
     <div>
@@ -1145,9 +1135,7 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=n
           </div>
           {upcomingToday.map(m => (
             <div key={m.id} style={{opacity:0.75}}>
-              <MatchCard m={m} onAction={onAction} onMatchTap={onMatchTap} savedIds={savedIds}
-                favTeam={favTeams.includes(m.home)||favTeams.includes(m.away) ? (favTeams.find(t=>t===m.home||t===m.away)||"") : ""}
-              />
+              <MatchCard m={m} onAction={onAction} onMatchTap={onMatchTap} savedIds={savedIds}/>
             </div>
           ))}
         </div>
