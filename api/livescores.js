@@ -175,9 +175,13 @@ function mapESPNEvent(event) {
   const statusType = comp.status?.type?.name || "STATUS_SCHEDULED";
   let short = ESPN_STATUS_MAP[statusType] || "NS";
   const clock = comp.status?.displayClock;
+  const detail = comp.status?.detail || "";
+  // displayClock is "MM:SS" format — elapsed is the minutes portion
   const elapsed = clock && clock !== "0:00" ? parseInt(clock.split(":")[0]) : null;
-  // For extra time, preserve the "+N" portion (e.g. "90+7" → elapsed=90, elapsedExtra=7)
-  const elapsedExtra = clock && clock.includes("+") ? parseInt(clock.split("+")[1]) : null;
+  // ESPN injury time is in status.detail e.g. "45+3'" or "90+5'"
+  // displayClock does NOT include "+N" — parse it from detail instead
+  const detailMatch = detail.match(/(\d+)\+(\d+)/);
+  const elapsedExtra = detailMatch ? parseInt(detailMatch[2]) : (clock && clock.includes("+") ? parseInt(clock.split("+")[1]) : null);
   // ESPN sometimes returns NS with elapsed > 0 — fix it
   if (short === "NS" && elapsed && elapsed > 0) {
     short = elapsed <= 45 ? "1H" : elapsed <= 50 ? "HT" : elapsed <= 95 ? "2H" : "ET";

@@ -526,14 +526,15 @@ export default async function handler(req, res) {
 
   // Seed ESPN IDs from scoreboard — call manually or auto-triggered
   if (req.query.action === "seed-ids") {
-    const now = new Date();
     const fmt = (d) => d.toISOString().slice(0,10).replace(/-/g,"");
-    const tomorrow = new Date(now); tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
-    const [today, tmrw] = await Promise.all([
-      seedIdsFromScoreboard(fmt(now)),
-      seedIdsFromScoreboard(fmt(tomorrow)),
+    const d1 = new Date(); d1.setUTCDate(d1.getUTCDate() + 1);
+    const d2 = new Date(); d2.setUTCDate(d2.getUTCDate() + 2);
+    const [today, tomorrow, dayAfter] = await Promise.all([
+      seedIdsFromScoreboard(fmt(new Date())),
+      seedIdsFromScoreboard(fmt(d1)),
+      seedIdsFromScoreboard(fmt(d2)),
     ]);
-    return res.status(200).json({ ok: true, today, tomorrow: tmrw });
+    return res.status(200).json({ ok: true, today, tomorrow, dayAfter });
   }
 
   let { home, away, debug, flush, fixtureId } = req.query;
@@ -548,10 +549,12 @@ export default async function handler(req, res) {
     if (seededDate !== today) {
       await kv.set("wc2026:espn_ids_seeded_date", today, { ex: 28 * 60 * 60 });
       const fmt = (d) => d.toISOString().slice(0,10).replace(/-/g,"");
-      const tomorrow = new Date(); tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+      const d1 = new Date(); d1.setUTCDate(d1.getUTCDate() + 1);
+      const d2 = new Date(); d2.setUTCDate(d2.getUTCDate() + 2);
       await Promise.all([
         seedIdsFromScoreboard(fmt(new Date())),
-        seedIdsFromScoreboard(fmt(tomorrow)),
+        seedIdsFromScoreboard(fmt(d1)),
+        seedIdsFromScoreboard(fmt(d2)),
       ]);
     }
   }).catch(() => {});

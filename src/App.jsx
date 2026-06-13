@@ -603,9 +603,9 @@ const statusIsLive = (s) => ["1H","HT","2H","ET","BT","P","LIVE","inprogress","f
 const statusIsFinished = (s) => ["FT","AET","PEN","finished","ended","after_extra_time","after_penalties"].includes(s);
 const statusLabel = (s,e,ex) => {
   if(!s||s==="NS"||s==="notstarted") return null;
-  if(s==="1H"||s==="first_half"||s==="inprogress"||s==="LIVE") return e?`${e}'`:"LIVE";
+  if(s==="1H"||s==="first_half"||s==="inprogress"||s==="LIVE") return e?(ex?`${e}+${ex}'`:`${e}'`):"LIVE";
   if(s==="HT"||s==="halftime") return "HT";
-  if(s==="2H"||s==="second_half") return e?`${e}'`:"LIVE";
+  if(s==="2H"||s==="second_half") return e?(ex?`${e}+${ex}'`:`${e}'`):"LIVE";
   if(s==="ET"||s==="extra_time") return e?(ex?`ET ${e}+${ex}'`:`ET ${e}'`):"ET";
   if(s==="BT") return "BT";
   if(s==="P"||s==="penalties") return "Pens";
