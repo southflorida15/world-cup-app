@@ -1116,20 +1116,20 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="",
         </div>
         {/* Teams + score */}
         <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 13px"}}>
-          <Crest team={m.home} size={26}/>
+          <Crest team={m.home} size={32}/>
           <span style={{fontWeight:winner===m.home?800:700,color:winner===m.home?C.text:C.dim,flex:1,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.home}</span>
           <div style={{textAlign:"center",minWidth:60,flexShrink:0}}>
             <div style={{fontWeight:900,fontSize:22,color:C.text,fontFamily:"monospace",lineHeight:1}}>{sc.hg} – {sc.ag}</div>
           </div>
           <span style={{fontWeight:winner===m.away?800:700,color:winner===m.away?C.text:C.dim,flex:1,fontSize:14,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.away}</span>
-          <Crest team={m.away} size={26}/>
+          <Crest team={m.away} size={32}/>
         </div>
       </div>
     );
   }
 
   return (
-    <div onClick={()=>onMatchTap&&onMatchTap(m)} style={{marginBottom:8,background:C.s1,border:`1px solid ${live?C.green:isFav?`${C.gold}55`:C.b1}`,borderRadius:12,overflow:"hidden",opacity:finished?0.45:1,cursor:onMatchTap?"pointer":"default"}}>
+    <div onClick={()=>onMatchTap&&onMatchTap(m)} style={{marginBottom:8,background:C.s1,border:`1px solid ${countdown?C.gold:live?C.green:isFav?`${C.gold}55`:C.b1}`,borderRadius:12,overflow:"hidden",opacity:finished?0.45:1,cursor:onMatchTap?"pointer":"default",boxShadow:countdown?`0 0 0 1px ${C.gold}44,0 4px 16px ${C.gold}22`:"none",transition:"border-color .3s,box-shadow .3s"}}>
       {/* Header: group/stage + venue + time */}
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 13px",borderBottom:`1px solid ${C.b1}`,background:C.s2}}>
         <div style={{display:"flex",alignItems:"center",gap:6,minWidth:0,flex:1}}>
@@ -1141,7 +1141,6 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="",
           <span onClick={(e)=>{e.stopPropagation();openMaps(m.venue);}} style={{fontSize:11,color:C.dim,cursor:"pointer",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
             📍 {m.venue.split(",")[0]}
           </span>
-          {countdown && !live && !finished && <span style={{fontSize:11,fontWeight:700,color:C.gold,fontFamily:"monospace",animation:"pulse 1s infinite",flexShrink:0}}>⏱ {countdown}</span>}
         </div>
         <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
           {live && <span style={{fontSize:10,fontWeight:700,color:C.green}}>🔴 {statusLabel(sc.status,sc.elapsed,sc.elapsedExtra)}</span>}
@@ -1153,17 +1152,22 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="",
 
       {/* Teams row */}
       <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 13px"}}>
-        <Crest team={m.home} size={26}/>
+        <Crest team={m.home} size={32}/>
         <span style={{fontWeight:winner===m.home?800:700,color:finished?(winner===m.home?C.text:C.dim):favTeams?.includes(m.home)?C.gold:C.text,flex:1,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.home}</span>
         {hasScore ? (
           <div style={{textAlign:"center",minWidth:60,flexShrink:0}}>
             <div style={{fontWeight:900,fontSize:22,color:live?C.green:C.text,fontFamily:"monospace",lineHeight:1,animation:scoreFlash?"scoreFlash .6s ease":undefined,borderRadius:6,padding:"1px 4px",background:scoreFlash?`${C.green}30`:"transparent",transition:"background .3s"}}>{sc.hg} – {sc.ag}</div>
           </div>
         ) : (
-          <span style={{fontSize:11,color:C.dim,fontWeight:700,minWidth:36,textAlign:"center",flexShrink:0}}>VS</span>
+          <div style={{textAlign:"center",minWidth:60,flexShrink:0}}>
+            {countdown
+              ? <div style={{fontSize:13,fontWeight:800,color:C.gold,fontFamily:"monospace",animation:"pulse 1s infinite",lineHeight:1}}>⏱ {countdown}</div>
+              : <span style={{fontSize:11,color:C.dim,fontWeight:700}}>VS</span>
+            }
+          </div>
         )}
         <span style={{fontWeight:winner===m.away?800:700,color:finished?(winner===m.away?C.text:C.dim):favTeams?.includes(m.away)?C.gold:C.text,flex:1,fontSize:14,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.away}</span>
-        <Crest team={m.away} size={26}/>
+        <Crest team={m.away} size={32}/>
       </div>
 
       {/* Footer: TV + actions */}
