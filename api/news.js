@@ -1,7 +1,6 @@
 // /api/news.js
-// Fetches FIFA World Cup 2026 news from GNews API
-// Supports lang/country params for international editions
-// Cached in KV per locale. Daily quota guard prevents exceeding GNews free tier (100 req/day).
+// Fetches FIFA World Cup 2026 news from GNews API + custom RSS feeds
+// Supports lang/country params. Custom RSS sources bypass GNews quota entirely.
 
 import { Redis } from "@upstash/redis";
 
@@ -11,12 +10,91 @@ const kv = new Redis({
 });
 
 const GNEWS_KEY     = process.env.GNEWS_API_KEY;
-const CACHE_TTL     = 2 * 60 * 60;  // 2 hours — news is slow-moving
-const QUOTA_MAX     = 80;            // stay safely under 100/day limit
+const CACHE_TTL     = 2 * 60 * 60;
+const QUOTA_MAX     = 80;
 const QUOTA_KV_KEY  = "news:quota:daily";
 
 const ALLOWED_LANGS     = ["en","pt","es","de","fr","it","nl","ar","ja","ko","zh"];
 const ALLOWED_COUNTRIES = ["us","gb","br","es","de","fr","it","ar","mx","jp","kr","nl","pt","au","ca","za","ma","ng","eg","sa","cn","be","hr","uy","co","ec","pa","gh","se","no","at","cz","ch","tn","ir","nz","uz","cv","ht","jo","iq","cd"];
+
+// Custom RSS feeds per country — bypasses GNews quota entirely
+const RSS_SOURCES = {
+  br: [
+    { name:"GaúchaZH", url:"https://gauchazh.clicrbs.com.br/esportes/copa-do-mundo/feed" },
+    { name:"GaúchaZH Esportes", url:"https://gauchazh.clicrbs.com.br/esportes/feed" },
+    { name:"ge.globo", url:"https://ge.globo.com/rss/globoesporte/futebol/copa-do-mundo.xml" },
+    { name:"UOL Esporte", url:"https://rss.uol.com.br/feed/esportes.xml" },
+  ],
+};
+
+// Minimal RSS parser — no external deps
+function parseRSS(xml, sourceName) {
+  const articles = [];
+  const items = xml.match(/<item>([\s\S]*?)<\/item>/g) || [];
+  items.forEach(item => {
+    const get = (tag) => {
+      const m = item.match(new RegExp(`<${tag}[^>]*><!\\[CDATA\\[([\\s\\S]*?)\\]\\]><\\/${tag}>|<${tag}[^>]*>([^<]*)<\\/${tag}>`));
+      return m ? (m[1] || m[2] || "").trim() : "";
+    };
+    const title = get("title");
+    const url   = get("link") || (item.match(/<link[^>]*href="([^"]+)"/) || [])[1] || "";
+    const desc  = get("description");
+    const pub   = get("pubDate");
+    const img   = (item.match(/<media:content[^>]*url="([^"]+)"/) || item.match(/<enclosure[^>]*url="([^"]+)"/) || [])[1] || null;
+
+    if (title && url) {
+      articles.push({
+        title,
+        description: desc.replace(/<[^>]+>/g, "").slice(0, 200),
+        url,
+        image: img,
+        source: sourceName,
+        publishedAt: pub ? new Date(pub).toISOString() : new Date().toISOString(),
+      });
+    }
+  });
+  return articles;
+}
+
+async function fetchRSS(country) {
+  const sources = RSS_SOURCES[country];
+  if (!sources?.length) return null;
+
+  const cacheKey = `news:rss:${country}`;
+  try {
+    const cached = await kv.get(cacheKey);
+    if (cached) return { articles: cached, cached: true };
+  } catch {}
+
+  const results = await Promise.allSettled(
+    sources.map(async ({ name, url }) => {
+      const r = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0", "Accept": "application/rss+xml,application/xml,text/xml" }});
+      if (!r.ok) throw new Error(`${r.status}`);
+      const xml = await r.text();
+      return parseRSS(xml, name);
+    })
+  );
+
+  // Merge and interleave results from all sources
+  const arrays = results.filter(r => r.status === "fulfilled" && r.value?.length).map(r => r.value);
+  if (!arrays.length) return null;
+
+  const merged = [];
+  const maxLen = Math.max(...arrays.map(a => a.length));
+  for (let i = 0; i < maxLen; i++) {
+    arrays.forEach(a => { if (a[i]) merged.push(a[i]); });
+  }
+
+  // Dedupe by url
+  const seen = new Set();
+  const articles = merged.filter(a => { if (seen.has(a.url)) return false; seen.add(a.url); return true; }).slice(0, 20);
+
+  if (articles.length) {
+    try { await kv.set(cacheKey, articles, { ex: CACHE_TTL }); } catch {}
+  }
+
+  return articles.length ? { articles, cached: false } : null;
+}
 
 async function getQuota() {
   try {
@@ -98,7 +176,13 @@ export default async function handler(req, res) {
 
     const cacheKey = `news:wc2026:${lang}:${country}`;
 
-    // Always try cache first
+    // Try RSS feeds first (free, no quota, better quality for supported countries)
+    const rssResult = await fetchRSS(country);
+    if (rssResult) {
+      return res.status(200).json({ articles: rssResult.articles, cached: rssResult.cached, lang, country, source: "rss" });
+    }
+
+    // Always try GNews cache first
     const cached = await kv.get(cacheKey);
     if (cached) {
       res.setHeader("Cache-Control", "no-cache");
