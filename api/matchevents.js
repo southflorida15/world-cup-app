@@ -169,18 +169,25 @@ function parseLineups(data, homeTeam) {
     const side = teamName === homeTeam ? "home" : "away";
     const formation = roster.formation || null;
 
+    // ESPN uses different field names — try all variants
+    const players = roster.entries || roster.roster || roster.athletes || roster.players || [];
+
     const starters = [];
     const bench = [];
 
-    (roster.roster || roster.athletes || []).forEach(p => {
-      const name = p.athlete?.displayName || p.displayName || p.name || "";
-      const jersey = p.jersey || p.athlete?.jersey || null;
-      const pos = p.position?.abbreviation || p.position?.name || p.athlete?.position?.abbreviation || "";
-      const starter = p.starter ?? p.active ?? true;
+    players.forEach(p => {
+      // entries[] wraps the athlete under p.athlete; others may be flat
+      const athlete = p.athlete || p;
+      const name = athlete.displayName || athlete.fullName || athlete.shortName || p.displayName || p.name || "";
+      const jersey = p.jersey ?? athlete.jersey ?? null;
+      const pos = p.position?.abbreviation || p.position?.name
+                || athlete.position?.abbreviation || athlete.position?.name || "";
+      // starter field varies
+      const starter = p.starter ?? p.didPlay ?? p.active ?? true;
       const subbedOut = p.subbedOut ?? false;
-      const subbedIn = p.subbedIn ?? false;
+      const subbedIn  = p.subbedIn  ?? false;
 
-      const entry = { name, jersey, pos, subbedOut, subbedIn };
+      const entry = { name, jersey: jersey ? String(jersey) : null, pos, subbedOut, subbedIn };
       if (starter) starters.push(entry);
       else bench.push(entry);
     });
@@ -422,11 +429,18 @@ export default async function handler(req, res) {
     }
   }
 
-  let { home, away, debug, fixtureId } = req.query;
+  let { home, away, debug, flush, fixtureId } = req.query;
   if ((!home || !away) && fixtureId && fixtureId.includes("|")) {
     [home, away] = fixtureId.split("|");
   }
   if (!home || !away) return res.status(400).json({ error: "home and away required" });
+
+  // Flush stale KV cache for this match
+  if (flush === "1") {
+    await kv.del(kvKey(home, away)).catch(() => {});
+    delete memCache[`${home}|${away}`];
+    return res.status(200).json({ ok: true, flushed: `${home}|${away}` });
+  }
 
   const cacheKey = `${home}|${away}`;
 
@@ -479,7 +493,13 @@ export default async function handler(req, res) {
         boxscoreTeams: data.boxscore?.teams?.map(t => t.team?.displayName) || [],
         keyEvents: (data.keyEvents || []).slice(0, 5),
         rostersCount: data.rosters?.length || 0,
-        rosterSample: data.rosters?.[0]?.roster?.slice(0,3) || [],
+        rosterSample: data.rosters?.[0] ? {
+          teamName: data.rosters[0].team?.displayName,
+          formation: data.rosters[0].formation,
+          topKeys: Object.keys(data.rosters[0]),
+          entriesCount: (data.rosters[0].entries || data.rosters[0].roster || data.rosters[0].athletes || data.rosters[0].players || []).length,
+          firstPlayer: (data.rosters[0].entries || data.rosters[0].roster || data.rosters[0].athletes || data.rosters[0].players || [])[0] || null,
+        } : null,
       });
     }
 

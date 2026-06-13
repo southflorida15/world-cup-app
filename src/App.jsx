@@ -1052,6 +1052,8 @@ function useElemHeight(ref) {
 
 // ── MATCH CARD ─────────────────────────────────────────────────────────────
 function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="", savedIds=new Set() }) {
+  const { dark } = useContext(ThemeCtx);
+  const countdownBg = dark ? "#132e1c" : "#c8ecd2"; // lighter green in dark, darker green in light
   const { favTeams=[] } = useContext(FavCtx);
   const country = useContext(CountryCtx);
   const { getScore } = useContext(LiveScoresCtx);
@@ -1129,7 +1131,7 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="",
   }
 
   return (
-    <div onClick={()=>onMatchTap&&onMatchTap(m)} style={{marginBottom:8,background:countdown?`#0f2a18`:C.s1,border:`${countdown?"2.5px":"1px"} solid ${countdown?C.gold:live?C.green:isFav?`${C.gold}55`:C.b1}`,borderRadius:12,overflow:"hidden",opacity:finished?0.45:1,cursor:onMatchTap?"pointer":"default",boxShadow:countdown?`0 0 0 1px ${C.gold}33,0 4px 20px ${C.gold}28`:"none",transition:"border-color .3s,box-shadow .3s,background .3s"}}>
+    <div onClick={()=>onMatchTap&&onMatchTap(m)} style={{marginBottom:8,background:countdown?countdownBg:C.s1,border:`${countdown?"2.5px":"1px"} solid ${countdown?C.gold:live?C.green:isFav?`${C.gold}55`:C.b1}`,borderRadius:12,overflow:"hidden",opacity:finished?0.45:1,cursor:onMatchTap?"pointer":"default",boxShadow:countdown?`0 0 0 1px ${C.gold}33,0 4px 20px ${C.gold}28`:"none",transition:"border-color .3s,box-shadow .3s,background .3s"}}>
       {/* Header: group/stage + venue + time */}
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 13px",borderBottom:`1px solid ${C.b1}`,background:C.s2}}>
         <div style={{display:"flex",alignItems:"center",gap:6,minWidth:0,flex:1}}>
