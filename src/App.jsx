@@ -5687,6 +5687,9 @@ function AskWorldCupTab({ tabTop=116 }) {
       const teams = Object.entries(TEAM_DATA||{}).filter(([,d])=>d.conf===conf);
       return { title:`${conf} teams (${teams.length})`, summary:teams.map(([t,d])=>`${d.flag} ${t}`).join(" · "), rows:[] };
     }
+
+    // Highest scoring / biggest win
+    if (text.includes("highest scor") || (text.includes("most goal") && text.includes("match")) || text.includes("biggest win") || text.includes("best result")) {
       const finished = MATCHES.filter(m => {
         const sc = scoresRef[`${m.home}|${m.away}`];
         return sc && sc.hg !== null && sc.ag !== null && (sc.status==="FT"||sc.status==="AET"||sc.status==="finished"||sc.status==="ended");
