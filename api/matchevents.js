@@ -30,6 +30,7 @@ const ESPN_NAME_MAP = {
   "Bosnia and Herzegovina": "Bosnia & Herz.",
   "Cape Verde Islands": "Cape Verde",
   "Turkey": "Turkiye",
+  "Türkiye": "Turkiye",
   "Curaçao": "Curacao",
   "Congo, DR": "DR Congo",
   "DR Congo": "DR Congo",
@@ -150,8 +151,7 @@ async function seedIdsFromScoreboard(dateStr) {
       const away = competitors.find(c => c.homeAway === "away");
       if (!home || !away) continue;
       const homeName = normESPN(home.team?.displayName || home.team?.name || "");
-      const awayName = normESPN(away.team?.displayName || away.team?.name || "");
-      const espnId   = String(ev.id || "");
+      const awayName = normESPN(away.team?.displayName || away.team?.name || "");      const espnId   = String(ev.id || "");
       if (!homeName || !awayName || !espnId) continue;
       const key = `${homeName}|${awayName}`;
       if (!idMap[key]) {
