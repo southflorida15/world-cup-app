@@ -1145,8 +1145,17 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=n
   const { scores, getScore, lastFetch } = useContext(LiveScoresCtx);
   const _lhRef = useRef(null); const _lhH = useElemHeight(_lhRef);
   const lastUpdate = lastFetch ? lastFetch.toLocaleTimeString() : null;
-  const liveMatches = MATCHES.filter(m => { const s=getScore(m.home,m.away); return s&&statusIsLive(s.status); });
-
+  const liveMatches = MATCHES.filter(m => {
+    const s = getScore(m.home, m.away);
+    if (s && statusIsLive(s.status)) return true;
+    // Fallback: kickoff passed but not yet in feed — treat as live
+    const iso = MATCH_UTC[m.id];
+    if (!iso) return false;
+    const ko = new Date(iso).getTime();
+    if (Date.now() < ko) return false;
+    if (s && statusIsFinished(s.status)) return false;
+    return Date.now() < ko + 130 * 60 * 1000; // within 130min of kickoff
+  });
 
   // All upcoming matches today (local timezone)
   const _nowLive = new Date();
@@ -1164,9 +1173,9 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=n
     const iso = MATCH_UTC[m.id];
     if (!iso) return false;
     const d = new Date(iso);
+    if (Date.now() > d.getTime()) return false; // kickoff already passed
     const dStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     if (dStr !== _todayLive) return false;
-    if (Date.now() > d.getTime()) return false; // kickoff already passed
     const s = getScore(m.home, m.away);
     return !s || s.status === "NS";
   });
