@@ -2848,7 +2848,7 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
 
   const finalMatch = matchesById[104]||(bracket?.final||[])[0]||{match:104,home:null,away:null,winner:null};
   const finalTop = 483;
-  const finalLabelH = 36; // "FINAL" label + date height
+  const finalLabelH = 32; // "FINAL" label + marginBottom only
   const finalCardMidY = finalTop + finalLabelH + CH/2; // absolute Y center of final card
   const sfCardMidY = 483 + CH/2; // both SF cards are at tops[0]=483
 
@@ -2866,7 +2866,6 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
             <div style={{position:"absolute",top:finalLabelH+CH/2,right:-STUB,width:STUB,borderTop:`1.5px solid ${C.b2}`,opacity:0.6}}/>
             <div style={{textAlign:"center",marginBottom:12}}>
               <div style={{fontSize:12,color:C.gold,fontWeight:900,letterSpacing:"0.12em"}}>FINAL</div>
-              <div style={{fontSize:10,color:C.dim}}>Jul 19 · New York/New Jersey</div>
             </div>
             <BracketMatchup match={finalMatch.match} t1={finalMatch.home} t2={finalMatch.away} winner={finalMatch.winner} interactive={pickMode==="manual"} onPick={(team)=>onPick(finalMatch,team)}/>
             {finalMatch.winner && (
