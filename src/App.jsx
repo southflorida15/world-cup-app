@@ -2815,97 +2815,70 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
 
   const columnWidth = 166;
 
-  const CARD_H = 116; // header(32) + 2 team rows(42 each)
-  const COL_GAP = 26; // horizontal gap between columns
+  const CARD_H = 132;
+  const COL_GAP = 26;
 
   const renderColumn = (round, side="left") => {
     const ids = round.ids || [];
+    const isFirst = round.key === "r32L" || round.key === "r32R";
+    const isLast  = round.key === "sfL"  || round.key === "sfR";
+    const g = round.gap;
+    // top of card n (0-based) within the flex container
+    const cardTop = n => n * (CARD_H + g);
+    const cardMid = n => cardTop(n) + CARD_H / 2;
+    const totalH = cardTop(ids.length - 1) + CARD_H;
+
+    // Build connector pairs
+    const pairs = [];
+    for (let i = 0; i < ids.length - 1; i += 2) pairs.push([i, i+1]);
 
     return (
       <div key={round.key} style={{width:columnWidth,flex:`0 0 ${columnWidth}px`,paddingTop:round.padTop}}>
-        <div style={{position:"sticky",top:0,zIndex:2,textAlign:"center",marginBottom:10,background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b1}`,borderRadius:999,padding:"6px 8px",boxShadow:DS.shadow.card}}>
+        <div style={{textAlign:"center",marginBottom:10,background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b1}`,borderRadius:999,padding:"6px 8px",boxShadow:DS.shadow.card}}>
           <div style={{fontSize:10,fontWeight:900,color:round.short==="FINAL"?C.gold:C.green,letterSpacing:"0.08em"}}>{round.short}</div>
           <div style={{fontSize:9,color:C.dim,whiteSpace:"nowrap"}}>{round.label}</div>
         </div>
 
-        <div style={{position:"relative",display:"flex",flexDirection:"column",gap:round.gap}}>
-          {ids.map((id, idx) => {
+        <div style={{position:"relative",display:"flex",flexDirection:"column",gap:g}}>
+          {/* Single SVG overlay for all connectors in this column */}
+          <svg style={{position:"absolute",top:0,left:0,width:columnWidth,height:totalH,overflow:"visible",pointerEvents:"none",zIndex:3}}>
+            {/* Outgoing L-connectors to next column */}
+            {!isLast && pairs.map(([ti, bi]) => {
+              const y1   = cardMid(ti);
+              const y2   = cardMid(bi);
+              const yMid = (y1 + y2) / 2;
+              const xE   = side==="left" ? columnWidth     : 0;            // card edge
+              const xV   = side==="left" ? columnWidth + 12 : -12;         // vertical line
+              const xOut = side==="left" ? columnWidth + COL_GAP : -COL_GAP; // next col
+              const col  = (matchesById[ids[ti]]?.winner) ? C.greenS : C.b2;
+              return (
+                <g key={`out-${ti}`}>
+                  <line x1={xE} y1={y1}   x2={xV}   y2={y1}   stroke={col} strokeWidth="1.5"/>
+                  <line x1={xV} y1={y1}   x2={xV}   y2={y2}   stroke={col} strokeWidth="1.5"/>
+                  <line x1={xE} y1={y2}   x2={xV}   y2={y2}   stroke={col} strokeWidth="1.5"/>
+                  <line x1={xV} y1={yMid} x2={xOut} y2={yMid} stroke={col} strokeWidth="1.5"/>
+                </g>
+              );
+            })}
+            {/* Incoming stubs from previous column */}
+            {!isFirst && ids.map((id, n) => {
+              const m   = matchesById[id] || {};
+              const col = m.winner ? C.greenS : C.b2;
+              const xS  = side==="left" ? -COL_GAP : columnWidth + COL_GAP;
+              const xE  = side==="left" ? 0        : columnWidth;
+              return (
+                <line key={`in-${id}`} x1={xS} y1={cardMid(n)} x2={xE} y2={cardMid(n)}
+                  stroke={col} strokeWidth="1.5" opacity={m.home&&m.away?1:0.3}/>
+              );
+            })}
+          </svg>
+
+          {ids.map((id) => {
             const m = matchesById[id] || {match:id,home:null,away:null,winner:null};
-            const locked = !(m.home && m.away);
-            const isEven = idx % 2 === 0;
-            const hasNext = idx + 1 < ids.length;
-            const cardMidY = CARD_H / 2;
-            const pairSpan = CARD_H * 2 + round.gap; // height from top of card[idx] to bottom of card[idx+1]
-            const connColor = m.winner ? C.greenS : C.b2;
-
             return (
-              <div key={id} style={{position:"relative",opacity:locked?0.58:1}}>
-                {/* Incoming stub from previous column */}
-                {round.key !== "r32L" && round.key !== "r32R" && (
-                  <div style={{
-                    position:"absolute",
-                    [side==="left"?"left":"right"]: -COL_GAP,
-                    top: cardMidY,
-                    transform: "translateY(-50%)",
-                    width: COL_GAP,
-                    borderTop: `1.5px solid ${connColor}`,
-                    opacity: m.home&&m.away ? 1 : 0.3
-                  }}/>
-                )}
-
-                {/* Outgoing L-connector: only on even-indexed cards (top of pair) */}
-                {round.key !== "sfL" && round.key !== "sfR" && isEven && hasNext && (
-                  <svg
-                    style={{
-                      position:"absolute",
-                      [side==="left"?"right":"left"]: -COL_GAP,
-                      top: 0,
-                      width: COL_GAP,
-                      height: pairSpan,
-                      overflow: "visible",
-                      pointerEvents: "none",
-                      zIndex: 1
-                    }}
-                  >
-                    {/* Horizontal from top card center to vertical */}
-                    <line
-                      x1={side==="left" ? 0 : COL_GAP}
-                      y1={cardMidY}
-                      x2={side==="left" ? COL_GAP/2 : COL_GAP/2}
-                      y2={cardMidY}
-                      stroke={connColor} strokeWidth="1.5"
-                    />
-                    {/* Vertical line connecting the two card midpoints */}
-                    <line
-                      x1={COL_GAP/2} y1={cardMidY}
-                      x2={COL_GAP/2} y2={pairSpan - cardMidY}
-                      stroke={connColor} strokeWidth="1.5"
-                    />
-                    {/* Horizontal from vertical to bottom card center */}
-                    <line
-                      x1={COL_GAP/2} y1={pairSpan - cardMidY}
-                      x2={side==="left" ? 0 : COL_GAP}
-                      y2={pairSpan - cardMidY}
-                      stroke={connColor} strokeWidth="1.5"
-                    />
-                    {/* Horizontal out to next column at midpoint */}
-                    <line
-                      x1={COL_GAP/2} y1={pairSpan/2}
-                      x2={side==="left" ? COL_GAP : 0}
-                      y2={pairSpan/2}
-                      stroke={connColor} strokeWidth="1.5"
-                    />
-                  </svg>
-                )}
-
-                <BracketMatchup
-                  match={m.match}
-                  t1={m.home}
-                  t2={m.away}
-                  winner={m.winner}
-                  interactive={pickMode==="manual"}
-                  onPick={(team)=>onPick(m,team)}
-                />
+              <div key={id} style={{opacity:!(m.home&&m.away)?0.58:1}}>
+                <BracketMatchup match={m.match} t1={m.home} t2={m.away} winner={m.winner}
+                  interactive={pickMode==="manual"} onPick={t=>onPick(m,t)}/>
               </div>
             );
           })}
