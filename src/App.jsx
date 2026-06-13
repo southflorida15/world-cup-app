@@ -1149,12 +1149,11 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=n
   const liveMatches = MATCHES.filter(m => {
     const s = getScore(m.home, m.away);
     if (s && statusIsLive(s.status)) return true;
+    if (s) return false; // feed has data — trust it completely
     const iso = MATCH_UTC[m.id];
     if (!iso) return false;
     const ko = new Date(iso).getTime();
-    if (Date.now() < ko) return false;
-    if (s && statusIsFinished(s.status)) return false;
-    return Date.now() < ko + 130 * 60 * 1000;
+    return Date.now() > ko && Date.now() < ko + 130 * 60 * 1000;
   });
 
 
@@ -5979,13 +5978,12 @@ export default function App() {
 
   const hasLiveMatches = MATCHES.some(m => {
     if (isMatchLive(m.home, m.away)) return true;
+    const sc = getScoreMain(m.home, m.away);
+    if (sc) return false; // feed has data — trust it completely
     const iso = MATCH_UTC[m.id];
     if (!iso) return false;
     const ko = new Date(iso).getTime();
-    if (Date.now() < ko) return false;
-    const sc = getScoreMain(m.home, m.away);
-    if (sc && statusIsFinished(sc.status)) return false;
-    return Date.now() < ko + 130 * 60 * 1000;
+    return Date.now() > ko && Date.now() < ko + 130 * 60 * 1000;
   });
   const savedIds = new Set(saved.map(x=>x.match?.id));
   const onAction=(m)=>{
