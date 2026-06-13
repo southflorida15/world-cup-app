@@ -10,6 +10,7 @@ export default function MatchInfoSection({
   p1,
   p2,
   finished,
+  isPastDay,
   openMaps,
   C,
 }) {
@@ -19,7 +20,8 @@ export default function MatchInfoSection({
   };
   return (
     <>
-      {/* VENUE + WEATHER — single compact row */}
+      {/* VENUE + WEATHER — hide for past matches */}
+      {!isPastDay && (
       <div
         style={{
           display: "flex",
@@ -49,9 +51,10 @@ export default function MatchInfoSection({
           </div>
         )}
       </div>
+      )}
 
-      {/* TV — single compact row */}
-      {match.tv && (
+      {/* TV — hide for past matches */}
+      {!isPastDay && match.tv && (
         <div style={{ padding: "8px 12px", background: C.s1, border: `1px solid ${C.b1}`, borderRadius: 10, marginBottom: 8 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <span style={{ fontSize: 14, flexShrink: 0 }}>📺</span>

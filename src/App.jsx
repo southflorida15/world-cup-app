@@ -1097,14 +1097,33 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="",
 
   if (isPastDay && finished && hasScore) {
     return (
-      <div onClick={()=>onMatchTap&&onMatchTap(m)} style={{marginBottom:6,background:C.s1,border:`1px solid ${C.b1}`,borderRadius:10,overflow:"hidden",opacity:0.45,cursor:onMatchTap?"pointer":"default",display:"flex",alignItems:"center",gap:8,padding:"7px 13px"}}>
-        <span style={{fontSize:10,fontWeight:700,color:m.group?C.green:C.gold,background:m.group?`${C.green}18`:`${C.gold}18`,padding:"2px 6px",borderRadius:8,flexShrink:0}}>{m.group?`Grp ${m.group}`:m.stage||"KO"}</span>
-        <Crest team={m.home} size={18}/>
-        <span style={{flex:1,fontSize:13,fontWeight:winner===m.home?800:600,color:winner===m.home?C.text:C.dim,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.home}</span>
-        <span style={{fontWeight:900,fontSize:16,color:C.text,fontFamily:"monospace",flexShrink:0}}>{sc.hg} – {sc.ag}</span>
-        <span style={{flex:1,fontSize:13,fontWeight:winner===m.away?800:600,color:winner===m.away?C.text:C.dim,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.away}</span>
-        <Crest team={m.away} size={18}/>
-        <span style={{fontSize:10,color:C.dim,flexShrink:0}}>FT</span>
+      <div onClick={()=>onMatchTap&&onMatchTap(m)} style={{marginBottom:8,background:C.s1,border:`1px solid ${C.b1}`,borderRadius:12,overflow:"hidden",opacity:0.45,cursor:onMatchTap?"pointer":"default"}}>
+        {/* Header: keep group/venue/time */}
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 13px",borderBottom:`1px solid ${C.b1}`,background:C.s2}}>
+          <div style={{display:"flex",alignItems:"center",gap:6,minWidth:0,flex:1}}>
+            {m.group
+              ? <span style={{fontSize:11,fontWeight:700,color:C.green,background:`${C.green}18`,padding:"2px 7px",borderRadius:10,flexShrink:0}}>Group {m.group}</span>
+              : <span style={{fontSize:11,fontWeight:700,color:C.gold,background:`${C.gold}18`,padding:"2px 7px",borderRadius:10,flexShrink:0}}>{m.stage||"Knockout"}</span>
+            }
+            <span style={{fontSize:10,color:C.dim,flexShrink:0}}>#{m.id}</span>
+            <span style={{fontSize:11,color:C.dim,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>📍 {m.venue.split(",")[0]}</span>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
+            <span style={{fontSize:12,fontWeight:600,color:C.text}}>{displayTime}</span>
+            <span style={{fontSize:10,color:C.dim}}>{tzLabel}</span>
+            <span style={{fontSize:10,color:C.dim,marginLeft:2}}>· FT</span>
+          </div>
+        </div>
+        {/* Teams + score */}
+        <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 13px"}}>
+          <Crest team={m.home} size={26}/>
+          <span style={{fontWeight:winner===m.home?800:700,color:winner===m.home?C.text:C.dim,flex:1,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.home}</span>
+          <div style={{textAlign:"center",minWidth:60,flexShrink:0}}>
+            <div style={{fontWeight:900,fontSize:22,color:C.text,fontFamily:"monospace",lineHeight:1}}>{sc.hg} – {sc.ag}</div>
+          </div>
+          <span style={{fontWeight:winner===m.away?800:700,color:winner===m.away?C.text:C.dim,flex:1,fontSize:14,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.away}</span>
+          <Crest team={m.away} size={26}/>
+        </div>
       </div>
     );
   }
@@ -4339,6 +4358,16 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
   const finished = sc ? statusIsFinished(sc.status) : false;
   const { localTime } = match ? matchTimes(match) : {};
 
+  const isPastDay = (() => {
+    if (!finished || !match) return false;
+    const iso = MATCH_UTC[match.id];
+    if (!iso) return false;
+    const venueTzKey = VENUE_TZ[match.venue] || "America/New_York";
+    const matchDate = new Intl.DateTimeFormat("en-CA", { timeZone: venueTzKey }).format(new Date(iso));
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: venueTzKey }).format(new Date());
+    return matchDate < today;
+  })();
+
   // Polymarket odds
   const p1 = match ? PREDS.find(x=>x.team===match.home) : null;
   const p2 = match ? PREDS.find(x=>x.team===match.away) : null;
@@ -4502,6 +4531,7 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
   p1={p1}
   p2={p2}
   finished={finished}
+  isPastDay={isPastDay}
   openMaps={openMaps}
   C={C}
 />
