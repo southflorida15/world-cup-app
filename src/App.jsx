@@ -1085,7 +1085,7 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="",
   const countdown = useCountdown(m.id);
 
   return (
-    <div style={{marginBottom:8,background:C.s1,border:`1px solid ${live?C.green:isFav?`${C.gold}55`:C.b1}`,borderRadius:12,overflow:"hidden",opacity:finished?0.45:1}}>
+    <div onClick={()=>onMatchTap&&onMatchTap(m)} style={{marginBottom:8,background:C.s1,border:`1px solid ${live?C.green:isFav?`${C.gold}55`:C.b1}`,borderRadius:12,overflow:"hidden",opacity:finished?0.45:1,cursor:onMatchTap?"pointer":"default"}}>
       {/* Header: group/stage + venue + time */}
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 13px",borderBottom:`1px solid ${C.b1}`,background:C.s2}}>
         <div style={{display:"flex",alignItems:"center",gap:6,minWidth:0,flex:1}}>
@@ -1094,7 +1094,7 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="",
             : <span style={{fontSize:11,fontWeight:700,color:C.gold,background:`${C.gold}18`,padding:"2px 7px",borderRadius:10,flexShrink:0}}>{m.stage||"Knockout"}</span>
           }
           <span style={{fontSize:10,color:C.dim,flexShrink:0}}>#{m.id}</span>
-          <span onClick={()=>openMaps(m.venue)} style={{fontSize:11,color:C.dim,cursor:"pointer",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+          <span onClick={(e)=>{e.stopPropagation();openMaps(m.venue);}} style={{fontSize:11,color:C.dim,cursor:"pointer",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
             📍 {m.venue.split(",")[0]}
           </span>
           {countdown && !live && !finished && <span style={{fontSize:11,fontWeight:700,color:C.gold,fontFamily:"monospace",animation:"pulse 1s infinite",flexShrink:0}}>⏱ {countdown}</span>}
@@ -1107,8 +1107,8 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="",
         </div>
       </div>
 
-      {/* Teams row — tappable to open detail */}
-      <div onClick={()=>onMatchTap&&onMatchTap(m)} style={{display:"flex",alignItems:"center",gap:8,padding:"10px 13px",cursor:onMatchTap?"pointer":"default"}}>
+      {/* Teams row */}
+      <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 13px"}}>
         <Crest team={m.home} size={26}/>
         <span style={{fontWeight:winner===m.home?800:700,color:finished?(winner===m.home?C.text:C.dim):favTeams?.includes(m.home)?C.gold:C.text,flex:1,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.home}</span>
         {hasScore ? (
@@ -1123,7 +1123,7 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="",
       </div>
 
       {/* Footer: TV + actions */}
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"5px 13px",borderTop:`1px solid ${C.b1}`,background:C.s2}}>
+      <div onClick={e=>e.stopPropagation()} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"5px 13px",borderTop:`1px solid ${C.b1}`,background:C.s2}}>
         <div style={{fontSize:11,color:finished?C.dim:C.gold,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1}}>
           {m.tv && <>📺 {isUS ? m.tv : bc.primary}</>}
         </div>
@@ -3367,7 +3367,7 @@ function MyBracketTab({ tabTop=116 }) {
   );
 }
 // ── SAVED TAB ──────────────────────────────────────────────────────────────
-function SavedMatchCard({ item, onRemove, notifiedIds=new Set(), onNotified=()=>{} }) {
+function SavedMatchCard({ item, onRemove, onMatchTap, notifiedIds=new Set(), onNotified=()=>{} }) {
   const isPWA = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
   const [pushState, setPushState] = useState(() => {
     if (!("Notification" in window)) return "unsupported";
@@ -3399,7 +3399,7 @@ function SavedMatchCard({ item, onRemove, notifiedIds=new Set(), onNotified=()=>
     <div style={{background:C.s2,border:`1px solid ${C.gold}33`,borderLeft:`3px solid ${C.gold}`,borderRadius:12,marginBottom:6,overflow:"hidden"}}>
       <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px"}}>
         <Crest team={m.home} size={22}/>
-        <div style={{flex:1,minWidth:0}}>
+        <div onClick={()=>onMatchTap&&onMatchTap(m)} style={{flex:1,minWidth:0,cursor:onMatchTap?"pointer":"default"}}>
           <div style={{display:"flex",alignItems:"center",gap:5}}>
             <span style={{color:C.gold,fontSize:11}}>★</span>
             <span style={{fontWeight:700,color:C.text,fontSize:13,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{m.home} vs {m.away}</span>
@@ -3428,7 +3428,7 @@ function SavedMatchCard({ item, onRemove, notifiedIds=new Set(), onNotified=()=>
   );
 }
 
-function SavedTab({ saved, onRemove, tabTop=116 }) {
+function SavedTab({ saved, onRemove, onMatchTap, tabTop=116 }) {
   const _ref = useRef(null);
   const _h = useElemHeight(_ref);
   const savedStripRef = useRef(null);
@@ -3595,7 +3595,7 @@ function SavedTab({ saved, onRemove, tabTop=116 }) {
       <div style={{height:0}}/>
       {filtered.length === 0
         ? <div style={{textAlign:"center",padding:"32px 0",color:C.dim,fontSize:13}}>No matches match this filter.</div>
-        : filtered.map(item=>(<SavedMatchCard key={item.id} item={item} onRemove={onRemove} notifiedIds={notifiedIds} onNotified={(id)=>setNotifiedIds(prev=>new Set([...prev,id]))}/>))
+        : filtered.map(item=>(<SavedMatchCard key={item.id} item={item} onRemove={onRemove} onMatchTap={onMatchTap} notifiedIds={notifiedIds} onNotified={(id)=>setNotifiedIds(prev=>new Set([...prev,id]))}/>))
       }
     </div>
   );
@@ -4441,25 +4441,17 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
       <div onClick={e=>e.stopPropagation()} style={{background:C.bg,border:`1px solid ${C.b2}`,borderRadius:"18px 18px 0 0",width:"100%",maxWidth:620,maxHeight:"92vh",overflowY:"auto",paddingBottom:20,position:"relative"}}>
 
 
-        <button
-  onClick={onClose}
-  style={{
-    position: "absolute",
-    top: 12,
-    right: 12,
-    zIndex: 9999,
-    background: "rgba(0,0,0,.4)",
-    border: "none",
-    color: "white",
-    fontSize: 24,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    cursor: "pointer"
-  }}
->
-  ×
-</button>
+        <button onClick={onClose} style={{position:"absolute",top:12,right:12,zIndex:9999,background:"rgba(0,0,0,.4)",border:"none",color:"white",fontSize:24,width:36,height:36,borderRadius:18,cursor:"pointer"}}>×</button>
+
+        {/* Save + Share icon buttons — top left */}
+        <div style={{position:"absolute",top:12,left:12,zIndex:9999,display:"flex",gap:6}}>
+          {(()=>{ const isSaved=savedIds.has(match.id); return (
+            <button onClick={()=>{onAction(match);}} title={isSaved?"Saved":"Save Match"} style={{width:36,height:36,borderRadius:18,background:isSaved?`${C.gold}33`:"rgba(0,0,0,.4)",border:`1px solid ${isSaved?C.gold:"transparent"}`,color:isSaved?C.gold:"white",fontSize:17,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <StarIcon filled={isSaved} size={16}/>
+            </button>
+          ); })()}
+          <button onClick={shareMatch} title="Share" style={{width:36,height:36,borderRadius:18,background:"rgba(0,0,0,.4)",border:"none",color:"white",fontSize:16,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>📤</button>
+        </div>
         
         <MatchHeader
   match={match}
@@ -4578,16 +4570,6 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
               </div>
             );
           })()}
-
-          {/* ── ACTIONS ── */}
-          <div style={{display:"flex",gap:8,marginTop:8}}>
-            {!finished && (()=>{ const isSaved=savedIds.has(match.id); return (
-              <button onClick={()=>{onAction(match);onClose();}} style={{flex:1,padding:"11px 0",borderRadius:12,background:isSaved?`${C.gold}22`:`linear-gradient(135deg,${C.green},#22c55e)`,border:isSaved?`1px solid ${C.gold}`:"none",color:isSaved?"#f59e0b":"#030a05",fontWeight:700,fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
-                <StarIcon filled={isSaved} size={15}/>{isSaved?"Saved":"Save Match"}
-              </button>
-            ); })()}
-            <button onClick={shareMatch} style={{flex:1,padding:"11px 0",borderRadius:12,background:`${C.blue}22`,border:`1px solid ${C.blue}44`,color:C.blue,fontWeight:700,fontSize:14,cursor:"pointer"}}>{"📤 Share"}</button>
-          </div>
 
         </div>
       </div>
@@ -6079,7 +6061,7 @@ export default function App() {
           {tab==="bracket"   && <MyBracketTab tabTop={tabBarBottom}/>}
           {tab==="ask"       && <AskWorldCupTab tabTop={tabBarBottom}/>}
           {tab==="news"       && <WCNewsTab tabTop={tabBarBottom}/>}
-          {tab==="saved"     && <div style={{paddingTop:14}}><SavedTab saved={saved} onRemove={onRemove}/></div>}
+          {tab==="saved"     && <div style={{paddingTop:14}}><SavedTab saved={saved} onRemove={onRemove} onMatchTap={onMatchTap}/></div>}
         </div>
         </PullToRefresh>
         {/* Saved view overlay */}
@@ -6098,7 +6080,7 @@ export default function App() {
             {/* Scrollable content */}
             <div style={{flex:1,overflowY:"auto",position:"relative"}} id="saved-scroll">
               <div style={{maxWidth:700,margin:"0 auto",padding:"0 13px 80px"}}>
-                <SavedTab saved={saved} onRemove={onRemove} tabTop={57}/>
+                <SavedTab saved={saved} onRemove={onRemove} onMatchTap={onMatchTap} tabTop={57}/>
               </div>
             </div>
           </div>
