@@ -1129,7 +1129,7 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="",
   }
 
   return (
-    <div onClick={()=>onMatchTap&&onMatchTap(m)} style={{marginBottom:8,background:C.s1,border:`1px solid ${countdown?C.gold:live?C.green:isFav?`${C.gold}55`:C.b1}`,borderRadius:12,overflow:"hidden",opacity:finished?0.45:1,cursor:onMatchTap?"pointer":"default",boxShadow:countdown?`0 0 0 1px ${C.gold}44,0 4px 16px ${C.gold}22`:"none",transition:"border-color .3s,box-shadow .3s"}}>
+    <div onClick={()=>onMatchTap&&onMatchTap(m)} style={{marginBottom:8,background:countdown?`#0f2a18`:C.s1,border:`${countdown?"2.5px":"1px"} solid ${countdown?C.gold:live?C.green:isFav?`${C.gold}55`:C.b1}`,borderRadius:12,overflow:"hidden",opacity:finished?0.45:1,cursor:onMatchTap?"pointer":"default",boxShadow:countdown?`0 0 0 1px ${C.gold}33,0 4px 20px ${C.gold}28`:"none",transition:"border-color .3s,box-shadow .3s,background .3s"}}>
       {/* Header: group/stage + venue + time */}
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 13px",borderBottom:`1px solid ${C.b1}`,background:C.s2}}>
         <div style={{display:"flex",alignItems:"center",gap:6,minWidth:0,flex:1}}>
@@ -1156,7 +1156,15 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="",
         <span style={{fontWeight:winner===m.home?800:700,color:finished?(winner===m.home?C.text:C.dim):favTeams?.includes(m.home)?C.gold:C.text,flex:1,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.home}</span>
         {hasScore ? (
           <div style={{textAlign:"center",minWidth:60,flexShrink:0}}>
-            <div style={{fontWeight:900,fontSize:22,color:live?C.green:C.text,fontFamily:"monospace",lineHeight:1,animation:scoreFlash?"scoreFlash .6s ease":undefined,borderRadius:6,padding:"1px 4px",background:scoreFlash?`${C.green}30`:"transparent",transition:"background .3s"}}>{sc.hg} – {sc.ag}</div>
+            {sc.hg === 0 && sc.ag === 0 && !live && (() => {
+              const iso = MATCH_UTC[m.id];
+              const ko = iso ? new Date(iso).getTime() : 0;
+              const msSince = Date.now() - ko;
+              if (msSince > 0 && msSince < 10 * 60 * 1000) {
+                return <div style={{fontSize:11,fontWeight:700,color:C.green,animation:"pulse 1s infinite"}}>🔴 Starting...</div>;
+              }
+              return null;
+            })() || <div style={{fontWeight:900,fontSize:22,color:live?C.green:C.text,fontFamily:"monospace",lineHeight:1,animation:scoreFlash?"scoreFlash .6s ease":undefined,borderRadius:6,padding:"1px 4px",background:scoreFlash?`${C.green}30`:"transparent",transition:"background .3s"}}>{sc.hg} – {sc.ag}</div>}
           </div>
         ) : (
           <div style={{textAlign:"center",minWidth:60,flexShrink:0}}>
@@ -5174,20 +5182,69 @@ function QuickFacts({ tabTop }) {
 function WCNewsTab({ tabTop=116 }) {
   const _ref = useRef(null);
   const _h = useElemHeight(_ref);
+  const NEWS_LOCALES = [
+    { flag:"🇺🇸", label:"USA",       lang:"en", country:"us" },
+    { flag:"🇬🇧", label:"UK",        lang:"en", country:"gb" },
+    { flag:"🇧🇷", label:"Brazil",    lang:"pt", country:"br" },
+    { flag:"🇦🇷", label:"Argentina", lang:"es", country:"ar" },
+    { flag:"🇲🇽", label:"Mexico",    lang:"es", country:"mx" },
+    { flag:"🇪🇸", label:"Spain",     lang:"es", country:"es" },
+    { flag:"🇩🇪", label:"Germany",   lang:"de", country:"de" },
+    { flag:"🇫🇷", label:"France",    lang:"fr", country:"fr" },
+    { flag:"🇮🇹", label:"Italy",     lang:"it", country:"it" },
+    { flag:"🇯🇵", label:"Japan",     lang:"ja", country:"jp" },
+  ];
+
+  const [selectedLocales, setSelectedLocales] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("wc2026_news_locales") || "null");
+      return Array.isArray(saved) && saved.length ? saved : ["us"];
+    } catch { return ["us"]; }
+  });
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastFetch, setLastFetch] = useState(null);
 
-  const fetchNews = async () => {
+  const fetchNews = async (countries = selectedLocales) => {
     setLoading(true); setError(null);
     try {
-      const r = await fetch("/api/news");
-      const d = await r.json();
-      if (d.articles?.length) { setArticles(d.articles); setLastFetch(Date.now()); }
-      else setError("No articles found.");
+      // Fetch all selected countries in parallel
+      const locales = NEWS_LOCALES.filter(l => countries.includes(l.country));
+      const results = await Promise.all(
+        locales.map(loc => fetch(`/api/news?lang=${loc.lang}&country=${loc.country}`)
+          .then(r => r.json())
+          .then(d => {
+            if (d._quota === "exhausted") return [];
+            return (d.articles || []).map(a => ({...a, _country: loc.country, _flag: loc.flag}));
+          })
+          .catch(() => [])
+        )
+      );
+      // Interleave: zip articles from all sources round-robin
+      const merged = [];
+      const maxLen = Math.max(...results.map(r => r.length));
+      for (let i = 0; i < maxLen; i++) {
+        results.forEach(r => { if (r[i]) merged.push(r[i]); });
+      }
+      // Dedupe by url
+      const seen = new Set();
+      const deduped = merged.filter(a => { if (seen.has(a.url)) return false; seen.add(a.url); return true; });
+      if (deduped.length) { setArticles(deduped); setLastFetch(Date.now()); }
+      else setError("No articles available — daily news quota may be reached. Cached articles refresh overnight.");
     } catch(e) { setError("Couldn't load news. Try again."); }
     setLoading(false);
+  };
+
+  const toggleLocale = (country) => {
+    setSelectedLocales(prev => {
+      const next = prev.includes(country)
+        ? prev.length > 1 ? prev.filter(c => c !== country) : prev // keep at least 1
+        : [...prev, country];
+      try { localStorage.setItem("wc2026_news_locales", JSON.stringify(next)); } catch {}
+      fetchNews(next);
+      return next;
+    });
   };
 
   useEffect(() => { fetchNews(); }, []);
@@ -5196,12 +5253,24 @@ function WCNewsTab({ tabTop=116 }) {
     <div>
       {/* Sticky header */}
       <div ref={_ref} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:DS.shadow.sticky,padding:"8px 13px"}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
           <span style={{fontSize:15,fontWeight:700,color:C.green}}>{"📰 World Cup 2026 News"}</span>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
             {lastFetch && <span style={{fontSize:11,color:C.dim}}>Updated {timeAgo(new Date(lastFetch).toISOString())}</span>}
-            <button onClick={fetchNews} disabled={loading} style={{padding:"4px 10px",borderRadius:8,border:`1px solid ${C.b2}`,background:C.s2,color:C.mid,fontSize:11,cursor:"pointer",opacity:loading?0.5:1}}>↻ Refresh</button>
+            <button onClick={()=>fetchNews()} disabled={loading} style={{padding:"4px 10px",borderRadius:8,border:`1px solid ${C.b2}`,background:C.s2,color:C.mid,fontSize:11,cursor:"pointer",opacity:loading?0.5:1}}>↻ Refresh</button>
           </div>
+        </div>
+        {/* Source country picker */}
+        <div style={{fontSize:10,color:C.dim,fontWeight:700,letterSpacing:"0.08em",marginBottom:5}}>NEWS SOURCE COUNTRY</div>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+          {NEWS_LOCALES.map(loc=>{
+            const active = selectedLocales.includes(loc.country);
+            return (
+              <button key={loc.country} onClick={()=>toggleLocale(loc.country)} style={{padding:"4px 10px",borderRadius:999,border:`1px solid ${active?C.green:C.b2}`,background:active?`${C.green}18`:C.s2,color:active?C.green:C.mid,fontSize:11,fontWeight:600,cursor:"pointer",flexShrink:0}}>
+                {loc.flag} {loc.label}
+              </button>
+            );
+          })}
         </div>
       </div>
       
@@ -5239,6 +5308,7 @@ function WCNewsTab({ tabTop=116 }) {
                 <div style={{fontSize:13,fontWeight:700,color:C.text,lineHeight:1.4,marginBottom:4,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{a.title}</div>
                 {a.description && <div style={{fontSize:11,color:C.dim,lineHeight:1.4,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden",marginBottom:6}}>{a.description}</div>}
                 <div style={{display:"flex",alignItems:"center",gap:6}}>
+                  {a._flag && selectedLocales.length > 1 && <span style={{fontSize:12}}>{a._flag}</span>}
                   <span style={{fontSize:10,color:C.mid,fontWeight:600}}>{a.source}</span>
                   <span style={{fontSize:10,color:C.dim}}>·</span>
                   <span style={{fontSize:10,color:C.dim}}>{timeAgo(a.publishedAt)}</span>
