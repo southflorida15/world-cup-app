@@ -165,34 +165,22 @@ function parseLineups(data, homeTeam) {
   const result = { home: null, away: null };
 
   rosters.forEach(roster => {
-    // ESPN structure: { homeAway, winner, team: { displayName, athletes: [...] } }
-    const teamObj = roster.team || roster;
-    const teamName = normESPN(teamObj.displayName || teamObj.name || roster.team?.displayName || "");
+    const teamName = normESPN(roster.team?.displayName || roster.team?.name || "");
     const side = teamName === homeTeam ? "home" : "away";
-    const formation = roster.formation || teamObj.formation || null;
+    const formation = roster.formation || null;
 
-    // Try every possible location for the players array
-    const players =
-      roster.entries ||
-      roster.roster ||
-      roster.athletes ||
-      roster.players ||
-      teamObj.athletes ||
-      teamObj.roster ||
-      teamObj.entries ||
-      teamObj.players ||
-      [];
+    // Confirmed ESPN structure: players are in roster.roster[]
+    const players = roster.roster || roster.entries || roster.athletes || roster.players || [];
 
     const starters = [];
     const bench = [];
 
     players.forEach(p => {
       const athlete = p.athlete || p;
-      const name = athlete.displayName || athlete.fullName || athlete.shortName || p.displayName || p.name || "";
+      const name = athlete.displayName || athlete.fullName || athlete.shortName || "";
       const jersey = p.jersey ?? athlete.jersey ?? null;
-      const pos = p.position?.abbreviation || p.position?.name
-                || athlete.position?.abbreviation || athlete.position?.name || "";
-      const starter = p.starter ?? p.didPlay ?? p.active ?? true;
+      const pos = p.position?.abbreviation || p.position?.name || "";
+      const starter = p.starter ?? p.active ?? true;
       const subbedOut = p.subbedOut ?? false;
       const subbedIn  = p.subbedIn  ?? false;
 
