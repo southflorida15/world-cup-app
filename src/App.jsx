@@ -1209,7 +1209,8 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=n
   const liveMatches = MATCHES.filter(m => {
     const s = getScore(m.home, m.away);
     if (s && statusIsLive(s.status)) return true;
-    if (s) return false; // feed has data — trust it completely
+    if (s && statusIsFinished(s.status)) return false;
+    // Feed has no data yet or returns NS — use kickoff window as fallback
     const iso = MATCH_UTC[m.id];
     if (!iso) return false;
     const ko = new Date(iso).getTime();
@@ -6310,7 +6311,7 @@ export default function App() {
   const hasLiveMatches = MATCHES.some(m => {
     if (isMatchLive(m.home, m.away)) return true;
     const sc = getScoreMain(m.home, m.away);
-    if (sc) return false; // feed has data — trust it completely
+    if (sc && statusIsFinished(sc.status)) return false;
     const iso = MATCH_UTC[m.id];
     if (!iso) return false;
     const ko = new Date(iso).getTime();
