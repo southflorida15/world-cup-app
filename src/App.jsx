@@ -2848,6 +2848,9 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
 
   const finalMatch = matchesById[104]||(bracket?.final||[])[0]||{match:104,home:null,away:null,winner:null};
   const finalTop = 483;
+  const finalLabelH = 36; // "FINAL" label + date height
+  const finalCardMidY = finalTop + finalLabelH + CH/2; // absolute Y center of final card
+  const sfCardMidY = 483 + CH/2; // both SF cards are at tops[0]=483
 
   return (
     <div style={{width:"100%",maxWidth:"100%"}}>
@@ -2856,7 +2859,11 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
           {leftRounds.map(r=>renderRound(r,"left"))}
 
           {/* FINAL */}
-          <div style={{width:190,flexShrink:0,paddingTop:finalTop}}>
+          <div style={{width:190,flexShrink:0,paddingTop:finalTop,position:"relative"}}>
+            {/* Left stub from sfL */}
+            <div style={{position:"absolute",top:finalLabelH+CH/2,left:-STUB,width:STUB,borderTop:`1.5px solid ${C.b2}`,opacity:0.6}}/>
+            {/* Right stub from sfR */}
+            <div style={{position:"absolute",top:finalLabelH+CH/2,right:-STUB,width:STUB,borderTop:`1.5px solid ${C.b2}`,opacity:0.6}}/>
             <div style={{textAlign:"center",marginBottom:12}}>
               <div style={{fontSize:12,color:C.gold,fontWeight:900,letterSpacing:"0.12em"}}>FINAL</div>
               <div style={{fontSize:10,color:C.dim}}>Jul 19 · New York/New Jersey</div>
@@ -3171,10 +3178,14 @@ function MyBracketTab({ tabTop=116 }) {
   const handleManualPick = (match, team) => {
     if (playMode !== "manual" || !match?.match || !team || team === "TBD") return;
     setManualPicks(prev => {
+      const existing = prev[match.match];
       const next = {...prev, [match.match]: team};
-      const m = Number(match.match);
-      const cutoff = m < 89 ? 89 : m < 97 ? 97 : m < 101 ? 101 : m < 104 ? 104 : 105;
-      Object.keys(next).forEach(k => { if (Number(k) >= cutoff) delete next[k]; });
+      // Only clear downstream picks if we're CHANGING an existing pick (not filling a new slot)
+      if (existing && existing !== team) {
+        const m = Number(match.match);
+        const cutoff = m < 89 ? 89 : m < 97 ? 97 : m < 101 ? 101 : m < 104 ? 104 : 105;
+        Object.keys(next).forEach(k => { if (Number(k) >= cutoff) delete next[k]; });
+      }
       return next;
     });
   };
