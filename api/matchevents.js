@@ -154,9 +154,7 @@ async function saveESPNId(home, away, id) {
 }
 
 // ── Seed ESPN IDs from scoreboard ─────────────────────────────────────────
-// Fetches ESPN's scoreboard for a date and populates the ID map proactively
 async function seedIdsFromScoreboard(dateStr) {
-  // dateStr: YYYYMMDD
   const url = `${ESPN_BASE}/scoreboard?dates=${dateStr}&limit=20`;
   try {
     const r = await fetch(url, { headers: ESPN_HEADERS });
@@ -166,6 +164,18 @@ async function seedIdsFromScoreboard(dateStr) {
     const idMap = await kv.get(ESPN_ID_MAP_KEY) || {};
     let added = 0;
 
+    // Clean up any keys with un-normalized names (e.g. Türkiye, Curaçao)
+    const dirty = Object.keys(idMap).filter(k => {
+      const [h, a] = k.split("|");
+      return normESPN(h) !== h || normESPN(a) !== a;
+    });
+    dirty.forEach(k => {
+      const [h, a] = k.split("|");
+      const cleanKey = `${normESPN(h)}|${normESPN(a)}`;
+      if (!idMap[cleanKey]) idMap[cleanKey] = idMap[k];
+      delete idMap[k];
+    });
+
     for (const ev of events) {
       const comp = ev.competitions?.[0];
       if (!comp) continue;
@@ -174,7 +184,8 @@ async function seedIdsFromScoreboard(dateStr) {
       const away = competitors.find(c => c.homeAway === "away");
       if (!home || !away) continue;
       const homeName = normESPN(home.team?.displayName || home.team?.name || "");
-      const awayName = normESPN(away.team?.displayName || away.team?.name || "");      const espnId   = String(ev.id || "");
+      const awayName = normESPN(away.team?.displayName || away.team?.name || "");
+      const espnId = String(ev.id || "");
       if (!homeName || !awayName || !espnId) continue;
       const key = `${homeName}|${awayName}`;
       if (!idMap[key]) {
@@ -184,8 +195,8 @@ async function seedIdsFromScoreboard(dateStr) {
       }
     }
 
-    if (added > 0) await kv.set(ESPN_ID_MAP_KEY, idMap);
-    return { date: dateStr, events: events.length, added, idMap };
+    if (added > 0 || dirty.length > 0) await kv.set(ESPN_ID_MAP_KEY, idMap);
+    return { date: dateStr, events: events.length, added, cleaned: dirty.length, idMap };
   } catch(e) {
     console.error("[seed-ids] failed:", e.message);
     return { date: dateStr, error: e.message };
