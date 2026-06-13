@@ -5417,26 +5417,29 @@ function AskWorldCupTab({ tabTop=116 }) {
   const scoresRef = scores || {};
 
   const examples = [
+    "Teams at WC for first time",
+    "Most international caps",
+    "Top players by goals",
+    "Most titled teams",
+    "Championship odds",
+    "Strongest teams",
+    "Best form teams",
     "Total goals scored",
     "Highest scoring match",
     "Biggest win so far",
     "Which teams have won so far",
     "Unbeaten teams",
-    "Top scorers so far",
-    "Total red cards",
-    "Championship odds",
-    "Strongest teams",
-    "Best form teams",
+    "How many matches left",
     "Matches today",
     "Next match",
     "Next Brazil match",
     "Group A matches",
-    "Brazil matches",
     "Matches in Miami",
-    "Brazil vs France history",
     "Germany all-time top scorers",
+    "Brazil vs France history",
+    "Who is coaching Spain",
+    "Teams from Africa",
     "Final match",
-    "How many matches left",
   ];
 
   const norm = (v) => String(v || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
@@ -5579,8 +5582,68 @@ function AskWorldCupTab({ tabTop=116 }) {
       return { title:"Final / knockout matches", summary: rows.length ? `${rows.length} match${rows.length!==1?"es":""} found.` : "The final will appear here once the schedule data includes it.", rows };
     }
 
-    // Highest scoring / biggest win
-    if (text.includes("highest scor") || text.includes("most goal") && text.includes("match") || text.includes("biggest win") || text.includes("best result")) {
+    // First-time / debut WC teams
+    if (text.includes("first time") || text.includes("debut") || text.includes("first wc") || text.includes("first world cup") || text.includes("never been") || text.includes("new team") || text.includes("historic")) {
+      const DEBUTS = {
+        "Uzbekistan": "🇺🇿 Uzbekistan — first ever World Cup",
+        "Cape Verde": "🇨🇻 Cape Verde — first ever World Cup",
+        "Curacao": "🇨🇼 Curaçao — first ever World Cup",
+        "Jordan": "🇯🇴 Jordan — first ever World Cup",
+        "Haiti": "🇭🇹 Haiti — return after 52 years (last: 1974)",
+        "Iraq": "🇮🇶 Iraq — return after 40 years (last: 1986)",
+        "Bosnia & Herz.": "🇧🇦 Bosnia & Herz. — second appearance (last: 2014)",
+        "DR Congo": "🇨🇩 DR Congo — return after 48 years (last: 1974 as Zaire)",
+      };
+      return { title:"First-timers & long-absent teams", summary:Object.values(DEBUTS).join(" · "), rows:[] };
+    }
+
+    // Most international caps (from player data across all teams)
+    if (text.includes("most cap") || text.includes("most international") || text.includes("most appear") || text.includes("experienced player") || text.includes("veteran player")) {
+      const allPlayers = [];
+      Object.entries(TEAM_DATA||{}).forEach(([team, data]) => {
+        (data.players||[]).forEach(p => { if (p.caps > 0) allPlayers.push({...p, team, flag:data.flag}); });
+      });
+      const top = allPlayers.sort((a,b)=>b.caps-a.caps).slice(0,8);
+      return { title:"Most international caps at this WC", summary:top.map((p,i)=>`${i+1}. ${p.flag} ${p.name} (${p.team}) — ${p.caps} caps`).join(" · "), rows:[] };
+    }
+
+    // Top players by international goals
+    if ((text.includes("top player") || text.includes("most goal") || text.includes("top goal") || text.includes("international goal")) && !text.includes("match")) {
+      const allPlayers = [];
+      Object.entries(TEAM_DATA||{}).forEach(([team, data]) => {
+        (data.players||[]).forEach(p => { if (p.goals > 0) allPlayers.push({...p, team, flag:data.flag}); });
+      });
+      const top = allPlayers.sort((a,b)=>b.goals-a.goals).slice(0,8);
+      return { title:"Top international goalscorers at this WC", summary:top.map((p,i)=>`${i+1}. ${p.flag} ${p.name} (${p.team}) — ${p.goals} goals`).join(" · "), rows:[] };
+    }
+
+    // Most WC titles
+    if (text.includes("title") || text.includes("winner") && text.includes("most") || text.includes("champion") && !text.includes("chance") || text.includes("won the world cup") || text.includes("how many title")) {
+      const withTitles = Object.entries(TEAM_DATA||{}).filter(([,d])=>d.titles>0).sort((a,b)=>b[1].titles-a[1].titles);
+      if (!withTitles.length) return { title:"WC title holders", summary:"No title data found.", rows:[] };
+      return { title:"World Cup winners", summary:withTitles.map(([t,d])=>`${d.flag} ${t}: ${d.titles} 🏆`).join(" · "), rows:[] };
+    }
+
+    // Coaches
+    if (text.includes("coach") || text.includes("manager") || text.includes("head coach")) {
+      const teamMatch = findTeamInText(text);
+      if (teamMatch && TEAM_DATA?.[teamMatch]) {
+        const d = TEAM_DATA[teamMatch];
+        return { title:`${d.flag} ${teamMatch} coach`, summary:`${d.coach} is the head coach of ${teamMatch}.`, rows:[] };
+      }
+      // List all coaches
+      const coaches = Object.entries(TEAM_DATA||{}).filter(([,d])=>d.coach).slice(0,12);
+      return { title:"Head coaches at this World Cup", summary:coaches.map(([t,d])=>`${d.flag} ${t}: ${d.coach}`).join(" · "), rows:[] };
+    }
+
+    // Teams by confederation
+    if (text.includes("africa") || text.includes("caf") || text.includes("south america") || text.includes("conmebol") || text.includes("europe") || text.includes("uefa") || text.includes("asia") || text.includes("afc") || text.includes("concacaf") || text.includes("north america") || text.includes("central america")) {
+      const confMap = {africa:"CAF", "south america":"CONMEBOL", europe:"UEFA", asia:"AFC", concacaf:"CONCACAF", "north america":"CONCACAF", "central america":"CONCACAF"};
+      const confKey = Object.keys(confMap).find(k => text.includes(k)) || (text.includes("caf")?"CAF":text.includes("conmebol")?"CONMEBOL":text.includes("uefa")?"UEFA":text.includes("afc")?"AFC":"CONCACAF");
+      const conf = confMap[confKey] || confKey.toUpperCase();
+      const teams = Object.entries(TEAM_DATA||{}).filter(([,d])=>d.conf===conf);
+      return { title:`${conf} teams (${teams.length})`, summary:teams.map(([t,d])=>`${d.flag} ${t}`).join(" · "), rows:[] };
+    }
       const finished = MATCHES.filter(m => {
         const sc = scoresRef[`${m.home}|${m.away}`];
         return sc && sc.hg !== null && sc.ag !== null && (sc.status==="FT"||sc.status==="AET"||sc.status==="finished"||sc.status==="ended");
