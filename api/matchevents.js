@@ -129,6 +129,46 @@ async function saveESPNId(home, away, id) {
   }
 }
 
+// ── Seed ESPN IDs from scoreboard ─────────────────────────────────────────
+// Fetches ESPN's scoreboard for a date and populates the ID map proactively
+async function seedIdsFromScoreboard(dateStr) {
+  // dateStr: YYYYMMDD
+  const url = `${ESPN_BASE}/scoreboard?dates=${dateStr}&limit=20`;
+  try {
+    const r = await fetch(url, { headers: ESPN_HEADERS });
+    if (!r.ok) throw new Error(`ESPN scoreboard ${r.status}`);
+    const data = await r.json();
+    const events = data.events || [];
+    const idMap = await kv.get(ESPN_ID_MAP_KEY) || {};
+    let added = 0;
+
+    for (const ev of events) {
+      const comp = ev.competitions?.[0];
+      if (!comp) continue;
+      const competitors = comp.competitors || [];
+      const home = competitors.find(c => c.homeAway === "home");
+      const away = competitors.find(c => c.homeAway === "away");
+      if (!home || !away) continue;
+      const homeName = normESPN(home.team?.displayName || home.team?.name || "");
+      const awayName = normESPN(away.team?.displayName || away.team?.name || "");
+      const espnId   = String(ev.id || "");
+      if (!homeName || !awayName || !espnId) continue;
+      const key = `${homeName}|${awayName}`;
+      if (!idMap[key]) {
+        idMap[key] = espnId;
+        added++;
+        console.log(`[seed-ids] ${homeName} vs ${awayName} → ${espnId}`);
+      }
+    }
+
+    if (added > 0) await kv.set(ESPN_ID_MAP_KEY, idMap);
+    return { date: dateStr, events: events.length, added, idMap };
+  } catch(e) {
+    console.error("[seed-ids] failed:", e.message);
+    return { date: dateStr, error: e.message };
+  }
+}
+
 // ── Stats parser ──────────────────────────────────────────────────────────
 function parseStats(boxscore, homeTeam) {
   if (!boxscore?.teams?.length) return null;
@@ -450,11 +490,37 @@ export default async function handler(req, res) {
     }
   }
 
+  // Seed ESPN IDs from scoreboard — call manually or auto-triggered
+  if (req.query.action === "seed-ids") {
+    const now = new Date();
+    const fmt = (d) => d.toISOString().slice(0,10).replace(/-/g,"");
+    const tomorrow = new Date(now); tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+    const [today, tmrw] = await Promise.all([
+      seedIdsFromScoreboard(fmt(now)),
+      seedIdsFromScoreboard(fmt(tomorrow)),
+    ]);
+    return res.status(200).json({ ok: true, today, tomorrow: tmrw });
+  }
+
   let { home, away, debug, flush, fixtureId } = req.query;
   if ((!home || !away) && fixtureId && fixtureId.includes("|")) {
     [home, away] = fixtureId.split("|");
   }
   if (!home || !away) return res.status(400).json({ error: "home and away required" });
+
+  // Auto-seed ESPN IDs once per day (fire-and-forget)
+  kv.get("wc2026:espn_ids_seeded_date").then(async (seededDate) => {
+    const today = new Date().toISOString().slice(0, 10);
+    if (seededDate !== today) {
+      await kv.set("wc2026:espn_ids_seeded_date", today, { ex: 28 * 60 * 60 });
+      const fmt = (d) => d.toISOString().slice(0,10).replace(/-/g,"");
+      const tomorrow = new Date(); tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+      await Promise.all([
+        seedIdsFromScoreboard(fmt(new Date())),
+        seedIdsFromScoreboard(fmt(tomorrow)),
+      ]);
+    }
+  }).catch(() => {});
 
   // Flush stale KV cache for this match
   if (flush === "1") {
