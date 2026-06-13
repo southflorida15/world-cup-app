@@ -3163,9 +3163,23 @@ function MyBracketTab({ tabTop=116 }) {
   const runBracket=()=>{
     setRunning(true);
     setTimeout(()=>{
-      const qualifiedThirds = buildQualifiedThirdsFromSelectedTeams(groups, thirds);
+      // Auto-select best 8 third-place teams if user hasn't picked them
+      // (takes the 3rd team from each group, sorted by simulator strength, top 8)
+      let activeThirds = thirds;
+      if (!activeThirds || activeThirds.length !== 8) {
+        const allThirds = Object.entries(groups)
+          .map(([g, teams]) => ({ group: g, team: teams[2] }))
+          .filter(x => x.team)
+          .sort((a, b) => (STR[b.team] || 0) - (STR[a.team] || 0))
+          .slice(0, 8)
+          .map(x => x.team);
+        activeThirds = allThirds;
+        setThirds(allThirds);
+      }
+
+      const qualifiedThirds = buildQualifiedThirdsFromSelectedTeams(groups, activeThirds);
       let thirdGroupsKey = "";
-      try { thirdGroupsKey = buildThirdGroupsKey(groups, thirds); } catch(e) { thirdGroupsKey = ""; }
+      try { thirdGroupsKey = buildThirdGroupsKey(groups, activeThirds); } catch(e) { thirdGroupsKey = ""; }
 
       console.log("Qualified third-place teams:", qualifiedThirds);
       console.log("Annex C group key:", thirdGroupsKey);
