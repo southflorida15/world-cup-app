@@ -5831,8 +5831,8 @@ function AskWorldCupTab({ tabTop=116 }) {
       </Card>
 
       <div style={{fontSize:11,color:C.dim,fontWeight:800,letterSpacing:"0.12em",textTransform:"uppercase",margin:"12px 2px 8px"}}>Popular Questions</div>
-      <div style={{display:"flex",gap:8,overflowX:"auto",paddingBottom:8,scrollbarWidth:"none"}}>
-        {examples.map(ex=><button key={ex} onClick={()=>runAsk(ex)} style={{flex:"0 0 auto",border:`1px solid ${C.b2}`,background:C.s1,color:C.text,borderRadius:999,padding:"8px 11px",fontWeight:750,fontSize:12,cursor:"pointer"}}>{ex}</button>)}
+      <div style={{display:"flex",flexWrap:"wrap",gap:8,paddingBottom:4}}>
+        {examples.map(ex=><button key={ex} onClick={()=>runAsk(ex)} style={{border:`1px solid ${C.b2}`,background:C.s1,color:C.text,borderRadius:999,padding:"7px 11px",fontWeight:600,fontSize:12,cursor:"pointer"}}>{ex}</button>)}
       </div>
 
       {loading && <Card><div style={{padding:14,color:C.mid}}>Searching World Cup data...</div></Card>}
