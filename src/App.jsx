@@ -1030,7 +1030,7 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="",
   const sc = getScore(m.home, m.away);
   const live = sc ? statusIsLive(sc.status) : false;
   const finished = sc ? statusIsFinished(sc.status) : false;
-  const hasScore = sc && sc.hg !== null && sc.ag !== null;
+  const hasScore = sc && sc.hg !== null && sc.ag !== null && (live || finished);
   const isKO = !m.group;
   let winner = null;
   if(isKO && finished && hasScore) { if(sc.hg>sc.ag) winner=m.home; else if(sc.ag>sc.hg) winner=m.away; }
@@ -1057,7 +1057,7 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="",
 
 
   return (
-    <div style={{marginBottom:8,background:C.s1,border:`1px solid ${live?C.green:isFav?`${C.gold}55`:C.b1}`,borderRadius:12,overflow:"hidden",opacity:finished?0.45:1}}>
+    <div style={{marginBottom:8,background:C.s1,border:`1px solid ${live?C.green:isFav?`${C.gold}55`:C.b1}`,borderRadius:12,overflow:"hidden",opacity:finished?0.8:1}}>
       {/* Header: group/stage + venue + time */}
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 13px",borderBottom:`1px solid ${C.b1}`,background:C.s2}}>
         <div style={{display:"flex",alignItems:"center",gap:6,minWidth:0,flex:1}}>
@@ -4138,7 +4138,7 @@ return (
             const hasPred = pred.hg!==undefined && pred.ag!==undefined && pred.hg!=="" && pred.ag!=="";
             const saving = predSaving[m.id];
             return (
-              <Card key={m.id} style={{marginBottom:8,border:`1px solid ${pts===3?C.green:pts===1?C.gold:pts===0?C.red:hasPred?`${C.green}44`:C.b1}`,opacity:locked&&!done?0.72:1}} >
+              <Card key={m.id} style={{marginBottom:8,border:`1px solid ${pts===3?C.green:pts===1?C.gold:pts===0?C.red:hasPred?`${C.green}44`:C.b1}`,opacity:done?0.45:locked?0.72:1}} >
                 <div style={{padding:"10px 13px"}}>
                   <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
                     <Badge>Group {m.group} · {m.date}</Badge>
@@ -4218,7 +4218,7 @@ async function fetchMatchEvents(fixtureId) {
     const data = await res.json();
     // Handle both old format (array) and new format ({events, stats})
     const result = Array.isArray(data) ? { events: data, stats: null } : data;
-    eventsCache[fixtureId] = result;
+    if (result?.events?.length > 0) eventsCache[fixtureId] = result;
     return result;
   } catch(e) {
     console.error("[matchevents]", e.message);
