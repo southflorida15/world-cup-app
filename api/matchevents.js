@@ -69,8 +69,8 @@ const ESPN_ID_MAP_KEY = "wc2026:espn_ids";
 const HARDCODED_ESPN_IDS = {
   "Mexico|South Africa":"760415","South Korea|Czechia":"760414",
   "Canada|Bosnia & Herz.":"760416","United States|Paraguay":"760417",
-  "Qatar|Switzerland":"760418","Brazil|Morocco":"760419",
-  "Haiti|Scotland":"760420","Australia|Turkiye":"760421",
+  "Haiti|Scotland":"760418","Qatar|Switzerland":"760420",
+  "Brazil|Morocco":"760419","Australia|Turkiye":"760421",
   "Germany|Curacao":"760422","Netherlands|Japan":"760423",
   "Ivory Coast|Ecuador":"760424","Sweden|Tunisia":"760425",
   "Spain|Cape Verde":"760426","Belgium|Egypt":"760427",
