@@ -1088,6 +1088,16 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="",
   const isUS = country === "US" || !BROADCAST[country];
   const countdown = useCountdown(m.id);
 
+  // True from 30min before kickoff until ESPN confirms live — drives the gold highlight
+  const isKickingOff = (() => {
+    if (live || finished) return false;
+    const iso = MATCH_UTC[m.id];
+    if (!iso) return false;
+    const ko = new Date(iso).getTime();
+    const msSince = Date.now() - ko;
+    return msSince > -30 * 60 * 1000 && msSince < 15 * 60 * 1000;
+  })();
+
   // Compact card for matches finished on a previous day (at venue timezone)
   const isPastDay = (() => {
     if (!finished) return false;
@@ -1133,7 +1143,7 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="",
   }
 
   return (
-    <div onClick={()=>onMatchTap&&onMatchTap(m)} style={{marginBottom:8,background:countdown?countdownBg:C.s1,border:`${countdown?"2.5px":"1px"} solid ${countdown?C.gold:live?C.green:isFav?`${C.gold}55`:C.b1}`,borderRadius:12,overflow:"hidden",opacity:finished?0.45:1,cursor:onMatchTap?"pointer":"default",boxShadow:countdown?`0 0 0 1px ${C.gold}33,0 4px 20px ${C.gold}28`:"none",transition:"border-color .3s,box-shadow .3s,background .3s"}}>
+    <div onClick={()=>onMatchTap&&onMatchTap(m)} style={{marginBottom:8,background:isKickingOff?countdownBg:C.s1,border:`${isKickingOff?"2.5px":"1px"} solid ${isKickingOff?C.gold:live?C.green:isFav?`${C.gold}55`:C.b1}`,borderRadius:12,overflow:"hidden",opacity:finished?0.45:1,cursor:onMatchTap?"pointer":"default",boxShadow:isKickingOff?`0 0 0 1px ${C.gold}33,0 4px 20px ${C.gold}28`:"none",transition:"border-color .3s,box-shadow .3s,background .3s"}}>
       {/* Header: group/stage + venue + time */}
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 13px",borderBottom:`1px solid ${C.b1}`,background:C.s2}}>
         <div style={{display:"flex",alignItems:"center",gap:6,minWidth:0,flex:1}}>
@@ -1158,24 +1168,20 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="",
       <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 13px"}}>
         <Crest team={m.home} size={32}/>
         <span style={{fontWeight:winner===m.home?800:700,color:finished?(winner===m.home?C.text:C.dim):favTeams?.includes(m.home)?C.gold:C.text,flex:1,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.home}</span>
-        {hasScore ? (
-          <div style={{textAlign:"center",minWidth:60,flexShrink:0}}>
-            {sc.hg === 0 && sc.ag === 0 && !live && (() => {
-              const iso = MATCH_UTC[m.id];
-              const ko = iso ? new Date(iso).getTime() : 0;
-              const msSince = Date.now() - ko;
-              if (msSince > 0 && msSince < 10 * 60 * 1000) {
-                return <div style={{fontSize:11,fontWeight:700,color:C.green,animation:"pulse 1s infinite"}}>🔴 Starting...</div>;
-              }
-              return null;
-            })() || <div style={{fontWeight:900,fontSize:22,color:live?C.green:C.text,fontFamily:"monospace",lineHeight:1,animation:scoreFlash?"scoreFlash .6s ease":undefined,borderRadius:6,padding:"1px 4px",background:scoreFlash?`${C.green}30`:"transparent",transition:"background .3s"}}>{sc.hg} – {sc.ag}</div>}
-          </div>
-        ) : (
+        {isKickingOff ? (
           <div style={{textAlign:"center",minWidth:60,flexShrink:0}}>
             {countdown
               ? <div style={{fontSize:13,fontWeight:800,color:C.gold,fontFamily:"monospace",animation:"pulse 1s infinite",lineHeight:1}}>⏱ {countdown}</div>
-              : <span style={{fontSize:11,color:C.dim,fontWeight:700}}>VS</span>
+              : <div style={{fontSize:11,fontWeight:700,color:C.green,animation:"pulse 1s infinite"}}>🔴 Starting...</div>
             }
+          </div>
+        ) : hasScore ? (
+          <div style={{textAlign:"center",minWidth:60,flexShrink:0}}>
+            <div style={{fontWeight:900,fontSize:22,color:live?C.green:C.text,fontFamily:"monospace",lineHeight:1,animation:scoreFlash?"scoreFlash .6s ease":undefined,borderRadius:6,padding:"1px 4px",background:scoreFlash?`${C.green}30`:"transparent",transition:"background .3s"}}>{sc.hg} – {sc.ag}</div>
+          </div>
+        ) : (
+          <div style={{textAlign:"center",minWidth:60,flexShrink:0}}>
+            <span style={{fontSize:11,color:C.dim,fontWeight:700}}>VS</span>
           </div>
         )}
         <span style={{fontWeight:winner===m.away?800:700,color:finished?(winner===m.away?C.text:C.dim):favTeams?.includes(m.away)?C.gold:C.text,flex:1,fontSize:14,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.away}</span>
@@ -1210,11 +1216,12 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=n
     const s = getScore(m.home, m.away);
     if (s && statusIsLive(s.status)) return true;
     if (s && statusIsFinished(s.status)) return false;
-    // Feed has no data yet or returns NS — use kickoff window as fallback
     const iso = MATCH_UTC[m.id];
     if (!iso) return false;
     const ko = new Date(iso).getTime();
-    return Date.now() > ko && Date.now() < ko + 130 * 60 * 1000;
+    const msSince = Date.now() - ko;
+    // Within kickoff window — show as live regardless of feed (ESPN is slow to update)
+    return msSince > -60000 && msSince < 130 * 60 * 1000;
   });
 
 
@@ -1234,7 +1241,7 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=n
     const iso = MATCH_UTC[m.id];
     if (!iso) return false;
     const d = new Date(iso);
-    if (Date.now() > d.getTime()) return false;
+    if (Date.now() > d.getTime() - 60000) return false; // remove 1min before kickoff
     const dStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     if (dStr !== _todayLive) return false;
     const s = getScore(m.home, m.away);
@@ -6317,7 +6324,8 @@ export default function App() {
     const iso = MATCH_UTC[m.id];
     if (!iso) return false;
     const ko = new Date(iso).getTime();
-    return Date.now() > ko && Date.now() < ko + 130 * 60 * 1000;
+    const msSince = Date.now() - ko;
+    return msSince > -60000 && msSince < 130 * 60 * 1000;
   });
   const savedIds = new Set(saved.map(x=>x.match?.id));
   const onAction=(m)=>{
