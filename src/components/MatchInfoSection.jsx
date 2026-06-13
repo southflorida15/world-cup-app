@@ -14,132 +14,51 @@ export default function MatchInfoSection({
 }) {
   return (
     <>
-      {/* VENUE */}
+      {/* VENUE + WEATHER — single compact row */}
       <div
         onClick={() => openMaps(match.venue)}
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 10,
-          padding: "12px 14px",
+          gap: 8,
+          padding: "8px 12px",
           background: C.s1,
           border: `1px solid ${C.b1}`,
           borderRadius: 10,
-          marginBottom: 12,
+          marginBottom: 8,
           cursor: "pointer",
         }}
       >
-        <span style={{ fontSize: 20 }}>📍</span>
-
-        <div style={{ flex: 1 }}>
-          <div
-            style={{
-              fontSize: 13,
-              fontWeight: 600,
-              color: C.blue,
-              textDecoration: "underline",
-              textDecorationStyle: "dotted",
-            }}
-          >
+        <span style={{ fontSize: 16, flexShrink: 0 }}>📍</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: C.blue, textDecoration: "underline", textDecorationStyle: "dotted" }}>
             {match.venue.split(",")[0]}
-          </div>
-
-          <div
-            style={{
-              fontSize: 11,
-              color: C.dim,
-              marginTop: 2,
-            }}
-          >
-            {match.venue.split(",").slice(1).join(",").trim()} · Tap for
-            directions
-          </div>
+          </span>
+          <span style={{ fontSize: 11, color: C.dim }}>{" · "}{match.venue.split(",").slice(1).join(",").trim()}</span>
         </div>
-
-        {modalWx ? (
-          <div style={{ textAlign: "center", flexShrink: 0 }}>
-            <div style={{ fontSize: 18, lineHeight: 1 }}>
-              {modalWx.icon}
-            </div>
-
-            <div
-              style={{
-                fontSize: 11,
-                fontWeight: 700,
-                color: C.text,
-              }}
-            >
-              {modalWx.temp}°F
-              <span style={{ color: C.dim }}>
-                {" "}
-                / {modalWx.tempC}°C
-              </span>
-            </div>
-
-            <div
-              style={{
-                fontSize: 9,
-                color: C.dim,
-              }}
-            >
-              at venue
-            </div>
+        {modalWx && (
+          <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+            <span style={{ fontSize: 16 }}>{modalWx.icon}</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>{modalWx.temp}°<span style={{ color: C.dim, fontWeight: 400 }}>F</span></span>
           </div>
-        ) : null}
+        )}
       </div>
 
-      {/* TV */}
+      {/* TV — single compact row */}
       {match.tv && (
-        <div
-          style={{
-            padding: "10px 14px",
-            background: C.s1,
-            border: `1px solid ${C.b1}`,
-            borderRadius: 10,
-            marginBottom: 12,
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              marginBottom: bc.streaming ? 6 : 0,
-            }}
-          >
-            <span style={{ fontSize: 16 }}>📺</span>
-
-            <div
-              style={{
-                fontSize: 13,
-                color: C.gold,
-                fontWeight: 600,
-              }}
-            >
+        <div style={{ padding: "8px 12px", background: C.s1, border: `1px solid ${C.b1}`, borderRadius: 10, marginBottom: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ fontSize: 14, flexShrink: 0 }}>📺</span>
+            <span style={{ fontSize: 13, color: C.gold, fontWeight: 600 }}>
               {isUS ? match.tv : `${bc.note} ${bc.primary}`}
-            </div>
+            </span>
+            {bc.streaming && (
+              <>
+                <span style={{ color: C.dim, fontSize: 11 }}>·</span>
+                <span style={{ fontSize: 11, color: C.mid }}>{bc.streaming}</span>
+              </>
+            )}
           </div>
-
-          {bc.streaming && (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-              }}
-            >
-              <span style={{ fontSize: 16 }}>💻</span>
-
-              <div
-                style={{
-                  fontSize: 12,
-                  color: C.mid,
-                }}
-              >
-                {bc.streaming}
-              </div>
-            </div>
-          )}
         </div>
       )}
 

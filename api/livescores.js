@@ -176,6 +176,8 @@ function mapESPNEvent(event) {
   let short = ESPN_STATUS_MAP[statusType] || "NS";
   const clock = comp.status?.displayClock;
   const elapsed = clock && clock !== "0:00" ? parseInt(clock.split(":")[0]) : null;
+  // For extra time, preserve the "+N" portion (e.g. "90+7" → elapsed=90, elapsedExtra=7)
+  const elapsedExtra = clock && clock.includes("+") ? parseInt(clock.split("+")[1]) : null;
   // ESPN sometimes returns NS with elapsed > 0 — fix it
   if (short === "NS" && elapsed && elapsed > 0) {
     short = elapsed <= 45 ? "1H" : elapsed <= 50 ? "HT" : elapsed <= 95 ? "2H" : "ET";
@@ -187,7 +189,7 @@ function mapESPNEvent(event) {
     fixture: {
       id: event.id,
       date: comp.date || event.date,
-      status: { short, elapsed },
+      status: { short, elapsed, elapsedExtra },
       venue: { name: comp.venue?.fullName || "", city: comp.venue?.address?.city || "" },
     },
     league: { id: 1635, season: 2026 },

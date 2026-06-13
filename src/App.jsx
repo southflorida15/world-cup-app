@@ -601,12 +601,12 @@ const LiveScoresCtx = createContext({scores:{},getScore:()=>null,isLive:()=>fals
 
 const statusIsLive = (s) => ["1H","HT","2H","ET","BT","P","LIVE","inprogress","first_half","halftime","second_half","extra_time","penalties"].includes(s);
 const statusIsFinished = (s) => ["FT","AET","PEN","finished","ended","after_extra_time","after_penalties"].includes(s);
-const statusLabel = (s,e) => {
+const statusLabel = (s,e,ex) => {
   if(!s||s==="NS"||s==="notstarted") return null;
   if(s==="1H"||s==="first_half"||s==="inprogress"||s==="LIVE") return e?`${e}'`:"LIVE";
   if(s==="HT"||s==="halftime") return "HT";
   if(s==="2H"||s==="second_half") return e?`${e}'`:"LIVE";
-  if(s==="ET"||s==="extra_time") return e?`ET ${e}'`:"ET";
+  if(s==="ET"||s==="extra_time") return e?(ex?`ET ${e}+${ex}'`:`ET ${e}'`):"ET";
   if(s==="BT") return "BT";
   if(s==="P"||s==="penalties") return "Pens";
   if(s==="FT"||s==="finished"||s==="ended") return "FT";
@@ -679,9 +679,10 @@ function LiveScoresProvider({ children }) {
         const a = normTeam(f?.teams?.away?.name || "");
         const status = f?.fixture?.status?.short || "NS";
         const elapsed = f?.fixture?.status?.elapsed || null;
+        const elapsedExtra = f?.fixture?.status?.elapsedExtra || null;
         const hg = f?.goals?.home ?? null;
         const ag = f?.goals?.away ?? null;
-        if(h && a) map[`${h}|${a}`] = { hg, ag, status, elapsed };
+        if(h && a) map[`${h}|${a}`] = { hg, ag, status, elapsed, elapsedExtra };
       });
       setScores(map);
       setLastFetch(new Date());
@@ -1099,7 +1100,7 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="",
           {countdown && !live && !finished && <span style={{fontSize:11,fontWeight:700,color:C.gold,fontFamily:"monospace",animation:"pulse 1s infinite",flexShrink:0}}>⏱ {countdown}</span>}
         </div>
         <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
-          {live && <span style={{fontSize:10,fontWeight:700,color:C.green}}>🔴 {statusLabel(sc.status,sc.elapsed)}</span>}
+          {live && <span style={{fontSize:10,fontWeight:700,color:C.green}}>🔴 {statusLabel(sc.status,sc.elapsed,sc.elapsedExtra)}</span>}
           {!live && <span style={{fontSize:12,fontWeight:600,color:timeMode==="venue"?C.gold:C.text}}>{displayTime}</span>}
           {!live && <span style={{fontSize:10,color:C.dim}}>{tzLabel}</span>}
           {finished && <span style={{fontSize:10,color:C.dim,marginLeft:2}}>· {"FT"}</span>}
@@ -3720,7 +3721,7 @@ function MatchdayCard({ m, onAction, favTeam }) {
           {hasScore ? (
             <div style={{textAlign:"center",minWidth:64}}>
               <div style={{fontWeight:900,fontSize:22,color:live?C.green:C.text,fontFamily:"monospace",lineHeight:1}}>{sc.hg} – {sc.ag}</div>
-              {statusLabel(sc.status,sc.elapsed) && <div style={{fontSize:10,fontWeight:700,marginTop:2,color:live?C.green:C.dim}}>{live?"🔴 ":""}{statusLabel(sc.status,sc.elapsed)}</div>}
+              {statusLabel(sc.status,sc.elapsed,sc.elapsedExtra) && <div style={{fontSize:10,fontWeight:700,marginTop:2,color:live?C.green:C.dim}}>{live?"🔴 ":""}{statusLabel(sc.status,sc.elapsed,sc.elapsedExtra)}</div>}
             </div>
           ) : (
             <span style={{fontSize:11,color:C.dim,fontWeight:700,minWidth:40,textAlign:"center"}}>VS</span>
@@ -4496,10 +4497,13 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
                 ["Possession", matchStats.home.possession, matchStats.away.possession, true, "%"],
                 ["Shots", matchStats.home.shots, matchStats.away.shots, false, ""],
                 ["Shots on Target", matchStats.home.shotsOn, matchStats.away.shotsOn, false, ""],
+                ["Saves", matchStats.home.saves, matchStats.away.saves, false, ""],
                 ["Corners", matchStats.home.corners, matchStats.away.corners, false, ""],
                 ["Fouls", matchStats.home.fouls, matchStats.away.fouls, true, ""],
+                ["Offsides", matchStats.home.offsides, matchStats.away.offsides, true, ""],
+                ["Passes", matchStats.home.passes, matchStats.away.passes, false, ""],
                 ["Pass Accuracy", matchStats.home.passAcc, matchStats.away.passAcc, true, "%"],
-              ].filter(([,h,a]) => h!==null && a!==null).map(([label, hv, av, lowerBetter, unit]) => {
+              ].filter(([,h,a]) => h!==null && a!==null && h!==undefined && a!==undefined).map(([label, hv, av, lowerBetter, unit]) => {
                 const total = hv + av || 1;
                 const hPct = Math.round((hv/total)*100);
                 return (
