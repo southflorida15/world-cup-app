@@ -2860,16 +2860,15 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
 
           {/* FINAL */}
           <div style={{position:"relative",width:190,flexShrink:0}}>
-            {/* Round label — same structure as other columns */}
-            <div style={{textAlign:"center",marginBottom:8,background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b1}`,borderRadius:999,padding:"5px 8px"}}>
-              <div style={{fontSize:10,fontWeight:900,color:C.gold,letterSpacing:"0.08em"}}>FINAL</div>
-              <div style={{fontSize:9,color:C.dim}}>Jul 19</div>
-            </div>
             <div style={{position:"relative",height:totalHeight}}>
               {/* Left stub from sfL */}
-              <div style={{position:"absolute",top:finalTop+CH/2,left:-STUB,width:STUB,borderTop:`1.5px solid ${C.b2}`,opacity:0.6}}/>
+              <div style={{position:"absolute",top:finalTop+CH/2,left:-GAP,width:GAP,borderTop:`1.5px solid ${C.b2}`,opacity:0.6}}/>
               {/* Right stub from sfR */}
-              <div style={{position:"absolute",top:finalTop+CH/2,right:-STUB,width:STUB,borderTop:`1.5px solid ${C.b2}`,opacity:0.6}}/>
+              <div style={{position:"absolute",top:finalTop+CH/2,right:-GAP,width:GAP,borderTop:`1.5px solid ${C.b2}`,opacity:0.6}}/>
+              {/* FINAL label just above the card */}
+              <div style={{position:"absolute",top:finalTop-28,left:0,width:190,textAlign:"center"}}>
+                <div style={{fontSize:11,fontWeight:900,color:C.gold,letterSpacing:"0.12em"}}>FINAL</div>
+              </div>
               {/* Final card */}
               <div style={{position:"absolute",top:finalTop,left:0,width:190}}>
                 <BracketMatchup match={finalMatch.match} t1={finalMatch.home} t2={finalMatch.away} winner={finalMatch.winner} interactive={pickMode==="manual"} onPick={(team)=>onPick(finalMatch,team)}/>
