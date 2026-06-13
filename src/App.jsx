@@ -1148,14 +1148,14 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=n
   const liveMatches = MATCHES.filter(m => {
     const s = getScore(m.home, m.away);
     if (s && statusIsLive(s.status)) return true;
-    // Fallback: kickoff passed but not yet in feed — treat as live
     const iso = MATCH_UTC[m.id];
     if (!iso) return false;
     const ko = new Date(iso).getTime();
     if (Date.now() < ko) return false;
     if (s && statusIsFinished(s.status)) return false;
-    return Date.now() < ko + 130 * 60 * 1000; // within 130min of kickoff
+    return Date.now() < ko + 130 * 60 * 1000;
   });
+
 
   // All upcoming matches today (local timezone)
   const _nowLive = new Date();
@@ -1173,7 +1173,7 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=n
     const iso = MATCH_UTC[m.id];
     if (!iso) return false;
     const d = new Date(iso);
-    if (Date.now() > d.getTime()) return false; // kickoff already passed
+    if (Date.now() > d.getTime()) return false;
     const dStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     if (dStr !== _todayLive) return false;
     const s = getScore(m.home, m.away);
@@ -4518,38 +4518,85 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
           )}
 
           {/* ── MATCH EVENTS ── */}
-          {(live || finished) && (
-            <div style={{marginBottom:12}}>
-              <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",marginBottom:8}}>MATCH TIMELINE</div>
-              {loading && (
-                <div style={{textAlign:"center",padding:"20px 0"}}>
-                  <div style={{width:22,height:22,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto 8px"}}/>
-                  <div style={{fontSize:12,color:C.mid}}>Loading events…</div>
-                </div>
-              )}
-              {!loading && events && events.length > 0 && events.map((ev,i)=>{
-                const isHome = normTeam(ev.team?.name||"")=== match.home;
-                const icon = ev.type==="Goal"?(ev.detail==="Own Goal"?"⚽🔴":ev.detail==="Penalty"?"⚽🎯":"⚽"):ev.type==="Card"?(ev.detail==="Yellow Card"?"🟨":"🟥"):ev.type==="subst"?"🔄":"•";
-                return (
-                  <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 0",borderBottom:`1px solid ${C.b1}`}}>
-                    <div style={{flex:1,textAlign:"right"}}>
-                      {isHome && ev.type!=="subst" && <span style={{fontSize:13,color:C.text,fontWeight:ev.type==="Goal"?700:400}}>{ev.player?.name||""}</span>}
-                      {isHome && ev.type==="subst" && <div style={{fontSize:13}}><span style={{color:C.green,fontWeight:600}}>↑ {ev.player?.name||""}</span>{" "}<span style={{color:C.red,fontWeight:600}}>↓ {ev.assist?.name||""}</span></div>}
-                    </div>
-                    <div style={{display:"flex",flexDirection:"column",alignItems:"center",minWidth:52,flexShrink:0}}>
-                      <div style={{fontSize:11,fontWeight:700,color:C.gold}}>{ev.time?.elapsed}{ev.time?.extra?`+${ev.time.extra}`:""}'</div>
-                      <div style={{fontSize:16}}>{icon}</div>
-                    </div>
-                    <div style={{flex:1}}>
-                      {!isHome && ev.type!=="subst" && <span style={{fontSize:13,color:C.text,fontWeight:ev.type==="Goal"?700:400}}>{ev.player?.name||""}</span>}
-                      {!isHome && ev.type==="subst" && <div style={{fontSize:13}}><span style={{color:C.green,fontWeight:600}}>↑ {ev.player?.name||""}</span>{" "}<span style={{color:C.red,fontWeight:600}}>↓ {ev.assist?.name||""}</span></div>}
-                    </div>
+          {(live || finished) && (() => {
+            const [evOpen, setEvOpen] = React.useState(false);
+            const [evFilter, setEvFilter] = React.useState(["Goal","Card","subst"]);
+            const toggleFilter = (t) => setEvFilter(f => f.includes(t) ? f.filter(x=>x!==t) : [...f,t]);
+            const goals  = events ? events.filter(e=>e.type==="Goal").length : 0;
+            const cards  = events ? events.filter(e=>e.type==="Card").length : 0;
+            const subs   = events ? events.filter(e=>e.type==="subst").length : 0;
+            const filtered = events ? events.filter(e=>evFilter.includes(e.type)) : [];
+            const FILTERS = [
+              {type:"Goal", label:`⚽ ${goals}`},
+              {type:"Card", label:`🟨 ${cards}`},
+              {type:"subst", label:`🔄 ${subs}`},
+            ];
+            return (
+              <div style={{marginBottom:12}}>
+                {/* Header row — always visible, tap to expand */}
+                <div onClick={()=>setEvOpen(o=>!o)}
+                  style={{display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer",padding:"7px 0",borderBottom:`1px solid ${C.b1}`}}>
+                  <span style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em"}}>MATCH TIMELINE</span>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    {!evOpen && events && events.length > 0 && (
+                      <span style={{fontSize:12,color:C.mid}}>
+                        {goals>0?`⚽ ${goals}  `:""}
+                        {cards>0?`🟨 ${cards}  `:""}
+                        {subs>0?`🔄 ${subs}`:""}
+                      </span>
+                    )}
+                    <span style={{fontSize:13,color:C.dim,transition:"transform .2s",display:"inline-block",transform:evOpen?"rotate(180deg)":"rotate(0deg)"}}>▾</span>
                   </div>
-                );
-              })}
-              {!loading && events && events.length === 0 && <div style={{fontSize:12,color:C.dim,textAlign:"center",padding:"16px 0"}}>No events yet.</div>}
-            </div>
-          )}
+                </div>
+
+                {evOpen && (
+                  <>
+                    {/* Filter pills */}
+                    {events && events.length > 0 && (
+                      <div style={{display:"flex",gap:6,padding:"8px 0"}}>
+                        {FILTERS.map(f=>(
+                          <button key={f.type} onClick={()=>toggleFilter(f.type)}
+                            style={{padding:"4px 10px",borderRadius:20,border:`1px solid ${evFilter.includes(f.type)?C.green:C.b2}`,background:evFilter.includes(f.type)?`${C.green}22`:C.s2,color:evFilter.includes(f.type)?C.green:C.dim,fontSize:12,fontWeight:600,cursor:"pointer"}}>
+                            {f.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Events list */}
+                    {loading && (
+                      <div style={{textAlign:"center",padding:"20px 0"}}>
+                        <div style={{width:22,height:22,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto 8px"}}/>
+                        <div style={{fontSize:12,color:C.mid}}>Loading events…</div>
+                      </div>
+                    )}
+                    {!loading && filtered.length > 0 && filtered.map((ev,i)=>{
+                      const isHome = normTeam(ev.team?.name||"")=== match.home;
+                      const icon = ev.type==="Goal"?(ev.detail==="Own Goal"?"⚽🔴":ev.detail==="Penalty"?"⚽🎯":"⚽"):ev.type==="Card"?(ev.detail==="Yellow Card"?"🟨":"🟥"):ev.type==="subst"?"🔄":"•";
+                      return (
+                        <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 0",borderBottom:`1px solid ${C.b1}`}}>
+                          <div style={{flex:1,textAlign:"right"}}>
+                            {isHome && ev.type!=="subst" && <span style={{fontSize:13,color:C.text,fontWeight:ev.type==="Goal"?700:400}}>{ev.player?.name||""}</span>}
+                            {isHome && ev.type==="subst" && <div style={{fontSize:13}}><span style={{color:C.green,fontWeight:600}}>↑ {ev.player?.name||""}</span>{" "}<span style={{color:C.red,fontWeight:600}}>↓ {ev.assist?.name||""}</span></div>}
+                          </div>
+                          <div style={{display:"flex",flexDirection:"column",alignItems:"center",minWidth:52,flexShrink:0}}>
+                            <div style={{fontSize:11,fontWeight:700,color:C.gold}}>{ev.time?.elapsed}{ev.time?.extra?`+${ev.time.extra}`:""}'</div>
+                            <div style={{fontSize:16}}>{icon}</div>
+                          </div>
+                          <div style={{flex:1}}>
+                            {!isHome && ev.type!=="subst" && <span style={{fontSize:13,color:C.text,fontWeight:ev.type==="Goal"?700:400}}>{ev.player?.name||""}</span>}
+                            {!isHome && ev.type==="subst" && <div style={{fontSize:13}}><span style={{color:C.green,fontWeight:600}}>↑ {ev.player?.name||""}</span>{" "}<span style={{color:C.red,fontWeight:600}}>↓ {ev.assist?.name||""}</span></div>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {!loading && filtered.length === 0 && events && events.length > 0 && <div style={{fontSize:12,color:C.dim,textAlign:"center",padding:"12px 0"}}>No events match filter.</div>}
+                    {!loading && (!events || events.length === 0) && <div style={{fontSize:12,color:C.dim,textAlign:"center",padding:"16px 0"}}>No events yet.</div>}
+                  </>
+                )}
+              </div>
+            );
+          })()}
 
           {/* ── ACTIONS ── */}
           <div style={{display:"flex",gap:8,marginTop:8}}>
