@@ -4478,6 +4478,7 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
           <MatchInfoSection
   match={match}
   modalWx={modalWx}
+  modalCity={modalCity}
   bc={bc}
   isUS={isUS}
   simOdds={simOdds}

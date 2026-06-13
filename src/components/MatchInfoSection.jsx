@@ -3,6 +3,7 @@ import React from "react";
 export default function MatchInfoSection({
   match,
   modalWx,
+  modalCity,
   bc,
   isUS,
   simOdds,
@@ -12,11 +13,14 @@ export default function MatchInfoSection({
   openMaps,
   C,
 }) {
+  const openWeather = () => {
+    if (!modalCity) return;
+    window.open(`https://weather.com/weather/today/l/${modalCity.lat},${modalCity.lon}`, "_blank", "noopener,noreferrer");
+  };
   return (
     <>
       {/* VENUE + WEATHER — single compact row */}
       <div
-        onClick={() => openMaps(match.venue)}
         style={{
           display: "flex",
           alignItems: "center",
@@ -26,20 +30,22 @@ export default function MatchInfoSection({
           border: `1px solid ${C.b1}`,
           borderRadius: 10,
           marginBottom: 8,
-          cursor: "pointer",
         }}
       >
         <span style={{ fontSize: 16, flexShrink: 0 }}>📍</span>
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div onClick={() => openMaps(match.venue)} style={{ flex: 1, minWidth: 0, cursor: "pointer" }}>
           <span style={{ fontSize: 13, fontWeight: 600, color: C.blue, textDecoration: "underline", textDecorationStyle: "dotted" }}>
             {match.venue.split(",")[0]}
           </span>
           <span style={{ fontSize: 11, color: C.dim }}>{" · "}{match.venue.split(",").slice(1).join(",").trim()}</span>
         </div>
         {modalWx && (
-          <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+          <div onClick={openWeather} style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0, cursor: modalCity ? "pointer" : "default" }}>
             <span style={{ fontSize: 16 }}>{modalWx.icon}</span>
-            <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>{modalWx.temp}°<span style={{ color: C.dim, fontWeight: 400 }}>F</span></span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>
+              {modalWx.temp}°F
+              <span style={{ color: C.dim, fontWeight: 400 }}> / {modalWx.tempC}°C</span>
+            </span>
           </div>
         )}
       </div>
