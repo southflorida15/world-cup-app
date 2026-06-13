@@ -2800,17 +2800,17 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
   }, []);
 
   const left = [
-    {key:"r32L", short:"R32", label:"Round of 32", ids:[73,74,75,77,83,84,81,82], gap:8, padTop:0},
+    {key:"r32L", short:"R32", label:"Round of 32", ids:[73,75,74,77,83,84,81,82], gap:8, padTop:0},
     {key:"r16L", short:"R16", label:"Round of 16", ids:[89,90,93,94], gap:70, padTop:38},
-    {key:"qfL", short:"QF", label:"Quarterfinals", ids:[97,98], gap:224, padTop:130},
-    {key:"sfL", short:"SF", label:"Semifinal", ids:[101], gap:0, padTop:318},
+    {key:"qfL",  short:"QF",  label:"Quarterfinals", ids:[97,98], gap:224, padTop:130},
+    {key:"sfL",  short:"SF",  label:"Semifinal",     ids:[101], gap:0, padTop:318},
   ];
 
   const right = [
-    {key:"sfR", short:"SF", label:"Semifinal", ids:[102], gap:0, padTop:318},
-    {key:"qfR", short:"QF", label:"Quarterfinals", ids:[99,100], gap:224, padTop:130},
-    {key:"r16R", short:"R16", label:"Round of 16", ids:[91,92,95,96], gap:70, padTop:38},
-    {key:"r32R", short:"R32", label:"Round of 32", ids:[76,78,79,80,86,88,85,87], gap:8, padTop:0},
+    {key:"sfR",  short:"SF",  label:"Semifinal",     ids:[102], gap:0, padTop:318},
+    {key:"qfR",  short:"QF",  label:"Quarterfinals", ids:[99,100], gap:224, padTop:130},
+    {key:"r16R", short:"R16", label:"Round of 16",   ids:[91,92,95,96], gap:70, padTop:38},
+    {key:"r32R", short:"R32", label:"Round of 32",   ids:[76,78,79,80,86,88,85,87], gap:8, padTop:0},
   ];
 
   const columnWidth = 166;
