@@ -3893,7 +3893,7 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
       saveTimerRef.current[id] = setTimeout(async () => {
         if (!user) return;
         const latest = next[id];
-        if (!latest || latest.hg === "" || latest.ag === "" || latest.hg === undefined || latest.ag === undefined) return;
+        if (!latest || latest.hg === "" || latest.ag === "" || latest.hg == null || latest.ag == null) return;
         setPSaving(p => ({...p, [id]: true}));
         try {
           await apiPred("savePred", {}, { userId: fantasyUserId, matchId: id, hg: parseInt(latest.hg), ag: parseInt(latest.ag) });
@@ -4167,10 +4167,10 @@ return (
                       )}
                       {!done && (
                         <>
-                          <input value={pred.hg||""} onChange={e=>!locked&&upd(m.id,"hg",e.target.value)} disabled={locked} placeholder="?" maxLength={2}
+                          <input value={pred.hg??""} onChange={e=>!locked&&upd(m.id,"hg",e.target.value)} disabled={locked} placeholder="?" maxLength={2}
                             style={{width:34,textAlign:"center",background:locked?C.bg:C.s2,border:`1px solid ${hasPred?C.green:C.b2}`,borderRadius:8,color:locked?C.dim:C.green,fontSize:16,fontWeight:700,padding:"4px 0",outline:"none",opacity:locked?0.65:1}}/>
                           <span style={{color:C.dim,fontWeight:700}}>–</span>
-                          <input value={pred.ag||""} onChange={e=>!locked&&upd(m.id,"ag",e.target.value)} disabled={locked} placeholder="?" maxLength={2}
+                          <input value={pred.ag??""} onChange={e=>!locked&&upd(m.id,"ag",e.target.value)} disabled={locked} placeholder="?" maxLength={2}
                             style={{width:34,textAlign:"center",background:locked?C.bg:C.s2,border:`1px solid ${hasPred?C.green:C.b2}`,borderRadius:8,color:locked?C.dim:C.green,fontSize:16,fontWeight:700,padding:"4px 0",outline:"none",opacity:locked?0.65:1}}/>
                         </>
                       )}
