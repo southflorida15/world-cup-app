@@ -2698,6 +2698,7 @@ function DragList({ items, onReorder, renderItem }) {
 const defaultBracketGroups=()=>Object.fromEntries(Object.entries(GROUPS).map(([g,{teams}])=>[g,[...teams]]));
 function BracketMatchup({ match, t1, t2, winner, onPick, interactive=false, compact=false }) {
   const canPick = interactive && t1 && t2 && t1 !== "TBD" && t2 !== "TBD";
+  const matchData = match ? MATCHES.find(m => m.id === match) : null;
   const teamRow = (team, i) => {
     const isW = winner && team === winner;
     const disabled = !canPick || !team || team === "TBD";
@@ -2717,9 +2718,16 @@ function BracketMatchup({ match, t1, t2, winner, onPick, interactive=false, comp
   };
   return (
     <div style={{position:"relative",background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${winner?C.greenS:C.b1}`,borderRadius:12,overflow:"hidden",width:"100%",boxShadow:winner?DS.shadow.panel:DS.shadow.card}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 10px",borderBottom:`1px solid ${C.b1}`,background:`${C.gold}10`}}>
-        <span style={{fontSize:10,color:C.gold,fontWeight:900,letterSpacing:"0.08em"}}>M{match || "—"}</span>
-        {interactive && <span style={{fontSize:9,color:canPick?C.green:C.dim,fontWeight:800}}>{canPick?"TAP PICK":"LOCKED"}</span>}
+      <div style={{padding:"5px 10px",borderBottom:`1px solid ${C.b1}`,background:`${C.bg}88`}}>
+        {matchData ? (
+          <>
+            <div style={{fontSize:10,fontWeight:700,color:C.gold,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{matchData.date} · {matchData.time}</div>
+            <div style={{fontSize:9,color:C.dim,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>📍 {matchData.venue.split(",")[0]}</div>
+          </>
+        ) : (
+          <div style={{fontSize:10,color:C.gold,fontWeight:900,letterSpacing:"0.08em"}}>M{match || "—"}</div>
+        )}
+        {interactive && <span style={{position:"absolute",top:5,right:8,fontSize:9,color:canPick?C.green:C.dim,fontWeight:800}}>{canPick?"TAP PICK":"LOCKED"}</span>}
       </div>
       {teamRow(t1,0)}
       {teamRow(t2,1)}
@@ -2817,8 +2825,35 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
     opacity:m.home&&m.away?1:0.35
   });
 
+  // Renders an SVG L-connector between a pair of matches and the next round
+  // pairIndex: 0-based index of the pair (0 = first two matches, 1 = next two, etc.)
+  // cardHeight: estimated height of a BracketMatchup card
+  // gapBetween: gap between cards in this round
+  const BracketConnector = ({ side, pairIndex, cardHeight=96, gap, color=C.b2 }) => {
+    const totalPairH = cardHeight * 2 + gap;
+    const midY = totalPairH / 2;
+    const w = 26;
+    return (
+      <svg
+        width={w} height={totalPairH}
+        style={{position:"absolute", [side === "left" ? "right" : "left"]:-w, top:0, overflow:"visible", pointerEvents:"none"}}
+        viewBox={`0 0 ${w} ${totalPairH}`}
+      >
+        {/* Line from top card mid to center */}
+        <line x1={side==="left"?0:w} y1={cardHeight/2} x2={side==="left"?w:0} y2={cardHeight/2} stroke={color} strokeWidth="1.5"/>
+        {/* Vertical line connecting top and bottom */}
+        <line x1={side==="left"?w:0} y1={cardHeight/2} x2={side==="left"?w:0} y2={totalPairH - cardHeight/2} stroke={color} strokeWidth="1.5"/>
+        {/* Line from center to bottom card mid */}
+        <line x1={side==="left"?0:w} y1={totalPairH - cardHeight/2} x2={side==="left"?w:0} y2={totalPairH - cardHeight/2} stroke={color} strokeWidth="1.5"/>
+        {/* Line from center out to next column */}
+        <line x1={side==="left"?w:0} y1={midY} x2={side==="left"?w+16:0-16} y2={midY} stroke={color} strokeWidth="1.5"/>
+      </svg>
+    );
+  };
+
   const renderColumn = (round, side="left") => {
     const ids = round.ids || [];
+    const cardH = 96; // approximate card height with date/time header
 
     return (
       <div key={round.key} style={{width:columnWidth,flex:`0 0 ${columnWidth}px`,paddingTop:round.padTop}}>
@@ -2828,16 +2863,19 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
         </div>
 
         <div style={{display:"flex",flexDirection:"column",gap:round.gap}}>
-          {ids.map((id) => {
+          {ids.map((id, idx) => {
             const m = matchesById[id] || {match:id,home:null,away:null,winner:null};
             const locked = !(m.home && m.away);
+            const isPaired = round.ids.length > 1;
+            const isEven = idx % 2 === 0;
+            const isLastRound = round.key === "sfL" || round.key === "sfR";
 
             return (
               <div key={id} style={{position:"relative",opacity:locked?0.58:1}}>
-                {side === "left" && round.key !== "sfL" && <div style={connector("right", m)}/>}
-                {side === "left" && round.key !== "r32L" && <div style={connector("left", m)}/>}
-                {side === "right" && round.key !== "sfR" && <div style={connector("left", m)}/>}
-                {side === "right" && round.key !== "r32R" && <div style={connector("right", m)}/>}
+                {/* Incoming connector from previous round (horizontal stub) */}
+                {((side==="left"&&round.key!=="r32L")||(side==="right"&&round.key!=="r32R")) && (
+                  <div style={{position:"absolute",[side==="left"?"left":"right"]:-16,top:"50%",width:16,borderTop:`1.5px solid ${m.winner?C.greenS:C.b2}`,opacity:m.home&&m.away?1:0.35}}/>
+                )}
 
                 <BracketMatchup
                   match={m.match}
@@ -2847,6 +2885,17 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
                   interactive={pickMode==="manual"}
                   onPick={(team)=>onPick(m,team)}
                 />
+
+                {/* Outgoing L-connector for even-indexed cards (top of each pair) */}
+                {isPaired && isEven && !isLastRound && (
+                  <BracketConnector
+                    side={side}
+                    pairIndex={Math.floor(idx/2)}
+                    cardHeight={cardH}
+                    gap={round.gap}
+                    color={m.winner?C.greenS:C.b2}
+                  />
+                )}
               </div>
             );
           })}
