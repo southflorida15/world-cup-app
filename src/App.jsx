@@ -4518,7 +4518,7 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
   };
 
   return (
-    <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",zIndex:1000,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
+    <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center"}}>
       <div onClick={e=>e.stopPropagation()} style={{background:C.bg,border:`1px solid ${C.b2}`,borderRadius:"18px 18px 0 0",width:"100%",maxWidth:620,maxHeight:"92vh",overflowY:"auto",paddingBottom:20,position:"relative"}}>
 
 
@@ -4565,23 +4565,22 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
 
           {/* ── SECTION PILLS ── */}
           {(live || finished || lineups) && (() => {
-            const hasLineups = lineups && (lineups.home || lineups.away);
-            const hasStats = matchStats && (live || finished);
+            const hasLineups = !!(lineups && (lineups.home || lineups.away));
+            const hasStats   = !!(matchStats && (live || finished));
             const hasTimeline = live || finished;
-            if (!hasLineups && !hasStats && !hasTimeline) return null;
+            const goals = events ? events.filter(e=>e.type==="Goal").length : 0;
+            const cards = events ? events.filter(e=>e.type==="Card").length : 0;
+            const timelineLabel = evOpen ? "Timeline" : `Timeline${events?.length ? ` · ${goals}⚽ ${cards}🟨` : ""}`;
             const pill = (label, active, onClick, disabled) => (
-              <button onClick={onClick} disabled={disabled} style={{padding:"6px 14px",borderRadius:999,border:`1.5px solid ${active?C.green:C.b2}`,background:active?`${C.green}18`:C.s2,color:active?C.green:disabled?C.dim:C.mid,fontSize:12,fontWeight:700,cursor:disabled?"default":"pointer",opacity:disabled?0.4:1,transition:"all .15s"}}>
+              <button onClick={disabled ? undefined : onClick} style={{padding:"6px 14px",borderRadius:999,border:`1.5px solid ${active?C.green:disabled?C.b1:C.b2}`,background:active?`${C.green}18`:C.s2,color:active?C.green:disabled?C.dim:C.mid,fontSize:12,fontWeight:700,cursor:disabled?"default":"pointer",opacity:disabled?0.4:1,transition:"all .15s"}}>
                 {label}
               </button>
             );
             return (
               <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
-                {hasLineups  && pill("Lineups",      lineupsOpen, ()=>setLineupsOpen(o=>!o), false)}
-                {hasTimeline && pill(
-                  evOpen ? "Timeline" : `Timeline${events && events.length > 0 ? ` · ${events.filter(e=>e.type==="Goal").length}⚽ ${events.filter(e=>e.type==="Card").length}🟨` : ""}`,
-                  evOpen, ()=>setEvOpen(o=>!o), false
-                )}
-                {hasStats    && pill("Match Stats",  statsOpen,   ()=>setStatsOpen(o=>!o),  false)}
+                {pill("Lineups",    lineupsOpen, ()=>setLineupsOpen(o=>!o), !hasLineups)}
+                {pill(timelineLabel, evOpen,     ()=>setEvOpen(o=>!o),      !hasTimeline)}
+                {pill("Match Stats", statsOpen,  ()=>setStatsOpen(o=>!o),   !hasStats)}
               </div>
             );
           })()}
