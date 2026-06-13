@@ -615,6 +615,35 @@ const statusLabel = (s,e) => {
   return s;
 };
 
+// ── COUNTDOWN HOOK ────────────────────────────────────────────────────────
+// Returns a formatted countdown string (e.g. "18:42") if within 30 min of
+// kickoff, otherwise null. Updates every second.
+function useCountdown(matchId) {
+  const iso = MATCH_UTC[matchId];
+  const [label, setLabel] = useState(() => {
+    if (!iso) return null;
+    const diff = new Date(iso).getTime() - Date.now();
+    if (diff <= 0 || diff > 30 * 60 * 1000) return null;
+    const m = Math.floor(diff / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    return `${m}:${String(s).padStart(2,"0")}`;
+  });
+  useEffect(() => {
+    if (!iso) return;
+    const tick = () => {
+      const diff = new Date(iso).getTime() - Date.now();
+      if (diff <= 0 || diff > 30 * 60 * 1000) { setLabel(null); return; }
+      const m = Math.floor(diff / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      setLabel(`${m}:${String(s).padStart(2,"0")}`);
+    };
+    tick();
+    const t = setInterval(tick, 1000);
+    return () => clearInterval(t);
+  }, [iso]);
+  return label;
+}
+
 const API_NAME_MAP = {
   "USA":"United States","United States of America":"United States",
   "Turkey":"Turkiye","Türkiye":"Turkiye",
@@ -1054,7 +1083,7 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="",
   const tzLabel = timeMode === "venue" ? venueTzShort : userTzShort;
   const bc = getBroadcast(country);
   const isUS = country === "US" || !BROADCAST[country];
-
+  const countdown = useCountdown(m.id);
 
   return (
     <div style={{marginBottom:8,background:C.s1,border:`1px solid ${live?C.green:isFav?`${C.gold}55`:C.b1}`,borderRadius:12,overflow:"hidden",opacity:finished?0.45:1}}>
@@ -1072,8 +1101,9 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="",
         </div>
         <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
           {live && <span style={{fontSize:10,fontWeight:700,color:C.green}}>🔴 {statusLabel(sc.status,sc.elapsed)}</span>}
-          {!live && <span style={{fontSize:12,fontWeight:600,color:timeMode==="venue"?C.gold:C.text}}>{displayTime}</span>}
-          {!live && <span style={{fontSize:10,color:C.dim}}>{tzLabel}</span>}
+          {!live && countdown && <span style={{fontSize:12,fontWeight:700,color:C.gold,fontFamily:"monospace",animation:"pulse 1s infinite"}}>⏱ {countdown}</span>}
+          {!live && !countdown && <span style={{fontSize:12,fontWeight:600,color:timeMode==="venue"?C.gold:C.text}}>{displayTime}</span>}
+          {!live && !countdown && <span style={{fontSize:10,color:C.dim}}>{tzLabel}</span>}
           {finished && <span style={{fontSize:10,color:C.dim,marginLeft:2}}>· {"FT"}</span>}
         </div>
       </div>
