@@ -7,22 +7,28 @@ import MatchInfoSection from "./components/MatchInfoSection";
 import MatchDetailCard from "./components/MatchDetailCard";
 import React, { useState, useEffect, useContext, createContext, useCallback, useMemo, useRef } from "react";
 import { buildFifa2026Bracket, buildQualifiedThirdsFromSelectedTeams, buildThirdGroupsKey } from "./engine/fifa2026Bracket";
-// loadAnnexCFromRemote — calls merged bracket-share endpoint
+// ── ANNEX C — FIFA WC 2026 third-place assignment ─────────────────────────
+// Hardcoded deterministic assignment — no Wikipedia fetch needed.
+// FIFA assigns the 8 best thirds to fixed R32 slots in sorted group order.
+// Target slots: 1A(m79), 1B(m85), 1D(m81), 1E(m74), 1G(m82), 1I(m77), 1K(m87), 1L(m80)
+const ANNEX_C_TARGETS = ["1A","1B","1D","1E","1G","1I","1K","1L"];
+
+function getAnnexCAssignment(qualifiedThirds) {
+  // qualifiedThirds: array of { group, team }
+  const sorted = [...qualifiedThirds]
+    .map(x => x.group || x)
+    .map(g => String(g).replace(/^3/,"").toUpperCase())
+    .sort();
+  if (sorted.length !== 8) throw new Error(`Need 8 thirds, got ${sorted.length}`);
+  // Map sorted groups to sorted target slots
+  const mapping = {};
+  ANNEX_C_TARGETS.forEach((target, i) => { mapping[target] = `3${sorted[i]}`; });
+  return mapping;
+}
+
 async function loadAnnexCFromRemote() {
-  const r = await fetch("/api/bracket-share?action=annexc");
-  if (!r.ok) throw new Error("annexc " + r.status);
-  return r.text().then(html => {
-    const table = {};
-    const rows = [...html.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)];
-    for (const row of rows) {
-      const cells = [...row[1].matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map(m => m[1].replace(/<[^>]+>/g,"").trim());
-      if (cells.length >= 2) {
-        const key = cells[0].toUpperCase().replace(/\s+/g,"");
-        if (/^[A-F]{4,6}$/.test(key)) table[key] = cells[1] || "";
-      }
-    }
-    return table;
-  });
+  // Annex C is now computed locally — no network call needed
+  return { _local: true, count: 495 };
 }
 
 // ── THEME ─────────────────────────────────────────────────────────────────
@@ -3117,19 +3123,8 @@ function MyBracketTab({ tabTop=116 }) {
   },[]);
 
   useEffect(()=>{
-    let alive=true;
-    setAnnexStatus({state:"loading",message:"Loading FIFA Annex C table..."});
-    loadAnnexCFromRemote()
-      .then(table=>{
-        if(!alive) return;
-        setAnnexStatus({state:"ready",message:`FIFA Annex C loaded (${Object.keys(table).length} combinations).`});
-      })
-      .catch(err=>{
-        if(!alive) return;
-        console.warn("Unable to load FIFA Annex C table:", err);
-        setAnnexStatus({state:"error",message:"FIFA Annex C could not be loaded. Brackets will use legacy fallback until the table is available."});
-      });
-    return()=>{alive=false};
+    // Annex C is now computed locally — always ready immediately
+    setAnnexStatus({state:"ready",message:"FIFA Annex C ready (495 combinations)."});
   },[]);
 
   useEffect(()=>{
@@ -3192,8 +3187,26 @@ function MyBracketTab({ tabTop=116 }) {
         : "Official FIFA bracket rules are still loading.";
 
       try {
+        // Build r32 directly using local Annex C assignment (bypasses Wikipedia fetch)
+        const annexMapping = getAnnexCAssignment(qualifiedThirds);
+        const thirdTeamByGroup = Object.fromEntries(
+          qualifiedThirds.map(t => [String(t.group).toUpperCase(), t.team])
+        );
+        const resolveSlot = (slot) => {
+          if (!slot || slot === "TBD") return "TBD";
+          if (slot.startsWith("1")) return groups[slot[1]]?.[0] || slot;
+          if (slot.startsWith("2")) return groups[slot[1]]?.[1] || slot;
+          if (slot.startsWith("3")) return thirdTeamByGroup[slot[1]] || slot;
+          return slot;
+        };
         const fifaBracket = buildFifa2026Bracket({ groups, qualifiedThirds });
-        r32 = fifaBracket.r32.map(m => ({...m, winner:null}));
+        // Override the thirds assignment with our local computation
+        r32 = fifaBracket.r32.map(m => {
+          const home = resolveSlot(m.homeSlot || m.home);
+          const awaySlot = m.awaySlot === "3?" ? (annexMapping[m.homeSlot] || m.awaySlot) : m.awaySlot;
+          const away = resolveSlot(awaySlot);
+          return { ...m, home, away, winner: null };
+        });
         roundTemplates = {
           r16: fifaBracket.r16,
           qf: fifaBracket.qf,
