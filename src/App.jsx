@@ -4282,6 +4282,8 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
   const [events, setEvents] = useState(null);
   const [matchStats, setMatchStats] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [evOpen, setEvOpen] = useState(false);
+  const [evFilter, setEvFilter] = useState(["Goal","Card","subst"]);
   const { getScore } = useContext(LiveScoresCtx);
   const { favTeams=[] } = useContext(FavCtx);
   const country = useContext(CountryCtx);
@@ -4296,7 +4298,7 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
 
   useEffect(() => {
     if (!open || !match) return;
-    setEvents(null); setLoading(true);
+    setEvents(null); setLoading(true); setEvOpen(false); setEvFilter(["Goal","Card","subst"]);
     fetchMatchEvents(`${match.home}|${match.away}`)
       .then(d => {
         setEvents(d?.events || []);
@@ -4519,8 +4521,6 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
 
           {/* ── MATCH EVENTS ── */}
           {(live || finished) && (() => {
-            const [evOpen, setEvOpen] = React.useState(false);
-            const [evFilter, setEvFilter] = React.useState(["Goal","Card","subst"]);
             const toggleFilter = (t) => setEvFilter(f => f.includes(t) ? f.filter(x=>x!==t) : [...f,t]);
             const goals  = events ? events.filter(e=>e.type==="Goal").length : 0;
             const cards  = events ? events.filter(e=>e.type==="Card").length : 0;
@@ -4533,25 +4533,20 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
             ];
             return (
               <div style={{marginBottom:12}}>
-                {/* Header row — always visible, tap to expand */}
                 <div onClick={()=>setEvOpen(o=>!o)}
                   style={{display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer",padding:"7px 0",borderBottom:`1px solid ${C.b1}`}}>
                   <span style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em"}}>MATCH TIMELINE</span>
                   <div style={{display:"flex",alignItems:"center",gap:8}}>
                     {!evOpen && events && events.length > 0 && (
                       <span style={{fontSize:12,color:C.mid}}>
-                        {goals>0?`⚽ ${goals}  `:""}
-                        {cards>0?`🟨 ${cards}  `:""}
-                        {subs>0?`🔄 ${subs}`:""}
+                        {goals>0?`⚽ ${goals}  `:""}{cards>0?`🟨 ${cards}  `:""}{subs>0?`🔄 ${subs}`:""}
                       </span>
                     )}
-                    <span style={{fontSize:13,color:C.dim,transition:"transform .2s",display:"inline-block",transform:evOpen?"rotate(180deg)":"rotate(0deg)"}}>▾</span>
+                    <span style={{fontSize:13,color:C.dim,display:"inline-block",transform:evOpen?"rotate(180deg)":"rotate(0deg)",transition:"transform .2s"}}>▾</span>
                   </div>
                 </div>
-
                 {evOpen && (
                   <>
-                    {/* Filter pills */}
                     {events && events.length > 0 && (
                       <div style={{display:"flex",gap:6,padding:"8px 0"}}>
                         {FILTERS.map(f=>(
@@ -4562,8 +4557,6 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
                         ))}
                       </div>
                     )}
-
-                    {/* Events list */}
                     {loading && (
                       <div style={{textAlign:"center",padding:"20px 0"}}>
                         <div style={{width:22,height:22,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto 8px"}}/>
