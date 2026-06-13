@@ -4526,22 +4526,14 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
             const cards  = events ? events.filter(e=>e.type==="Card").length : 0;
             const subs   = events ? events.filter(e=>e.type==="subst").length : 0;
             const filtered = events ? events.filter(e=>evFilter.includes(e.type)) : [];
-            const FILTERS = [
-              {type:"Goal", label:`⚽ ${goals}`},
-              {type:"Card", label:`🟨 ${cards}`},
-              {type:"subst", label:`🔄 ${subs}`},
-            ];
+            const FILTERS = [{type:"Goal",label:`⚽ ${goals}`},{type:"Card",label:`🟨 ${cards}`},{type:"subst",label:`🔄 ${subs}`}];
             return (
               <div style={{marginBottom:12}}>
-                <div onClick={()=>setEvOpen(o=>!o)}
-                  style={{display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer",padding:"7px 0",borderBottom:`1px solid ${C.b1}`}}>
+                <div onClick={()=>setEvOpen(o=>!o)} style={{display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer",padding:"7px 0",borderBottom:`1px solid ${C.b1}`}}>
                   <span style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em"}}>MATCH TIMELINE</span>
                   <div style={{display:"flex",alignItems:"center",gap:8}}>
-                    {!evOpen && events && events.length > 0 && (
-                      <span style={{fontSize:12,color:C.mid}}>
-                        {goals>0?`⚽ ${goals}  `:""}{cards>0?`🟨 ${cards}  `:""}{subs>0?`🔄 ${subs}`:""}
-                      </span>
-                    )}
+                    {!evOpen && events && events.length > 0 && <span style={{fontSize:12,color:C.mid}}>{goals>0?`⚽ ${goals}  `:""}{cards>0?`🟨 ${cards}  `:""}{subs>0?`🔄 ${subs}`:""}</span>}
+                    {!evOpen && <span style={{fontSize:10,color:C.dim,fontStyle:"italic"}}>tap to expand</span>}
                     <span style={{fontSize:13,color:C.dim,display:"inline-block",transform:evOpen?"rotate(180deg)":"rotate(0deg)",transition:"transform .2s"}}>▾</span>
                   </div>
                 </div>
@@ -4550,19 +4542,11 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
                     {events && events.length > 0 && (
                       <div style={{display:"flex",gap:6,padding:"8px 0"}}>
                         {FILTERS.map(f=>(
-                          <button key={f.type} onClick={()=>toggleFilter(f.type)}
-                            style={{padding:"4px 10px",borderRadius:20,border:`1px solid ${evFilter.includes(f.type)?C.green:C.b2}`,background:evFilter.includes(f.type)?`${C.green}22`:C.s2,color:evFilter.includes(f.type)?C.green:C.dim,fontSize:12,fontWeight:600,cursor:"pointer"}}>
-                            {f.label}
-                          </button>
+                          <button key={f.type} onClick={()=>toggleFilter(f.type)} style={{padding:"4px 10px",borderRadius:20,border:`1px solid ${evFilter.includes(f.type)?C.green:C.b2}`,background:evFilter.includes(f.type)?`${C.green}22`:C.s2,color:evFilter.includes(f.type)?C.green:C.dim,fontSize:12,fontWeight:600,cursor:"pointer"}}>{f.label}</button>
                         ))}
                       </div>
                     )}
-                    {loading && (
-                      <div style={{textAlign:"center",padding:"20px 0"}}>
-                        <div style={{width:22,height:22,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto 8px"}}/>
-                        <div style={{fontSize:12,color:C.mid}}>Loading events…</div>
-                      </div>
-                    )}
+                    {loading && <div style={{textAlign:"center",padding:"20px 0"}}><div style={{width:22,height:22,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto 8px"}}/><div style={{fontSize:12,color:C.mid}}>Loading events…</div></div>}
                     {!loading && filtered.length > 0 && filtered.map((ev,i)=>{
                       const isHome = normTeam(ev.team?.name||"")=== match.home;
                       const icon = ev.type==="Goal"?(ev.detail==="Own Goal"?"⚽🔴":ev.detail==="Penalty"?"⚽🎯":"⚽"):ev.type==="Card"?(ev.detail==="Yellow Card"?"🟨":"🟥"):ev.type==="subst"?"🔄":"•";
@@ -4583,8 +4567,8 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
                         </div>
                       );
                     })}
-                    {!loading && filtered.length === 0 && events && events.length > 0 && <div style={{fontSize:12,color:C.dim,textAlign:"center",padding:"12px 0"}}>No events match filter.</div>}
-                    {!loading && (!events || events.length === 0) && <div style={{fontSize:12,color:C.dim,textAlign:"center",padding:"16px 0"}}>No events yet.</div>}
+                    {!loading && filtered.length===0 && events && events.length>0 && <div style={{fontSize:12,color:C.dim,textAlign:"center",padding:"12px 0"}}>No events match filter.</div>}
+                    {!loading && (!events||events.length===0) && <div style={{fontSize:12,color:C.dim,textAlign:"center",padding:"16px 0"}}>No events yet.</div>}
                   </>
                 )}
               </div>
@@ -5247,6 +5231,7 @@ function PullToRefresh({ onRefresh, children }) {
   const [pullY, setPullY] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const startY = useRef(0);
+  const startX = useRef(0);
   const pullingRef = useRef(false);
   const pullYRef = useRef(0);
   const refreshingRef = useRef(false);
@@ -5257,6 +5242,7 @@ function PullToRefresh({ onRefresh, children }) {
       const scroller = document.getElementById("scroll-area");
       if (scroller && scroller.scrollTop > 0) return;
       startY.current = e.touches[0].clientY;
+      startX.current = e.touches[0].clientX;
     };
 
     const onTouchMove = (e) => {
@@ -5264,8 +5250,10 @@ function PullToRefresh({ onRefresh, children }) {
       if (scroller && scroller.scrollTop > 0) return;
 
       const dy = e.touches[0].clientY - startY.current;
-      if (dy > 8) {
-        // Prevent iOS native bounce — only prevent when pulling down from top
+      const dx = Math.abs(e.touches[0].clientX - startX.current);
+
+      // Only intercept if clearly pulling DOWN and not swiping horizontally
+      if (dy > 8 && dx < 10) {
         e.preventDefault();
         const clamped = Math.min(dy * 0.45, THRESHOLD + 20);
         pullingRef.current = true;
