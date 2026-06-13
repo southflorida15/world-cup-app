@@ -46,7 +46,21 @@ const kvKey = (home, away) => `wc2026:events:${home}|${away}`;
 async function loadFromKV(home, away) {
   try {
     const data = await kv.get(kvKey(home, away));
-    return data || null;
+    if (!data) return null;
+
+    // Validate the stored data belongs to this match by checking event teams
+    // ESPN sometimes returns wrong match data for an ID — catch it here
+    if (data.teams && data.teams.home && data.teams.away) {
+      const storedHome = normESPN(data.teams.home);
+      const storedAway = normESPN(data.teams.away);
+      if (storedHome !== home || storedAway !== away) {
+        console.warn(`[matchevents] KV mismatch for ${home}|${away}: found ${storedHome}|${storedAway} — auto-flushing`);
+        await kv.del(kvKey(home, away));
+        return null;
+      }
+    }
+
+    return data;
   } catch(e) {
     console.warn("[matchevents] KV load:", e.message);
     return null;
@@ -55,7 +69,8 @@ async function loadFromKV(home, away) {
 
 async function saveToKV(home, away, events, stats, lineups=null) {
   try {
-    await kv.set(kvKey(home, away), { events, stats, lineups, savedAt: Date.now() });
+    // Store team names alongside data so we can validate on future reads
+    await kv.set(kvKey(home, away), { events, stats, lineups, teams: { home, away }, savedAt: Date.now() });
     console.log(`[matchevents] Persisted ${events.length} events for ${home} vs ${away}`);
   } catch(e) {
     console.warn("[matchevents] KV save:", e.message);
@@ -65,29 +80,13 @@ async function saveToKV(home, away, events, stats, lineups=null) {
 // ── ESPN event ID lookup ───────────────────────────────────────────────────
 const ESPN_ID_MAP_KEY = "wc2026:espn_ids";
 
-// Hardcoded ESPN IDs for all group stage matches — never ages out
-const HARDCODED_ESPN_IDS = {
-  "Mexico|South Africa":"760415","South Korea|Czechia":"760414",
-  "Canada|Bosnia & Herz.":"760416","United States|Paraguay":"760417",
-  "Haiti|Scotland":"760418","Qatar|Switzerland":"760420",
-  "Brazil|Morocco":"760419","Australia|Turkiye":"760421",
-  "Germany|Curacao":"760422","Netherlands|Japan":"760423",
-  "Ivory Coast|Ecuador":"760424","Sweden|Tunisia":"760425",
-  "Spain|Cape Verde":"760426","Belgium|Egypt":"760427",
-  "Saudi Arabia|Uruguay":"760428","Iran|New Zealand":"760429",
-  "France|Senegal":"760430","Iraq|Norway":"760431",
-  "Argentina|Algeria":"760432","Austria|Jordan":"760433",
-  "Portugal|DR Congo":"760434","England|Croatia":"760435",
-  "Ghana|Panama":"760436","Uzbekistan|Colombia":"760437",
-};
+// No hardcoded IDs — ESPN assigns them dynamically and they often don't match
+// our expected order. Always discover from livescores feed (ground truth).
 
 async function getESPNEventId(home, away) {
   const key = `${home}|${away}`;
 
-  // 1. Hardcoded map (fastest, always works for known matches)
-  if (HARDCODED_ESPN_IDS[key]) return HARDCODED_ESPN_IDS[key];
-
-  // 2. Try livescores cache (works for recent/live matches)
+  // 1. Try livescores KV first — this has ground-truth IDs from ESPN's feed
   try {
     const cached = await kv.get("wc2026:livescores");
     if (cached) {
@@ -98,15 +97,15 @@ async function getESPNEventId(home, away) {
         return h === home && a === away;
       });
       if (match?.fixture?.id) {
-        saveESPNId(home, away, match.fixture.id);
-        return match.fixture.id;
+        await saveESPNId(home, away, String(match.fixture.id));
+        return String(match.fixture.id);
       }
     }
   } catch(e) {
     console.warn("[matchevents] livescores KV lookup:", e.message);
   }
 
-  // 3. Fall back to persisted ID map
+  // 2. Fall back to persisted ID map (populated by previous successful lookups)
   try {
     const idMap = await kv.get(ESPN_ID_MAP_KEY) || {};
     if (idMap[key]) return idMap[key];
@@ -480,7 +479,19 @@ export default async function handler(req, res) {
 
     const data = await r.json();
 
-    if (debug === "1") {
+    // Validate ESPN returned the right match — if teams don't match, clear the bad ID
+    const espnTeams = data.boxscore?.teams?.map(t => normESPN(t.team?.displayName || "")) || [];
+    if (espnTeams.length === 2 && !espnTeams.includes(home) && !espnTeams.includes(away)) {
+      console.warn(`[matchevents] ESPN event ${eventId} returned wrong match (${espnTeams.join(" vs ")}) for ${home} vs ${away} — clearing ID`);
+      // Remove bad ID from persisted map so next request re-discovers
+      try {
+        const idMap = await kv.get(ESPN_ID_MAP_KEY) || {};
+        delete idMap[`${home}|${away}`];
+        await kv.set(ESPN_ID_MAP_KEY, idMap);
+      } catch {}
+      delete memCache[cacheKey];
+      return res.status(200).json({ events: [], stats: null, lineups: null, _debug: "wrong_match_auto_cleared" });
+    }
       return res.status(200).json({
         _debug: true,
         eventId,

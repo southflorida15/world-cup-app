@@ -4352,6 +4352,7 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
   const [loading, setLoading] = useState(false);
   const [evOpen, setEvOpen] = useState(false);
   const [lineupsOpen, setLineupsOpen] = useState(false);
+  const [statsOpen, setStatsOpen] = useState(false);
   const [evFilter, setEvFilter] = useState(["Goal","Card","subst"]);
   const { getScore } = useContext(LiveScoresCtx);
   const { favTeams=[] } = useContext(FavCtx);
@@ -4367,7 +4368,7 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
 
   useEffect(() => {
     if (!open || !match) return;
-    setEvents(null); setLoading(true); setEvOpen(false); setEvFilter(["Goal","Card","subst"]); setLineups(null); setLineupsOpen(false);
+    setEvents(null); setLoading(true); setEvOpen(false); setEvFilter(["Goal","Card","subst"]); setLineups(null); setLineupsOpen(false); setStatsOpen(false);
     fetchMatchEvents(`${match.home}|${match.away}`)
       .then(d => {
         setEvents(d?.events || []);
@@ -4562,19 +4563,33 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
   C={C}
 />
 
-          {/* ── LINEUPS ── */}
-          {lineups && (lineups.home || lineups.away) && (
-            <div style={{marginBottom:12}}>
-              <div onClick={()=>setLineupsOpen(o=>!o)} style={{display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer",padding:"7px 0",borderBottom:`1px solid ${C.b1}`}}>
-                <span style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em"}}>LINEUPS</span>
-                <div style={{display:"flex",alignItems:"center",gap:8}}>
-                  {!lineupsOpen && lineups.home?.formation && <span style={{fontSize:11,color:C.mid}}>{lineups.home.formation} · {lineups.away?.formation}</span>}
-                  {!lineupsOpen && <span style={{fontSize:10,color:C.dim,fontStyle:"italic"}}>tap to expand</span>}
-                  <span style={{fontSize:13,color:C.dim,display:"inline-block",transform:lineupsOpen?"rotate(180deg)":"rotate(0deg)",transition:"transform .2s"}}>▾</span>
-                </div>
+          {/* ── SECTION PILLS ── */}
+          {(live || finished || lineups) && (() => {
+            const hasLineups = lineups && (lineups.home || lineups.away);
+            const hasStats = matchStats && (live || finished);
+            const hasTimeline = live || finished;
+            if (!hasLineups && !hasStats && !hasTimeline) return null;
+            const pill = (label, active, onClick, disabled) => (
+              <button onClick={onClick} disabled={disabled} style={{padding:"6px 14px",borderRadius:999,border:`1.5px solid ${active?C.green:C.b2}`,background:active?`${C.green}18`:C.s2,color:active?C.green:disabled?C.dim:C.mid,fontSize:12,fontWeight:700,cursor:disabled?"default":"pointer",opacity:disabled?0.4:1,transition:"all .15s"}}>
+                {label}
+              </button>
+            );
+            return (
+              <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
+                {hasLineups  && pill("Lineups",      lineupsOpen, ()=>setLineupsOpen(o=>!o), false)}
+                {hasTimeline && pill(
+                  evOpen ? "Timeline" : `Timeline${events && events.length > 0 ? ` · ${events.filter(e=>e.type==="Goal").length}⚽ ${events.filter(e=>e.type==="Card").length}🟨` : ""}`,
+                  evOpen, ()=>setEvOpen(o=>!o), false
+                )}
+                {hasStats    && pill("Match Stats",  statsOpen,   ()=>setStatsOpen(o=>!o),  false)}
               </div>
-              {lineupsOpen && (
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,paddingTop:8}}>
+            );
+          })()}
+
+          {/* ── LINEUPS ── */}
+          {lineups && (lineups.home || lineups.away) && lineupsOpen && (
+            <div style={{marginBottom:12}}>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
                   {[{side:"home",team:match.home},{side:"away",team:match.away}].map(({side,team})=>{
                     const lu = lineups[side];
                     if (!lu) return <div key={side}/>;
@@ -4607,14 +4622,12 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
                     );
                   })}
                 </div>
-              )}
             </div>
           )}
 
           {/* ── MATCH STATS ── */}
-          {matchStats && (live || finished) && (
+          {matchStats && (live || finished) && statsOpen && (
             <div style={{marginBottom:12}}>
-              <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",marginBottom:8}}>MATCH STATS</div>
               {[
                 ["Possession", matchStats.home.possession, matchStats.away.possession, true, "%"],
                 ["Shots", matchStats.home.shots, matchStats.away.shots, false, ""],
@@ -4646,7 +4659,7 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
           )}
 
           {/* ── MATCH EVENTS ── */}
-          {(live || finished) && (() => {
+          {(live || finished) && evOpen && (() => {
             const toggleFilter = (t) => setEvFilter(f => f.includes(t) ? f.filter(x=>x!==t) : [...f,t]);
             const goals  = events ? events.filter(e=>e.type==="Goal").length : 0;
             const cards  = events ? events.filter(e=>e.type==="Card").length : 0;
@@ -4655,16 +4668,7 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
             const FILTERS = [{type:"Goal",label:`⚽ ${goals}`},{type:"Card",label:`🟨 ${cards}`},{type:"subst",label:`🔄 ${subs}`}];
             return (
               <div style={{marginBottom:12}}>
-                <div onClick={()=>setEvOpen(o=>!o)} style={{display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer",padding:"7px 0",borderBottom:`1px solid ${C.b1}`}}>
-                  <span style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em"}}>MATCH TIMELINE</span>
-                  <div style={{display:"flex",alignItems:"center",gap:8}}>
-                    {!evOpen && events && events.length > 0 && <span style={{fontSize:12,color:C.mid}}>{goals>0?`⚽ ${goals}  `:""}{cards>0?`🟨 ${cards}  `:""}{subs>0?`🔄 ${subs}`:""}</span>}
-                    {!evOpen && <span style={{fontSize:10,color:C.dim,fontStyle:"italic"}}>tap to expand</span>}
-                    <span style={{fontSize:13,color:C.dim,display:"inline-block",transform:evOpen?"rotate(180deg)":"rotate(0deg)",transition:"transform .2s"}}>▾</span>
-                  </div>
-                </div>
-                {evOpen && (
-                  <>
+                <>
                     {events && events.length > 0 && (
                       <div style={{display:"flex",gap:6,padding:"8px 0"}}>
                         {FILTERS.map(f=>(
@@ -4696,7 +4700,6 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
                     {!loading && filtered.length===0 && events && events.length>0 && <div style={{fontSize:12,color:C.dim,textAlign:"center",padding:"12px 0"}}>No events match filter.</div>}
                     {!loading && (!events||events.length===0) && <div style={{fontSize:12,color:C.dim,textAlign:"center",padding:"16px 0"}}>No events yet.</div>}
                   </>
-                )}
               </div>
             );
           })()}
