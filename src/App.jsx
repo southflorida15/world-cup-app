@@ -2759,14 +2759,14 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
   // Per-round config: ids in pair order, vertical gap between cards in a pair, top offset
   const leftRounds  = [
     {key:"r32L", ids:[73,75,74,77,83,84,81,82], pairGap:8,   topOffset:0},
-    {key:"r16L", ids:[89,90,93,94],              pairGap:70,  topOffset:51},
-    {key:"qfL",  ids:[97,98],                    pairGap:224, topOffset:153},
-    {key:"sfL",  ids:[101],                      pairGap:0,   topOffset:359},
+    {key:"r16L", ids:[89,90,93,94],              pairGap:146, topOffset:69},
+    {key:"qfL",  ids:[97,98],                    pairGap:422, topOffset:207},
+    {key:"sfL",  ids:[101],                      pairGap:0,   topOffset:483},
   ];
   const rightRounds = [
-    {key:"sfR",  ids:[102],                      pairGap:0,   topOffset:359},
-    {key:"qfR",  ids:[99,100],                   pairGap:224, topOffset:153},
-    {key:"r16R", ids:[91,92,95,96],              pairGap:70,  topOffset:51},
+    {key:"sfR",  ids:[102],                      pairGap:0,   topOffset:483},
+    {key:"qfR",  ids:[99,100],                   pairGap:422, topOffset:207},
+    {key:"r16R", ids:[91,92,95,96],              pairGap:146, topOffset:69},
     {key:"r32R", ids:[76,78,79,80,86,88,85,87],  pairGap:8,   topOffset:0},
   ];
 
@@ -2783,13 +2783,7 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
     return y;
   };
 
-  const totalHeight = (() => {
-    const r = leftRounds[0];
-    const n = r.ids.length;
-    const pairs = Math.ceil(n/2);
-    const interPairGap = CH * 2 + r.pairGap + 8;
-    return r.topOffset + pairs * interPairGap + 60;
-  })();
+  const totalHeight = 1100;
 
   const renderRound = (round, side) => {
     const isFirst = round.key==="r32L"||round.key==="r32R";
@@ -2880,7 +2874,7 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
   };
 
   const finalMatch = matchesById[104]||(bracket?.final||[])[0]||{match:104,home:null,away:null,winner:null};
-  const finalTop = leftRounds[3].topOffset + 36;
+  const finalTop = 483;
 
   return (
     <div style={{width:"100%",maxWidth:"100%"}}>
