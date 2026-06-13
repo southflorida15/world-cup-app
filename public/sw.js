@@ -1,9 +1,10 @@
 // /public/sw.js  — Service Worker for FIFA World Cup 2026 PWA
-// Caches the app shell for offline use.
-// Live API data (scores, predictions) always fetches fresh from network.
+// Strategy: network-first for everything except offline fallback.
+// Never cache JS/CSS bundles — Vite uses content hashes so stale caches
+// cause users to run old versions. Let Vercel's HTTP cache handle assets.
 
-const CACHE_NAME = "wc2026-v3";
-const APP_SHELL = [
+const CACHE_NAME = "wc2026-v4";
+const OFFLINE_URLS = [
   "/",
   "/index.html",
   "/manifest.json",
@@ -11,15 +12,15 @@ const APP_SHELL = [
   "/icons/icon-512.png",
 ];
 
-// ── Install: cache app shell ──────────────────────────────────────────────
+// ── Install: cache only the bare minimum for offline ─────────────────────
 self.addEventListener("install", event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL))
+    caches.open(CACHE_NAME).then(cache => cache.addAll(OFFLINE_URLS))
   );
   self.skipWaiting();
 });
 
-// ── Activate: clear old caches ────────────────────────────────────────────
+// ── Activate: clear ALL old caches immediately ────────────────────────────
 self.addEventListener("activate", event => {
   event.waitUntil(
     caches.keys().then(keys =>
@@ -29,36 +30,33 @@ self.addEventListener("activate", event => {
   self.clients.claim();
 });
 
-// ── Fetch: network-first for API, cache-first for assets ─────────────────
+// ── Force update when app requests it ────────────────────────────────────
+self.addEventListener("message", event => {
+  if (event.data?.type === "SKIP_WAITING") self.skipWaiting();
+});
+
+// ── Fetch: network-first, never cache JS/CSS bundles ─────────────────────
 self.addEventListener("fetch", event => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Always fetch API calls fresh — never serve stale scores/predictions
+  // Always go to network for API calls
   if (url.pathname.startsWith("/api/")) {
     event.respondWith(fetch(request));
     return;
   }
 
-  // Always fetch HTML fresh — ensures users get latest app version
-  if (request.headers.get("accept")?.includes("text/html") || url.pathname === "/" || url.pathname === "/index.html") {
-    event.respondWith(
-      fetch(request)
-        .then(response => {
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then(cache => cache.put(request, clone));
-          }
-          return response;
-        })
-        .catch(() => caches.match(request))
-    );
+  // Never cache Vite build assets (JS/CSS with content hashes)
+  // Vercel sets immutable cache headers on these — browser handles them fine
+  if (url.pathname.startsWith("/assets/")) {
+    event.respondWith(fetch(request));
     return;
   }
+
+  // For everything else: network-first, fall back to cache offline
   event.respondWith(
     fetch(request)
       .then(response => {
-        // Cache successful GET responses
         if (request.method === "GET" && response.ok) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(request, clone));
@@ -67,11 +65,6 @@ self.addEventListener("fetch", event => {
       })
       .catch(() => caches.match(request))
   );
-});
-
-// ── Force update when app requests it ────────────────────────────────────
-self.addEventListener("message", event => {
-  if (event.data?.type === "SKIP_WAITING") self.skipWaiting();
 });
 
 // ── Push notifications ────────────────────────────────────────────────────
