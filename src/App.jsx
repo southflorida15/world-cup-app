@@ -1084,6 +1084,31 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="",
   const isUS = country === "US" || !BROADCAST[country];
   const countdown = useCountdown(m.id);
 
+  // Compact card for matches finished on a previous day (at venue timezone)
+  const isPastDay = (() => {
+    if (!finished) return false;
+    const iso = MATCH_UTC[m.id];
+    if (!iso) return false;
+    const venueTzKey = VENUE_TZ[m.venue] || "America/New_York";
+    const matchDate = new Intl.DateTimeFormat("en-CA", { timeZone: venueTzKey }).format(new Date(iso));
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: venueTzKey }).format(new Date());
+    return matchDate < today;
+  })();
+
+  if (isPastDay && finished && hasScore) {
+    return (
+      <div onClick={()=>onMatchTap&&onMatchTap(m)} style={{marginBottom:6,background:C.s1,border:`1px solid ${C.b1}`,borderRadius:10,overflow:"hidden",opacity:0.45,cursor:onMatchTap?"pointer":"default",display:"flex",alignItems:"center",gap:8,padding:"7px 13px"}}>
+        <span style={{fontSize:10,fontWeight:700,color:m.group?C.green:C.gold,background:m.group?`${C.green}18`:`${C.gold}18`,padding:"2px 6px",borderRadius:8,flexShrink:0}}>{m.group?`Grp ${m.group}`:m.stage||"KO"}</span>
+        <Crest team={m.home} size={18}/>
+        <span style={{flex:1,fontSize:13,fontWeight:winner===m.home?800:600,color:winner===m.home?C.text:C.dim,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.home}</span>
+        <span style={{fontWeight:900,fontSize:16,color:C.text,fontFamily:"monospace",flexShrink:0}}>{sc.hg} – {sc.ag}</span>
+        <span style={{flex:1,fontSize:13,fontWeight:winner===m.away?800:600,color:winner===m.away?C.text:C.dim,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.away}</span>
+        <Crest team={m.away} size={18}/>
+        <span style={{fontSize:10,color:C.dim,flexShrink:0}}>FT</span>
+      </div>
+    );
+  }
+
   return (
     <div onClick={()=>onMatchTap&&onMatchTap(m)} style={{marginBottom:8,background:C.s1,border:`1px solid ${live?C.green:isFav?`${C.gold}55`:C.b1}`,borderRadius:12,overflow:"hidden",opacity:finished?0.45:1,cursor:onMatchTap?"pointer":"default"}}>
       {/* Header: group/stage + venue + time */}
