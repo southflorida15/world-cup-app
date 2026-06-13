@@ -3014,7 +3014,26 @@ const MY_BRACKET_STORAGE_KEY = "wc2026_my_bracket_v1";
 function readSavedMyBracket() {
   try {
     const raw = localStorage.getItem(MY_BRACKET_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : {};
+    const saved = raw ? JSON.parse(raw) : {};
+
+    // Validate groups — each group's teams must belong to that group
+    // If corrupted (e.g. Brazil in Group A), reset groups to default
+    if (saved.groups) {
+      const valid = Object.entries(saved.groups).every(([g, teams]) => {
+        const expected = GROUPS[g]?.teams || [];
+        return Array.isArray(teams) &&
+          teams.length === expected.length &&
+          teams.every(t => expected.includes(t));
+      });
+      if (!valid) {
+        console.warn("[bracket] Corrupted groups detected — resetting to default");
+        saved.groups = defaultBracketGroups();
+        saved.result = null;
+        saved.stage = "groups";
+      }
+    }
+
+    return saved;
   } catch {
     return {};
   }
