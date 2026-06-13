@@ -2839,7 +2839,7 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
           <div style={{fontSize:9,color:C.dim,whiteSpace:"nowrap"}}>{round.label}</div>
         </div>
 
-        <div style={{position:"relative",display:"flex",flexDirection:"column",gap:g}}>
+        <div style={{position:"relative",display:"flex",flexDirection:"column",gap:g,overflow:"visible"}}>
           {/* Single SVG overlay for all connectors in this column */}
           <svg style={{position:"absolute",top:0,left:0,width:columnWidth,height:totalH,overflow:"visible",pointerEvents:"none",zIndex:3}}>
             {/* Outgoing L-connectors to next column */}
@@ -2890,13 +2890,13 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
   const finalMatch = matchesById[104] || (bracket?.final || [])[0] || {match:104,home:null,away:null,winner:null};
 
   return (
-    <div style={{width:"100%",maxWidth:"100%",overflow:"hidden"}}>
+    <div style={{width:"100%",maxWidth:"100%",overflow:"visible"}}>
       <div
   ref={bracketScrollRef}
   style={{
     width:"100%",
     overflowX:"auto",
-    overflowY:"hidden",
+    overflowY:"visible",
     cursor:"grab",
     WebkitOverflowScrolling:"touch",
     padding:"6px 0 18px",
