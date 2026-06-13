@@ -1089,13 +1089,15 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="",
   const countdown = useCountdown(m.id);
 
   // True from 30min before kickoff until ESPN confirms live — drives the gold highlight
+  // Also overrides stale "finished" status from feed within 15min of kickoff
   const isKickingOff = (() => {
-    if (live || finished) return false;
     const iso = MATCH_UTC[m.id];
     if (!iso) return false;
     const ko = new Date(iso).getTime();
     const msSince = Date.now() - ko;
-    return msSince > -30 * 60 * 1000 && msSince < 15 * 60 * 1000;
+    if (msSince < -30 * 60 * 1000 || msSince > 15 * 60 * 1000) return false;
+    if (live) return false; // feed confirmed live, switch to live display
+    return true; // within window — show as kicking off regardless of feed
   })();
 
   // Compact card for matches finished on a previous day (at venue timezone)
@@ -4349,6 +4351,7 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
   const [lineups, setLineups] = useState(null);
   const [loading, setLoading] = useState(false);
   const [evOpen, setEvOpen] = useState(false);
+  const [lineupsOpen, setLineupsOpen] = useState(false);
   const [evFilter, setEvFilter] = useState(["Goal","Card","subst"]);
   const { getScore } = useContext(LiveScoresCtx);
   const { favTeams=[] } = useContext(FavCtx);
@@ -4364,7 +4367,7 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
 
   useEffect(() => {
     if (!open || !match) return;
-    setEvents(null); setLoading(true); setEvOpen(false); setEvFilter(["Goal","Card","subst"]); setLineups(null);
+    setEvents(null); setLoading(true); setEvOpen(false); setEvFilter(["Goal","Card","subst"]); setLineups(null); setLineupsOpen(false);
     fetchMatchEvents(`${match.home}|${match.away}`)
       .then(d => {
         setEvents(d?.events || []);
@@ -4562,40 +4565,49 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
           {/* ── LINEUPS ── */}
           {lineups && (lineups.home || lineups.away) && (
             <div style={{marginBottom:12}}>
-              <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",marginBottom:8}}>LINEUPS</div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-                {[{side:"home",team:match.home},{side:"away",team:match.away}].map(({side,team})=>{
-                  const lu = lineups[side];
-                  if (!lu) return <div key={side}/>;
-                  return (
-                    <div key={side} style={{background:C.s1,border:`1px solid ${C.b1}`,borderRadius:10,padding:"8px 10px"}}>
-                      <div style={{fontSize:11,fontWeight:700,color:side==="home"?C.green:C.red,marginBottom:4,display:"flex",alignItems:"center",gap:4}}>
-                        <Crest team={team} size={14}/>
-                        <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{team}</span>
-                        {lu.formation && <span style={{marginLeft:"auto",fontSize:10,color:C.dim,fontWeight:600,flexShrink:0}}>{lu.formation}</span>}
-                      </div>
-                      <div style={{fontSize:10,color:C.dim,fontWeight:600,marginBottom:3}}>Starting XI</div>
-                      {lu.starters.map((p,i)=>(
-                        <div key={i} style={{display:"flex",alignItems:"center",gap:4,padding:"2px 0",borderBottom:i<lu.starters.length-1?`1px solid ${C.b1}`:"none"}}>
-                          {p.jersey && <span style={{fontSize:9,color:C.dim,minWidth:14,textAlign:"center"}}>{p.jersey}</span>}
-                          <span style={{fontSize:11,color:p.subbedOut?C.dim:C.text,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}{p.subbedOut?" ↓":""}</span>
-                          <span style={{fontSize:9,color:C.dim,flexShrink:0}}>{p.pos}</span>
+              <div onClick={()=>setLineupsOpen(o=>!o)} style={{display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer",padding:"7px 0",borderBottom:`1px solid ${C.b1}`}}>
+                <span style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em"}}>LINEUPS</span>
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  {!lineupsOpen && lineups.home?.formation && <span style={{fontSize:11,color:C.mid}}>{lineups.home.formation} · {lineups.away?.formation}</span>}
+                  {!lineupsOpen && <span style={{fontSize:10,color:C.dim,fontStyle:"italic"}}>tap to expand</span>}
+                  <span style={{fontSize:13,color:C.dim,display:"inline-block",transform:lineupsOpen?"rotate(180deg)":"rotate(0deg)",transition:"transform .2s"}}>▾</span>
+                </div>
+              </div>
+              {lineupsOpen && (
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,paddingTop:8}}>
+                  {[{side:"home",team:match.home},{side:"away",team:match.away}].map(({side,team})=>{
+                    const lu = lineups[side];
+                    if (!lu) return <div key={side}/>;
+                    return (
+                      <div key={side} style={{background:C.s1,border:`1px solid ${C.b1}`,borderRadius:10,padding:"8px 10px"}}>
+                        <div style={{fontSize:11,fontWeight:700,color:side==="home"?C.green:C.red,marginBottom:4,display:"flex",alignItems:"center",gap:4}}>
+                          <Crest team={team} size={14}/>
+                          <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{team}</span>
+                          {lu.formation && <span style={{marginLeft:"auto",fontSize:10,color:C.dim,fontWeight:600,flexShrink:0}}>{lu.formation}</span>}
                         </div>
-                      ))}
-                      {lu.bench.length > 0 && <>
-                        <div style={{fontSize:10,color:C.dim,fontWeight:600,marginTop:6,marginBottom:3}}>Bench</div>
-                        {lu.bench.map((p,i)=>(
-                          <div key={i} style={{display:"flex",alignItems:"center",gap:4,padding:"2px 0"}}>
+                        <div style={{fontSize:10,color:C.dim,fontWeight:600,marginBottom:3}}>Starting XI</div>
+                        {lu.starters.map((p,i)=>(
+                          <div key={i} style={{display:"flex",alignItems:"center",gap:4,padding:"2px 0",borderBottom:i<lu.starters.length-1?`1px solid ${C.b1}`:"none"}}>
                             {p.jersey && <span style={{fontSize:9,color:C.dim,minWidth:14,textAlign:"center"}}>{p.jersey}</span>}
-                            <span style={{fontSize:11,color:p.subbedIn?C.green:C.dim,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}{p.subbedIn?" ↑":""}</span>
+                            <span style={{fontSize:11,color:p.subbedOut?C.dim:C.text,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}{p.subbedOut?" ↓":""}</span>
                             <span style={{fontSize:9,color:C.dim,flexShrink:0}}>{p.pos}</span>
                           </div>
                         ))}
-                      </>}
-                    </div>
-                  );
-                })}
-              </div>
+                        {lu.bench.length > 0 && <>
+                          <div style={{fontSize:10,color:C.dim,fontWeight:600,marginTop:6,marginBottom:3}}>Bench</div>
+                          {lu.bench.map((p,i)=>(
+                            <div key={i} style={{display:"flex",alignItems:"center",gap:4,padding:"2px 0"}}>
+                              {p.jersey && <span style={{fontSize:9,color:C.dim,minWidth:14,textAlign:"center"}}>{p.jersey}</span>}
+                              <span style={{fontSize:11,color:p.subbedIn?C.green:C.dim,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}{p.subbedIn?" ↑":""}</span>
+                              <span style={{fontSize:9,color:C.dim,flexShrink:0}}>{p.pos}</span>
+                            </div>
+                          ))}
+                        </>}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
 
