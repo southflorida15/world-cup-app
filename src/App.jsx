@@ -1096,12 +1096,12 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="",
           <span onClick={()=>openMaps(m.venue)} style={{fontSize:11,color:C.dim,cursor:"pointer",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
             📍 {m.venue.split(",")[0]}
           </span>
+          {countdown && !live && !finished && <span style={{fontSize:11,fontWeight:700,color:C.gold,fontFamily:"monospace",animation:"pulse 1s infinite",flexShrink:0}}>⏱ {countdown}</span>}
         </div>
         <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
           {live && <span style={{fontSize:10,fontWeight:700,color:C.green}}>🔴 {statusLabel(sc.status,sc.elapsed)}</span>}
-          {!live && countdown && <span style={{fontSize:12,fontWeight:700,color:C.gold,fontFamily:"monospace",animation:"pulse 1s infinite"}}>⏱ {countdown}</span>}
-          {!live && !countdown && <span style={{fontSize:12,fontWeight:600,color:timeMode==="venue"?C.gold:C.text}}>{displayTime}</span>}
-          {!live && !countdown && <span style={{fontSize:10,color:C.dim}}>{tzLabel}</span>}
+          {!live && <span style={{fontSize:12,fontWeight:600,color:timeMode==="venue"?C.gold:C.text}}>{displayTime}</span>}
+          {!live && <span style={{fontSize:10,color:C.dim}}>{tzLabel}</span>}
           {finished && <span style={{fontSize:10,color:C.dim,marginLeft:2}}>· {"FT"}</span>}
         </div>
       </div>
@@ -1166,6 +1166,7 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=n
     const d = new Date(iso);
     const dStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     if (dStr !== _todayLive) return false;
+    if (Date.now() > d.getTime()) return false; // kickoff already passed
     const s = getScore(m.home, m.away);
     return !s || s.status === "NS";
   });
@@ -6010,7 +6011,7 @@ export default function App() {
                 <button key={t.id} onClick={()=>setTab(t.id)} style={{flex:"0 0 auto",padding:"8px 8px",background:"none",border:"none",borderBottom:`2px solid ${tab===t.id?C.green:"transparent"}`,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,color:tab===t.id?C.green:C.dim,position:"relative"}}>
                   <span style={{fontSize:14}}>{t.icon}</span>
                   <span style={{fontSize:9,fontWeight:600,whiteSpace:"nowrap"}}>{t.label}</span>
-                  {t.id==="live" && hasLiveMatches && tab!=="live" && (
+                  {t.id==="live" && hasLiveMatches && (
                     <span style={{position:"absolute",top:6,right:6,width:7,height:7,borderRadius:"50%",background:"#ef4444",boxShadow:"0 0 0 2px #ef444488",animation:"pulse 1.5s infinite"}}/>
                   )}
                 </button>
