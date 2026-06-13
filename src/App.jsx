@@ -6027,11 +6027,8 @@ export default function App() {
             <div style={{display:"flex",overflowX:"auto",scrollbarWidth:"none",marginBottom:-1}}>
               {TABS.map(t=>(
                 <button key={t.id} onClick={()=>setTab(t.id)} style={{flex:"0 0 auto",padding:"8px 8px",background:"none",border:"none",borderBottom:`2px solid ${tab===t.id?C.green:"transparent"}`,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,color:tab===t.id?C.green:C.dim,position:"relative"}}>
-                  <span style={{fontSize:14}}>{t.icon}</span>
+                  <span style={{fontSize:14,animation:t.id==="live"&&hasLiveMatches?"pulse 1.5s infinite":undefined}}>{t.icon}</span>
                   <span style={{fontSize:9,fontWeight:600,whiteSpace:"nowrap"}}>{t.label}</span>
-                  {t.id==="live" && hasLiveMatches && (
-                    <span style={{position:"absolute",top:6,right:6,width:7,height:7,borderRadius:"50%",background:"#ef4444",boxShadow:"0 0 0 2px #ef444488",animation:"pulse 1.5s infinite"}}/>
-                  )}
                 </button>
               ))}
             </div>
