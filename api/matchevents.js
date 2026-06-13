@@ -53,9 +53,9 @@ async function loadFromKV(home, away) {
   }
 }
 
-async function saveToKV(home, away, events, stats) {
+async function saveToKV(home, away, events, stats, lineups=null) {
   try {
-    await kv.set(kvKey(home, away), { events, stats, savedAt: Date.now() });
+    await kv.set(kvKey(home, away), { events, stats, lineups, savedAt: Date.now() });
     console.log(`[matchevents] Persisted ${events.length} events for ${home} vs ${away}`);
   } catch(e) {
     console.warn("[matchevents] KV save:", e.message);
@@ -151,14 +151,45 @@ function parseStats(boxscore, homeTeam) {
       else if (name.includes("offside")) stats.offsides = val;
       else if (name.includes("save")) stats.saves = val;
       else if (name.includes("pass") && name.includes("acc")) stats.passAcc = (val > 0 && val <= 100) ? val : null;
-      else if ((name === "passes" || name === "totalpasses" || name.includes("total pass")) && !name.includes("acc")) stats.passes = val;
     });
     result[side] = stats;
   });
   return result;
 }
 
-// ── Events parser ─────────────────────────────────────────────────────────
+// ── Lineups parser ────────────────────────────────────────────────────────
+function parseLineups(data, homeTeam) {
+  const rosters = data.rosters;
+  if (!rosters?.length) return null;
+
+  const result = { home: null, away: null };
+
+  rosters.forEach(roster => {
+    const teamName = normESPN(roster.team?.displayName || roster.team?.name || "");
+    const side = teamName === homeTeam ? "home" : "away";
+    const formation = roster.formation || null;
+
+    const starters = [];
+    const bench = [];
+
+    (roster.roster || roster.athletes || []).forEach(p => {
+      const name = p.athlete?.displayName || p.displayName || p.name || "";
+      const jersey = p.jersey || p.athlete?.jersey || null;
+      const pos = p.position?.abbreviation || p.position?.name || p.athlete?.position?.abbreviation || "";
+      const starter = p.starter ?? p.active ?? true;
+      const subbedOut = p.subbedOut ?? false;
+      const subbedIn = p.subbedIn ?? false;
+
+      const entry = { name, jersey, pos, subbedOut, subbedIn };
+      if (starter) starters.push(entry);
+      else bench.push(entry);
+    });
+
+    result[side] = { formation, starters, bench, teamName };
+  });
+
+  return (result.home || result.away) ? result : null;
+}
 function parseEvents(data, homeTeam) {
   const events = [];
 
@@ -414,7 +445,7 @@ export default async function handler(req, res) {
     if (persisted && persisted.events?.length > 0) {
       console.log(`[matchevents] Serving ${home} vs ${away} from KV (${persisted.events.length} events)`);
       memCache[cacheKey] = { ...persisted, isDone: true, ts: Date.now() };
-      return res.status(200).json({ events: persisted.events, stats: persisted.stats });
+      return res.status(200).json({ events: persisted.events, stats: persisted.stats, lineups: persisted.lineups || null });
     }
   }
 
@@ -447,25 +478,31 @@ export default async function handler(req, res) {
         playsCount: data.plays?.length || 0,
         boxscoreTeams: data.boxscore?.teams?.map(t => t.team?.displayName) || [],
         keyEvents: (data.keyEvents || []).slice(0, 5),
+        rostersCount: data.rosters?.length || 0,
+        rosterSample: data.rosters?.[0]?.roster?.slice(0,3) || [],
       });
     }
 
     const statusType = data.header?.competitions?.[0]?.status?.type?.name || "NS";
     const isDone = DONE_STATUSES.includes(statusType);
     const isLive = LIVE_STATUSES.includes(statusType);
+    const isPrematch = !isDone && !isLive;
 
     const events = parseEvents(data, home);
     const stats = parseStats(data.boxscore, home);
+    const lineups = parseLineups(data, home);
 
-    console.log(`[matchevents] ${home} vs ${away}: ${events.length} events, stats=${!!stats}, status=${statusType}`);
+    console.log(`[matchevents] ${home} vs ${away}: ${events.length} events, stats=${!!stats}, lineups=${!!lineups}, status=${statusType}`);
 
     // Persist to KV if match is finished and we have data
     if (isDone && events.length > 0) {
-      await saveToKV(home, away, events, stats);
+      await saveToKV(home, away, events, stats, lineups);
     }
 
-    memCache[cacheKey] = { events, stats, isDone, isLive, ts: Date.now() };
-    return res.status(200).json({ events, stats });
+    // Cache lineups pre-match with short TTL (5min) so we pick them up when published
+    const TTL_PREMATCH_LINEUPS = 5 * 60 * 1000;
+    memCache[cacheKey] = { events, stats, lineups, isDone, isLive, ts: Date.now(), ttlOverride: isPrematch && lineups ? TTL_PREMATCH_LINEUPS : null };
+    return res.status(200).json({ events, stats, lineups });
 
   } catch(e) {
     console.error("[matchevents] Error:", e.message);

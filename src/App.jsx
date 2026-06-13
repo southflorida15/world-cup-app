@@ -4320,6 +4320,7 @@ function WeatherBadge({ lat, lon }) {
 function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), userPredHg, userPredAg }) {
   const [events, setEvents] = useState(null);
   const [matchStats, setMatchStats] = useState(null);
+  const [lineups, setLineups] = useState(null);
   const [loading, setLoading] = useState(false);
   const [evOpen, setEvOpen] = useState(false);
   const [evFilter, setEvFilter] = useState(["Goal","Card","subst"]);
@@ -4337,11 +4338,12 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
 
   useEffect(() => {
     if (!open || !match) return;
-    setEvents(null); setLoading(true); setEvOpen(false); setEvFilter(["Goal","Card","subst"]);
+    setEvents(null); setLoading(true); setEvOpen(false); setEvFilter(["Goal","Card","subst"]); setLineups(null);
     fetchMatchEvents(`${match.home}|${match.away}`)
       .then(d => {
         setEvents(d?.events || []);
         setMatchStats(d?.stats || null);
+        setLineups(d?.lineups || null);
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -4530,6 +4532,46 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
   openMaps={openMaps}
   C={C}
 />
+
+          {/* ── LINEUPS ── */}
+          {lineups && (lineups.home || lineups.away) && (
+            <div style={{marginBottom:12}}>
+              <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",marginBottom:8}}>LINEUPS</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                {[{side:"home",team:match.home},{side:"away",team:match.away}].map(({side,team})=>{
+                  const lu = lineups[side];
+                  if (!lu) return <div key={side}/>;
+                  return (
+                    <div key={side} style={{background:C.s1,border:`1px solid ${C.b1}`,borderRadius:10,padding:"8px 10px"}}>
+                      <div style={{fontSize:11,fontWeight:700,color:side==="home"?C.green:C.red,marginBottom:4,display:"flex",alignItems:"center",gap:4}}>
+                        <Crest team={team} size={14}/>
+                        <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{team}</span>
+                        {lu.formation && <span style={{marginLeft:"auto",fontSize:10,color:C.dim,fontWeight:600,flexShrink:0}}>{lu.formation}</span>}
+                      </div>
+                      <div style={{fontSize:10,color:C.dim,fontWeight:600,marginBottom:3}}>Starting XI</div>
+                      {lu.starters.map((p,i)=>(
+                        <div key={i} style={{display:"flex",alignItems:"center",gap:4,padding:"2px 0",borderBottom:i<lu.starters.length-1?`1px solid ${C.b1}`:"none"}}>
+                          {p.jersey && <span style={{fontSize:9,color:C.dim,minWidth:14,textAlign:"center"}}>{p.jersey}</span>}
+                          <span style={{fontSize:11,color:p.subbedOut?C.dim:C.text,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}{p.subbedOut?" ↓":""}</span>
+                          <span style={{fontSize:9,color:C.dim,flexShrink:0}}>{p.pos}</span>
+                        </div>
+                      ))}
+                      {lu.bench.length > 0 && <>
+                        <div style={{fontSize:10,color:C.dim,fontWeight:600,marginTop:6,marginBottom:3}}>Bench</div>
+                        {lu.bench.map((p,i)=>(
+                          <div key={i} style={{display:"flex",alignItems:"center",gap:4,padding:"2px 0"}}>
+                            {p.jersey && <span style={{fontSize:9,color:C.dim,minWidth:14,textAlign:"center"}}>{p.jersey}</span>}
+                            <span style={{fontSize:11,color:p.subbedIn?C.green:C.dim,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}{p.subbedIn?" ↑":""}</span>
+                            <span style={{fontSize:9,color:C.dim,flexShrink:0}}>{p.pos}</span>
+                          </div>
+                        ))}
+                      </>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* ── MATCH STATS ── */}
           {matchStats && (live || finished) && (
