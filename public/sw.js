@@ -69,6 +69,11 @@ self.addEventListener("fetch", event => {
   );
 });
 
+// ── Force update when app requests it ────────────────────────────────────
+self.addEventListener("message", event => {
+  if (event.data?.type === "SKIP_WAITING") self.skipWaiting();
+});
+
 // ── Push notifications ────────────────────────────────────────────────────
 self.addEventListener("push", event => {
   if (!event.data) return;

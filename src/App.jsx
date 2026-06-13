@@ -6198,7 +6198,32 @@ export default function App() {
   useEffect(() => {
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("/sw.js")
-        .then(() => console.log("[PWA] Service worker registered"))
+        .then(reg => {
+          console.log("[PWA] Service worker registered");
+
+          // Check for updates every 60 seconds
+          setInterval(() => reg.update(), 60 * 1000);
+
+          // When a new SW is waiting — force it to activate immediately
+          const onUpdateFound = () => {
+            const newWorker = reg.installing;
+            if (!newWorker) return;
+            newWorker.addEventListener("statechange", () => {
+              if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+                // New version ready — tell SW to skip waiting then reload
+                newWorker.postMessage({ type: "SKIP_WAITING" });
+              }
+            });
+          };
+
+          reg.addEventListener("updatefound", onUpdateFound);
+
+          // When SW activates (after skipWaiting) — reload all clients
+          let refreshing = false;
+          navigator.serviceWorker.addEventListener("controllerchange", () => {
+            if (!refreshing) { refreshing = true; window.location.reload(); }
+          });
+        })
         .catch(e => console.warn("[PWA] SW registration failed:", e));
     }
   }, []);
