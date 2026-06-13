@@ -2727,7 +2727,7 @@ function BracketMatchup({ match, t1, t2, winner, onPick, interactive=false, comp
         ) : (
           <div style={{fontSize:10,color:C.gold,fontWeight:900,letterSpacing:"0.08em"}}>M{match || "—"}</div>
         )}
-        {interactive && <span style={{position:"absolute",top:5,right:8,fontSize:9,color:canPick?C.green:C.dim,fontWeight:800}}>{canPick?"TAP WINNER":"LOCKED"}</span>}
+        {interactive && canPick && <span style={{position:"absolute",top:5,right:8,fontSize:9,color:C.green,fontWeight:800}}>✦</span>}
       </div>
       {teamRow(t1,0)}
       {teamRow(t2,1)}
@@ -2849,24 +2849,32 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
           {pairs.map(([topId, botId], pairIdx) => {
             const mTop = matchesById[topId] || {match:topId,home:null,away:null,winner:null};
             const mBot = matchesById[botId] || {match:botId,home:null,away:null,winner:null};
+            const cardH = 96;
+            const topMid = cardH / 2;
+            const botMid = cardH + gapPx + cardH / 2;
+            const totalH = cardH * 2 + gapPx;
+            const midH = totalH / 2;
+            const x1 = side==="left" ? 0 : 26;
+            const xV = side==="left" ? 16 : 10;
+            const x2 = side==="left" ? 26 : 0;
 
             return (
               <div key={topId} style={{position:"relative",display:"flex",flexDirection:"column",gap:gapPx}}>
-                {/* Incoming stubs (left or right side) */}
+                {/* Incoming stubs from previous round */}
                 {!isFirst && (
                   <>
-                    <div style={{position:"absolute",[side==="left"?"left":"right"]:-18,top:"25%",width:18,borderTop:`1.5px solid ${connColor}`}}/>
-                    <div style={{position:"absolute",[side==="left"?"left":"right"]:-18,top:"75%",width:18,borderTop:`1.5px solid ${connColor}`}}/>
+                    <div style={{position:"absolute",[side==="left"?"left":"right"]:-18,top:topMid,width:18,borderTop:`1.5px solid ${connColor}`,transform:"translateY(-50%)"}}/>
+                    <div style={{position:"absolute",[side==="left"?"left":"right"]:-18,top:cardH+gapPx+topMid,width:18,borderTop:`1.5px solid ${connColor}`,transform:"translateY(-50%)"}}/>
                   </>
                 )}
 
                 {/* Outgoing L-connector to next round */}
                 {!isLast && (
-                  <svg style={{position:"absolute",[side==="left"?"right":"left"]:-26,top:0,bottom:0,width:26,overflow:"visible",pointerEvents:"none"}} height="100%">
-                    <line x1={side==="left"?0:26} y1="25%" x2={side==="left"?14:12} y2="25%" stroke={connColor} strokeWidth="1.5"/>
-                    <line x1={side==="left"?14:12} y1="25%" x2={side==="left"?14:12} y2="75%" stroke={connColor} strokeWidth="1.5"/>
-                    <line x1={side==="left"?0:26} y1="75%" x2={side==="left"?14:12} y2="75%" stroke={connColor} strokeWidth="1.5"/>
-                    <line x1={side==="left"?14:12} y1="50%" x2={side==="left"?26:0} y2="50%" stroke={connColor} strokeWidth="1.5"/>
+                  <svg style={{position:"absolute",[side==="left"?"right":"left"]:-26,top:0,width:26,height:totalH,overflow:"visible",pointerEvents:"none"}}>
+                    <line x1={x1} y1={topMid} x2={xV} y2={topMid} stroke={connColor} strokeWidth="1.5"/>
+                    <line x1={xV} y1={topMid} x2={xV} y2={botMid} stroke={connColor} strokeWidth="1.5"/>
+                    <line x1={x1} y1={botMid} x2={xV} y2={botMid} stroke={connColor} strokeWidth="1.5"/>
+                    <line x1={xV} y1={midH} x2={x2} y2={midH} stroke={connColor} strokeWidth="1.5"/>
                   </svg>
                 )}
 
@@ -3399,6 +3407,7 @@ function MyBracketTab({ tabTop=116 }) {
         <span style={{marginLeft:6,fontSize:11,color:C.dim,fontWeight:600}}>
           ({displayedResult?.completedCount || 0}/31)
         </span>
+        {bracketView==="tree" && <span style={{marginLeft:8,fontSize:10,color:C.dim,fontWeight:400,fontStyle:"italic"}}>tap a team to pick the winner</span>}
       </div>
 
       <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
