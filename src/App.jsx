@@ -5943,9 +5943,18 @@ export default function App() {
   };
 
   const onTeam=(t)=>{setStatsTeam(t);setTab("stats");};
-  const { isLive: isMatchLive, refresh: refreshScores } = useContext(LiveScoresCtx);
+  const { isLive: isMatchLive, getScore: getScoreMain, refresh: refreshScores } = useContext(LiveScoresCtx);
 
-  const hasLiveMatches = MATCHES.some(m => isMatchLive(m.home, m.away));
+  const hasLiveMatches = MATCHES.some(m => {
+    if (isMatchLive(m.home, m.away)) return true;
+    const iso = MATCH_UTC[m.id];
+    if (!iso) return false;
+    const ko = new Date(iso).getTime();
+    if (Date.now() < ko) return false;
+    const sc = getScoreMain(m.home, m.away);
+    if (sc && statusIsFinished(sc.status)) return false;
+    return Date.now() < ko + 130 * 60 * 1000;
+  });
   const savedIds = new Set(saved.map(x=>x.match?.id));
   const onAction=(m)=>{
     if(savedIds.has(m.id)){ setSaved(s=>s.filter(x=>x.match?.id!==m.id)); setToast("Removed from saved"); }
