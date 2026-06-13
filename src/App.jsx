@@ -2727,7 +2727,7 @@ function BracketMatchup({ match, t1, t2, winner, onPick, interactive=false, comp
         ) : (
           <div style={{fontSize:10,color:C.gold,fontWeight:900,letterSpacing:"0.08em"}}>M{match || "—"}</div>
         )}
-        {interactive && <span style={{position:"absolute",top:5,right:8,fontSize:9,color:canPick?C.green:C.dim,fontWeight:800}}>{canPick?"TAP PICK":"LOCKED"}</span>}
+        {interactive && <span style={{position:"absolute",top:5,right:8,fontSize:9,color:canPick?C.green:C.dim,fontWeight:800}}>{canPick?"TAP WINNER":"LOCKED"}</span>}
       </div>
       {teamRow(t1,0)}
       {teamRow(t2,1)}
@@ -2825,35 +2825,18 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
     opacity:m.home&&m.away?1:0.35
   });
 
-  // Renders an SVG L-connector between a pair of matches and the next round
-  // pairIndex: 0-based index of the pair (0 = first two matches, 1 = next two, etc.)
-  // cardHeight: estimated height of a BracketMatchup card
-  // gapBetween: gap between cards in this round
-  const BracketConnector = ({ side, pairIndex, cardHeight=96, gap, color=C.b2 }) => {
-    const totalPairH = cardHeight * 2 + gap;
-    const midY = totalPairH / 2;
-    const w = 26;
-    return (
-      <svg
-        width={w} height={totalPairH}
-        style={{position:"absolute", [side === "left" ? "right" : "left"]:-w, top:0, overflow:"visible", pointerEvents:"none"}}
-        viewBox={`0 0 ${w} ${totalPairH}`}
-      >
-        {/* Line from top card mid to center */}
-        <line x1={side==="left"?0:w} y1={cardHeight/2} x2={side==="left"?w:0} y2={cardHeight/2} stroke={color} strokeWidth="1.5"/>
-        {/* Vertical line connecting top and bottom */}
-        <line x1={side==="left"?w:0} y1={cardHeight/2} x2={side==="left"?w:0} y2={totalPairH - cardHeight/2} stroke={color} strokeWidth="1.5"/>
-        {/* Line from center to bottom card mid */}
-        <line x1={side==="left"?0:w} y1={totalPairH - cardHeight/2} x2={side==="left"?w:0} y2={totalPairH - cardHeight/2} stroke={color} strokeWidth="1.5"/>
-        {/* Line from center out to next column */}
-        <line x1={side==="left"?w:0} y1={midY} x2={side==="left"?w+16:0-16} y2={midY} stroke={color} strokeWidth="1.5"/>
-      </svg>
-    );
-  };
-
   const renderColumn = (round, side="left") => {
     const ids = round.ids || [];
-    const cardH = 96; // approximate card height with date/time header
+    const isFirst = round.key === "r32L" || round.key === "r32R";
+    const isLast  = round.key === "sfL"  || round.key === "sfR";
+    const connColor = C.b2;
+    const gapPx = round.gap;
+
+    // Group ids into pairs: [[id0,id1],[id2,id3],...]
+    const pairs = [];
+    for (let i = 0; i < ids.length; i += 2) pairs.push(ids.slice(i, i+2));
+    // If only 1 match in round (SF), treat as a single unpaired card
+    const singles = ids.length % 2 !== 0 ? [ids[ids.length-1]] : [];
 
     return (
       <div key={round.key} style={{width:columnWidth,flex:`0 0 ${columnWidth}px`,paddingTop:round.padTop}}>
@@ -2862,40 +2845,49 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
           <div style={{fontSize:9,color:C.dim,whiteSpace:"nowrap"}}>{round.label}</div>
         </div>
 
-        <div style={{display:"flex",flexDirection:"column",gap:round.gap}}>
-          {ids.map((id, idx) => {
-            const m = matchesById[id] || {match:id,home:null,away:null,winner:null};
-            const locked = !(m.home && m.away);
-            const isPaired = round.ids.length > 1;
-            const isEven = idx % 2 === 0;
-            const isLastRound = round.key === "sfL" || round.key === "sfR";
+        <div style={{display:"flex",flexDirection:"column",gap:gapPx*2+8}}>
+          {pairs.map(([topId, botId], pairIdx) => {
+            const mTop = matchesById[topId] || {match:topId,home:null,away:null,winner:null};
+            const mBot = matchesById[botId] || {match:botId,home:null,away:null,winner:null};
 
             return (
-              <div key={id} style={{position:"relative",opacity:locked?0.58:1}}>
-                {/* Incoming connector from previous round (horizontal stub) */}
-                {((side==="left"&&round.key!=="r32L")||(side==="right"&&round.key!=="r32R")) && (
-                  <div style={{position:"absolute",[side==="left"?"left":"right"]:-16,top:"50%",width:16,borderTop:`1.5px solid ${m.winner?C.greenS:C.b2}`,opacity:m.home&&m.away?1:0.35}}/>
+              <div key={topId} style={{position:"relative",display:"flex",flexDirection:"column",gap:gapPx}}>
+                {/* Incoming stubs (left or right side) */}
+                {!isFirst && (
+                  <>
+                    <div style={{position:"absolute",[side==="left"?"left":"right"]:-18,top:"25%",width:18,borderTop:`1.5px solid ${connColor}`}}/>
+                    <div style={{position:"absolute",[side==="left"?"left":"right"]:-18,top:"75%",width:18,borderTop:`1.5px solid ${connColor}`}}/>
+                  </>
                 )}
 
-                <BracketMatchup
-                  match={m.match}
-                  t1={m.home}
-                  t2={m.away}
-                  winner={m.winner}
-                  interactive={pickMode==="manual"}
-                  onPick={(team)=>onPick(m,team)}
-                />
-
-                {/* Outgoing L-connector for even-indexed cards (top of each pair) */}
-                {isPaired && isEven && !isLastRound && (
-                  <BracketConnector
-                    side={side}
-                    pairIndex={Math.floor(idx/2)}
-                    cardHeight={cardH}
-                    gap={round.gap}
-                    color={m.winner?C.greenS:C.b2}
-                  />
+                {/* Outgoing L-connector to next round */}
+                {!isLast && (
+                  <svg style={{position:"absolute",[side==="left"?"right":"left"]:-26,top:0,bottom:0,width:26,overflow:"visible",pointerEvents:"none"}} height="100%">
+                    <line x1={side==="left"?0:26} y1="25%" x2={side==="left"?14:12} y2="25%" stroke={connColor} strokeWidth="1.5"/>
+                    <line x1={side==="left"?14:12} y1="25%" x2={side==="left"?14:12} y2="75%" stroke={connColor} strokeWidth="1.5"/>
+                    <line x1={side==="left"?0:26} y1="75%" x2={side==="left"?14:12} y2="75%" stroke={connColor} strokeWidth="1.5"/>
+                    <line x1={side==="left"?14:12} y1="50%" x2={side==="left"?26:0} y2="50%" stroke={connColor} strokeWidth="1.5"/>
+                  </svg>
                 )}
+
+                <div style={{opacity:!(mTop.home&&mTop.away)?0.58:1}}>
+                  <BracketMatchup match={mTop.match} t1={mTop.home} t2={mTop.away} winner={mTop.winner} interactive={pickMode==="manual"} onPick={(team)=>onPick(mTop,team)}/>
+                </div>
+                <div style={{opacity:!(mBot.home&&mBot.away)?0.58:1}}>
+                  <BracketMatchup match={mBot.match} t1={mBot.home} t2={mBot.away} winner={mBot.winner} interactive={pickMode==="manual"} onPick={(team)=>onPick(mBot,team)}/>
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Singles (SF) */}
+          {singles.map(id => {
+            const m = matchesById[id] || {match:id,home:null,away:null,winner:null};
+            return (
+              <div key={id} style={{position:"relative",opacity:!(m.home&&m.away)?0.58:1}}>
+                {!isFirst && <div style={{position:"absolute",[side==="left"?"left":"right"]:-18,top:"50%",width:18,borderTop:`1.5px solid ${connColor}`}}/>}
+                {!isLast  && <div style={{position:"absolute",[side==="left"?"right":"left"]:-18,top:"50%",width:18,borderTop:`1.5px solid ${connColor}`}}/>}
+                <BracketMatchup match={m.match} t1={m.home} t2={m.away} winner={m.winner} interactive={pickMode==="manual"} onPick={(team)=>onPick(m,team)}/>
               </div>
             );
           })}
