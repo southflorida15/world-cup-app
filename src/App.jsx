@@ -2740,188 +2740,161 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
   useEffect(() => {
     const el = bracketScrollRef.current;
     if (!el) return;
-
-    let isDown = false;
-    let startX = 0;
-    let scrollLeft = 0;
-
-    const down = (e) => {
-      if (e.button !== 0) return;
-      isDown = true;
-      startX = e.pageX - el.offsetLeft;
-      scrollLeft = el.scrollLeft;
-      el.style.cursor = "grabbing";
-      el.style.userSelect = "none";
-    };
-
-    const leave = () => {
-      isDown = false;
-      el.style.cursor = "grab";
-      el.style.userSelect = "auto";
-    };
-
-    const up = () => {
-      isDown = false;
-      el.style.cursor = "grab";
-      el.style.userSelect = "auto";
-    };
-
-    const move = (e) => {
-      if (!isDown) return;
-      e.preventDefault();
-      const x = e.pageX - el.offsetLeft;
-      const y = e.pageY - el.offsetTop;
-      const walkX = (x - startX) * 1.4;
-      const walkY = (y - startY) * 1.4;
-      
-      el.scrollLeft = scrollLeft - walkX;
-      el.scrollTop = scrollTop - walkY;
-    };
-
-    const wheel = (e) => {
-      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-        el.scrollLeft += e.deltaY;
-      }
-    };
-
-    el.addEventListener("mousedown", down);
-    el.addEventListener("mouseleave", leave);
-    el.addEventListener("mouseup", up);
-    el.addEventListener("mousemove", move);
-    el.addEventListener("wheel", wheel, { passive: true });
-
-    return () => {
-      el.removeEventListener("mousedown", down);
-      el.removeEventListener("mouseleave", leave);
-      el.removeEventListener("mouseup", up);
-      el.removeEventListener("mousemove", move);
-      el.removeEventListener("wheel", wheel);
-    };
+    let isDown=false, startX=0, scrollLeft=0;
+    const down=(e)=>{ if(e.button!==0)return; isDown=true; startX=e.pageX-el.offsetLeft; scrollLeft=el.scrollLeft; el.style.cursor="grabbing"; el.style.userSelect="none"; };
+    const leave=()=>{ isDown=false; el.style.cursor="grab"; el.style.userSelect="auto"; };
+    const up=()=>{ isDown=false; el.style.cursor="grab"; el.style.userSelect="auto"; };
+    const move=(e)=>{ if(!isDown)return; e.preventDefault(); const x=e.pageX-el.offsetLeft; el.scrollLeft=scrollLeft-(x-startX)*1.4; };
+    const wheel=(e)=>{ if(Math.abs(e.deltaY)>Math.abs(e.deltaX)) el.scrollLeft+=e.deltaY; };
+    el.addEventListener("mousedown",down); el.addEventListener("mouseleave",leave); el.addEventListener("mouseup",up); el.addEventListener("mousemove",move); el.addEventListener("wheel",wheel,{passive:true});
+    return ()=>{ el.removeEventListener("mousedown",down); el.removeEventListener("mouseleave",leave); el.removeEventListener("mouseup",up); el.removeEventListener("mousemove",move); el.removeEventListener("wheel",wheel); };
   }, []);
 
-  const left = [
-    {key:"r32L", short:"R32", label:"Round of 32", ids:[73,75,74,77,83,84,81,82], gap:8, padTop:0},
-    {key:"r16L", short:"R16", label:"Round of 16", ids:[89,90,93,94], gap:70, padTop:38},
-    {key:"qfL",  short:"QF",  label:"Quarterfinals", ids:[97,98], gap:224, padTop:130},
-    {key:"sfL",  short:"SF",  label:"Semifinal",     ids:[101], gap:0, padTop:318},
+  // Layout constants
+  const CW = 168;   // card width
+  const CH = 130;   // card height (header + 2 rows)
+  const GAP = 28;   // gap between columns
+  const STUB = 14;  // horizontal stub length
+
+  // Per-round config: ids in pair order, vertical gap between cards in a pair, top offset
+  const leftRounds  = [
+    {key:"r32L", ids:[73,75,74,77,83,84,81,82], pairGap:8,   topOffset:0},
+    {key:"r16L", ids:[89,90,93,94],              pairGap:70,  topOffset:51},
+    {key:"qfL",  ids:[97,98],                    pairGap:224, topOffset:153},
+    {key:"sfL",  ids:[101],                      pairGap:0,   topOffset:359},
+  ];
+  const rightRounds = [
+    {key:"sfR",  ids:[102],                      pairGap:0,   topOffset:359},
+    {key:"qfR",  ids:[99,100],                   pairGap:224, topOffset:153},
+    {key:"r16R", ids:[91,92,95,96],              pairGap:70,  topOffset:51},
+    {key:"r32R", ids:[76,78,79,80,86,88,85,87],  pairGap:8,   topOffset:0},
   ];
 
-  const right = [
-    {key:"sfR",  short:"SF",  label:"Semifinal",     ids:[102], gap:0, padTop:318},
-    {key:"qfR",  short:"QF",  label:"Quarterfinals", ids:[99,100], gap:224, padTop:130},
-    {key:"r16R", short:"R16", label:"Round of 16",   ids:[91,92,95,96], gap:70, padTop:38},
-    {key:"r32R", short:"R32", label:"Round of 32",   ids:[76,78,79,80,86,88,85,87], gap:8, padTop:0},
-  ];
+  const ROUND_LABELS = {r32L:"R32",r16L:"R16",qfL:"QF",sfL:"SF",sfR:"SF",qfR:"QF",r16R:"R16",r32R:"R32"};
+  const ROUND_FULL   = {r32L:"Round of 32",r16L:"Round of 16",qfL:"Quarterfinals",sfL:"Semifinal",sfR:"Semifinal",qfR:"Quarterfinals",r16R:"Round of 16",r32R:"Round of 32"};
 
-  const columnWidth = 166;
+  // Compute absolute Y center of card n in a round
+  const cardCenterY = (round, n) => {
+    // pairs: cards 0&1, 2&3, etc. Within pair, gap=pairGap. Between pairs, gap doubles so next column centers align
+    const pairIdx = Math.floor(n / 2);
+    const posInPair = n % 2;
+    const interPairGap = CH * 2 + round.pairGap + 8; // gap between pair groups
+    const y = round.topOffset + pairIdx * interPairGap + posInPair * (CH + round.pairGap) + CH / 2;
+    return y;
+  };
 
-  const CARD_H = 132;
-  const COL_GAP = 26;
+  const totalHeight = (() => {
+    const r = leftRounds[0];
+    const n = r.ids.length;
+    const pairs = Math.ceil(n/2);
+    const interPairGap = CH * 2 + r.pairGap + 8;
+    return r.topOffset + pairs * interPairGap + 60;
+  })();
 
-  const renderColumn = (round, side="left") => {
-    const ids = round.ids || [];
-    const isFirst = round.key === "r32L" || round.key === "r32R";
-    const isLast  = round.key === "sfL"  || round.key === "sfR";
-    const g = round.gap;
-    // top of card n (0-based) within the flex container
-    const cardTop = n => n * (CARD_H + g);
-    const cardMid = n => cardTop(n) + CARD_H / 2;
-    const totalH = cardTop(ids.length - 1) + CARD_H;
-
-    // Build connector pairs
+  const renderRound = (round, side) => {
+    const isFirst = round.key==="r32L"||round.key==="r32R";
+    const isLast  = round.key==="sfL" ||round.key==="sfR";
+    const ids = round.ids;
     const pairs = [];
-    for (let i = 0; i < ids.length - 1; i += 2) pairs.push([i, i+1]);
+    for (let i=0;i<ids.length;i+=2) pairs.push(ids.slice(i,i+2));
 
     return (
-      <div key={round.key} style={{width:columnWidth,flex:`0 0 ${columnWidth}px`,paddingTop:round.padTop}}>
-        <div style={{textAlign:"center",marginBottom:10,background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b1}`,borderRadius:999,padding:"6px 8px",boxShadow:DS.shadow.card}}>
-          <div style={{fontSize:10,fontWeight:900,color:round.short==="FINAL"?C.gold:C.green,letterSpacing:"0.08em"}}>{round.short}</div>
-          <div style={{fontSize:9,color:C.dim,whiteSpace:"nowrap"}}>{round.label}</div>
+      <div key={round.key} style={{position:"relative",width:CW,flexShrink:0}}>
+        {/* Round label */}
+        <div style={{textAlign:"center",marginBottom:8,background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b1}`,borderRadius:999,padding:"5px 8px"}}>
+          <div style={{fontSize:10,fontWeight:900,color:C.green,letterSpacing:"0.08em"}}>{ROUND_LABELS[round.key]}</div>
+          <div style={{fontSize:9,color:C.dim}}>{ROUND_FULL[round.key]}</div>
         </div>
 
-        <div style={{position:"relative",display:"flex",flexDirection:"column",gap:g,overflow:"visible"}}>
-          {/* Single SVG overlay for all connectors in this column */}
-          <svg style={{position:"absolute",top:0,left:0,width:columnWidth,height:totalH,overflow:"visible",pointerEvents:"none",zIndex:3}}>
-            {/* Outgoing L-connectors to next column */}
-            {!isLast && pairs.map(([ti, bi]) => {
-              const y1   = cardMid(ti);
-              const y2   = cardMid(bi);
-              const yMid = (y1 + y2) / 2;
-              const xE   = side==="left" ? columnWidth     : 0;            // card edge
-              const xV   = side==="left" ? columnWidth + 12 : -12;         // vertical line
-              const xOut = side==="left" ? columnWidth + COL_GAP : -COL_GAP; // next col
-              const col  = (matchesById[ids[ti]]?.winner) ? C.greenS : C.b2;
-              return (
-                <g key={`out-${ti}`}>
-                  <line x1={xE} y1={y1}   x2={xV}   y2={y1}   stroke={col} strokeWidth="1.5"/>
-                  <line x1={xV} y1={y1}   x2={xV}   y2={y2}   stroke={col} strokeWidth="1.5"/>
-                  <line x1={xE} y1={y2}   x2={xV}   y2={y2}   stroke={col} strokeWidth="1.5"/>
-                  <line x1={xV} y1={yMid} x2={xOut} y2={yMid} stroke={col} strokeWidth="1.5"/>
-                </g>
-              );
-            })}
-            {/* Incoming stubs from previous column */}
-            {!isFirst && ids.map((id, n) => {
-              const m   = matchesById[id] || {};
-              const col = m.winner ? C.greenS : C.b2;
-              const xS  = side==="left" ? -COL_GAP : columnWidth + COL_GAP;
-              const xE  = side==="left" ? 0        : columnWidth;
-              return (
-                <line key={`in-${id}`} x1={xS} y1={cardMid(n)} x2={xE} y2={cardMid(n)}
-                  stroke={col} strokeWidth="1.5" opacity={m.home&&m.away?1:0.3}/>
-              );
-            })}
-          </svg>
+        {/* Cards + connectors */}
+        <div style={{position:"relative",height:totalHeight}}>
+          {pairs.map(([topId,botId],pairIdx)=>{
+            const interPairGap = CH*2 + round.pairGap + 8;
+            const pairTop = round.topOffset + pairIdx * interPairGap;
+            const mTop = matchesById[topId]||{match:topId,home:null,away:null,winner:null};
+            const mBot = matchesById[botId]||{match:botId,home:null,away:null,winner:null};
+            const topMidY = pairTop + CH/2;
+            const botMidY = pairTop + CH + round.pairGap + CH/2;
+            const midY    = (topMidY + botMidY) / 2;
+            const connCol = C.b2;
 
-          {ids.map((id) => {
-            const m = matchesById[id] || {match:id,home:null,away:null,winner:null};
             return (
-              <div key={id} style={{opacity:!(m.home&&m.away)?0.58:1}}>
-                <BracketMatchup match={m.match} t1={m.home} t2={m.away} winner={m.winner}
-                  interactive={pickMode==="manual"} onPick={t=>onPick(m,t)}/>
+              <div key={topId}>
+                {/* Top card */}
+                <div style={{position:"absolute",top:pairTop,left:0,width:CW,opacity:!(mTop.home&&mTop.away)?0.55:1}}>
+                  <BracketMatchup match={mTop.match} t1={mTop.home} t2={mTop.away} winner={mTop.winner} interactive={pickMode==="manual"} onPick={t=>onPick(mTop,t)}/>
+                </div>
+                {/* Bot card */}
+                {botId && (
+                  <div style={{position:"absolute",top:pairTop+CH+round.pairGap,left:0,width:CW,opacity:!(mBot.home&&mBot.away)?0.55:1}}>
+                    <BracketMatchup match={mBot.match} t1={mBot.home} t2={mBot.away} winner={mBot.winner} interactive={pickMode==="manual"} onPick={t=>onPick(mBot,t)}/>
+                  </div>
+                )}
+
+                {/* Outgoing L-connector */}
+                {!isLast && botId && (() => {
+                  const xEdge = side==="left" ? CW : 0;
+                  const xV    = side==="left" ? CW+STUB : -STUB;
+                  return (
+                    <>
+                      {/* Top horizontal stub */}
+                      <div style={{position:"absolute",top:topMidY,left:side==="left"?CW:-STUB,width:STUB,borderTop:`1.5px solid ${connCol}`,opacity:mTop.home&&mTop.away?1:0.3}}/>
+                      {/* Bot horizontal stub */}
+                      <div style={{position:"absolute",top:botMidY,left:side==="left"?CW:-STUB,width:STUB,borderTop:`1.5px solid ${connCol}`,opacity:mBot.home&&mBot.away?1:0.3}}/>
+                      {/* Vertical line */}
+                      <div style={{position:"absolute",top:topMidY,left:side==="left"?CW+STUB:-(STUB+1),width:1.5,height:botMidY-topMidY,background:connCol,opacity:(mTop.home&&mTop.away)||(mBot.home&&mBot.away)?0.6:0.25}}/>
+                      {/* Center stub to next column */}
+                      <div style={{position:"absolute",top:midY,left:side==="left"?CW+STUB:-(STUB+GAP-STUB),width:GAP-STUB,borderTop:`1.5px solid ${connCol}`,opacity:(mTop.home&&mTop.away)||(mBot.home&&mBot.away)?0.6:0.25}}/>
+                    </>
+                  );
+                })()}
+
+                {/* Incoming stub from previous column */}
+                {!isFirst && (
+                  <>
+                    <div style={{position:"absolute",top:topMidY,left:side==="left"?-STUB:CW,width:STUB,borderTop:`1.5px solid ${connCol}`,opacity:mTop.home&&mTop.away?0.6:0.25}}/>
+                    {botId && <div style={{position:"absolute",top:botMidY,left:side==="left"?-STUB:CW,width:STUB,borderTop:`1.5px solid ${connCol}`,opacity:mBot.home&&mBot.away?0.6:0.25}}/>}
+                  </>
+                )}
               </div>
             );
           })}
+
+          {/* Singles (SF) */}
+          {ids.length===1 && (()=>{
+            const m = matchesById[ids[0]]||{match:ids[0],home:null,away:null,winner:null};
+            const midY = round.topOffset + CH/2;
+            return (
+              <div>
+                <div style={{position:"absolute",top:round.topOffset,left:0,width:CW,opacity:!(m.home&&m.away)?0.55:1}}>
+                  <BracketMatchup match={m.match} t1={m.home} t2={m.away} winner={m.winner} interactive={pickMode==="manual"} onPick={t=>onPick(m,t)}/>
+                </div>
+                {!isFirst && <div style={{position:"absolute",top:midY,left:side==="left"?-STUB:CW,width:STUB,borderTop:`1.5px solid ${C.b2}`}}/>}
+                {!isLast  && <div style={{position:"absolute",top:midY,left:side==="left"?CW:-STUB,width:STUB,borderTop:`1.5px solid ${C.b2}`}}/>}
+              </div>
+            );
+          })()}
         </div>
       </div>
     );
   };
 
-  const finalMatch = matchesById[104] || (bracket?.final || [])[0] || {match:104,home:null,away:null,winner:null};
+  const finalMatch = matchesById[104]||(bracket?.final||[])[0]||{match:104,home:null,away:null,winner:null};
+  const finalTop = leftRounds[3].topOffset + 36;
 
   return (
-    <div style={{width:"100%",maxWidth:"100%",overflow:"visible"}}>
-      <div
-  ref={bracketScrollRef}
-  style={{
-    width:"100%",
-    overflowX:"auto",
-    overflowY:"visible",
-    cursor:"grab",
-    WebkitOverflowScrolling:"touch",
-    padding:"6px 0 18px",
-    scrollPaddingLeft:24,
-    overscrollBehaviorX:"contain"
-  }}
->
-        <div style={{display:"flex",alignItems:"flex-start",gap:26,minWidth:1520,padding:"0 24px 8px"}}>
-          {left.map(r => renderColumn(r, "left"))}
+    <div style={{width:"100%",maxWidth:"100%"}}>
+      <div ref={bracketScrollRef} style={{width:"100%",overflowX:"auto",overflowY:"hidden",cursor:"grab",WebkitOverflowScrolling:"touch",padding:"6px 0 18px",overscrollBehaviorX:"contain"}}>
+        <div style={{display:"flex",alignItems:"flex-start",gap:GAP,minWidth:1520,padding:"0 24px 8px"}}>
+          {leftRounds.map(r=>renderRound(r,"left"))}
 
-          <div style={{width:190,flex:"0 0 190px",paddingTop:310}}>
+          {/* FINAL */}
+          <div style={{width:190,flexShrink:0,paddingTop:finalTop}}>
             <div style={{textAlign:"center",marginBottom:12}}>
               <div style={{fontSize:12,color:C.gold,fontWeight:900,letterSpacing:"0.12em"}}>FINAL</div>
               <div style={{fontSize:10,color:C.dim}}>Jul 19 · New York/New Jersey</div>
             </div>
-
-            <BracketMatchup
-              match={finalMatch.match}
-              t1={finalMatch.home}
-              t2={finalMatch.away}
-              winner={finalMatch.winner}
-              interactive={pickMode==="manual"}
-              onPick={(team)=>onPick(finalMatch,team)}
-            />
-
+            <BracketMatchup match={finalMatch.match} t1={finalMatch.home} t2={finalMatch.away} winner={finalMatch.winner} interactive={pickMode==="manual"} onPick={(team)=>onPick(finalMatch,team)}/>
             {finalMatch.winner && (
               <div style={{marginTop:14,textAlign:"center",background:`${C.gold}16`,border:`1px solid ${C.gold}44`,borderRadius:14,padding:"10px 8px"}}>
                 <div style={{fontSize:10,color:C.dim,fontWeight:800,letterSpacing:"0.08em"}}>CHAMPION</div>
@@ -2931,7 +2904,7 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
             )}
           </div>
 
-          {right.map(r => renderColumn(r, "right"))}
+          {rightRounds.map(r=>renderRound(r,"right"))}
         </div>
       </div>
     </div>
