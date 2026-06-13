@@ -165,28 +165,38 @@ function parseLineups(data, homeTeam) {
   const result = { home: null, away: null };
 
   rosters.forEach(roster => {
-    const teamName = normESPN(roster.team?.displayName || roster.team?.name || "");
+    // ESPN structure: { homeAway, winner, team: { displayName, athletes: [...] } }
+    const teamObj = roster.team || roster;
+    const teamName = normESPN(teamObj.displayName || teamObj.name || roster.team?.displayName || "");
     const side = teamName === homeTeam ? "home" : "away";
-    const formation = roster.formation || null;
+    const formation = roster.formation || teamObj.formation || null;
 
-    // ESPN uses different field names — try all variants
-    const players = roster.entries || roster.roster || roster.athletes || roster.players || [];
+    // Try every possible location for the players array
+    const players =
+      roster.entries ||
+      roster.roster ||
+      roster.athletes ||
+      roster.players ||
+      teamObj.athletes ||
+      teamObj.roster ||
+      teamObj.entries ||
+      teamObj.players ||
+      [];
 
     const starters = [];
     const bench = [];
 
     players.forEach(p => {
-      // entries[] wraps the athlete under p.athlete; others may be flat
       const athlete = p.athlete || p;
       const name = athlete.displayName || athlete.fullName || athlete.shortName || p.displayName || p.name || "";
       const jersey = p.jersey ?? athlete.jersey ?? null;
       const pos = p.position?.abbreviation || p.position?.name
                 || athlete.position?.abbreviation || athlete.position?.name || "";
-      // starter field varies
       const starter = p.starter ?? p.didPlay ?? p.active ?? true;
       const subbedOut = p.subbedOut ?? false;
       const subbedIn  = p.subbedIn  ?? false;
 
+      if (!name) return;
       const entry = { name, jersey: jersey ? String(jersey) : null, pos, subbedOut, subbedIn };
       if (starter) starters.push(entry);
       else bench.push(entry);
@@ -497,8 +507,9 @@ export default async function handler(req, res) {
           teamName: data.rosters[0].team?.displayName,
           formation: data.rosters[0].formation,
           topKeys: Object.keys(data.rosters[0]),
-          entriesCount: (data.rosters[0].entries || data.rosters[0].roster || data.rosters[0].athletes || data.rosters[0].players || []).length,
-          firstPlayer: (data.rosters[0].entries || data.rosters[0].roster || data.rosters[0].athletes || data.rosters[0].players || [])[0] || null,
+          teamKeys: data.rosters[0].team ? Object.keys(data.rosters[0].team) : [],
+          entriesCount: (data.rosters[0].entries || data.rosters[0].roster || data.rosters[0].athletes || data.rosters[0].players || data.rosters[0].team?.athletes || data.rosters[0].team?.roster || []).length,
+          firstPlayer: (data.rosters[0].entries || data.rosters[0].roster || data.rosters[0].athletes || data.rosters[0].players || data.rosters[0].team?.athletes || data.rosters[0].team?.roster || [])[0] || null,
         } : null,
       });
     }
