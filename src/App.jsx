@@ -1726,6 +1726,8 @@ function StatsTab({ initial="", tabTop=116 }) {
 
   return (
     <div>
+      {/* Tournament facts at top of Stats */}
+      <QuickFacts tabTop={tabTop}/>
       <div ref={_shRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:DS.shadow.sticky,padding:"8px 13px"}}>
         <select value={sel} onChange={e=>setSel(e.target.value)} style={{width:"100%",padding:"10px 14px",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:10,color:C.text,fontSize:14,outline:"none"}}>
           <option value="">Select a team</option>
@@ -5160,8 +5162,7 @@ function WCNewsTab({ tabTop=116 }) {
 
       <div style={{height:0}}/>
       <div style={{padding:"0 0 20px"}}>
-        {/* Tournament facts */}
-        <QuickFacts tabTop={tabTop}/>
+        {/* News articles below */}
 
         {/* News feed */}
         <div style={{fontSize:12,fontWeight:700,color:C.mid,letterSpacing:"0.08em",marginBottom:10}}>{"🗞️ LATEST HEADLINES"}</div>
