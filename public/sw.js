@@ -2,7 +2,7 @@
 // Caches the app shell for offline use.
 // Live API data (scores, predictions) always fetches fresh from network.
 
-const CACHE_NAME = "wc2026-v2";
+const CACHE_NAME = "wc2026-v3";
 const APP_SHELL = [
   "/",
   "/index.html",
@@ -40,7 +40,21 @@ self.addEventListener("fetch", event => {
     return;
   }
 
-  // For everything else: try network first, fall back to cache
+  // Always fetch HTML fresh — ensures users get latest app version
+  if (request.headers.get("accept")?.includes("text/html") || url.pathname === "/" || url.pathname === "/index.html") {
+    event.respondWith(
+      fetch(request)
+        .then(response => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(request, clone));
+          }
+          return response;
+        })
+        .catch(() => caches.match(request))
+    );
+    return;
+  }
   event.respondWith(
     fetch(request)
       .then(response => {
