@@ -2871,6 +2871,8 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
               <div style={{position:"absolute",top:finalTop+CH/2,left:-GAP,width:GAP,borderTop:`1.5px solid ${C.b2}`,opacity:0.6}}/>
               {/* Right stub from sfR */}
               <div style={{position:"absolute",top:finalTop+CH/2,right:-GAP,width:GAP,borderTop:`1.5px solid ${C.b2}`,opacity:0.6}}/>
+              {/* FINAL label just above the card */}
+              <div style={{position:"absolute",top:finalTop-22,left:0,width:190,textAlign:"center",fontSize:11,fontWeight:900,color:C.gold,letterSpacing:"0.12em"}}>FINAL</div>
               {/* Final card */}
               <div style={{position:"absolute",top:finalTop,left:0,width:190}}>
                 <BracketMatchup match={finalMatch.match} t1={finalMatch.home} t2={finalMatch.away} winner={finalMatch.winner} interactive={pickMode==="manual"} onPick={(team)=>onPick(finalMatch,team)}/>
@@ -5411,20 +5413,30 @@ function AskWorldCupTab({ tabTop=116 }) {
   const [q, setQ] = useState("");
   const [answer, setAnswer] = useState(null);
   const [loading, setLoading] = useState(false);
+  const { scores } = useContext(LiveScoresCtx);
+  const scoresRef = scores || {};
 
   const examples = [
+    "Total goals scored",
+    "Highest scoring match",
+    "Biggest win so far",
+    "Which teams have won so far",
+    "Unbeaten teams",
+    "Top scorers so far",
+    "Total red cards",
+    "Championship odds",
+    "Strongest teams",
+    "Best form teams",
+    "Matches today",
     "Next match",
-    "Next 5 matches",
     "Next Brazil match",
-    "Next match involving Messi",
-    "Show matches at 12AM ET",
-    "Show matches at 9PM ET",
-    "Show matches in Miami",
     "Group A matches",
     "Brazil matches",
-    "Final match",
-    "Most yellow cards",
+    "Matches in Miami",
     "Brazil vs France history",
+    "Germany all-time top scorers",
+    "Final match",
+    "How many matches left",
   ];
 
   const norm = (v) => String(v || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
@@ -5567,8 +5579,111 @@ function AskWorldCupTab({ tabTop=116 }) {
       return { title:"Final / knockout matches", summary: rows.length ? `${rows.length} match${rows.length!==1?"es":""} found.` : "The final will appear here once the schedule data includes it.", rows };
     }
 
-    // Cards / events placeholder.
-    if (text.includes("yellow") || text.includes("card")) {
+    // Highest scoring / biggest win
+    if (text.includes("highest scor") || text.includes("most goal") && text.includes("match") || text.includes("biggest win") || text.includes("best result")) {
+      const finished = MATCHES.filter(m => {
+        const sc = scoresRef[`${m.home}|${m.away}`];
+        return sc && sc.hg !== null && sc.ag !== null && (sc.status==="FT"||sc.status==="AET"||sc.status==="finished"||sc.status==="ended");
+      });
+      if (!finished.length) return { title:"No finished matches yet", summary:"Check back once matches have been played.", rows:[] };
+      const withScores = finished.map(m => { const sc = scoresRef[`${m.home}|${m.away}`]; return {...m, hg:sc.hg, ag:sc.ag, total:sc.hg+sc.ag, diff:Math.abs(sc.hg-sc.ag)}; });
+      if (text.includes("biggest win")) {
+        const top = [...withScores].sort((a,b)=>b.diff-a.diff).slice(0,3);
+        const rows = top.map(m => ({ title:`${getFlag(m.home)} ${m.home} ${m.hg}–${m.ag} ${getFlag(m.away)} ${m.away}`, meta:`${m.date} · Margin: ${m.diff}`, match:m }));
+        return { title:"Biggest wins so far", summary:`Top ${rows.length} by goal margin.`, rows };
+      }
+      const top = [...withScores].sort((a,b)=>b.total-a.total).slice(0,3);
+      const rows = top.map(m => ({ title:`${getFlag(m.home)} ${m.home} ${m.hg}–${m.ag} ${getFlag(m.away)} ${m.away}`, meta:`${m.date} · ${m.total} goals`, match:m }));
+      return { title:"Highest scoring matches", summary:`Top ${rows.length} by total goals.`, rows };
+    }
+
+    // Which teams have won / unbeaten
+    if (text.includes("won so far") || text.includes("which team") && text.includes("win") || text.includes("unbeaten") || text.includes("no loss")) {
+      const teamRecord = {};
+      MATCHES.forEach(m => {
+        const sc = scoresRef[`${m.home}|${m.away}`];
+        if (!sc || sc.hg === null || !(sc.status==="FT"||sc.status==="AET"||sc.status==="finished"||sc.status==="ended")) return;
+        [m.home, m.away].forEach(t => { if (!teamRecord[t]) teamRecord[t] = {w:0,d:0,l:0}; });
+        if (sc.hg > sc.ag) { teamRecord[m.home].w++; teamRecord[m.away].l++; }
+        else if (sc.hg < sc.ag) { teamRecord[m.away].w++; teamRecord[m.home].l++; }
+        else { teamRecord[m.home].d++; teamRecord[m.away].d++; }
+      });
+      if (text.includes("unbeaten")) {
+        const unbeaten = Object.entries(teamRecord).filter(([,r])=>r.l===0&&(r.w>0||r.d>0)).sort((a,b)=>b[1].w-a[1].w);
+        if (!unbeaten.length) return { title:"Unbeaten teams", summary:"No finished matches yet.", rows:[] };
+        return { title:`Unbeaten teams (${unbeaten.length})`, summary:unbeaten.map(([t,r])=>`${getFlag(t)} ${t}: ${r.w}W ${r.d}D`).join(" · "), rows:[] };
+      }
+      const winners = Object.entries(teamRecord).filter(([,r])=>r.w>0).sort((a,b)=>b[1].w-a[1].w);
+      if (!winners.length) return { title:"No wins yet", summary:"No finished matches yet.", rows:[] };
+      return { title:`Teams with wins (${winners.length})`, summary:winners.map(([t,r])=>`${getFlag(t)} ${t}: ${r.w}W ${r.d}D ${r.l}L`).join(" · "), rows:[] };
+    }
+
+    // How many matches left / remaining
+    if (text.includes("how many match") || text.includes("matches left") || text.includes("remaining match")) {
+      const finished = MATCHES.filter(m => { const sc = scoresRef[`${m.home}|${m.away}`]; return sc && (sc.status==="FT"||sc.status==="AET"||sc.status==="finished"||sc.status==="ended"); });
+      const remaining = MATCHES.length - finished.length;
+      return { title:"Tournament progress", summary:`${finished.length} of ${MATCHES.length} matches played · ${remaining} remaining.`, rows:[] };
+    }
+
+    // Championship odds
+    if (text.includes("odd") || text.includes("favorite") || text.includes("favourite") || text.includes("champion") && text.includes("chance") || text.includes("polymarket")) {
+      const top = PREDS.filter(p=>p.team!=="Others").sort((a,b)=>b.poly-a.poly).slice(0,8);
+      return { title:"Championship odds (Polymarket)", summary:top.map(p=>`${getFlag(p.team)} ${p.team} ${p.poly}% ${p.trend}`).join(" · "), rows:[] };
+    }
+
+    // Strongest teams / team ratings
+    if (text.includes("strong") || text.includes("best team") || text.includes("top team") || text.includes("rated")) {
+      const top = Object.entries(STR).sort((a,b)=>b[1]-a[1]).slice(0,10);
+      return { title:"Strongest teams (simulator ratings)", summary:top.map(([t,r],i)=>`${i+1}. ${getFlag(t)} ${t} (${r})`).join(" · "), rows:[] };
+    }
+
+    // Best form teams
+    if (text.includes("form") || text.includes("in-form") || text.includes("hot team") || text.includes("on a run")) {
+      const scored = Object.entries(FORM_DATA).map(([t,f])=>{
+        const pts = f.slice(-5).reduce((s,r)=>s+(r==="W"?3:r==="D"?1:0),0);
+        return [t, pts, f.slice(-5)];
+      }).sort((a,b)=>b[1]-a[1]).slice(0,8);
+      return { title:"Best recent form (last 5 games)", summary:scored.map(([t,,f])=>`${getFlag(t)} ${t}: ${f.join("")}`).join(" · "), rows:[] };
+    }
+
+    // Matches today
+    if (text.includes("today") || text.includes("match today")) {
+      const todayStr = new Date().toLocaleDateString("en-US",{month:"short",day:"numeric"});
+      const rows = MATCHES.filter(m => m.date === todayStr).map(fmtMatch);
+      return { title:`Matches today (${todayStr})`, summary: rows.length ? `${rows.length} match${rows.length!==1?"es":""} today.` : "No matches today.", rows };
+    }
+
+    // All-time WC top scorers for a team
+    const scorerTeam = Object.keys(WC_TOP_SCORERS).find(t => norm(text).includes(norm(t)));
+    if (scorerTeam && (text.includes("scor") || text.includes("goal") || text.includes("history") || text.includes("all.time"))) {
+      const scorers = WC_TOP_SCORERS[scorerTeam];
+      return { title:`${getFlag(scorerTeam)} ${scorerTeam} all-time WC top scorers`, summary:scorers.map((s,i)=>`${i+1}. ${s.name} (${s.goals})`).join(" · "), rows:[] };
+    }
+
+    // Tournament stats queries
+    if (text.includes("top scor") && !scorerTeam) {
+      return { title:"Top scorers", summary:"Live top-scorer data comes from the match events feed. Open any finished match card → Match Events to see goals. A dedicated leaderboard is on the roadmap.", rows:[] };
+    }
+
+    if (text.includes("total goal") || text.includes("goals scored") || text.includes("how many goal")) {
+      const finished = MATCHES.filter(m => {
+        const sc = scoresRef[`${m.home}|${m.away}`];
+        return sc && (sc.status==="FT"||sc.status==="AET"||sc.status==="PEN"||sc.status==="finished"||sc.status==="ended"||sc.status==="after_extra_time"||sc.status==="after_penalties");
+      });
+      const total = finished.reduce((sum,m)=>{
+        const sc = scoresRef[`${m.home}|${m.away}`];
+        return sum + (sc?.hg||0) + (sc?.ag||0);
+      }, 0);
+      const played = finished.length;
+      const avg = played > 0 ? (total/played).toFixed(2) : "—";
+      return { title:"Total goals scored", summary: played > 0 ? `${total} goals scored across ${played} finished match${played!==1?"es":""} (avg ${avg} per game).` : "No finished matches yet — check back during the tournament.", rows:[] };
+    }
+
+    if (text.includes("red card") || (text.includes("red") && text.includes("card"))) {
+      return { title:"Red cards", summary:"Red card counts per match are available in Match Events — tap any finished match card and expand the Match Timeline. A tournament-wide red card tally is on the roadmap once the events API returns card data across all matches.", rows:[] };
+    }
+
+    if (text.includes("yellow card") || text.includes("card") || text.includes("yellow")) {
       return { title:"Yellow-card leaders", summary:"This question will become available once match-event feeds return player card data. The app already has a match-events API path ready for this type of query.", rows:[] };
     }
 
