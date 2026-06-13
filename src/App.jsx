@@ -2800,7 +2800,7 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
   }, []);
 
   const left = [
-    {key:"r32L", short:"R32", label:"Round of 32", ids:[74,77,73,75,83,84,81,82], gap:8, padTop:0},
+    {key:"r32L", short:"R32", label:"Round of 32", ids:[73,74,75,77,83,84,81,82], gap:8, padTop:0},
     {key:"r16L", short:"R16", label:"Round of 16", ids:[89,90,93,94], gap:70, padTop:38},
     {key:"qfL", short:"QF", label:"Quarterfinals", ids:[97,98], gap:224, padTop:130},
     {key:"sfL", short:"SF", label:"Semifinal", ids:[101], gap:0, padTop:318},
