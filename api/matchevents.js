@@ -26,19 +26,42 @@ const TTL_LIVE = 30 * 1000;
 const TTL_DONE = 60 * 60 * 1000;
 
 const ESPN_NAME_MAP = {
-  "USA": "United States",
-  "Bosnia and Herzegovina": "Bosnia & Herz.",
-  "Cape Verde Islands": "Cape Verde",
-  "Turkey": "Turkiye",
-  "Türkiye": "Turkiye",
-  "Curaçao": "Curacao",
-  "Congo, DR": "DR Congo",
-  "DR Congo": "DR Congo",
-  "Côte d'Ivoire": "Ivory Coast",
-  "Korea Republic": "South Korea",
-  "Czech Republic": "Czechia",
+  "USA":                      "United States",
+  "Bosnia and Herzegovina":   "Bosnia & Herz.",
+  "Bosnia & Herzegovina":     "Bosnia & Herz.",
+  "Cape Verde Islands":       "Cape Verde",
+  "Cape Verde":               "Cape Verde",
+  "Turkey":                   "Turkiye",
+  "Türkiye":                  "Turkiye",
+  "Curaçao":                  "Curacao",
+  "Congo, DR":                "DR Congo",
+  "Congo DR":                 "DR Congo",
+  "Democratic Republic of Congo": "DR Congo",
+  "DR Congo":                 "DR Congo",
+  "Côte d'Ivoire":            "Ivory Coast",
+  "Cote d'Ivoire":            "Ivory Coast",
+  "Korea Republic":           "South Korea",
+  "Republic of Korea":        "South Korea",
+  "Czech Republic":           "Czechia",
+  "Czechia":                  "Czechia",
+  "Iran":                     "Iran",
+  "IR Iran":                  "Iran",
+  "Scotland":                 "Scotland",
+  "United States":            "United States",
+  "Saudi Arabia":             "Saudi Arabia",
+  "KSA":                      "Saudi Arabia",
+  "New Zealand":              "New Zealand",
+  "Uzbekistan":               "Uzbekistan",
 };
-const normESPN = n => ESPN_NAME_MAP[n] || n;
+const normESPN = n => {
+  if (!n) return n;
+  // Direct map first
+  if (ESPN_NAME_MAP[n]) return ESPN_NAME_MAP[n];
+  // Strip accents and try again (handles Curaçao → Curacao etc.)
+  const stripped = n.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  if (ESPN_NAME_MAP[stripped]) return ESPN_NAME_MAP[stripped];
+  return n;
+};
 
 // ── KV persistence ────────────────────────────────────────────────────────
 // Finished match events+stats stored permanently, no expiry.
