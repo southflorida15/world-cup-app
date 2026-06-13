@@ -2847,8 +2847,8 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
   };
 
   const finalMatch = matchesById[104]||(bracket?.final||[])[0]||{match:104,home:null,away:null,winner:null};
-  const PILL_H = 38; // round label pill height + marginBottom
-  const finalTop = 483 + PILL_H;
+  const PILL_H = 38;
+  const finalTop = 483;
   const finalLabelH = 32; // "FINAL" label + marginBottom only
   const finalCardMidY = finalTop + finalLabelH + CH/2; // absolute Y center of final card
   const sfCardMidY = 483 + CH/2; // both SF cards are at tops[0]=483
@@ -2859,17 +2859,18 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
         <div style={{display:"flex",alignItems:"flex-start",gap:GAP,minWidth:1520,padding:"0 24px 8px"}}>
           {leftRounds.map(r=>renderRound(r,"left"))}
 
-          {/* FINAL */}
+          {/* FINAL — identical structure to other columns for guaranteed vertical alignment */}
           <div style={{position:"relative",width:190,flexShrink:0}}>
+            {/* Same pill as other columns */}
+            <div style={{textAlign:"center",marginBottom:8,background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b1}`,borderRadius:999,padding:"5px 8px"}}>
+              <div style={{fontSize:10,fontWeight:900,color:C.gold,letterSpacing:"0.08em"}}>FINAL</div>
+              <div style={{fontSize:9,color:C.dim,visibility:"hidden"}}>placeholder</div>
+            </div>
             <div style={{position:"relative",height:totalHeight}}>
               {/* Left stub from sfL */}
               <div style={{position:"absolute",top:finalTop+CH/2,left:-GAP,width:GAP,borderTop:`1.5px solid ${C.b2}`,opacity:0.6}}/>
               {/* Right stub from sfR */}
               <div style={{position:"absolute",top:finalTop+CH/2,right:-GAP,width:GAP,borderTop:`1.5px solid ${C.b2}`,opacity:0.6}}/>
-              {/* FINAL label just above the card */}
-              <div style={{position:"absolute",top:finalTop-28,left:0,width:190,textAlign:"center"}}>
-                <div style={{fontSize:11,fontWeight:900,color:C.gold,letterSpacing:"0.12em"}}>FINAL</div>
-              </div>
               {/* Final card */}
               <div style={{position:"absolute",top:finalTop,left:0,width:190}}>
                 <BracketMatchup match={finalMatch.match} t1={finalMatch.home} t2={finalMatch.away} winner={finalMatch.winner} interactive={pickMode==="manual"} onPick={(team)=>onPick(finalMatch,team)}/>
