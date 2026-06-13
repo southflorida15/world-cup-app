@@ -616,8 +616,6 @@ const statusLabel = (s,e) => {
 };
 
 // ── COUNTDOWN HOOK ────────────────────────────────────────────────────────
-// Returns a formatted countdown string (e.g. "18:42") if within 30 min of
-// kickoff, otherwise null. Updates every second.
 function useCountdown(matchId) {
   const iso = MATCH_UTC[matchId];
   const [label, setLabel] = useState(() => {
@@ -1129,7 +1127,7 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="",
           {m.tv && <>📺 {isUS ? m.tv : bc.primary}</>}
         </div>
         <div style={{display:"flex",gap:5,alignItems:"center",flexShrink:0}}>
-          {onMatchTap && (live||finished) && <button onClick={()=>onMatchTap(m)} style={{background:`${C.blue}18`,border:`1px solid ${C.blue}33`,color:C.blue,padding:"3px 8px",borderRadius:20,fontSize:11,fontWeight:600,cursor:"pointer"}}>Match Events</button>}
+          {onMatchTap && (live||finished||(MATCH_UTC[m.id]&&Date.now()>new Date(MATCH_UTC[m.id]).getTime())) && <button onClick={()=>onMatchTap(m)} style={{background:`${C.blue}18`,border:`1px solid ${C.blue}33`,color:C.blue,padding:"3px 8px",borderRadius:20,fontSize:11,fontWeight:600,cursor:"pointer"}}>Match Events</button>}
           {!finished && !live && (()=>{ const isSaved=savedIds.has(m.id); return (
             <button onClick={()=>onAction(m)} style={{background:isSaved?`${C.gold}22`:`${C.green}22`,border:`1px solid ${isSaved?C.gold:C.greenS}`,color:isSaved?C.gold:C.green,padding:"3px 9px",borderRadius:20,fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
               <StarIcon filled={isSaved} size={12}/>{isSaved?"Saved":"Add"}
@@ -3690,7 +3688,7 @@ function MatchdayCard({ m, onAction, favTeam }) {
   const cardBg = live ? `linear-gradient(135deg,#0a1f10,#0d2815)` : `linear-gradient(135deg,${C.s1},${C.s2})`;
 
   return (
-    <Card style={{marginBottom:8, border:`1px solid ${cardBorder}`, background:cardBg, opacity:finished?0.75:1}}>
+    <Card style={{marginBottom:8, border:`1px solid ${cardBorder}`, background:cardBg, opacity:finished?0.45:1}}>
       <div style={{padding:"11px 13px"}}>
         {/* Fav banner */}
         {isFav && !live && !finished && (
@@ -4243,7 +4241,7 @@ const eventsCache = {};
 async function fetchMatchEvents(fixtureId) {
   if (eventsCache[fixtureId]) return eventsCache[fixtureId];
   try {
-    const res = await fetch(`/api/matchevents?fixtureId=${fixtureId}`);
+    const res = await fetch(`/api/matchevents?fixtureId=${encodeURIComponent(fixtureId)}`);
     if (!res.ok) throw new Error(res.statusText);
     const data = await res.json();
     // Handle both old format (array) and new format ({events, stats})
