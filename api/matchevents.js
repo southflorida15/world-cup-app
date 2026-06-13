@@ -196,7 +196,28 @@ function parseLineups(data, homeTeam) {
 }
 function parseEvents(data, homeTeam) {
   const events = [];
+  const seenIds = new Set();
 
+  // Source 1: scoringPlays (most reliable for goals)
+  for (const sp of (data.scoringPlays || [])) {
+    const id = sp.id || sp.sequenceNumber;
+    if (id && seenIds.has(id)) continue;
+    if (id) seenIds.add(id);
+    const teamName = normESPN(sp.team?.displayName || sp.team?.name || "");
+    const elapsed = sp.clock?.displayValue ? parseInt(sp.clock.displayValue) : sp.clock?.value ? Math.round(sp.clock.value / 60) : null;
+    const text = (sp.type?.text || sp.text || "").toLowerCase();
+    const athletes = sp.athletesInvolved || sp.participants || [];
+    events.push({
+      time: { elapsed, extra: null },
+      team: { name: teamName },
+      player: { name: athletes[0]?.athlete?.displayName || athletes[0]?.displayName || "" },
+      assist: { name: athletes[1]?.athlete?.displayName || athletes[1]?.displayName || null },
+      type: "Goal",
+      detail: text.includes("own goal") ? "Own Goal" : text.includes("penalty") ? "Penalty" : "Normal Goal",
+    });
+  }
+
+  // Source 2: keyEvents (goals, cards, subs)
   const keyEvents = data.keyEvents || [];
   for (const ev of keyEvents) {
     const teamName = normESPN(ev.team?.displayName || ev.team?.name || "");
@@ -227,6 +248,9 @@ function parseEvents(data, homeTeam) {
     }
 
     if (!type || !teamName) continue;
+
+    // Skip if we already have this goal from scoringPlays
+    if (type === "Goal" && events.some(e => e.type === "Goal" && e.team.name === teamName && e.time.elapsed === elapsed)) continue;
 
     events.push({
       time: { elapsed, extra: null },
@@ -446,7 +470,7 @@ export default async function handler(req, res) {
   if (memCached && debug !== "1" && memCached.events.length > 0) {
     const ttl = memCached.isDone ? TTL_DONE : TTL_LIVE;
     if (Date.now() - memCached.ts < ttl) {
-      return res.status(200).json({ events: memCached.events, stats: memCached.stats });
+      return res.status(200).json({ events: memCached.events, stats: memCached.stats, lineups: memCached.lineups || null });
     }
   }
 
@@ -492,23 +516,27 @@ export default async function handler(req, res) {
       delete memCache[cacheKey];
       return res.status(200).json({ events: [], stats: null, lineups: null, _debug: "wrong_match_auto_cleared" });
     }
+    if (debug === "1") {
       return res.status(200).json({
         _debug: true,
         eventId,
         topKeys: Object.keys(data),
         scoringPlaysCount: data.scoringPlays?.length || 0,
+        scoringPlays: (data.scoringPlays || []).slice(0, 3),
         keyEventsCount: data.keyEvents?.length || 0,
-        playsCount: data.plays?.length || 0,
-        boxscoreTeams: data.boxscore?.teams?.map(t => t.team?.displayName) || [],
         keyEvents: (data.keyEvents || []).slice(0, 5),
+        playsCount: data.plays?.length || 0,
+        commentaryCount: data.commentary?.items?.length || data.commentary?.length || 0,
+        commentarySample: (data.commentary?.items || data.commentary || []).slice(0, 3),
+        boxscoreTeams: data.boxscore?.teams?.map(t => t.team?.displayName) || [],
+        leaders: (data.leaders || []).slice(0,2).map(l => ({ name: l.name, leaders: (l.leaders||[]).slice(0,2) })),
         rostersCount: data.rosters?.length || 0,
         rosterSample: data.rosters?.[0] ? {
           teamName: data.rosters[0].team?.displayName,
           formation: data.rosters[0].formation,
           topKeys: Object.keys(data.rosters[0]),
-          teamKeys: data.rosters[0].team ? Object.keys(data.rosters[0].team) : [],
-          entriesCount: (data.rosters[0].entries || data.rosters[0].roster || data.rosters[0].athletes || data.rosters[0].players || data.rosters[0].team?.athletes || data.rosters[0].team?.roster || []).length,
-          firstPlayer: (data.rosters[0].entries || data.rosters[0].roster || data.rosters[0].athletes || data.rosters[0].players || data.rosters[0].team?.athletes || data.rosters[0].team?.roster || [])[0] || null,
+          entriesCount: (data.rosters[0].roster || []).length,
+          firstPlayer: (data.rosters[0].roster || [])[0] || null,
         } : null,
       });
     }

@@ -18,13 +18,20 @@ const ALLOWED_LANGS     = ["en","pt","es","de","fr","it","nl","ar","ja","ko","zh
 const ALLOWED_COUNTRIES = ["us","gb","br","es","de","fr","it","ar","mx","jp","kr","nl","pt","au","ca","za","ma","ng","eg","sa","cn","be","hr","uy","co","ec","pa","gh","se","no","at","cz","ch","tn","ir","nz","uz","cv","ht","jo","iq","cd"];
 
 // Custom RSS feeds per country — bypasses GNews quota entirely
+// Only include sources confirmed to serve public RSS without blocking
 const RSS_SOURCES = {
-  br: [
-    { name:"GaúchaZH", url:"https://gauchazh.clicrbs.com.br/esportes/copa-do-mundo/feed" },
-    { name:"GaúchaZH Esportes", url:"https://gauchazh.clicrbs.com.br/esportes/feed" },
-    { name:"ge.globo", url:"https://ge.globo.com/rss/globoesporte/futebol/copa-do-mundo.xml" },
-    { name:"UOL Esporte", url:"https://rss.uol.com.br/feed/esportes.xml" },
+  es: [
+    { name:"Marca", url:"https://www.marca.com/rss/futbol/mundial.xml" },
+    { name:"AS", url:"https://as.com/rss/tags/copa_del_mundo.xml" },
   ],
+  de: [
+    { name:"Kicker", url:"https://www.kicker.de/news/fussball/wm/rss.xml" },
+  ],
+  ar: [
+    { name:"Ole", url:"https://www.ole.com.ar/rss/copa-del-mundo/" },
+  ],
+  // br: GaúchaZH and ge.globo block server-side requests — use GNews (pt/br) instead
+  // which returns Lance!, ESPN BR, UOL and other Brazilian sources reliably
 };
 
 // Minimal RSS parser — no external deps
@@ -68,12 +75,18 @@ async function fetchRSS(country) {
 
   const results = await Promise.allSettled(
     sources.map(async ({ name, url }) => {
-      const r = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0", "Accept": "application/rss+xml,application/xml,text/xml" }});
-      if (!r.ok) throw new Error(`${r.status}`);
+      const r = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0", "Accept": "application/rss+xml,application/xml,text/xml,*/*" }});
+      if (!r.ok) throw new Error(`${name}: HTTP ${r.status}`);
       const xml = await r.text();
-      return parseRSS(xml, name);
+      const parsed = parseRSS(xml, name);
+      console.log(`[rss] ${name}: ${parsed.length} articles`);
+      return parsed;
     })
   );
+
+  results.forEach((r, i) => {
+    if (r.status === "rejected") console.warn(`[rss] ${sources[i].name} failed:`, r.reason?.message);
+  });
 
   // Merge and interleave results from all sources
   const arrays = results.filter(r => r.status === "fulfilled" && r.value?.length).map(r => r.value);

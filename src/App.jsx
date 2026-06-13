@@ -4375,6 +4375,17 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
         setMatchStats(d?.stats || null);
         setLineups(d?.lineups || null);
         setLoading(false);
+        // Auto-open most useful section
+        const sc = getScore(match.home, match.away);
+        const isPastMatch = (() => { const iso = MATCH_UTC[match?.id]; return iso ? Date.now() > new Date(iso).getTime() + 90*60*1000 : false; })();
+        if (sc && statusIsFinished(sc.status) || isPastMatch) {
+          setEvOpen(true);
+          setStatsOpen(true);
+        } else if (sc && statusIsLive(sc.status)) {
+          setEvOpen(true);
+        } else if (d?.lineups?.home || d?.lineups?.away) {
+          setLineupsOpen(true);
+        }
       })
       .catch(() => setLoading(false));
   }, [open, match]);
@@ -4383,6 +4394,13 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
   const hasScore = sc && sc.hg !== null && sc.ag !== null;
   const live = sc ? statusIsLive(sc.status) : false;
   const finished = sc ? statusIsFinished(sc.status) : false;
+  // isPast: kickoff was >90min ago — treat as finished even if feed has no data
+  const isPast = (() => {
+    const iso = MATCH_UTC[match?.id];
+    if (!iso) return false;
+    return Date.now() > new Date(iso).getTime() + 90 * 60 * 1000;
+  })();
+  const isPlayed = live || finished || isPast;
   const { localTime } = match ? matchTimes(match) : {};
 
   const isPastDay = (() => {
@@ -4564,10 +4582,10 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
 />
 
           {/* ── SECTION PILLS ── */}
-          {(live || finished || lineups) && (() => {
+          {(isPlayed || lineups) && (() => {
             const hasLineups = !!(lineups && (lineups.home || lineups.away));
-            const hasStats   = !!(matchStats && (live || finished));
-            const hasTimeline = live || finished;
+            const hasStats   = !!(matchStats && isPlayed);
+            const hasTimeline = isPlayed;
             const goals = events ? events.filter(e=>e.type==="Goal").length : 0;
             const cards = events ? events.filter(e=>e.type==="Card").length : 0;
             const timelineLabel = evOpen ? "Timeline" : `Timeline${events?.length ? ` · ${goals}⚽ ${cards}🟨` : ""}`;
@@ -4625,7 +4643,7 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
           )}
 
           {/* ── MATCH STATS ── */}
-          {matchStats && (live || finished) && statsOpen && (
+          {matchStats && isPlayed && statsOpen && (
             <div style={{marginBottom:12}}>
               {[
                 ["Possession", matchStats.home.possession, matchStats.away.possession, true, "%"],
@@ -4658,7 +4676,7 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
           )}
 
           {/* ── MATCH EVENTS ── */}
-          {(live || finished) && evOpen && (() => {
+          {isPlayed && evOpen && (() => {
             const toggleFilter = (t) => setEvFilter(f => f.includes(t) ? f.filter(x=>x!==t) : [...f,t]);
             const goals  = events ? events.filter(e=>e.type==="Goal").length : 0;
             const cards  = events ? events.filter(e=>e.type==="Card").length : 0;
