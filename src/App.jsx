@@ -3010,14 +3010,30 @@ function VisualBracketTree({ bracket, pickMode="auto", onPick=()=>{}, view="comp
 }
 
 const MY_BRACKET_STORAGE_KEY = "wc2026_my_bracket_v1";
+const MY_BRACKET_VERSION = "2.1"; // bump this to force reset groups/result for all users
 
 function readSavedMyBracket() {
   try {
     const raw = localStorage.getItem(MY_BRACKET_STORAGE_KEY);
     const saved = raw ? JSON.parse(raw) : {};
 
-    // Validate groups — each group's teams must belong to that group
-    // If corrupted (e.g. Brazil in Group A), reset groups to default
+    // Version check — if outdated, reset groups/result but keep manual picks
+    if (saved._version !== MY_BRACKET_VERSION) {
+      console.log(`[bracket] Version mismatch (${saved._version} → ${MY_BRACKET_VERSION}) — resetting groups/result, keeping picks`);
+      return {
+        _version: MY_BRACKET_VERSION,
+        manualPicks: saved.manualPicks || {},
+        bracketView: saved.bracketView || "tree",
+        bracketMode: saved.bracketMode || "simulation",
+        stage: "groups",
+        groups: defaultBracketGroups(),
+        thirds: [],
+        result: null,
+        playMode: "manual",
+      };
+    }
+
+    // Validate groups — teams must belong to their correct group
     if (saved.groups) {
       const valid = Object.entries(saved.groups).every(([g, teams]) => {
         const expected = GROUPS[g]?.teams || [];
@@ -3026,7 +3042,7 @@ function readSavedMyBracket() {
           teams.every(t => expected.includes(t));
       });
       if (!valid) {
-        console.warn("[bracket] Corrupted groups detected — resetting to default");
+        console.warn("[bracket] Corrupted groups detected — resetting");
         saved.groups = defaultBracketGroups();
         saved.result = null;
         saved.stage = "groups";
@@ -3041,7 +3057,7 @@ function readSavedMyBracket() {
 
 function writeSavedMyBracket(state) {
   try {
-    localStorage.setItem(MY_BRACKET_STORAGE_KEY, JSON.stringify(state));
+    localStorage.setItem(MY_BRACKET_STORAGE_KEY, JSON.stringify({ ...state, _version: MY_BRACKET_VERSION }));
     window.dispatchEvent(new CustomEvent("wc2026_my_bracket_changed", { detail: state }));
   } catch {}
 }
