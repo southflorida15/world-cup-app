@@ -2847,7 +2847,8 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
   };
 
   const finalMatch = matchesById[104]||(bracket?.final||[])[0]||{match:104,home:null,away:null,winner:null};
-  const finalTop = 483;
+  const PILL_H = 46; // round label pill height + marginBottom (approx)
+  const finalTop = 483 + PILL_H;
   const finalLabelH = 32; // "FINAL" label + marginBottom only
   const finalCardMidY = finalTop + finalLabelH + CH/2; // absolute Y center of final card
   const sfCardMidY = 483 + CH/2; // both SF cards are at tops[0]=483
