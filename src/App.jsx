@@ -1053,7 +1053,9 @@ function useElemHeight(ref) {
 // ── MATCH CARD ─────────────────────────────────────────────────────────────
 function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="", savedIds=new Set() }) {
   const { dark } = useContext(ThemeCtx);
-  const countdownBg = dark ? "#132e1c" : "#c8ecd2"; // lighter green in dark, darker green in light
+  const countdownBg = dark
+    ? "linear-gradient(135deg,#1a3d22,#1f4a28)"   // clearly lighter green in dark
+    : "linear-gradient(135deg,#a8d4b2,#b8dfc0)";  // clearly darker green in light
   const { favTeams=[] } = useContext(FavCtx);
   const country = useContext(CountryCtx);
   const { getScore } = useContext(LiveScoresCtx);
