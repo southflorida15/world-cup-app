@@ -1113,7 +1113,7 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="",
     return matchDate < today;
   })();
 
-  if (isPastDay && finished && hasScore) {
+  if ((isPastDay || finished) && finished && hasScore) {
     return (
       <div onClick={()=>onMatchTap&&onMatchTap(m)} style={{marginBottom:8,background:C.s1,border:`1px solid ${C.b2}`,borderRadius:12,overflow:"hidden",opacity:0.8,cursor:onMatchTap?"pointer":"default"}}>
         {/* Header: keep group/venue/time */}
@@ -1276,7 +1276,7 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=n
             TODAY — UPCOMING
           </div>
           {sortByKickoff(upcomingToday).map(m => (
-            <div key={m.id} style={{opacity:0.75}}>
+            <div key={m.id}>
               <MatchCard m={m} onAction={onAction} onMatchTap={onMatchTap} savedIds={savedIds}/>
             </div>
           ))}
