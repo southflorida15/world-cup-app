@@ -5068,7 +5068,7 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
                   maxLength={24}
                   style={{background:"none",border:"none",borderBottom:`1px solid ${C.green}`,outline:"none",color:C.text,fontSize:16,fontWeight:800,width:"100%",padding:"2px 0"}}/>
               : <div onClick={()=>{setNameInput(displayName||"");setNameEditing(true);}} style={{cursor:"text"}}>
-                  <div style={{fontWeight:displayName?900:700,color:displayName?C.text:C.dim,fontSize:displayName?(isDesktop?19:19):(isDesktop?14:13),lineHeight:1.08,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
+                  <div style={{fontWeight:displayName?900:700,color:displayName?C.text:C.dim,fontSize:displayName?(isDesktop?19:17):(isDesktop?14:13),lineHeight:1.15,wordBreak:"break-word"}}>
                     {displayName||<span style={{color:C.dim,fontStyle:"italic"}}>Tap to add your name</span>}
                     {displayName && <span style={{fontSize:10,color:C.dim,marginLeft:6,fontWeight:400}}>✏️</span>}
                   </div>
