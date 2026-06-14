@@ -4340,7 +4340,7 @@ return (
             const hasPred = pred.hg!==undefined && pred.ag!==undefined && pred.hg!=="" && pred.ag!=="";
             const saving = predSaving[m.id];
             return (
-              <Card key={m.id} style={{marginBottom:8,border:`1px solid ${pts===3?C.green:pts===1?C.gold:pts===0?C.red:hasPred?`${C.green}44`:C.b1}`,opacity:done?0.45:locked?0.72:1}} >
+              <Card key={m.id} style={{marginBottom:8,border:`1px solid ${pts===3?C.green:pts===1?C.gold:pts===0?C.red:hasPred?`${C.green}44`:C.b2}`,opacity:done?0.45:locked?0.72:1,background:done?C.s2:undefined}} >
                 <div style={{padding:"10px 13px"}}>
                   <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
                     <Badge>Group {m.group} · {m.date}</Badge>
@@ -4359,12 +4359,12 @@ return (
                   </div>
                   <div style={{display:"flex",alignItems:"center",gap:8}}>
                     <Crest team={m.home} size={22}/>
-                    <span style={{fontWeight:700,color:C.text,flex:1,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.home}</span>
+                    <span style={{fontWeight:800,color:C.text,flex:1,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.home}</span>
                     <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
                       {done && sc && (
-                        <div style={{textAlign:"center",minWidth:48,background:C.s2,borderRadius:8,padding:"4px 8px",border:`1px solid ${C.b2}`}}>
-                          <div style={{fontSize:9,color:C.mid,marginBottom:1,fontWeight:700,letterSpacing:"0.05em"}}>RESULT</div>
-                          <div style={{fontWeight:800,fontSize:18,color:C.text,fontFamily:"monospace"}}>{sc.hg}–{sc.ag}</div>
+                        <div style={{textAlign:"center",minWidth:52,background:C.bg,borderRadius:8,padding:"5px 10px",border:`1px solid ${C.b2}`}}>
+                          <div style={{fontSize:9,color:C.text,marginBottom:1,fontWeight:700,letterSpacing:"0.05em"}}>RESULT</div>
+                          <div style={{fontWeight:900,fontSize:20,color:C.text,fontFamily:"monospace"}}>{sc.hg}–{sc.ag}</div>
                         </div>
                       )}
                       {!done && (
@@ -4377,13 +4377,13 @@ return (
                         </>
                       )}
                       {done && hasPred && (
-                        <div style={{textAlign:"center",minWidth:48,background:`${ptColor}12`,borderRadius:8,padding:"4px 8px",border:`1px solid ${ptColor}44`}}>
+                        <div style={{textAlign:"center",minWidth:52,background:C.bg,borderRadius:8,padding:"5px 10px",border:`1px solid ${ptColor}`}}>
                           <div style={{fontSize:9,color:ptColor,marginBottom:1,fontWeight:700,letterSpacing:"0.05em"}}>YOUR PICK</div>
-                          <div style={{fontWeight:800,fontSize:18,color:ptColor,fontFamily:"monospace"}}>{pred.hg}–{pred.ag}</div>
+                          <div style={{fontWeight:900,fontSize:20,color:ptColor,fontFamily:"monospace"}}>{pred.hg}–{pred.ag}</div>
                         </div>
                       )}
                     </div>
-                    <span style={{fontWeight:700,color:C.text,flex:1,fontSize:13,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.away}</span>
+                    <span style={{fontWeight:800,color:C.text,flex:1,fontSize:13,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.away}</span>
                     <Crest team={m.away} size={22}/>
                   </div>
                 </div>
