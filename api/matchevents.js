@@ -28,24 +28,16 @@ const TTL_DONE = 60 * 60 * 1000;
 const ESPN_NAME_MAP = {
   "USA": "United States",
   "Bosnia and Herzegovina": "Bosnia & Herz.",
-  "Bosnia-Herzegovina": "Bosnia & Herz.",
   "Cape Verde Islands": "Cape Verde",
   "Turkey": "Turkiye",
-  "Türkiye": "Turkiye",
   "Curaçao": "Curacao",
   "Congo, DR": "DR Congo",
-  "Congo DR": "DR Congo",
   "DR Congo": "DR Congo",
   "Côte d'Ivoire": "Ivory Coast",
   "Korea Republic": "South Korea",
   "Czech Republic": "Czechia",
 };
-const normESPN = n => {
-  if (!n) return n;
-  if (ESPN_NAME_MAP[n]) return ESPN_NAME_MAP[n];
-  const stripped = n.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  return ESPN_NAME_MAP[stripped] || stripped;
-};
+const normESPN = n => ESPN_NAME_MAP[n] || n;
 
 // ── KV persistence ────────────────────────────────────────────────────────
 // Finished match events+stats stored permanently, no expiry.
@@ -334,12 +326,6 @@ const SEEDED_EVENTS = {
 const KNOWN_FINISHED = [
   { home: "Mexico",      away: "South Africa", espnId: "760415" },
   { home: "South Korea", away: "Czechia",      espnId: "760414" },
-  { home: "Canada",      away: "Bosnia & Herz.", espnId: "760416" },
-  { home: "United States", away: "Paraguay",   espnId: "760417" },
-  { home: "Qatar",       away: "Switzerland",  espnId: "760418" },
-  { home: "Brazil",      away: "Morocco",      espnId: "760419" },
-  { home: "Haiti",       away: "Scotland",     espnId: "760420" },
-  { home: "Australia",   away: "Turkiye",      espnId: "760421" },
 ];
 
 async function autoSeedEvents() {
@@ -440,6 +426,46 @@ async function getScorers() {
   };
 }
 
+// ── Seed ESPN IDs for today + tomorrow ───────────────────────────────────────
+async function seedESPNIds() {
+  const pad = n => String(n).padStart(2, "0");
+  const dateStr = d => `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`;
+  const now = new Date();
+  const dates = [dateStr(now), dateStr(new Date(now.getTime() + 86400000)), dateStr(new Date(now.getTime() + 172800000))];
+
+  const idMap = await kv.get(ESPN_ID_MAP_KEY).catch(() => ({})) || {};
+  let added = 0;
+
+  for (const date of dates) {
+    try {
+      const r = await fetch(`${ESPN_BASE}/scoreboard?dates=${date}&limit=20`, { headers: ESPN_HEADERS });
+      if (!r.ok) continue;
+      const data = await r.json();
+      for (const event of (data.events || [])) {
+        const comp = event.competitions?.[0];
+        if (!comp) continue;
+        const home = normESPN(comp.competitors?.find(c => c.homeAway === "home")?.team?.displayName || "");
+        const away = normESPN(comp.competitors?.find(c => c.homeAway === "away")?.team?.displayName || "");
+        if (!home || !away) continue;
+        const key = `${home}|${away}`;
+        if (!idMap[key] && event.id) {
+          idMap[key] = event.id;
+          added++;
+          console.log(`[seed-ids] ${key} → ${event.id}`);
+        }
+      }
+    } catch(e) {
+      console.warn(`[seed-ids] failed for ${date}:`, e.message);
+    }
+  }
+
+  if (added > 0) {
+    await kv.set(ESPN_ID_MAP_KEY, idMap).catch(() => {});
+  }
+
+  return { added, total: Object.keys(idMap).length, dates };
+}
+
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   if (req.method === "OPTIONS") return res.status(200).end();
@@ -452,6 +478,26 @@ export default async function handler(req, res) {
       return res.status(200).json({ scorers: [], cards: [], error: e.message });
     }
   }
+
+  // Seed ESPN IDs for today + tomorrow
+  if (req.query.action === "seed-ids") {
+    try {
+      const result = await seedESPNIds();
+      return res.status(200).json({ ok: true, ...result });
+    } catch(e) {
+      return res.status(500).json({ error: e.message });
+    }
+  }
+
+  // Auto-seed IDs once per day on first request
+  try {
+    const lastSeed = await kv.get("wc2026:espn_ids_seeded_date").catch(() => null);
+    const today = new Date().toISOString().slice(0, 10);
+    if (lastSeed !== today) {
+      seedESPNIds().catch(e => console.warn("[matchevents] auto-seed failed:", e.message));
+      await kv.set("wc2026:espn_ids_seeded_date", today, { ex: 86400 }).catch(() => {});
+    }
+  } catch(e) { /* non-critical */ }
 
   let { home, away, debug, flush, fixtureId } = req.query;
   if ((!home || !away) && fixtureId && fixtureId.includes("|")) {
