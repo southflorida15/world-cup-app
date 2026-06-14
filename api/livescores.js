@@ -58,11 +58,21 @@ function isMatchWindowActive() {
   return KICKOFFS.some(k => { const ko = new Date(k).getTime(); return now >= ko && now <= ko + WINDOW_MS; });
 }
 
+function isKickoffImminent() {
+  const now = Date.now();
+  return KICKOFFS.some(k => {
+    const ko = new Date(k).getTime();
+    return now >= ko - 5 * 60 * 1000 && now <= ko + 15 * 60 * 1000;
+  });
+}
+
 function getSmartTTL(fixtures) {
   const liveCount = fixtures.filter(f => LIVE_STATUSES.includes(f?.fixture?.status?.short)).length;
   if (liveCount >= 4) return 3 * 60;
   if (liveCount >= 2) return 2 * 60;
   if (liveCount >= 1) return 60;
+  // No live matches — check if a kickoff is imminent (within 5 min)
+  if (isKickoffImminent()) return 60;
   return 60 * 60;
 }
 
@@ -175,13 +185,9 @@ function mapESPNEvent(event) {
   const statusType = comp.status?.type?.name || "STATUS_SCHEDULED";
   let short = ESPN_STATUS_MAP[statusType] || "NS";
   const clock = comp.status?.displayClock;
-  const detail = comp.status?.detail || "";
-  // displayClock is "MM:SS" format — elapsed is the minutes portion
   const elapsed = clock && clock !== "0:00" ? parseInt(clock.split(":")[0]) : null;
-  // ESPN injury time is in status.detail e.g. "45+3'" or "90+5'"
-  // displayClock does NOT include "+N" — parse it from detail instead
-  const detailMatch = detail.match(/(\d+)\+(\d+)/);
-  const elapsedExtra = detailMatch ? parseInt(detailMatch[2]) : (clock && clock.includes("+") ? parseInt(clock.split("+")[1]) : null);
+  // For extra time, preserve the "+N" portion (e.g. "90+7" → elapsed=90, elapsedExtra=7)
+  const elapsedExtra = clock && clock.includes("+") ? parseInt(clock.split("+")[1]) : null;
   // ESPN sometimes returns NS with elapsed > 0 — fix it
   if (short === "NS" && elapsed && elapsed > 0) {
     short = elapsed <= 45 ? "1H" : elapsed <= 50 ? "HT" : elapsed <= 95 ? "2H" : "ET";
