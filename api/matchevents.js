@@ -26,41 +26,23 @@ const TTL_LIVE = 30 * 1000;
 const TTL_DONE = 60 * 60 * 1000;
 
 const ESPN_NAME_MAP = {
-  "USA":                      "United States",
-  "Bosnia and Herzegovina":   "Bosnia & Herz.",
-  "Bosnia & Herzegovina":     "Bosnia & Herz.",
-  "Cape Verde Islands":       "Cape Verde",
-  "Cape Verde":               "Cape Verde",
-  "Turkey":                   "Turkiye",
-  "Türkiye":                  "Turkiye",
-  "Curaçao":                  "Curacao",
-  "Congo, DR":                "DR Congo",
-  "Congo DR":                 "DR Congo",
-  "Democratic Republic of Congo": "DR Congo",
-  "DR Congo":                 "DR Congo",
-  "Côte d'Ivoire":            "Ivory Coast",
-  "Cote d'Ivoire":            "Ivory Coast",
-  "Korea Republic":           "South Korea",
-  "Republic of Korea":        "South Korea",
-  "Czech Republic":           "Czechia",
-  "Czechia":                  "Czechia",
-  "Iran":                     "Iran",
-  "IR Iran":                  "Iran",
-  "Scotland":                 "Scotland",
-  "United States":            "United States",
-  "Saudi Arabia":             "Saudi Arabia",
-  "KSA":                      "Saudi Arabia",
-  "New Zealand":              "New Zealand",
-  "Uzbekistan":               "Uzbekistan",
+  "USA": "United States",
+  "Bosnia and Herzegovina": "Bosnia & Herz.",
+  "Cape Verde Islands": "Cape Verde",
+  "Turkey": "Turkiye",
+  "Türkiye": "Turkiye",
+  "Curaçao": "Curacao",
+  "Congo, DR": "DR Congo",
+  "DR Congo": "DR Congo",
+  "Côte d'Ivoire": "Ivory Coast",
+  "Korea Republic": "South Korea",
+  "Czech Republic": "Czechia",
 };
 const normESPN = n => {
   if (!n) return n;
-  // Direct map first
   if (ESPN_NAME_MAP[n]) return ESPN_NAME_MAP[n];
-  // Strip accents and try again (handles Curaçao → Curacao etc.)
   const stripped = n.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  if (ESPN_NAME_MAP[stripped]) return ESPN_NAME_MAP[stripped];
-  return n;
+  return ESPN_NAME_MAP[stripped] || stripped;
 };
 
 // ── KV persistence ────────────────────────────────────────────────────────
@@ -70,21 +52,7 @@ const kvKey = (home, away) => `wc2026:events:${home}|${away}`;
 async function loadFromKV(home, away) {
   try {
     const data = await kv.get(kvKey(home, away));
-    if (!data) return null;
-
-    // Validate the stored data belongs to this match by checking event teams
-    // ESPN sometimes returns wrong match data for an ID — catch it here
-    if (data.teams && data.teams.home && data.teams.away) {
-      const storedHome = normESPN(data.teams.home);
-      const storedAway = normESPN(data.teams.away);
-      if (storedHome !== home || storedAway !== away) {
-        console.warn(`[matchevents] KV mismatch for ${home}|${away}: found ${storedHome}|${storedAway} — auto-flushing`);
-        await kv.del(kvKey(home, away));
-        return null;
-      }
-    }
-
-    return data;
+    return data || null;
   } catch(e) {
     console.warn("[matchevents] KV load:", e.message);
     return null;
@@ -93,8 +61,7 @@ async function loadFromKV(home, away) {
 
 async function saveToKV(home, away, events, stats, lineups=null) {
   try {
-    // Store team names alongside data so we can validate on future reads
-    await kv.set(kvKey(home, away), { events, stats, lineups, teams: { home, away }, savedAt: Date.now() });
+    await kv.set(kvKey(home, away), { events, stats, lineups, savedAt: Date.now() });
     console.log(`[matchevents] Persisted ${events.length} events for ${home} vs ${away}`);
   } catch(e) {
     console.warn("[matchevents] KV save:", e.message);
@@ -104,13 +71,29 @@ async function saveToKV(home, away, events, stats, lineups=null) {
 // ── ESPN event ID lookup ───────────────────────────────────────────────────
 const ESPN_ID_MAP_KEY = "wc2026:espn_ids";
 
-// No hardcoded IDs — ESPN assigns them dynamically and they often don't match
-// our expected order. Always discover from livescores feed (ground truth).
+// Hardcoded ESPN IDs for all group stage matches — never ages out
+const HARDCODED_ESPN_IDS = {
+  "Mexico|South Africa":"760415","South Korea|Czechia":"760414",
+  "Canada|Bosnia & Herz.":"760416","United States|Paraguay":"760417",
+  "Qatar|Switzerland":"760418","Brazil|Morocco":"760419",
+  "Haiti|Scotland":"760420","Australia|Turkiye":"760421",
+  "Germany|Curacao":"760422","Netherlands|Japan":"760423",
+  "Ivory Coast|Ecuador":"760424","Sweden|Tunisia":"760425",
+  "Spain|Cape Verde":"760426","Belgium|Egypt":"760427",
+  "Saudi Arabia|Uruguay":"760428","Iran|New Zealand":"760429",
+  "France|Senegal":"760430","Iraq|Norway":"760431",
+  "Argentina|Algeria":"760432","Austria|Jordan":"760433",
+  "Portugal|DR Congo":"760434","England|Croatia":"760435",
+  "Ghana|Panama":"760436","Uzbekistan|Colombia":"760437",
+};
 
 async function getESPNEventId(home, away) {
   const key = `${home}|${away}`;
 
-  // 1. Try livescores KV first — this has ground-truth IDs from ESPN's feed
+  // 1. Hardcoded map (fastest, always works for known matches)
+  if (HARDCODED_ESPN_IDS[key]) return HARDCODED_ESPN_IDS[key];
+
+  // 2. Try livescores cache (works for recent/live matches)
   try {
     const cached = await kv.get("wc2026:livescores");
     if (cached) {
@@ -121,15 +104,15 @@ async function getESPNEventId(home, away) {
         return h === home && a === away;
       });
       if (match?.fixture?.id) {
-        await saveESPNId(home, away, String(match.fixture.id));
-        return String(match.fixture.id);
+        saveESPNId(home, away, match.fixture.id);
+        return match.fixture.id;
       }
     }
   } catch(e) {
     console.warn("[matchevents] livescores KV lookup:", e.message);
   }
 
-  // 2. Fall back to persisted ID map (populated by previous successful lookups)
+  // 3. Fall back to persisted ID map
   try {
     const idMap = await kv.get(ESPN_ID_MAP_KEY) || {};
     if (idMap[key]) return idMap[key];
@@ -150,56 +133,6 @@ async function saveESPNId(home, away, id) {
     }
   } catch(e) {
     // non-critical
-  }
-}
-
-// ── Seed ESPN IDs from scoreboard ─────────────────────────────────────────
-async function seedIdsFromScoreboard(dateStr) {
-  const url = `${ESPN_BASE}/scoreboard?dates=${dateStr}&limit=20`;
-  try {
-    const r = await fetch(url, { headers: ESPN_HEADERS });
-    if (!r.ok) throw new Error(`ESPN scoreboard ${r.status}`);
-    const data = await r.json();
-    const events = data.events || [];
-    const idMap = await kv.get(ESPN_ID_MAP_KEY) || {};
-    let added = 0;
-
-    // Clean up any keys with un-normalized names (e.g. Türkiye, Curaçao)
-    const dirty = Object.keys(idMap).filter(k => {
-      const [h, a] = k.split("|");
-      return normESPN(h) !== h || normESPN(a) !== a;
-    });
-    dirty.forEach(k => {
-      const [h, a] = k.split("|");
-      const cleanKey = `${normESPN(h)}|${normESPN(a)}`;
-      if (!idMap[cleanKey]) idMap[cleanKey] = idMap[k];
-      delete idMap[k];
-    });
-
-    for (const ev of events) {
-      const comp = ev.competitions?.[0];
-      if (!comp) continue;
-      const competitors = comp.competitors || [];
-      const home = competitors.find(c => c.homeAway === "home");
-      const away = competitors.find(c => c.homeAway === "away");
-      if (!home || !away) continue;
-      const homeName = normESPN(home.team?.displayName || home.team?.name || "");
-      const awayName = normESPN(away.team?.displayName || away.team?.name || "");
-      const espnId = String(ev.id || "");
-      if (!homeName || !awayName || !espnId) continue;
-      const key = `${homeName}|${awayName}`;
-      if (!idMap[key]) {
-        idMap[key] = espnId;
-        added++;
-        console.log(`[seed-ids] ${homeName} vs ${awayName} → ${espnId}`);
-      }
-    }
-
-    if (added > 0 || dirty.length > 0) await kv.set(ESPN_ID_MAP_KEY, idMap);
-    return { date: dateStr, events: events.length, added, cleaned: dirty.length, idMap };
-  } catch(e) {
-    console.error("[seed-ids] failed:", e.message);
-    return { date: dateStr, error: e.message };
   }
 }
 
@@ -238,22 +171,34 @@ function parseLineups(data, homeTeam) {
   const result = { home: null, away: null };
 
   rosters.forEach(roster => {
-    const teamName = normESPN(roster.team?.displayName || roster.team?.name || "");
+    // ESPN structure: { homeAway, winner, team: { displayName, athletes: [...] } }
+    const teamObj = roster.team || roster;
+    const teamName = normESPN(teamObj.displayName || teamObj.name || roster.team?.displayName || "");
     const side = teamName === homeTeam ? "home" : "away";
-    const formation = roster.formation || null;
+    const formation = roster.formation || teamObj.formation || null;
 
-    // Confirmed ESPN structure: players are in roster.roster[]
-    const players = roster.roster || roster.entries || roster.athletes || roster.players || [];
+    // Try every possible location for the players array
+    const players =
+      roster.entries ||
+      roster.roster ||
+      roster.athletes ||
+      roster.players ||
+      teamObj.athletes ||
+      teamObj.roster ||
+      teamObj.entries ||
+      teamObj.players ||
+      [];
 
     const starters = [];
     const bench = [];
 
     players.forEach(p => {
       const athlete = p.athlete || p;
-      const name = athlete.displayName || athlete.fullName || athlete.shortName || "";
+      const name = athlete.displayName || athlete.fullName || athlete.shortName || p.displayName || p.name || "";
       const jersey = p.jersey ?? athlete.jersey ?? null;
-      const pos = p.position?.abbreviation || p.position?.name || "";
-      const starter = p.starter ?? p.active ?? true;
+      const pos = p.position?.abbreviation || p.position?.name
+                || athlete.position?.abbreviation || athlete.position?.name || "";
+      const starter = p.starter ?? p.didPlay ?? p.active ?? true;
       const subbedOut = p.subbedOut ?? false;
       const subbedIn  = p.subbedIn  ?? false;
 
@@ -270,28 +215,7 @@ function parseLineups(data, homeTeam) {
 }
 function parseEvents(data, homeTeam) {
   const events = [];
-  const seenIds = new Set();
 
-  // Source 1: scoringPlays (most reliable for goals)
-  for (const sp of (data.scoringPlays || [])) {
-    const id = sp.id || sp.sequenceNumber;
-    if (id && seenIds.has(id)) continue;
-    if (id) seenIds.add(id);
-    const teamName = normESPN(sp.team?.displayName || sp.team?.name || "");
-    const elapsed = sp.clock?.displayValue ? parseInt(sp.clock.displayValue) : sp.clock?.value ? Math.round(sp.clock.value / 60) : null;
-    const text = (sp.type?.text || sp.text || "").toLowerCase();
-    const athletes = sp.athletesInvolved || sp.participants || [];
-    events.push({
-      time: { elapsed, extra: null },
-      team: { name: teamName },
-      player: { name: athletes[0]?.athlete?.displayName || athletes[0]?.displayName || "" },
-      assist: { name: athletes[1]?.athlete?.displayName || athletes[1]?.displayName || null },
-      type: "Goal",
-      detail: text.includes("own goal") ? "Own Goal" : text.includes("penalty") ? "Penalty" : "Normal Goal",
-    });
-  }
-
-  // Source 2: keyEvents (goals, cards, subs)
   const keyEvents = data.keyEvents || [];
   for (const ev of keyEvents) {
     const teamName = normESPN(ev.team?.displayName || ev.team?.name || "");
@@ -322,9 +246,6 @@ function parseEvents(data, homeTeam) {
     }
 
     if (!type || !teamName) continue;
-
-    // Skip if we already have this goal from scoringPlays
-    if (type === "Goal" && events.some(e => e.type === "Goal" && e.team.name === teamName && e.time.elapsed === elapsed)) continue;
 
     events.push({
       time: { elapsed, extra: null },
@@ -411,6 +332,12 @@ const SEEDED_EVENTS = {
 const KNOWN_FINISHED = [
   { home: "Mexico",      away: "South Africa", espnId: "760415" },
   { home: "South Korea", away: "Czechia",      espnId: "760414" },
+  { home: "Canada",      away: "Bosnia & Herz.", espnId: "760416" },
+  { home: "United States", away: "Paraguay",   espnId: "760417" },
+  { home: "Qatar",       away: "Switzerland",  espnId: "760418" },
+  { home: "Brazil",      away: "Morocco",      espnId: "760419" },
+  { home: "Haiti",       away: "Scotland",     espnId: "760420" },
+  { home: "Australia",   away: "Turkiye",      espnId: "760421" },
 ];
 
 async function autoSeedEvents() {
@@ -524,40 +451,11 @@ export default async function handler(req, res) {
     }
   }
 
-  // Seed ESPN IDs from scoreboard — call manually or auto-triggered
-  if (req.query.action === "seed-ids") {
-    const fmt = (d) => d.toISOString().slice(0,10).replace(/-/g,"");
-    const d1 = new Date(); d1.setUTCDate(d1.getUTCDate() + 1);
-    const d2 = new Date(); d2.setUTCDate(d2.getUTCDate() + 2);
-    const [today, tomorrow, dayAfter] = await Promise.all([
-      seedIdsFromScoreboard(fmt(new Date())),
-      seedIdsFromScoreboard(fmt(d1)),
-      seedIdsFromScoreboard(fmt(d2)),
-    ]);
-    return res.status(200).json({ ok: true, today, tomorrow, dayAfter });
-  }
-
   let { home, away, debug, flush, fixtureId } = req.query;
   if ((!home || !away) && fixtureId && fixtureId.includes("|")) {
     [home, away] = fixtureId.split("|");
   }
   if (!home || !away) return res.status(400).json({ error: "home and away required" });
-
-  // Auto-seed ESPN IDs once per day (fire-and-forget)
-  kv.get("wc2026:espn_ids_seeded_date").then(async (seededDate) => {
-    const today = new Date().toISOString().slice(0, 10);
-    if (seededDate !== today) {
-      await kv.set("wc2026:espn_ids_seeded_date", today, { ex: 28 * 60 * 60 });
-      const fmt = (d) => d.toISOString().slice(0,10).replace(/-/g,"");
-      const d1 = new Date(); d1.setUTCDate(d1.getUTCDate() + 1);
-      const d2 = new Date(); d2.setUTCDate(d2.getUTCDate() + 2);
-      await Promise.all([
-        seedIdsFromScoreboard(fmt(new Date())),
-        seedIdsFromScoreboard(fmt(d1)),
-        seedIdsFromScoreboard(fmt(d2)),
-      ]);
-    }
-  }).catch(() => {});
 
   // Flush stale KV cache for this match
   if (flush === "1") {
@@ -573,7 +471,7 @@ export default async function handler(req, res) {
   if (memCached && debug !== "1" && memCached.events.length > 0) {
     const ttl = memCached.isDone ? TTL_DONE : TTL_LIVE;
     if (Date.now() - memCached.ts < ttl) {
-      return res.status(200).json({ events: memCached.events, stats: memCached.stats, lineups: memCached.lineups || null });
+      return res.status(200).json({ events: memCached.events, stats: memCached.stats });
     }
   }
 
@@ -606,40 +504,24 @@ export default async function handler(req, res) {
 
     const data = await r.json();
 
-    // Validate ESPN returned the right match — if teams don't match, clear the bad ID
-    const espnTeams = data.boxscore?.teams?.map(t => normESPN(t.team?.displayName || "")) || [];
-    if (espnTeams.length === 2 && !espnTeams.includes(home) && !espnTeams.includes(away)) {
-      console.warn(`[matchevents] ESPN event ${eventId} returned wrong match (${espnTeams.join(" vs ")}) for ${home} vs ${away} — clearing ID`);
-      // Remove bad ID from persisted map so next request re-discovers
-      try {
-        const idMap = await kv.get(ESPN_ID_MAP_KEY) || {};
-        delete idMap[`${home}|${away}`];
-        await kv.set(ESPN_ID_MAP_KEY, idMap);
-      } catch {}
-      delete memCache[cacheKey];
-      return res.status(200).json({ events: [], stats: null, lineups: null, _debug: "wrong_match_auto_cleared" });
-    }
     if (debug === "1") {
       return res.status(200).json({
         _debug: true,
         eventId,
         topKeys: Object.keys(data),
         scoringPlaysCount: data.scoringPlays?.length || 0,
-        scoringPlays: (data.scoringPlays || []).slice(0, 3),
         keyEventsCount: data.keyEvents?.length || 0,
-        keyEvents: (data.keyEvents || []).slice(0, 5),
         playsCount: data.plays?.length || 0,
-        commentaryCount: data.commentary?.items?.length || data.commentary?.length || 0,
-        commentarySample: (data.commentary?.items || data.commentary || []).slice(0, 3),
         boxscoreTeams: data.boxscore?.teams?.map(t => t.team?.displayName) || [],
-        leaders: (data.leaders || []).slice(0,2).map(l => ({ name: l.name, leaders: (l.leaders||[]).slice(0,2) })),
+        keyEvents: (data.keyEvents || []).slice(0, 5),
         rostersCount: data.rosters?.length || 0,
         rosterSample: data.rosters?.[0] ? {
           teamName: data.rosters[0].team?.displayName,
           formation: data.rosters[0].formation,
           topKeys: Object.keys(data.rosters[0]),
-          entriesCount: (data.rosters[0].roster || []).length,
-          firstPlayer: (data.rosters[0].roster || [])[0] || null,
+          teamKeys: data.rosters[0].team ? Object.keys(data.rosters[0].team) : [],
+          entriesCount: (data.rosters[0].entries || data.rosters[0].roster || data.rosters[0].athletes || data.rosters[0].players || data.rosters[0].team?.athletes || data.rosters[0].team?.roster || []).length,
+          firstPlayer: (data.rosters[0].entries || data.rosters[0].roster || data.rosters[0].athletes || data.rosters[0].players || data.rosters[0].team?.athletes || data.rosters[0].team?.roster || [])[0] || null,
         } : null,
       });
     }

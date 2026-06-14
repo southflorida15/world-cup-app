@@ -156,6 +156,7 @@ const ESPN_NAME_MAP = {
   "Bosnia and Herzegovina": "Bosnia & Herz.",
   "Cape Verde Islands": "Cape Verde",
   "Turkey": "Turkiye",
+  "Türkiye": "Turkiye",
   "Curaçao": "Curacao",
   "Congo, DR": "DR Congo",
   "DR Congo": "DR Congo",
@@ -163,7 +164,14 @@ const ESPN_NAME_MAP = {
   "Korea Republic": "South Korea",
   "Czech Republic": "Czechia",
 };
-const normESPN = n => ESPN_NAME_MAP[n] || n;
+const normESPN = n => {
+  if (!n) return n;
+  // Check direct map first
+  if (ESPN_NAME_MAP[n]) return ESPN_NAME_MAP[n];
+  // Strip accents and retry (handles Türkiye→Turkiye, Curaçao→Curacao, etc.)
+  const stripped = n.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  return ESPN_NAME_MAP[stripped] || stripped;
+};
 
 function mapESPNEvent(event) {
   const comp = event.competitions?.[0];
@@ -318,7 +326,8 @@ export default async function handler(req, res) {
       "Qatar|Switzerland":     { hg: 1, ag: 1, status: "FT", elapsed: 90 },
       "Brazil|Morocco":        { hg: 1, ag: 1, status: "FT", elapsed: 90 },
       "Haiti|Scotland":        { hg: 0, ag: 1, status: "FT", elapsed: 90 },
-      "Australia|Turkiye":     { hg: 1, ag: 1, status: "FT", elapsed: 90 },
+      "Australia|Turkiye":     { hg: 2, ag: 0, status: "FT", elapsed: 90 },
+      "Australia|Türkiye":     { hg: 2, ag: 0, status: "FT", elapsed: 90 },
     };
     try {
       const existing = await loadPersistedResults();
@@ -341,7 +350,8 @@ export default async function handler(req, res) {
       "Qatar|Switzerland":     { hg: 1, ag: 1, status: "FT", elapsed: 90 },
       "Brazil|Morocco":        { hg: 1, ag: 1, status: "FT", elapsed: 90 },
       "Haiti|Scotland":        { hg: 0, ag: 1, status: "FT", elapsed: 90 },
-      "Australia|Turkiye":     { hg: 1, ag: 1, status: "FT", elapsed: 90 },
+      "Australia|Turkiye":     { hg: 2, ag: 0, status: "FT", elapsed: 90 },
+      "Australia|Türkiye":     { hg: 2, ag: 0, status: "FT", elapsed: 90 },
     };
     try { await kv.set(RESULTS_KEY, known); persisted = known; } catch(e) {}
   }
