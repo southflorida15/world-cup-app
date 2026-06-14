@@ -426,15 +426,18 @@ async function getScorers() {
   };
 }
 
-// ── Seed ESPN IDs for today + tomorrow ───────────────────────────────────────
+// ── Seed ESPN IDs for today + next 7 days + merge hardcoded ─────────────────
 async function seedESPNIds() {
   const pad = n => String(n).padStart(2, "0");
   const dateStr = d => `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`;
   const now = new Date();
-  const dates = [dateStr(now), dateStr(new Date(now.getTime() + 86400000)), dateStr(new Date(now.getTime() + 172800000))];
 
-  const idMap = await kv.get(ESPN_ID_MAP_KEY).catch(() => ({})) || {};
-  let added = 0;
+  // Fetch next 7 days to cover upcoming matchdays
+  const dates = Array.from({length: 7}, (_, i) => dateStr(new Date(now.getTime() + i * 86400000)));
+
+  // Start with hardcoded IDs as base
+  const idMap = { ...HARDCODED_ESPN_IDS, ...(await kv.get(ESPN_ID_MAP_KEY).catch(() => ({})) || {}) };
+  const before = Object.keys(idMap).length;
 
   for (const date of dates) {
     try {
@@ -446,11 +449,10 @@ async function seedESPNIds() {
         if (!comp) continue;
         const home = normESPN(comp.competitors?.find(c => c.homeAway === "home")?.team?.displayName || "");
         const away = normESPN(comp.competitors?.find(c => c.homeAway === "away")?.team?.displayName || "");
-        if (!home || !away) continue;
+        if (!home || !away || !event.id) continue;
         const key = `${home}|${away}`;
-        if (!idMap[key] && event.id) {
+        if (!idMap[key]) {
           idMap[key] = event.id;
-          added++;
           console.log(`[seed-ids] ${key} → ${event.id}`);
         }
       }
@@ -459,9 +461,8 @@ async function seedESPNIds() {
     }
   }
 
-  if (added > 0) {
-    await kv.set(ESPN_ID_MAP_KEY, idMap).catch(() => {});
-  }
+  const added = Object.keys(idMap).length - before;
+  await kv.set(ESPN_ID_MAP_KEY, idMap).catch(() => {});
 
   return { added, total: Object.keys(idMap).length, dates };
 }
