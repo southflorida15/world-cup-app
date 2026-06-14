@@ -199,13 +199,8 @@ function mapESPNEvent(event) {
   }
   // e.g. displayClock "90:04" during injury time → elapsedCurrent = 4
   // detail "90+7'" → totalAdded = 7
-  // We store both: elapsed=90, elapsedExtra=currentExtraMin, elapsedTotal=totalAdded
   let elapsedExtra = null;
-  let elapsedTotal = null;
   const detailMatch = detail.match(/(\d+)\+(\d+)/);
-  if (detailMatch) {
-    elapsedTotal = parseInt(detailMatch[2]); // total added time (e.g. 7)
-  }
   if (clock && elapsed !== null && elapsed >= 45) {
     const secs = parseInt(clock.split(":")[1] || "0");
     if (secs > 0 || elapsed > 90) {
@@ -230,7 +225,7 @@ function mapESPNEvent(event) {
     fixture: {
       id: event.id,
       date: comp.date || event.date,
-      status: { short, elapsed, elapsedExtra, elapsedTotal },
+      status: { short, elapsed, elapsedExtra },
       venue: { name: comp.venue?.fullName || "", city: comp.venue?.address?.city || "" },
     },
     league: { id: 1635, season: 2026 },

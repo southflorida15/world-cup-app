@@ -603,13 +603,12 @@ const LiveScoresCtx = createContext({scores:{},getScore:()=>null,isLive:()=>fals
 
 const statusIsLive = (s) => ["1H","HT","2H","ET","BT","P","LIVE","inprogress","first_half","halftime","second_half","extra_time","penalties"].includes(s);
 const statusIsFinished = (s) => ["FT","AET","PEN","finished","ended","after_extra_time","after_penalties"].includes(s);
-const statusLabel = (s,e,ex,tot) => {
+const statusLabel = (s,e,ex) => {
   if(!s||s==="NS"||s==="notstarted") return null;
-  const extraStr = ex ? (tot && tot > ex ? `${e}+${ex}/${tot}'` : `${e}+${ex}'`) : (e ? `${e}'` : "LIVE");
-  if(s==="1H"||s==="first_half"||s==="inprogress"||s==="LIVE") return ex ? extraStr : (e ? `${e}'` : "LIVE");
+  if(s==="1H"||s==="first_half"||s==="inprogress"||s==="LIVE") return e?(ex?`${e}+${ex}'`:`${e}'`):"LIVE";
   if(s==="HT"||s==="halftime") return "HT";
-  if(s==="2H"||s==="second_half") return ex ? extraStr : (e ? `${e}'` : "LIVE");
-  if(s==="ET"||s==="extra_time") return e?(ex?`ET ${extraStr}`:`ET ${e}'`):"ET";
+  if(s==="2H"||s==="second_half") return e?(ex?`${e}+${ex}'`:`${e}'`):"LIVE";
+  if(s==="ET"||s==="extra_time") return e?(ex?`ET ${e}+${ex}'`:`ET ${e}'`):"ET";
   if(s==="BT") return "BT";
   if(s==="P"||s==="penalties") return "Pens";
   if(s==="FT"||s==="finished"||s==="ended") return "FT";
@@ -683,10 +682,9 @@ function LiveScoresProvider({ children }) {
         const status = f?.fixture?.status?.short || "NS";
         const elapsed = f?.fixture?.status?.elapsed || null;
         const elapsedExtra = f?.fixture?.status?.elapsedExtra || null;
-        const elapsedTotal = f?.fixture?.status?.elapsedTotal || null;
         const hg = f?.goals?.home ?? null;
         const ag = f?.goals?.away ?? null;
-        if(h && a) map[`${h}|${a}`] = { hg, ag, status, elapsed, elapsedExtra, elapsedTotal };
+        if(h && a) map[`${h}|${a}`] = { hg, ag, status, elapsed, elapsedExtra };
       });
       setScores(map);
       setLastFetch(new Date());
@@ -1163,7 +1161,7 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="",
           </span>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
-          {live && <span style={{fontSize:10,fontWeight:700,color:C.green}}>🔴 {statusLabel(sc.status,sc.elapsed,sc.elapsedExtra,sc.elapsedTotal)}</span>}
+          {live && <span style={{fontSize:10,fontWeight:700,color:C.green}}>🔴 {statusLabel(sc.status,sc.elapsed,sc.elapsedExtra)}</span>}
           {!live && <span style={{fontSize:12,fontWeight:600,color:timeMode==="venue"?C.gold:C.text}}>{displayTime}</span>}
           {!live && <span style={{fontSize:10,color:C.dim}}>{tzLabel}</span>}
           {finished && <span style={{fontSize:10,color:C.dim,marginLeft:2}}>· {"FT"}</span>}
@@ -3881,7 +3879,7 @@ function MatchdayCard({ m, onAction, favTeam }) {
           {hasScore ? (
             <div style={{textAlign:"center",minWidth:64}}>
               <div style={{fontWeight:900,fontSize:22,color:live?C.green:C.text,fontFamily:"monospace",lineHeight:1}}>{sc.hg} – {sc.ag}</div>
-              {statusLabel(sc.status,sc.elapsed,sc.elapsedExtra,sc.elapsedTotal) && <div style={{fontSize:10,fontWeight:700,marginTop:2,color:live?C.green:C.dim}}>{live?"🔴 ":""}{statusLabel(sc.status,sc.elapsed,sc.elapsedExtra,sc.elapsedTotal)}</div>}
+              {statusLabel(sc.status,sc.elapsed,sc.elapsedExtra) && <div style={{fontSize:10,fontWeight:700,marginTop:2,color:live?C.green:C.dim}}>{live?"🔴 ":""}{statusLabel(sc.status,sc.elapsed,sc.elapsedExtra)}</div>}
             </div>
           ) : (
             <span style={{fontSize:11,color:C.dim,fontWeight:700,minWidth:40,textAlign:"center"}}>VS</span>
@@ -4359,8 +4357,8 @@ return (
                     <span style={{fontWeight:700,color:C.text,flex:1,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.home}</span>
                     <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
                       {done && sc && (
-                        <div style={{textAlign:"center",minWidth:48}}>
-                          <div style={{fontSize:9,color:C.dim,marginBottom:1}}>Result</div>
+                        <div style={{textAlign:"center",minWidth:48,background:C.s2,borderRadius:8,padding:"4px 8px",border:`1px solid ${C.b2}`}}>
+                          <div style={{fontSize:9,color:C.mid,marginBottom:1,fontWeight:700,letterSpacing:"0.05em"}}>RESULT</div>
                           <div style={{fontWeight:800,fontSize:18,color:C.text,fontFamily:"monospace"}}>{sc.hg}–{sc.ag}</div>
                         </div>
                       )}
@@ -4374,8 +4372,8 @@ return (
                         </>
                       )}
                       {done && hasPred && (
-                        <div style={{textAlign:"center",minWidth:48}}>
-                          <div style={{fontSize:9,color:C.dim,marginBottom:1}}>Your pick</div>
+                        <div style={{textAlign:"center",minWidth:48,background:`${ptColor}12`,borderRadius:8,padding:"4px 8px",border:`1px solid ${ptColor}44`}}>
+                          <div style={{fontSize:9,color:ptColor,marginBottom:1,fontWeight:700,letterSpacing:"0.05em"}}>YOUR PICK</div>
                           <div style={{fontWeight:800,fontSize:18,color:ptColor,fontFamily:"monospace"}}>{pred.hg}–{pred.ag}</div>
                         </div>
                       )}
