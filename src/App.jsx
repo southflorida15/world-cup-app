@@ -5080,9 +5080,7 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
             </> : <div style={{fontSize:11,color:C.dim,marginTop:3}}>Sign in to sync your saved matches, teams and bracket picks.</div>}
           </div>
         </div>
-        {isSynced && <div style={{display:"flex",justifyContent:"flex-end",marginTop:10}}>
-          <button onClick={()=>{persistProfile(null);onSignOut();setToast("Signed out.");onClose();}} style={{fontSize:11,color:C.dim,background:"none",border:"none",padding:"2px 0",cursor:"pointer",fontWeight:600,textDecoration:"underline",textDecorationStyle:"dotted"}}>Sign out</button>
-        </div>}
+
       </div>
 
       {/* My Teams — collapsible */}
@@ -5130,6 +5128,7 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
         <>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>
           <div style={{fontSize:11,color:C.dim,flex:1}}>✅ Syncing across devices</div>
+          {isSynced && <button onClick={()=>{persistProfile(null);onSignOut();setToast("Signed out.");onClose();}} style={{padding:"6px 12px",borderRadius:8,border:`1px solid ${C.b2}`,background:C.s2,color:C.mid,fontSize:11,fontWeight:600,cursor:"pointer",flexShrink:0}}>Sign out</button>}
           {syncProfile?.pin&&<button onClick={()=>{setPin("");setScreen("pin-change");setError("");}} style={{padding:"6px 12px",borderRadius:8,border:`1px solid ${C.b2}`,background:C.s2,color:C.mid,fontSize:11,fontWeight:600,cursor:"pointer",flexShrink:0}}>🔁 Change PIN</button>}
         </div>
         <div style={{textAlign:"center",marginTop:10}}>
