@@ -184,9 +184,32 @@ function mapESPNEvent(event) {
   const statusType = comp.status?.type?.name || "STATUS_SCHEDULED";
   let short = ESPN_STATUS_MAP[statusType] || "NS";
   const clock = comp.status?.displayClock;
+  const detail = comp.status?.detail || "";
   const elapsed = clock && clock !== "0:00" ? parseInt(clock.split(":")[0]) : null;
-  // For extra time, preserve the "+N" portion (e.g. "90+7" → elapsed=90, elapsedExtra=7)
-  const elapsedExtra = clock && clock.includes("+") ? parseInt(clock.split("+")[1]) : null;
+
+  // elapsedExtra: how many extra minutes have actually elapsed (from clock seconds)
+  // e.g. displayClock "90:04" during injury time → elapsedCurrent = 4
+  // detail "90+7'" → totalAdded = 7
+  // We store both: elapsed=90, elapsedExtra=currentExtraMin, elapsedTotal=totalAdded
+  let elapsedExtra = null;
+  let elapsedTotal = null;
+  const detailMatch = detail.match(/(\d+)\+(\d+)/);
+  if (detailMatch) {
+    elapsedTotal = parseInt(detailMatch[2]); // total added time (e.g. 7)
+  }
+  if (clock && elapsed !== null && elapsed >= 45) {
+    const secs = parseInt(clock.split(":")[1] || "0");
+    if (secs > 0 || elapsed > 90) {
+      // Current extra minute elapsed = minutes portion beyond base time
+      const baseTime = elapsed >= 90 ? 90 : 45;
+      const extraElapsed = elapsed - baseTime;
+      elapsedExtra = extraElapsed > 0 ? extraElapsed : (secs > 0 ? 1 : null);
+    }
+  }
+  // Fallback: if clock has + format (shouldn't happen with ESPN but just in case)
+  if (elapsedExtra === null && clock && clock.includes("+")) {
+    elapsedExtra = parseInt(clock.split("+")[1]) || null;
+  }
   // ESPN sometimes returns NS with elapsed > 0 — fix it
   if (short === "NS" && elapsed && elapsed > 0) {
     short = elapsed <= 45 ? "1H" : elapsed <= 50 ? "HT" : elapsed <= 95 ? "2H" : "ET";
@@ -198,7 +221,7 @@ function mapESPNEvent(event) {
     fixture: {
       id: event.id,
       date: comp.date || event.date,
-      status: { short, elapsed, elapsedExtra },
+      status: { short, elapsed, elapsedExtra, elapsedTotal },
       venue: { name: comp.venue?.fullName || "", city: comp.venue?.address?.city || "" },
     },
     league: { id: 1635, season: 2026 },
