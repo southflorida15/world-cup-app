@@ -1137,7 +1137,7 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="",
           <Crest team={m.home} size={32}/>
           <span style={{fontWeight:winner===m.home?800:700,color:winner===m.home?C.text:C.dim,flex:1,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.home}</span>
           <div style={{textAlign:"center",minWidth:60,flexShrink:0}}>
-            <div style={{fontWeight:900,fontSize:22,color:C.text,fontFamily:"monospace",lineHeight:1}}>{sc.hg} – {sc.ag}</div>
+            <div style={{fontWeight:900,fontSize:22,color:C.mid,fontFamily:"monospace",lineHeight:1}}>{sc.hg} – {sc.ag}</div>
           </div>
           <span style={{fontWeight:winner===m.away?800:700,color:winner===m.away?C.text:C.dim,flex:1,fontSize:14,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.away}</span>
           <Crest team={m.away} size={32}/>
@@ -1181,7 +1181,7 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="",
           </div>
         ) : hasScore ? (
           <div style={{textAlign:"center",minWidth:60,flexShrink:0}}>
-            <div style={{fontWeight:900,fontSize:22,color:live?C.green:C.text,fontFamily:"monospace",lineHeight:1,animation:scoreFlash?"scoreFlash .6s ease":undefined,borderRadius:6,padding:"1px 4px",background:scoreFlash?`${C.green}30`:"transparent",transition:"background .3s"}}>{sc.hg} – {sc.ag}</div>
+            <div style={{fontWeight:900,fontSize:22,color:live?C.green:finished?C.mid:C.text,fontFamily:"monospace",lineHeight:1,animation:scoreFlash?"scoreFlash .6s ease":undefined,borderRadius:6,padding:"1px 4px",background:scoreFlash?`${C.green}30`:"transparent",transition:"background .3s"}}>{sc.hg} – {sc.ag}</div>
           </div>
         ) : (
           <div style={{textAlign:"center",minWidth:60,flexShrink:0}}>
