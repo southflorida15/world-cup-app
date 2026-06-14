@@ -1242,8 +1242,10 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=n
     const iso = MATCH_UTC[m.id];
     if (!iso) return false;
     const d = new Date(iso);
+    // Use local date so midnight matches (e.g. 12AM ET = next day UTC) show correctly
     const dStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    return dStr === _todayLive;
+    const dStrLocal = d.toLocaleDateString('en-CA'); // YYYY-MM-DD in local tz
+    return dStr === _todayLive || dStrLocal === _todayLive;
   });
   const upcomingToday = MATCHES.filter(m => {
     const iso = MATCH_UTC[m.id];
@@ -1251,7 +1253,8 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=n
     const d = new Date(iso);
     if (Date.now() > d.getTime() - 60000) return false; // remove 1min before kickoff
     const dStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    if (dStr !== _todayLive) return false;
+    const dStrLocal = d.toLocaleDateString('en-CA');
+    if (dStr !== _todayLive && dStrLocal !== _todayLive) return false;
     const s = getScore(m.home, m.away);
     return !s || s.status === "NS";
   });
