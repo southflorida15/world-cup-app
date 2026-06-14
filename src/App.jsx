@@ -5077,12 +5077,11 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
             {isSynced ? <>
               <div style={{fontSize:isDesktop?12:13,color:C.dim,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginTop:6}}>{syncProfile.email||"PIN User"}</div>
               {syncProfile.pin && <div style={{fontSize:isDesktop?12:13,color:C.mid,marginTop:2}}>PIN: <strong style={{color:C.gold,letterSpacing:"0.1em"}}>{syncProfile.pin}</strong></div>}
-              <div style={{fontSize:isDesktop?12:13,color:C.green,fontWeight:800,marginTop:3}}>✅ Syncing</div>
             </> : <div style={{fontSize:11,color:C.dim,marginTop:3}}>Sign in to sync your saved matches, teams and bracket picks.</div>}
           </div>
         </div>
         {isSynced && <div style={{display:"flex",justifyContent:"flex-end",marginTop:10}}>
-          <button onClick={()=>{persistProfile(null);onSignOut();setToast("Signed out.");onClose();}} style={{fontSize:isDesktop?12:11,color:C.mid,background:C.bg,border:`1px solid ${C.b2}`,borderRadius:10,padding:"4px 12px",cursor:"pointer",fontWeight:700}}>Sign out</button>
+          <button onClick={()=>{persistProfile(null);onSignOut();setToast("Signed out.");onClose();}} style={{fontSize:11,color:C.dim,background:"none",border:"none",padding:"2px 0",cursor:"pointer",fontWeight:600,textDecoration:"underline",textDecorationStyle:"dotted"}}>Sign out</button>
         </div>}
       </div>
 
