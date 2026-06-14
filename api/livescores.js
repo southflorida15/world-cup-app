@@ -246,19 +246,45 @@ function mapESPNEvent(event) {
 }
 
 async function fetchFromESPN() {
-  const r = await fetch(`${ESPN_BASE}/scoreboard`, {
-    headers: {
-      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-      "Accept": "application/json",
-      "Origin": "https://www.espn.com",
-      "Referer": "https://www.espn.com/",
-    },
-  });
-  if (!r.ok) throw new Error(`ESPN ${r.status}`);
-  const data = await r.json();
-  const events = data.events || [];
-  console.log(`[livescores] ESPN: ${events.length} events`);
-  return events.map(mapESPNEvent).filter(Boolean);
+  const pad = n => String(n).padStart(2, "0");
+  const dateStr = d => `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`;
+  const now = new Date();
+  const yesterday = dateStr(new Date(now.getTime() - 86400000));
+  const today     = dateStr(now);
+  const tomorrow  = dateStr(new Date(now.getTime() + 86400000));
+
+  const fetchDate = async (date) => {
+    const r = await fetch(`${ESPN_BASE}/scoreboard?dates=${date}&limit=20`, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Accept": "application/json",
+        "Origin": "https://www.espn.com",
+        "Referer": "https://www.espn.com/",
+      },
+    });
+    if (!r.ok) throw new Error(`ESPN ${r.status}`);
+    const data = await r.json();
+    return data.events || [];
+  };
+
+  const [yd, td, tm] = await Promise.allSettled([
+    fetchDate(yesterday),
+    fetchDate(today),
+    fetchDate(tomorrow),
+  ]);
+
+  const allEvents = [
+    ...(yd.status === "fulfilled" ? yd.value : []),
+    ...(td.status === "fulfilled" ? td.value : []),
+    ...(tm.status === "fulfilled" ? tm.value : []),
+  ];
+
+  // Deduplicate by event id
+  const seen = new Set();
+  const unique = allEvents.filter(e => { if (seen.has(e.id)) return false; seen.add(e.id); return true; });
+
+  console.log(`[livescores] ESPN: ${unique.length} events (yd=${yd.status==="fulfilled"?yd.value.length:0} td=${td.status==="fulfilled"?td.value.length:0} tm=${tm.status==="fulfilled"?tm.value.length:0})`);
+  return unique.map(mapESPNEvent).filter(Boolean);
 }
 
 // ── Highlightly mapper ─────────────────────────────────────────────────────
@@ -330,17 +356,8 @@ export default async function handler(req, res) {
   // Seed known results that predate the persistence system
   if (req.query.seed === "1") {
     const known = {
-      "Mexico|South Africa":        { hg: 2, ag: 0, status: "FT", elapsed: 90 },
-      "South Korea|Czechia":         { hg: 2, ag: 1, status: "FT", elapsed: 90 },
-      "Canada|Bosnia-Herzegovina":   { hg: 1, ag: 1, status: "FT", elapsed: 90 },
-      "United States|Paraguay":      { hg: 4, ag: 1, status: "FT", elapsed: 90 },
-      "Qatar|Switzerland":           { hg: 1, ag: 1, status: "FT", elapsed: 90 },
-      "Brazil|Morocco":              { hg: 1, ag: 1, status: "FT", elapsed: 90 },
-      "Haiti|Scotland":              { hg: 0, ag: 1, status: "FT", elapsed: 90 },
-      "Australia|Turkiye":           { hg: 2, ag: 0, status: "FT", elapsed: 90 },
-      "Australia|Türkiye":           { hg: 2, ag: 0, status: "FT", elapsed: 90 },
-      "Germany|Curacao":             { hg: 7, ag: 1, status: "FT", elapsed: 90 },
-      "Netherlands|Japan":           { hg: 2, ag: 2, status: "FT", elapsed: 90 },
+      "Mexico|South Africa": { hg: 2, ag: 0, status: "FT", elapsed: 90 },
+      "South Korea|Czechia":  { hg: 2, ag: 1, status: "FT", elapsed: 90 },
     };
     try {
       const existing = await loadPersistedResults();
@@ -358,17 +375,8 @@ export default async function handler(req, res) {
   // Auto-seed known results if store is empty (self-healing)
   if (Object.keys(persisted).length === 0) {
     const known = {
-      "Mexico|South Africa":        { hg: 2, ag: 0, status: "FT", elapsed: 90 },
-      "South Korea|Czechia":         { hg: 2, ag: 1, status: "FT", elapsed: 90 },
-      "Canada|Bosnia-Herzegovina":   { hg: 1, ag: 1, status: "FT", elapsed: 90 },
-      "United States|Paraguay":      { hg: 4, ag: 1, status: "FT", elapsed: 90 },
-      "Qatar|Switzerland":           { hg: 1, ag: 1, status: "FT", elapsed: 90 },
-      "Brazil|Morocco":              { hg: 1, ag: 1, status: "FT", elapsed: 90 },
-      "Haiti|Scotland":              { hg: 0, ag: 1, status: "FT", elapsed: 90 },
-      "Australia|Turkiye":           { hg: 2, ag: 0, status: "FT", elapsed: 90 },
-      "Australia|Türkiye":           { hg: 2, ag: 0, status: "FT", elapsed: 90 },
-      "Germany|Curacao":             { hg: 7, ag: 1, status: "FT", elapsed: 90 },
-      "Netherlands|Japan":           { hg: 2, ag: 2, status: "FT", elapsed: 90 },
+      "Mexico|South Africa": { hg: 2, ag: 0, status: "FT", elapsed: 90 },
+      "South Korea|Czechia":  { hg: 2, ag: 1, status: "FT", elapsed: 90 },
     };
     try { await kv.set(RESULTS_KEY, known); persisted = known; } catch(e) {}
   }
