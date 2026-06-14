@@ -1,12 +1,10 @@
 // ── IMPORT COMPONENTS ──────────────────────────────────────────────────
-import FantasyPickLockStatus from "./components/FantasyPickLockStatus";
 import FantasyScoringRules from "./components/FantasyScoringRules";
 import FantasyStatsSummary from "./components/FantasyStatsSummary";
 import MatchHeader from "./components/MatchHeader";
 import MatchInfoSection from "./components/MatchInfoSection";
-import MatchDetailCard from "./components/MatchDetailCard";
 import React, { useState, useEffect, useContext, createContext, useCallback, useMemo, useRef } from "react";
-import { buildFifa2026Bracket, buildQualifiedThirdsFromSelectedTeams, buildThirdGroupsKey, ROUND_OF_16_TEMPLATE, QUARTER_FINAL_TEMPLATE, SEMI_FINAL_TEMPLATE, FINAL_TEMPLATE } from "./engine/fifa2026Bracket";
+import { buildQualifiedThirdsFromSelectedTeams, buildThirdGroupsKey, ROUND_OF_16_TEMPLATE, QUARTER_FINAL_TEMPLATE, SEMI_FINAL_TEMPLATE, FINAL_TEMPLATE } from "./engine/fifa2026Bracket";
 // ── ANNEX C — FIFA WC 2026 third-place assignment ─────────────────────────
 // Hardcoded deterministic assignment — no Wikipedia fetch needed.
 // FIFA assigns the 8 best thirds to fixed R32 slots in sorted group order.
@@ -26,10 +24,8 @@ function getAnnexCAssignment(qualifiedThirds) {
   return mapping;
 }
 
-async function loadAnnexCFromRemote() {
-  // Annex C is now computed locally — no network call needed
-  return { _local: true, count: 495 };
-}
+
+
 
 // ── THEME ─────────────────────────────────────────────────────────────────
 const C = {
@@ -3104,7 +3100,7 @@ function MyBracketTab({ tabTop=116 }) {
   const [running,setRunning]=useState(false);
   const [sharing,setSharing]=useState(false);
   const [showBracketActions,setShowBracketActions]=useState(false);
-  const [annexStatus,setAnnexStatus]=useState({state:"loading",message:"Loading FIFA Annex C table..."});
+  const annexStatus = {state:"ready",message:"FIFA Annex C ready (495 combinations)."};
   const allThirds=Object.entries(groups).map(([g,teams])=>({group:g,team:teams[2]}));
   const toggleThird=(t)=>{setThirds(p=>p.includes(t)?p.filter(x=>x!==t):[...p,t].slice(0,8));};
   const _mbhRef = useRef(null); const _mbhH = useElemHeight(_mbhRef);
@@ -3123,11 +3119,6 @@ function MyBracketTab({ tabTop=116 }) {
     };
     window.addEventListener("wc2026_my_bracket_synced", applySyncedBracket);
     return () => window.removeEventListener("wc2026_my_bracket_synced", applySyncedBracket);
-  },[]);
-
-  useEffect(()=>{
-    // Annex C is now computed locally — always ready immediately
-    setAnnexStatus({state:"ready",message:"FIFA Annex C ready (495 combinations)."});
   },[]);
 
   useEffect(()=>{

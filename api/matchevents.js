@@ -34,6 +34,7 @@ const ESPN_NAME_MAP = {
   "Türkiye": "Turkiye",
   "Curaçao": "Curacao",
   "Congo, DR": "DR Congo",
+  "Congo DR": "DR Congo",
   "DR Congo": "DR Congo",
   "Côte d'Ivoire": "Ivory Coast",
   "Korea Republic": "South Korea",
