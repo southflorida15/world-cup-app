@@ -3015,8 +3015,8 @@ function VisualBracketTree({ bracket, pickMode="auto", onPick=()=>{}, view="comp
   );
 }
 
-const MY_BRACKET_STORAGE_KEY = "wc2026_my_bracket_v2";
-const MY_BRACKET_VERSION = "2.1"; // bump this to force reset groups/result for all users
+const MY_BRACKET_STORAGE_KEY = "wc2026_my_bracket_v3";
+const MY_BRACKET_VERSION = "3.0"; // bump this to force reset groups/result for all users
 
 function readSavedMyBracket() {
   try {
