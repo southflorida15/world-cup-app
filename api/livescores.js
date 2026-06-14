@@ -58,21 +58,11 @@ function isMatchWindowActive() {
   return KICKOFFS.some(k => { const ko = new Date(k).getTime(); return now >= ko && now <= ko + WINDOW_MS; });
 }
 
-function isKickoffImminent() {
-  const now = Date.now();
-  return KICKOFFS.some(k => {
-    const ko = new Date(k).getTime();
-    return now >= ko - 5 * 60 * 1000 && now <= ko + 15 * 60 * 1000;
-  });
-}
-
 function getSmartTTL(fixtures) {
   const liveCount = fixtures.filter(f => LIVE_STATUSES.includes(f?.fixture?.status?.short)).length;
   if (liveCount >= 4) return 3 * 60;
   if (liveCount >= 2) return 2 * 60;
   if (liveCount >= 1) return 60;
-  // No live matches — check if a kickoff is imminent (within 5 min)
-  if (isKickoffImminent()) return 60;
   return 60 * 60;
 }
 
@@ -215,19 +205,43 @@ function mapESPNEvent(event) {
 }
 
 async function fetchFromESPN() {
-  const r = await fetch(`${ESPN_BASE}/scoreboard`, {
-    headers: {
-      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-      "Accept": "application/json",
-      "Origin": "https://www.espn.com",
-      "Referer": "https://www.espn.com/",
-    },
-  });
-  if (!r.ok) throw new Error(`ESPN ${r.status}`);
-  const data = await r.json();
-  const events = data.events || [];
-  console.log(`[livescores] ESPN: ${events.length} events`);
-  return events.map(mapESPNEvent).filter(Boolean);
+  // Fetch today AND tomorrow to catch late-night matches that are next day UTC
+  const now = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  const dateStr = d => `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`;
+  const today = dateStr(now);
+  const tomorrow = dateStr(new Date(now.getTime() + 24*60*60*1000));
+
+  const fetchDate = async (date) => {
+    const r = await fetch(`${ESPN_BASE}/scoreboard?dates=${date}&limit=20`, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Accept": "application/json",
+        "Origin": "https://www.espn.com",
+        "Referer": "https://www.espn.com/",
+      },
+    });
+    if (!r.ok) throw new Error(`ESPN ${r.status}`);
+    const data = await r.json();
+    return data.events || [];
+  };
+
+  const [todayEvents, tomorrowEvents] = await Promise.allSettled([
+    fetchDate(today),
+    fetchDate(tomorrow),
+  ]);
+
+  const allEvents = [
+    ...(todayEvents.status === "fulfilled" ? todayEvents.value : []),
+    ...(tomorrowEvents.status === "fulfilled" ? tomorrowEvents.value : []),
+  ];
+
+  // Deduplicate by event id
+  const seen = new Set();
+  const unique = allEvents.filter(e => { if (seen.has(e.id)) return false; seen.add(e.id); return true; });
+
+  console.log(`[livescores] ESPN: ${unique.length} events (today=${todayEvents.status === "fulfilled" ? todayEvents.value.length : 0}, tomorrow=${tomorrowEvents.status === "fulfilled" ? tomorrowEvents.value.length : 0})`);
+  return unique.map(mapESPNEvent).filter(Boolean);
 }
 
 // ── Highlightly mapper ─────────────────────────────────────────────────────
@@ -299,8 +313,12 @@ export default async function handler(req, res) {
   // Seed known results that predate the persistence system
   if (req.query.seed === "1") {
     const known = {
-      "Mexico|South Africa": { hg: 2, ag: 0, status: "FT", elapsed: 90 },
-      "South Korea|Czechia":  { hg: 2, ag: 1, status: "FT", elapsed: 90 },
+      "Mexico|South Africa":   { hg: 2, ag: 0, status: "FT", elapsed: 90 },
+      "South Korea|Czechia":   { hg: 2, ag: 1, status: "FT", elapsed: 90 },
+      "Qatar|Switzerland":     { hg: 1, ag: 1, status: "FT", elapsed: 90 },
+      "Brazil|Morocco":        { hg: 1, ag: 1, status: "FT", elapsed: 90 },
+      "Haiti|Scotland":        { hg: 0, ag: 1, status: "FT", elapsed: 90 },
+      "Australia|Turkiye":     { hg: 1, ag: 1, status: "FT", elapsed: 90 },
     };
     try {
       const existing = await loadPersistedResults();
@@ -318,8 +336,12 @@ export default async function handler(req, res) {
   // Auto-seed known results if store is empty (self-healing)
   if (Object.keys(persisted).length === 0) {
     const known = {
-      "Mexico|South Africa": { hg: 2, ag: 0, status: "FT", elapsed: 90 },
-      "South Korea|Czechia":  { hg: 2, ag: 1, status: "FT", elapsed: 90 },
+      "Mexico|South Africa":   { hg: 2, ag: 0, status: "FT", elapsed: 90 },
+      "South Korea|Czechia":   { hg: 2, ag: 1, status: "FT", elapsed: 90 },
+      "Qatar|Switzerland":     { hg: 1, ag: 1, status: "FT", elapsed: 90 },
+      "Brazil|Morocco":        { hg: 1, ag: 1, status: "FT", elapsed: 90 },
+      "Haiti|Scotland":        { hg: 0, ag: 1, status: "FT", elapsed: 90 },
+      "Australia|Turkiye":     { hg: 1, ag: 1, status: "FT", elapsed: 90 },
     };
     try { await kv.set(RESULTS_KEY, known); persisted = known; } catch(e) {}
   }
