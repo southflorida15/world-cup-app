@@ -1,12 +1,31 @@
-import FantasyPickLockStatus from "./components/FantasyPickLockStatus";
+// ── IMPORT COMPONENTS ──────────────────────────────────────────────────
 import FantasyScoringRules from "./components/FantasyScoringRules";
 import FantasyStatsSummary from "./components/FantasyStatsSummary";
 import MatchHeader from "./components/MatchHeader";
 import MatchInfoSection from "./components/MatchInfoSection";
-import MatchDetailCard from "./components/MatchDetailCard";
 import React, { useState, useEffect, useContext, createContext, useCallback, useMemo, useRef } from "react";
-import { buildFifa2026Bracket, buildQualifiedThirdsFromSelectedTeams, buildThirdGroupsKey } from "./engine/fifa2026Bracket";
-import { loadAnnexCFromRemote } from "./engine/annexC";
+import { buildQualifiedThirdsFromSelectedTeams, buildThirdGroupsKey, ROUND_OF_16_TEMPLATE, QUARTER_FINAL_TEMPLATE, SEMI_FINAL_TEMPLATE, FINAL_TEMPLATE } from "./engine/fifa2026Bracket";
+// ── ANNEX C — FIFA WC 2026 third-place assignment ─────────────────────────
+// Hardcoded deterministic assignment — no Wikipedia fetch needed.
+// FIFA assigns the 8 best thirds to fixed R32 slots in sorted group order.
+// Target slots: 1A(m79), 1B(m85), 1D(m81), 1E(m74), 1G(m82), 1I(m77), 1K(m87), 1L(m80)
+const ANNEX_C_TARGETS = ["1A","1B","1D","1E","1G","1I","1K","1L"];
+
+function getAnnexCAssignment(qualifiedThirds) {
+  // qualifiedThirds: array of { group, team }
+  const sorted = [...qualifiedThirds]
+    .map(x => x.group || x)
+    .map(g => String(g).replace(/^3/,"").toUpperCase())
+    .sort();
+  if (sorted.length !== 8) throw new Error(`Need 8 thirds, got ${sorted.length}`);
+  // Map sorted groups to sorted target slots
+  const mapping = {};
+  ANNEX_C_TARGETS.forEach((target, i) => { mapping[target] = `3${sorted[i]}`; });
+  return mapping;
+}
+
+
+
 
 // ── THEME ─────────────────────────────────────────────────────────────────
 const C = {
@@ -14,6 +33,25 @@ const C = {
   green:"#4ade80", greenS:"#4ade8055", gold:"#fbbf24", blue:"#60a5fa",
   rival:"#38bdf8", // sky blue — Team 2 color in H2H (neutral, not "loser" red)
   red:"#f87171", text:"#d4ead9", mid:"#7aaa8a", dim:"#3d6a4d",
+};
+
+// ── DESIGN SYSTEM TOKENS ──────────────────────────────────────────────────
+// Keep the app visually consistent by reusing this small spacing/elevation set.
+// Avoid one-off shadows, huge gradients, and random margins in feature tabs.
+const DS = {
+  space: { xs:4, sm:8, md:12, lg:16, xl:24 },
+  radius: { sm:8, md:12, lg:16, pill:999 },
+  shadow: {
+    none:"none",
+    card:"0 2px 8px rgba(0,0,0,0.12)",
+    panel:"0 4px 14px rgba(0,0,0,0.16)",
+    sticky:"0 2px 8px rgba(0,0,0,0.18)",
+    modal:"0 8px 28px rgba(0,0,0,0.30)"
+  },
+  border: {
+    subtle:`1px solid ${C.b1}`,
+    strong:`1px solid ${C.b2}`
+  }
 };
 
 // ── GROUPS ────────────────────────────────────────────────────────────────
@@ -565,12 +603,12 @@ const LiveScoresCtx = createContext({scores:{},getScore:()=>null,isLive:()=>fals
 
 const statusIsLive = (s) => ["1H","HT","2H","ET","BT","P","LIVE","inprogress","first_half","halftime","second_half","extra_time","penalties"].includes(s);
 const statusIsFinished = (s) => ["FT","AET","PEN","finished","ended","after_extra_time","after_penalties"].includes(s);
-const statusLabel = (s,e) => {
+const statusLabel = (s,e,ex) => {
   if(!s||s==="NS"||s==="notstarted") return null;
-  if(s==="1H"||s==="first_half"||s==="inprogress"||s==="LIVE") return e?`${e}'`:"LIVE";
+  if(s==="1H"||s==="first_half"||s==="inprogress"||s==="LIVE") return e?(ex?`${e}+${ex}'`:`${e}'`):"LIVE";
   if(s==="HT"||s==="halftime") return "HT";
-  if(s==="2H"||s==="second_half") return e?`${e}'`:"LIVE";
-  if(s==="ET"||s==="extra_time") return e?`ET ${e}'`:"ET";
+  if(s==="2H"||s==="second_half") return e?(ex?`${e}+${ex}'`:`${e}'`):"LIVE";
+  if(s==="ET"||s==="extra_time") return e?(ex?`ET ${e}+${ex}'`:`ET ${e}'`):"ET";
   if(s==="BT") return "BT";
   if(s==="P"||s==="penalties") return "Pens";
   if(s==="FT"||s==="finished"||s==="ended") return "FT";
@@ -578,6 +616,33 @@ const statusLabel = (s,e) => {
   if(s==="PEN"||s==="after_penalties") return "Pens";
   return s;
 };
+
+// ── COUNTDOWN HOOK ────────────────────────────────────────────────────────
+function useCountdown(matchId) {
+  const iso = MATCH_UTC[matchId];
+  const [label, setLabel] = useState(() => {
+    if (!iso) return null;
+    const diff = new Date(iso).getTime() - Date.now();
+    if (diff <= 0 || diff > 30 * 60 * 1000) return null;
+    const m = Math.floor(diff / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    return `${m}:${String(s).padStart(2,"0")}`;
+  });
+  useEffect(() => {
+    if (!iso) return;
+    const tick = () => {
+      const diff = new Date(iso).getTime() - Date.now();
+      if (diff <= 0 || diff > 30 * 60 * 1000) { setLabel(null); return; }
+      const m = Math.floor(diff / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      setLabel(`${m}:${String(s).padStart(2,"0")}`);
+    };
+    tick();
+    const t = setInterval(tick, 1000);
+    return () => clearInterval(t);
+  }, [iso]);
+  return label;
+}
 
 const API_NAME_MAP = {
   "USA":"United States","United States of America":"United States",
@@ -616,9 +681,10 @@ function LiveScoresProvider({ children }) {
         const a = normTeam(f?.teams?.away?.name || "");
         const status = f?.fixture?.status?.short || "NS";
         const elapsed = f?.fixture?.status?.elapsed || null;
+        const elapsedExtra = f?.fixture?.status?.elapsedExtra || null;
         const hg = f?.goals?.home ?? null;
         const ag = f?.goals?.away ?? null;
-        if(h && a) map[`${h}|${a}`] = { hg, ag, status, elapsed };
+        if(h && a) map[`${h}|${a}`] = { hg, ag, status, elapsed, elapsedExtra };
       });
       setScores(map);
       setLastFetch(new Date());
@@ -686,8 +752,8 @@ const VENUE_COORDS = {"Mexico City Stadium, Mexico City":"19.3029,-99.1505","Est
 const VENUE_TZ = {"Mexico City Stadium, Mexico City":"America/Mexico_City","Estadio Guadalajara, Zapopan":"America/Mexico_City","Estadio Monterrey, Guadalupe":"America/Monterrey","Toronto Stadium, Toronto":"America/Toronto","BC Place, Vancouver":"America/Vancouver","SoFi Stadium, Los Angeles":"America/Los_Angeles","San Francisco Bay Area Stadium, San Francisco":"America/Los_Angeles","Seattle Stadium, Seattle":"America/Los_Angeles","Dallas Stadium, Dallas":"America/Chicago","Houston Stadium, Houston":"America/Chicago","Kansas City Stadium, Kansas City":"America/Chicago","New York New Jersey Stadium, East Rutherford":"America/New_York","Boston Stadium, Boston":"America/New_York","Philadelphia Stadium, Philadelphia":"America/New_York","Atlanta Stadium, Atlanta":"America/New_York","Miami Stadium, Miami":"America/New_York"};
 const MATCH_UTC = {1:"2026-06-11T19:00:00Z",2:"2026-06-12T02:00:00Z",3:"2026-06-12T19:00:00Z",4:"2026-06-13T01:00:00Z",5:"2026-06-13T19:00:00Z",6:"2026-06-13T22:00:00Z",7:"2026-06-14T01:00:00Z",8:"2026-06-14T03:59:00Z",9:"2026-06-14T17:00:00Z",10:"2026-06-14T20:00:00Z",11:"2026-06-14T23:00:00Z",12:"2026-06-15T02:00:00Z",13:"2026-06-15T16:00:00Z",14:"2026-06-15T19:00:00Z",15:"2026-06-15T22:00:00Z",16:"2026-06-16T01:00:00Z",17:"2026-06-16T19:00:00Z",18:"2026-06-16T22:00:00Z",19:"2026-06-17T01:00:00Z",20:"2026-06-17T03:59:00Z",21:"2026-06-17T17:00:00Z",22:"2026-06-17T20:00:00Z",23:"2026-06-17T23:00:00Z",24:"2026-06-18T02:00:00Z",25:"2026-06-18T16:00:00Z",26:"2026-06-18T19:00:00Z",27:"2026-06-18T22:00:00Z",28:"2026-06-19T01:00:00Z",29:"2026-06-19T19:00:00Z",30:"2026-06-19T22:00:00Z",31:"2026-06-20T00:30:00Z",32:"2026-06-20T03:00:00Z",33:"2026-06-20T17:00:00Z",34:"2026-06-20T20:00:00Z",35:"2026-06-21T01:00:00Z",36:"2026-06-21T03:59:00Z",37:"2026-06-21T16:00:00Z",38:"2026-06-21T19:00:00Z",39:"2026-06-21T22:00:00Z",40:"2026-06-22T01:00:00Z",41:"2026-06-22T17:00:00Z",42:"2026-06-22T21:00:00Z",43:"2026-06-23T00:00:00Z",44:"2026-06-23T03:00:00Z",45:"2026-06-23T17:00:00Z",46:"2026-06-23T20:00:00Z",47:"2026-06-23T23:00:00Z",48:"2026-06-24T02:00:00Z",49:"2026-06-24T19:00:00Z",50:"2026-06-24T19:00:00Z",51:"2026-06-24T22:00:00Z",52:"2026-06-24T22:00:00Z",53:"2026-06-25T01:00:00Z",54:"2026-06-25T01:00:00Z",55:"2026-06-25T20:00:00Z",56:"2026-06-25T20:00:00Z",57:"2026-06-25T23:00:00Z",58:"2026-06-25T23:00:00Z",59:"2026-06-26T02:00:00Z",60:"2026-06-26T02:00:00Z",61:"2026-06-26T19:00:00Z",62:"2026-06-26T19:00:00Z",63:"2026-06-27T00:00:00Z",64:"2026-06-27T00:00:00Z",65:"2026-06-27T03:00:00Z",66:"2026-06-27T03:00:00Z",67:"2026-06-27T21:00:00Z",68:"2026-06-27T21:00:00Z",69:"2026-06-27T23:30:00Z",70:"2026-06-27T23:30:00Z",71:"2026-06-28T02:00:00Z",72:"2026-06-28T02:00:00Z",73:"2026-06-28T23:00:00Z",74:"2026-06-29T17:00:00Z",75:"2026-06-29T20:30:00Z",76:"2026-06-30T01:00:00Z",77:"2026-06-30T17:00:00Z",78:"2026-06-30T21:00:00Z",79:"2026-07-01T01:00:00Z",80:"2026-07-01T16:00:00Z",81:"2026-07-01T20:00:00Z",82:"2026-07-02T00:00:00Z",83:"2026-07-02T19:00:00Z",84:"2026-07-02T23:00:00Z",85:"2026-07-03T03:00:00Z",86:"2026-07-03T18:00:00Z",87:"2026-07-03T22:00:00Z",88:"2026-07-04T01:30:00Z",89:"2026-07-04T17:00:00Z",90:"2026-07-04T21:00:00Z",91:"2026-07-05T20:00:00Z",92:"2026-07-06T00:00:00Z",93:"2026-07-06T19:00:00Z",94:"2026-07-07T00:00:00Z",95:"2026-07-07T16:00:00Z",96:"2026-07-07T20:00:00Z",97:"2026-07-09T20:00:00Z",98:"2026-07-10T19:00:00Z",99:"2026-07-11T21:00:00Z",100:"2026-07-12T01:00:00Z",101:"2026-07-14T19:00:00Z",102:"2026-07-15T19:00:00Z",103:"2026-07-18T21:00:00Z",104:"2026-07-19T19:00:00Z"};
 const USER_TZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
-const APP_VERSION = "1.0.0";
-const APP_DATE = "Jun 9, 2026";
+const APP_VERSION = "2.1.0";
+const APP_DATE = "Jun 14, 2026";
 
 function getDeviceType() {
   const ua = navigator.userAgent;
@@ -712,8 +778,38 @@ function Crest({ team, size=26 }) {
 }
 
 // ── UI PRIMITIVES ─────────────────────────────────────────────────────────
-const Card = ({children,style={}}) => <div style={{background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b1}`,borderRadius:12,overflow:"hidden",...style}}>{children}</div>;
-const Badge = ({children,color=C.green}) => (
+// Shared primitives: use these wherever possible so tabs feel like one product.
+const Card = ({children,style={}}) => (
+  <div
+    style={{
+      background:C.s1,
+      border:DS.border.subtle,
+      borderRadius:DS.radius.md,
+      boxShadow:DS.shadow.card,
+      overflow:"hidden",
+      ...style
+    }}
+  >
+    {children}
+  </div>
+);
+
+const Panel = ({children,style={}}) => (
+  <Card
+    style={{
+      padding:DS.space.md,
+      marginBottom:DS.space.md,
+      background:C.bg,
+      border:DS.border.strong,
+      boxShadow:DS.shadow.sticky,
+      ...style
+    }}
+  >
+    {children}
+  </Card>
+);
+
+const Badge = ({children,color=C.green,style={}}) => (
   <span
     style={{
       display:"inline-flex",
@@ -722,17 +818,81 @@ const Badge = ({children,color=C.green}) => (
       minHeight:22,
       lineHeight:1,
       padding:"4px 8px",
-      borderRadius:20,
-      background:`${color}18`,
+      borderRadius:DS.radius.pill,
+      background:`${color}16`,
+      border:`1px solid ${color}33`,
       color,
       fontSize:11,
-      fontWeight:600
+      fontWeight:700,
+      whiteSpace:"nowrap",
+      ...style
     }}
   >
     {children}
   </span>
 );
-const Pill = ({children,active,onClick,color=C.green}) => <button onClick={onClick} style={{padding:"5px 12px",borderRadius:20,border:`1px solid ${active?color:C.b1}`,background:active?`${color}18`:"transparent",color:active?color:C.mid,fontSize:12,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap"}}>{children}</button>;
+
+const Pill = ({children,active,onClick,color=C.green,style={}}) => (
+  <button
+    onClick={onClick}
+    style={{
+      display:"inline-flex",
+      alignItems:"center",
+      justifyContent:"center",
+      minHeight:30,
+      padding:"5px 12px",
+      borderRadius:DS.radius.pill,
+      border:`1px solid ${active?color:C.b1}`,
+      background:active?`${color}16`:C.bg,
+      color:active?color:C.mid,
+      fontSize:12,
+      fontWeight:700,
+      cursor:"pointer",
+      whiteSpace:"nowrap",
+      lineHeight:1,
+      ...style
+    }}
+  >
+    {children}
+  </button>
+);
+
+const SectionTitle = ({icon,children,meta,actions=null,style={}}) => (
+  <div
+    style={{
+      display:"flex",
+      alignItems:"center",
+      justifyContent:"space-between",
+      gap:DS.space.sm,
+      marginBottom:DS.space.sm,
+      ...style
+    }}
+  >
+    <div style={{minWidth:0}}>
+      <div style={{fontSize:15,color:C.green,fontWeight:900,lineHeight:1.15}}>
+        {icon ? `${icon} ` : ""}{children}
+        {meta && <span style={{marginLeft:6,fontSize:11,color:C.dim,fontWeight:700}}>{meta}</span>}
+      </div>
+    </div>
+    {actions}
+  </div>
+);
+
+const FilterBar = ({children,style={}}) => (
+  <div
+    style={{
+      display:"flex",
+      gap:6,
+      overflowX:"auto",
+      scrollbarWidth:"none",
+      WebkitOverflowScrolling:"touch",
+      paddingBottom:2,
+      ...style
+    }}
+  >
+    {children}
+  </div>
+);
 const RC = ({v,sz=40}) => { const col=v>=8.5?C.green:v>=7.5?C.gold:v>=6.5?"#fb923c":C.red; return <div style={{width:sz,height:sz,borderRadius:"50%",background:`${col}22`,border:`2px solid ${col}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:sz*0.33,fontWeight:700,color:col,flexShrink:0}}>{v.toFixed(1)}</div>; };
 const Modal = ({open,onClose,title,children}) => { if(!open)return null; return <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.8)",zIndex:1000,display:"flex",alignItems:"flex-end",justifyContent:"center"}}><div onClick={e=>e.stopPropagation()} style={{background:C.s1,border:`1px solid ${C.b2}`,borderRadius:"18px 18px 0 0",width:"100%",maxWidth:620,maxHeight:"90vh",overflowY:"auto",paddingBottom:16}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 18px 12px",borderBottom:`1px solid ${C.b1}`,position:"sticky",top:0,background:C.s1}}><span style={{fontSize:17,fontWeight:700,color:C.green}}>{title}</span><button onClick={onClose} style={{background:"none",border:"none",color:C.mid,fontSize:22,cursor:"pointer"}}>×</button></div><div style={{padding:18}}>{children}</div></div></div>; };
 const Toast = ({msg,onDone}) => { useEffect(()=>{if(msg){const t=setTimeout(onDone,3000);return()=>clearTimeout(t);}},[msg]); if(!msg)return null; return <div style={{position:"fixed",bottom:80,left:"50%",transform:"translateX(-50%)",background:C.green,color:"#030a05",padding:"10px 20px",borderRadius:24,fontWeight:700,fontSize:13,zIndex:2000}}>{msg}</div>; };
@@ -894,13 +1054,17 @@ function useElemHeight(ref) {
 
 // ── MATCH CARD ─────────────────────────────────────────────────────────────
 function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="", savedIds=new Set() }) {
+  const { dark } = useContext(ThemeCtx);
+  const countdownBg = dark
+    ? "linear-gradient(135deg,#1a3d22,#1f4a28)"   // clearly lighter green in dark
+    : "linear-gradient(135deg,#a8d4b2,#b8dfc0)";  // clearly darker green in light
   const { favTeams=[] } = useContext(FavCtx);
   const country = useContext(CountryCtx);
   const { getScore } = useContext(LiveScoresCtx);
   const sc = getScore(m.home, m.away);
   const live = sc ? statusIsLive(sc.status) : false;
   const finished = sc ? statusIsFinished(sc.status) : false;
-  const hasScore = sc && sc.hg !== null && sc.ag !== null;
+  const hasScore = sc && sc.hg !== null && sc.ag !== null && (live || finished);
   const isKO = !m.group;
   let winner = null;
   if(isKO && finished && hasScore) { if(sc.hg>sc.ag) winner=m.home; else if(sc.ag>sc.hg) winner=m.away; }
@@ -924,10 +1088,66 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="",
   const tzLabel = timeMode === "venue" ? venueTzShort : userTzShort;
   const bc = getBroadcast(country);
   const isUS = country === "US" || !BROADCAST[country];
+  const countdown = useCountdown(m.id);
 
+  // True from 30min before kickoff until ESPN confirms live — drives the gold highlight
+  // Also overrides stale "finished" status from feed within 15min of kickoff
+  const isKickingOff = (() => {
+    const iso = MATCH_UTC[m.id];
+    if (!iso) return false;
+    const ko = new Date(iso).getTime();
+    const msSince = Date.now() - ko;
+    if (msSince < -30 * 60 * 1000 || msSince > 15 * 60 * 1000) return false;
+    if (live) return false; // feed confirmed live, switch to live display
+    return true; // within window — show as kicking off regardless of feed
+  })();
+
+  // Compact card for matches finished on a previous day (at venue timezone)
+  const isPastDay = (() => {
+    if (!finished) return false;
+    const iso = MATCH_UTC[m.id];
+    if (!iso) return false;
+    const venueTzKey = VENUE_TZ[m.venue] || "America/New_York";
+    const matchDate = new Intl.DateTimeFormat("en-CA", { timeZone: venueTzKey }).format(new Date(iso));
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: venueTzKey }).format(new Date());
+    return matchDate < today;
+  })();
+
+  if ((isPastDay || finished) && finished && hasScore) {
+    return (
+      <div onClick={()=>onMatchTap&&onMatchTap(m)} style={{marginBottom:8,background:C.s1,border:`1px solid ${C.b2}`,borderRadius:12,overflow:"hidden",opacity:0.8,cursor:onMatchTap?"pointer":"default"}}>
+        {/* Header: keep group/venue/time */}
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 13px",borderBottom:`1px solid ${C.b1}`,background:C.s2}}>
+          <div style={{display:"flex",alignItems:"center",gap:6,minWidth:0,flex:1}}>
+            {m.group
+              ? <span style={{fontSize:11,fontWeight:700,color:C.green,background:`${C.green}18`,padding:"2px 7px",borderRadius:10,flexShrink:0}}>Group {m.group}</span>
+              : <span style={{fontSize:11,fontWeight:700,color:C.gold,background:`${C.gold}18`,padding:"2px 7px",borderRadius:10,flexShrink:0}}>{m.stage||"Knockout"}</span>
+            }
+            <span style={{fontSize:10,color:C.dim,flexShrink:0}}>#{m.id}</span>
+            <span style={{fontSize:11,color:C.dim,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>📍 {m.venue.split(",")[0]}</span>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
+            <span style={{fontSize:12,fontWeight:600,color:C.text}}>{displayTime}</span>
+            <span style={{fontSize:10,color:C.dim}}>{tzLabel}</span>
+            <span style={{fontSize:10,color:C.dim,marginLeft:2}}>· FT</span>
+          </div>
+        </div>
+        {/* Teams + score */}
+        <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 13px"}}>
+          <Crest team={m.home} size={32}/>
+          <span style={{fontWeight:winner===m.home?800:700,color:winner===m.home?C.text:C.dim,flex:1,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.home}</span>
+          <div style={{textAlign:"center",minWidth:60,flexShrink:0}}>
+            <div style={{fontWeight:900,fontSize:22,color:C.mid,fontFamily:"monospace",lineHeight:1}}>{sc.hg} – {sc.ag}</div>
+          </div>
+          <span style={{fontWeight:winner===m.away?800:700,color:winner===m.away?C.text:C.dim,flex:1,fontSize:14,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.away}</span>
+          <Crest team={m.away} size={32}/>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div style={{marginBottom:8,background:C.s1,border:`1px solid ${live?C.green:isFav?`${C.gold}55`:C.b1}`,borderRadius:12,overflow:"hidden",opacity:finished?0.8:1}}>
+    <div onClick={()=>onMatchTap&&onMatchTap(m)} style={{marginBottom:8,background:isKickingOff?countdownBg:live?`linear-gradient(135deg,${C.green}14,${C.s1})`:C.s1,border:`${isKickingOff?"3px":live?"3px":"1px"} solid ${isKickingOff?C.gold:live?C.green:isFav?`${C.gold}66`:C.b2}`,borderRadius:12,overflow:"hidden",opacity:finished?0.8:1,cursor:onMatchTap?"pointer":"default",boxShadow:isKickingOff?`0 0 0 2px ${C.gold}44,0 4px 24px ${C.gold}33`:live?`0 0 0 1px ${C.green}44,0 4px 20px ${C.green}22`:"none",transition:"border-color .3s,box-shadow .3s,background .3s"}}>
       {/* Header: group/stage + venue + time */}
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 13px",borderBottom:`1px solid ${C.b1}`,background:C.s2}}>
         <div style={{display:"flex",alignItems:"center",gap:6,minWidth:0,flex:1}}>
@@ -936,40 +1156,49 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="",
             : <span style={{fontSize:11,fontWeight:700,color:C.gold,background:`${C.gold}18`,padding:"2px 7px",borderRadius:10,flexShrink:0}}>{m.stage||"Knockout"}</span>
           }
           <span style={{fontSize:10,color:C.dim,flexShrink:0}}>#{m.id}</span>
-          <span onClick={()=>openMaps(m.venue)} style={{fontSize:11,color:C.dim,cursor:"pointer",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+          <span onClick={(e)=>{e.stopPropagation();openMaps(m.venue);}} style={{fontSize:11,color:finished?C.dim:C.mid,cursor:"pointer",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
             📍 {m.venue.split(",")[0]}
           </span>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
-          {live && <span style={{fontSize:10,fontWeight:700,color:C.green}}>🔴 {statusLabel(sc.status,sc.elapsed)}</span>}
+          {live && <span style={{fontSize:10,fontWeight:700,color:C.green}}>🔴 {statusLabel(sc.status,sc.elapsed,sc.elapsedExtra)}</span>}
           {!live && <span style={{fontSize:12,fontWeight:600,color:timeMode==="venue"?C.gold:C.text}}>{displayTime}</span>}
           {!live && <span style={{fontSize:10,color:C.dim}}>{tzLabel}</span>}
           {finished && <span style={{fontSize:10,color:C.dim,marginLeft:2}}>· {"FT"}</span>}
         </div>
       </div>
 
-      {/* Teams row — tappable to open detail */}
-      <div onClick={()=>onMatchTap&&onMatchTap(m)} style={{display:"flex",alignItems:"center",gap:8,padding:"10px 13px",cursor:onMatchTap?"pointer":"default"}}>
-        <Crest team={m.home} size={26}/>
+      {/* Teams row */}
+      <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 13px"}}>
+        <Crest team={m.home} size={32}/>
         <span style={{fontWeight:winner===m.home?800:700,color:finished?(winner===m.home?C.text:C.dim):favTeams?.includes(m.home)?C.gold:C.text,flex:1,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.home}</span>
-        {hasScore ? (
+        {isKickingOff ? (
           <div style={{textAlign:"center",minWidth:60,flexShrink:0}}>
-            <div style={{fontWeight:900,fontSize:22,color:live?C.green:C.text,fontFamily:"monospace",lineHeight:1,animation:scoreFlash?"scoreFlash .6s ease":undefined,borderRadius:6,padding:"1px 4px",background:scoreFlash?`${C.green}30`:"transparent",transition:"background .3s"}}>{sc.hg} – {sc.ag}</div>
+            {countdown
+              ? <div style={{fontSize:13,fontWeight:800,color:C.gold,fontFamily:"monospace",animation:"pulse 1s infinite",lineHeight:1}}>⏱ {countdown}</div>
+              : <div style={{fontSize:11,fontWeight:700,color:C.green,animation:"pulse 1s infinite"}}>🔴 Starting...</div>
+            }
+          </div>
+        ) : hasScore ? (
+          <div style={{textAlign:"center",minWidth:60,flexShrink:0}}>
+            <div style={{fontWeight:900,fontSize:22,color:live?C.green:finished?C.mid:C.text,fontFamily:"monospace",lineHeight:1,animation:scoreFlash?"scoreFlash .6s ease":undefined,borderRadius:6,padding:"1px 4px",background:scoreFlash?`${C.green}30`:"transparent",transition:"background .3s"}}>{sc.hg} – {sc.ag}</div>
           </div>
         ) : (
-          <span style={{fontSize:11,color:C.dim,fontWeight:700,minWidth:36,textAlign:"center",flexShrink:0}}>VS</span>
+          <div style={{textAlign:"center",minWidth:60,flexShrink:0}}>
+            <span style={{fontSize:11,color:C.dim,fontWeight:700}}>VS</span>
+          </div>
         )}
         <span style={{fontWeight:winner===m.away?800:700,color:finished?(winner===m.away?C.text:C.dim):favTeams?.includes(m.away)?C.gold:C.text,flex:1,fontSize:14,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.away}</span>
-        <Crest team={m.away} size={26}/>
+        <Crest team={m.away} size={32}/>
       </div>
 
       {/* Footer: TV + actions */}
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"5px 13px",borderTop:`1px solid ${C.b1}`,background:C.s2}}>
-        <div style={{fontSize:11,color:finished?C.dim:C.gold,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1}}>
+      <div onClick={e=>e.stopPropagation()} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"5px 13px",borderTop:`1px solid ${C.b2}`,background:C.s2}}>
+        <div style={{fontSize:11,color:finished?C.dim:C.mid,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1}}>
           {m.tv && <>📺 {isUS ? m.tv : bc.primary}</>}
         </div>
         <div style={{display:"flex",gap:5,alignItems:"center",flexShrink:0}}>
-          {onMatchTap && (live||finished) && <button onClick={()=>onMatchTap(m)} style={{background:`${C.blue}18`,border:`1px solid ${C.blue}33`,color:C.blue,padding:"3px 8px",borderRadius:20,fontSize:11,fontWeight:600,cursor:"pointer"}}>Match Events</button>}
+          {onMatchTap && (live||finished||(MATCH_UTC[m.id]&&Date.now()>new Date(MATCH_UTC[m.id]).getTime())) && <button onClick={()=>onMatchTap(m)} style={{background:`${C.blue}18`,border:`1px solid ${C.blue}33`,color:C.blue,padding:"3px 8px",borderRadius:20,fontSize:11,fontWeight:600,cursor:"pointer"}}>Match Events</button>}
           {!finished && !live && (()=>{ const isSaved=savedIds.has(m.id); return (
             <button onClick={()=>onAction(m)} style={{background:isSaved?`${C.gold}22`:`${C.green}22`,border:`1px solid ${isSaved?C.gold:C.greenS}`,color:isSaved?C.gold:C.green,padding:"3px 9px",borderRadius:20,fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
               <StarIcon filled={isSaved} size={12}/>{isSaved?"Saved":"Add"}
@@ -987,19 +1216,46 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=n
   const { scores, getScore, lastFetch } = useContext(LiveScoresCtx);
   const _lhRef = useRef(null); const _lhH = useElemHeight(_lhRef);
   const lastUpdate = lastFetch ? lastFetch.toLocaleTimeString() : null;
-  const liveMatches = MATCHES.filter(m => { const s=getScore(m.home,m.away); return s&&statusIsLive(s.status); });
-  const finishedToday = MATCHES.filter(m => { const s=getScore(m.home,m.away); return s&&statusIsFinished(s.status); });
+  const liveMatches = MATCHES.filter(m => {
+    const s = getScore(m.home, m.away);
+    if (s && statusIsLive(s.status)) return true;
+    if (s && statusIsFinished(s.status)) return false;
+    const iso = MATCH_UTC[m.id];
+    if (!iso) return false;
+    const ko = new Date(iso).getTime();
+    const msSince = Date.now() - ko;
+    // Within kickoff window — show as live regardless of feed (ESPN is slow to update)
+    return msSince > -60000 && msSince < 130 * 60 * 1000;
+  });
 
-  // Upcoming fav matches — grouped by date, sorted chronologically
-  const upcomingFavMatches = favTeams.length > 0
-    ? MATCHES.filter(m => (favTeams.includes(m.home)||favTeams.includes(m.away)) && !getScore(m.home,m.away))
-    : [];
-  const upcomingByDate = upcomingFavMatches.reduce((acc, m) => {
-    const { dateLabel } = matchTimes(m);
-    const key = dateLabel || m.date;
-    (acc[key] = acc[key] || []).push(m);
-    return acc;
-  }, {});
+
+  // All upcoming matches today (local timezone)
+  const _nowLive = new Date();
+  const _todayLive = `${_nowLive.getFullYear()}-${String(_nowLive.getMonth()+1).padStart(2,'0')}-${String(_nowLive.getDate()).padStart(2,'0')}`;
+  const finishedToday = MATCHES.filter(m => {
+    const s = getScore(m.home, m.away);
+    if (!s || !statusIsFinished(s.status)) return false;
+    const iso = MATCH_UTC[m.id];
+    if (!iso) return false;
+    const d = new Date(iso);
+    // Use local date so midnight matches (e.g. 12AM ET = next day UTC) show correctly
+    const dStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const dStrLocal = d.toLocaleDateString('en-CA'); // YYYY-MM-DD in local tz
+    return dStr === _todayLive || dStrLocal === _todayLive;
+  });
+  const upcomingToday = MATCHES.filter(m => {
+    const iso = MATCH_UTC[m.id];
+    if (!iso) return false;
+    const d = new Date(iso);
+    if (Date.now() > d.getTime() - 60000) return false; // remove 1min before kickoff
+    const dStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const dStrLocal = d.toLocaleDateString('en-CA');
+    if (dStr !== _todayLive && dStrLocal !== _todayLive) return false;
+    const s = getScore(m.home, m.away);
+    return !s || s.status === "NS";
+  });
+
+  const sortByKickoff = (arr) => [...arr].sort((a,b) => (MATCH_UTC[a.id] ? new Date(MATCH_UTC[a.id]).getTime() : 0) - (MATCH_UTC[b.id] ? new Date(MATCH_UTC[b.id]).getTime() : 0));
 
   return (
     <div>
@@ -1013,27 +1269,26 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=n
       </div>
       
       <div style={{height:10}}/>
-      {Object.keys(upcomingByDate).length > 0 && (
+      {liveMatches.length>0 && <div style={{marginBottom:16}}><div style={{fontSize:11,color:C.green,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>{"LIVE — TODAY"}</div>{sortByKickoff(liveMatches).map(m=><MatchCard key={m.id} m={m} onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} savedIds={savedIds}/> )}</div>}
+      {upcomingToday.length > 0 && (
         <div style={{marginBottom:16}}>
-          <div style={{fontSize:11,color:C.gold,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>
-            {"UPCOMING — YOUR TEAMS"}
+          <div style={{fontSize:11,color:C.blue,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>
+            TODAY — UPCOMING
           </div>
-          {Object.entries(upcomingByDate).map(([date, matches]) => (
-            <div key={date} style={{marginBottom:10}}>
-              <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:5}}>{date}</div>
-              {matches.map(m => <MatchCard key={m.id} m={m} onAction={onAction} onMatchTap={onMatchTap} savedIds={savedIds}/>)}
+          {sortByKickoff(upcomingToday).map(m => (
+            <div key={m.id}>
+              <MatchCard m={m} onAction={onAction} onMatchTap={onMatchTap} savedIds={savedIds}/>
             </div>
           ))}
         </div>
       )}
-      {liveMatches.length>0 && <div><div style={{fontSize:11,color:C.green,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>{"Live"} — {"Today's Results".split("'")[0]}</div>{liveMatches.map(m=><MatchCard key={m.id} m={m} onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} savedIds={savedIds}/> )}</div>}
-      {finishedToday.length>0 && <div style={{marginTop:liveMatches.length?16:0}}><div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>{"Today's Results"}</div>{finishedToday.map(m=><MatchCard key={m.id} m={m} onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} savedIds={savedIds}/> )}</div>}
-      {liveMatches.length===0 && finishedToday.length===0 && Object.keys(upcomingByDate).length===0 && !lastFetch && (
+      {finishedToday.length>0 && <div style={{marginTop:liveMatches.length?16:0}}><div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>{"TODAY'S RESULTS"}</div>{sortByKickoff(finishedToday).map(m=><MatchCard key={m.id} m={m} onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} savedIds={savedIds}/> )}</div>}
+      {liveMatches.length===0 && finishedToday.length===0 && upcomingToday.length===0 && !lastFetch && (
         <div style={{marginTop:8}}>
           {[1,2,3].map(i=><SkeletonMatchCard key={i}/>)}
         </div>
       )}
-      {liveMatches.length===0 && finishedToday.length===0 && Object.keys(upcomingByDate).length===0 && lastFetch && (
+      {liveMatches.length===0 && finishedToday.length===0 && upcomingToday.length===0 && lastFetch && (
         <div style={{textAlign:"center",padding:"28px 20px"}}>
           <div style={{fontSize:"2.5rem",marginBottom:10}}>⚽</div>
           <div style={{fontWeight:700,fontSize:16,color:C.mid,marginBottom:6}}>{"No matches today"}</div>
@@ -1063,7 +1318,7 @@ const MATCH_DATES = (() => {
 
 function SchedTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=new Set() }) {
   const { favTeams=[] } = useContext(FavCtx);
-  const [filterMode, setFilterMode] = useState("group");
+  const [filterMode, setFilterMode] = useState("none");
   const [timeMode, setTimeMode] = useState("local");
   const [groupF, setGroupF] = useState("All");
   const [teamF, setTeamF] = useState("");
@@ -1098,6 +1353,7 @@ function SchedTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=
       const key = new Date(iso).toLocaleDateString("en-US",{month:"short",day:"numeric"});
       if (key !== selDate) return false;
     }
+    if(filterMode==="none") return true;
     if(filterMode==="fav") return favTeams?.length && (favTeams.includes(m.home)||favTeams.includes(m.away));
     if(filterMode==="group") { if(groupF==="All")return true; if(groupF==="Knockout")return!m.group; return m.group===groupF; }
     if(filterMode==="team") return !teamF||m.home===teamF||m.away===teamF;
@@ -1163,10 +1419,10 @@ function SchedTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=
         {/* Filter mode buttons */}
         <div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none",marginBottom:8,alignItems:"center"}}>
           {favTeams?.length > 0 && <button style={ss(filterMode==="fav",C.gold)} onClick={()=>setFilterMode("fav")}>⭐ My Teams</button>}
-          <button style={ss(filterMode==="group")} onClick={()=>setFilterMode("group")}>🗂 Group</button>
-          <button style={ss(filterMode==="team")} onClick={()=>setFilterMode("team")}>👥 Team</button>
-          <button style={ss(filterMode==="venue")} onClick={()=>setFilterMode("venue")}>📍 Venue</button>
-          <button style={ss(filterMode==="round")} onClick={()=>setFilterMode("round")}>🏆 Round</button>
+          <button style={ss(filterMode==="group")} onClick={()=>setFilterMode(f=>f==="group"?"none":"group")}>🗂 Group</button>
+          <button style={ss(filterMode==="team")} onClick={()=>setFilterMode(f=>f==="team"?"none":"team")}>👥 Team</button>
+          <button style={ss(filterMode==="venue")} onClick={()=>setFilterMode(f=>f==="venue"?"none":"venue")}>📍 Venue</button>
+          <button style={ss(filterMode==="round")} onClick={()=>setFilterMode(f=>f==="round"?"none":"round")}>🏆 Round</button>
         </div>
         {filterMode==="group" && (
           <div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none"}}>
@@ -1504,7 +1760,9 @@ function StatsTab({ initial="", tabTop=116 }) {
 
   return (
     <div>
-      <div ref={_shRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
+      {/* Tournament facts at top of Stats */}
+      <QuickFacts tabTop={tabTop}/>
+      <div ref={_shRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:DS.shadow.sticky,padding:"8px 13px"}}>
         <select value={sel} onChange={e=>setSel(e.target.value)} style={{width:"100%",padding:"10px 14px",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:10,color:C.text,fontSize:14,outline:"none"}}>
           <option value="">Select a team</option>
           {Object.keys(GROUPS).map(g=><optgroup key={g} label={`Group ${g}`}>{GROUPS[g].teams.map(t=><option key={t} value={t}>{getFlag(t)} {t}</option>)}</optgroup>)}
@@ -1745,7 +2003,7 @@ function PredTab({ tabTop=140, geoData={} }) {
   const _phRef = useRef(null); const _phH = useElemHeight(_phRef);
   return (
     <div>
-      <div ref={_phRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
+      <div ref={_phRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:DS.shadow.sticky,padding:"8px 13px"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <div>
             <span style={{fontWeight:700,fontSize:15,color:C.green}}>🎯 POLYMARKET ODDS</span>
@@ -1862,7 +2120,7 @@ function SimTab({ tabTop=116 }) {
 
   return (
     <div>
-      <div ref={_simhRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
+      <div ref={_simhRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:DS.shadow.sticky,padding:"8px 13px"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
           <div>
             <div style={{fontWeight:700,fontSize:15,color:C.green}}>{"🎲 WORLD CUP SIMULATOR"}</div>
@@ -2240,7 +2498,7 @@ function H2HTab({ tabTop=116 }) {
   return (
     <div>
       {/* Fixed team selector */}
-      <div ref={_h2hRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
+      <div ref={_h2hRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:DS.shadow.sticky,padding:"8px 13px"}}>
         <div style={{fontWeight:700,color:C.green,fontSize:15,marginBottom:8}}>{"⚔️ COMPARE TEAMS HEAD TO HEAD"}</div>
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:team1&&team2&&team1!==team2?8:0}}>
           <div style={{flex:1}}>
@@ -2476,6 +2734,7 @@ function DragList({ items, onReorder, renderItem }) {
 const defaultBracketGroups=()=>Object.fromEntries(Object.entries(GROUPS).map(([g,{teams}])=>[g,[...teams]]));
 function BracketMatchup({ match, t1, t2, winner, onPick, interactive=false, compact=false }) {
   const canPick = interactive && t1 && t2 && t1 !== "TBD" && t2 !== "TBD";
+  const matchData = match ? MATCHES.find(m => m.id === match) : null;
   const teamRow = (team, i) => {
     const isW = winner && team === winner;
     const disabled = !canPick || !team || team === "TBD";
@@ -2494,10 +2753,16 @@ function BracketMatchup({ match, t1, t2, winner, onPick, interactive=false, comp
     );
   };
   return (
-    <div style={{position:"relative",background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${winner?C.greenS:C.b1}`,borderRadius:12,overflow:"hidden",width:"100%",boxShadow:winner?`0 0 0 1px ${C.greenS}, 0 8px 20px rgba(0,0,0,0.25)`:"0 5px 16px rgba(0,0,0,0.22)"}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 10px",borderBottom:`1px solid ${C.b1}`,background:`${C.gold}10`}}>
-        <span style={{fontSize:10,color:C.gold,fontWeight:900,letterSpacing:"0.08em"}}>M{match || "—"}</span>
-        {interactive && <span style={{fontSize:9,color:canPick?C.green:C.dim,fontWeight:800}}>{canPick?"TAP PICK":"LOCKED"}</span>}
+    <div style={{position:"relative",background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${winner?C.greenS:C.b1}`,borderRadius:12,overflow:"hidden",width:"100%",boxShadow:winner?DS.shadow.panel:DS.shadow.card}}>
+      <div style={{padding:"5px 10px",borderBottom:`1px solid ${C.b1}`,background:`${C.bg}88`}}>
+        {matchData ? (
+          <>
+            <div style={{fontSize:10,fontWeight:700,color:C.gold,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{matchData.date} · {matchData.time}</div>
+            <div style={{fontSize:9,color:C.dim,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>📍 {matchData.venue.split(",")[0]}</div>
+          </>
+        ) : (
+          <div style={{fontSize:10,color:C.gold,fontWeight:900,letterSpacing:"0.08em"}}>M{match || "—"}</div>
+        )}
       </div>
       {teamRow(t1,0)}
       {teamRow(t2,1)}
@@ -2511,178 +2776,154 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
   useEffect(() => {
     const el = bracketScrollRef.current;
     if (!el) return;
-
-    let isDown = false;
-    let startX = 0;
-    let startY = 0;
-    let scrollLeft = 0;
-    let scrollTop = 0;
-
-    const down = (e) => {
-      if (e.button !== 0) return;
-      isDown = true;
-      startX = e.pageX - el.offsetLeft;
-      startY = e.pageY - el.offsetTop;
-      scrollLeft = el.scrollLeft;
-      scrollTop = el.scrollTop;
-      el.style.cursor = "grabbing";
-      el.style.userSelect = "none";
-    };
-
-    const leave = () => {
-      isDown = false;
-      el.style.cursor = "grab";
-      el.style.userSelect = "auto";
-    };
-
-    const up = () => {
-      isDown = false;
-      el.style.cursor = "grab";
-      el.style.userSelect = "auto";
-    };
-
-    const move = (e) => {
-      if (!isDown) return;
-      e.preventDefault();
-      const x = e.pageX - el.offsetLeft;
-      const y = e.pageY - el.offsetTop;
-      const walkX = (x - startX) * 1.4;
-      const walkY = (y - startY) * 1.4;
-      
-      el.scrollLeft = scrollLeft - walkX;
-      el.scrollTop = scrollTop - walkY;
-    };
-
-    const wheel = (e) => {
-      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-        el.scrollLeft += e.deltaY;
-      }
-    };
-
-    el.addEventListener("mousedown", down);
-    el.addEventListener("mouseleave", leave);
-    el.addEventListener("mouseup", up);
-    el.addEventListener("mousemove", move);
-    el.addEventListener("wheel", wheel, { passive: true });
-
-    return () => {
-      el.removeEventListener("mousedown", down);
-      el.removeEventListener("mouseleave", leave);
-      el.removeEventListener("mouseup", up);
-      el.removeEventListener("mousemove", move);
-      el.removeEventListener("wheel", wheel);
-    };
+    let isDown=false, startX=0, scrollLeft=0;
+    const down=(e)=>{ if(e.button!==0)return; isDown=true; startX=e.pageX-el.offsetLeft; scrollLeft=el.scrollLeft; el.style.cursor="grabbing"; el.style.userSelect="none"; };
+    const leave=()=>{ isDown=false; el.style.cursor="grab"; el.style.userSelect="auto"; };
+    const up=()=>{ isDown=false; el.style.cursor="grab"; el.style.userSelect="auto"; };
+    const move=(e)=>{ if(!isDown)return; e.preventDefault(); const x=e.pageX-el.offsetLeft; el.scrollLeft=scrollLeft-(x-startX)*1.4; };
+    const wheel=(e)=>{ if(Math.abs(e.deltaY)>Math.abs(e.deltaX)) el.scrollLeft+=e.deltaY; };
+    el.addEventListener("mousedown",down); el.addEventListener("mouseleave",leave); el.addEventListener("mouseup",up); el.addEventListener("mousemove",move); el.addEventListener("wheel",wheel,{passive:true});
+    return ()=>{ el.removeEventListener("mousedown",down); el.removeEventListener("mouseleave",leave); el.removeEventListener("mouseup",up); el.removeEventListener("mousemove",move); el.removeEventListener("wheel",wheel); };
   }, []);
 
-  const left = [
-    {key:"r32L", short:"R32", label:"Round of 32", ids:[74,77,73,75,83,84,81,82], gap:8, padTop:0},
-    {key:"r16L", short:"R16", label:"Round of 16", ids:[89,90,93,94], gap:70, padTop:38},
-    {key:"qfL", short:"QF", label:"Quarterfinals", ids:[97,98], gap:224, padTop:130},
-    {key:"sfL", short:"SF", label:"Semifinal", ids:[101], gap:0, padTop:318},
+  // Layout constants
+  const CW = 168;   // card width
+  const CH = 130;   // card height (header + 2 rows)
+  const GAP = 28;   // gap between columns
+  const STUB = 14;  // horizontal stub length
+
+  // Per-round config: ids in pair order, vertical gap between cards in a pair, top offset
+  const leftRounds  = [
+    {key:"r32L", ids:[73,75,74,77,83,84,81,82]},
+    {key:"r16L", ids:[89,90,93,94]},
+    {key:"qfL",  ids:[97,98]},
+    {key:"sfL",  ids:[101]},
+  ];
+  const rightRounds = [
+    {key:"sfR",  ids:[102]},
+    {key:"qfR",  ids:[99,100]},
+    {key:"r16R", ids:[91,92,95,96]},
+    {key:"r32R", ids:[76,78,79,80,86,88,85,87]},
   ];
 
-  const right = [
-    {key:"sfR", short:"SF", label:"Semifinal", ids:[102], gap:0, padTop:318},
-    {key:"qfR", short:"QF", label:"Quarterfinals", ids:[99,100], gap:224, padTop:130},
-    {key:"r16R", short:"R16", label:"Round of 16", ids:[91,92,95,96], gap:70, padTop:38},
-    {key:"r32R", short:"R32", label:"Round of 32", ids:[76,78,79,80,86,88,85,87], gap:8, padTop:0},
-  ];
+  const ROUND_LABELS = {r32L:"R32",r16L:"R16",qfL:"QF",sfL:"SF",sfR:"SF",qfR:"QF",r16R:"R16",r32R:"R32"};
+  const ROUND_FULL   = {r32L:"Round of 32",r16L:"Round of 16",qfL:"Quarterfinals",sfL:"Semifinal",sfR:"Semifinal",qfR:"Quarterfinals",r16R:"Round of 16",r32R:"Round of 32"};
 
-  const columnWidth = 166;
+  // Exact absolute top of every card in every column — derived from geometry, no formulas
+  const CARD_TOPS = {
+    r32L: [0,138,276,414,552,690,828,966],
+    r16L: [69,345,621,897],
+    qfL:  [207,759],
+    sfL:  [483],
+    sfR:  [483],
+    qfR:  [207,759],
+    r16R: [69,345,621,897],
+    r32R: [0,138,276,414,552,690,828,966],
+  };
 
-  const connector = (side, m) => ({
-    position:"absolute",
-    [side]:-16,
-    top:"50%",
-    width:16,
-    borderTop:`2px solid ${m.winner?C.greenS:C.b2}`,
-    opacity:m.home&&m.away?1:0.35
-  });
+  const totalHeight = 1130;
 
-  const renderColumn = (round, side="left") => {
-    const ids = round.ids || [];
+  const renderRound = (round, side) => {
+    const isFirst = round.key==="r32L"||round.key==="r32R";
+    const isLast  = round.key==="sfL" ||round.key==="sfR";
+    const ids = round.ids;
+    const tops = CARD_TOPS[round.key];
+    const connCol = C.b2;
+
+    // Group into pairs for outgoing connectors
+    const pairs = [];
+    for (let i=0;i<ids.length;i+=2) pairs.push([i,i+1]);
 
     return (
-      <div key={round.key} style={{width:columnWidth,flex:`0 0 ${columnWidth}px`,paddingTop:round.padTop}}>
-        <div style={{position:"sticky",top:0,zIndex:2,textAlign:"center",marginBottom:10,background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b1}`,borderRadius:999,padding:"6px 8px",boxShadow:"0 6px 14px rgba(0,0,0,0.25)"}}>
-          <div style={{fontSize:10,fontWeight:900,color:round.short==="FINAL"?C.gold:C.green,letterSpacing:"0.08em"}}>{round.short}</div>
-          <div style={{fontSize:9,color:C.dim,whiteSpace:"nowrap"}}>{round.label}</div>
+      <div key={round.key} style={{position:"relative",width:CW,flexShrink:0}}>
+        {/* Round label */}
+        <div style={{textAlign:"center",marginBottom:8,background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b1}`,borderRadius:999,padding:"5px 8px"}}>
+          <div style={{fontSize:10,fontWeight:900,color:C.green,letterSpacing:"0.08em"}}>{ROUND_LABELS[round.key]}</div>
+          <div style={{fontSize:9,color:C.dim}}>{ROUND_FULL[round.key]}</div>
         </div>
 
-        <div style={{display:"flex",flexDirection:"column",gap:round.gap}}>
-          {ids.map((id) => {
-            const m = matchesById[id] || {match:id,home:null,away:null,winner:null};
-            const locked = !(m.home && m.away);
-
+        <div style={{position:"relative",height:totalHeight}}>
+          {/* Cards */}
+          {ids.map((id,n)=>{
+            const m = matchesById[id]||{match:id,home:null,away:null,winner:null};
             return (
-              <div key={id} style={{position:"relative",opacity:locked?0.58:1}}>
-                {side === "left" && round.key !== "sfL" && <div style={connector("right", m)}/>}
-                {side === "left" && round.key !== "r32L" && <div style={connector("left", m)}/>}
-                {side === "right" && round.key !== "sfR" && <div style={connector("left", m)}/>}
-                {side === "right" && round.key !== "r32R" && <div style={connector("right", m)}/>}
-
-                <BracketMatchup
-                  match={m.match}
-                  t1={m.home}
-                  t2={m.away}
-                  winner={m.winner}
-                  interactive={pickMode==="manual"}
-                  onPick={(team)=>onPick(m,team)}
-                />
+              <div key={id} style={{position:"absolute",top:tops[n],left:0,width:CW,opacity:!(m.home&&m.away)?0.55:1}}>
+                <BracketMatchup match={m.match} t1={m.home} t2={m.away} winner={m.winner} interactive={pickMode==="manual"} onPick={t=>onPick(m,t)}/>
               </div>
             );
+          })}
+
+          {/* Outgoing L-connectors (one per pair) */}
+          {!isLast && pairs.map(([ti,bi])=>{
+            if (bi>=ids.length) return null;
+            const topMidY = tops[ti] + CH/2;
+            const botMidY = tops[bi] + CH/2;
+            const midY    = (topMidY+botMidY)/2;
+            const mTop = matchesById[ids[ti]]||{};
+            const mBot = matchesById[ids[bi]]||{};
+            return (
+              <div key={`conn-${ti}`}>
+                <div style={{position:"absolute",top:topMidY,left:side==="left"?CW:-STUB,width:STUB,borderTop:`1.5px solid ${connCol}`,opacity:mTop.home&&mTop.away?0.7:0.25}}/>
+                <div style={{position:"absolute",top:botMidY,left:side==="left"?CW:-STUB,width:STUB,borderTop:`1.5px solid ${connCol}`,opacity:mBot.home&&mBot.away?0.7:0.25}}/>
+                <div style={{position:"absolute",top:topMidY,left:side==="left"?CW+STUB:-(STUB+1),width:1.5,height:botMidY-topMidY,background:connCol,opacity:0.5}}/>
+                <div style={{position:"absolute",top:midY,left:side==="left"?CW+STUB:-(GAP),width:GAP-STUB,borderTop:`1.5px solid ${connCol}`,opacity:0.5}}/>
+              </div>
+            );
+          })}
+
+          {/* Incoming stubs */}
+          {!isFirst && ids.map((id,n)=>{
+            const m = matchesById[id]||{};
+            const midY = tops[n]+CH/2;
+            return <div key={`in-${id}`} style={{position:"absolute",top:midY,left:side==="left"?-STUB:CW,width:STUB,borderTop:`1.5px solid ${connCol}`,opacity:m.home&&m.away?0.7:0.25}}/>;
           })}
         </div>
       </div>
     );
   };
 
-  const finalMatch = matchesById[104] || (bracket?.final || [])[0] || {match:104,home:null,away:null,winner:null};
+  const finalMatch = matchesById[104]||(bracket?.final||[])[0]||{match:104,home:null,away:null,winner:null};
+  const PILL_H = 38;
+  const finalTop = 483;
+  const finalLabelH = 32; // "FINAL" label + marginBottom only
+  const finalCardMidY = finalTop + finalLabelH + CH/2; // absolute Y center of final card
+  const sfCardMidY = 483 + CH/2; // both SF cards are at tops[0]=483
 
   return (
-    <div style={{width:"100%",maxWidth:"100%",overflow:"hidden"}}>
-      <div
-  ref={bracketScrollRef}
-  style={{
-    width:"100%",
-    maxHeight:"70vh",
-    overflowX:"auto",
-    overflowY:"hidden",
-    cursor:"grab",
-    WebkitOverflowScrolling:"touch",
-    padding:"6px 0 18px",
-    scrollPaddingLeft:24,
-    overscrollBehaviorX:"contain"
-  }}
->
-        <div style={{display:"flex",alignItems:"flex-start",gap:26,minWidth:1520,padding:"0 24px 8px"}}>
-          {left.map(r => renderColumn(r, "left"))}
+    <div style={{width:"100%",maxWidth:"100%"}}>
+      <div ref={bracketScrollRef} style={{width:"100%",overflowX:"auto",overflowY:"hidden",cursor:"grab",WebkitOverflowScrolling:"touch",padding:"6px 0 18px",overscrollBehaviorX:"contain"}}>
+        <div style={{display:"flex",alignItems:"flex-start",gap:GAP,minWidth:1520,padding:"0 24px 8px"}}>
+          {leftRounds.map(r=>renderRound(r,"left"))}
 
-          <div style={{width:190,flex:"0 0 190px",paddingTop:310}}>
-            <div style={{textAlign:"center",marginBottom:12}}>
-              <div style={{fontSize:12,color:C.gold,fontWeight:900,letterSpacing:"0.12em"}}>FINAL</div>
-              <div style={{fontSize:10,color:C.dim}}>Jul 19 · New York/New Jersey</div>
+          {/* FINAL — identical structure to other columns for guaranteed vertical alignment */}
+          <div style={{position:"relative",width:190,flexShrink:0}}>
+            {/* Same pill as other columns */}
+            <div style={{textAlign:"center",marginBottom:8,background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b1}`,borderRadius:999,padding:"5px 8px"}}>
+              <div style={{fontSize:10,fontWeight:900,color:C.gold,letterSpacing:"0.08em"}}>FINAL</div>
+              <div style={{fontSize:9,color:C.dim,visibility:"hidden"}}>placeholder</div>
             </div>
-
-            <BracketMatchup
-              match={finalMatch.match}
-              t1={finalMatch.home}
-              t2={finalMatch.away}
-              winner={finalMatch.winner}
-              interactive={pickMode==="manual"}
-              onPick={(team)=>onPick(finalMatch,team)}
-            />
-
-            {finalMatch.winner && (
-              <div style={{marginTop:14,textAlign:"center",background:`${C.gold}16`,border:`1px solid ${C.gold}44`,borderRadius:14,padding:"10px 8px"}}>
-                <div style={{fontSize:10,color:C.dim,fontWeight:800,letterSpacing:"0.08em"}}>CHAMPION</div>
-                <div style={{fontSize:28,marginTop:4}}><Crest team={finalMatch.winner} size={34}/></div>
-                <div style={{fontSize:14,color:C.gold,fontWeight:900,marginTop:4}}>{finalMatch.winner}</div>
+            <div style={{position:"relative",height:totalHeight}}>
+              {/* Left stub from sfL */}
+              <div style={{position:"absolute",top:finalTop+CH/2,left:-GAP,width:GAP,borderTop:`1.5px solid ${C.b2}`,opacity:0.6}}/>
+              {/* Right stub from sfR */}
+              <div style={{position:"absolute",top:finalTop+CH/2,right:-GAP,width:GAP,borderTop:`1.5px solid ${C.b2}`,opacity:0.6}}/>
+              {/* FINAL label just above the card */}
+              <div style={{position:"absolute",top:finalTop-22,left:0,width:190,textAlign:"center",fontSize:11,fontWeight:900,color:C.gold,letterSpacing:"0.12em"}}>FINAL</div>
+              {/* Final card */}
+              <div style={{position:"absolute",top:finalTop,left:0,width:190}}>
+                <BracketMatchup match={finalMatch.match} t1={finalMatch.home} t2={finalMatch.away} winner={finalMatch.winner} interactive={pickMode==="manual"} onPick={(team)=>onPick(finalMatch,team)}/>
+                {finalMatch.winner && (
+                  <div style={{marginTop:14,textAlign:"center",background:`${C.gold}16`,border:`1px solid ${C.gold}44`,borderRadius:14,padding:"10px 8px"}}>
+                    <div style={{fontSize:10,color:C.dim,fontWeight:800,letterSpacing:"0.08em"}}>CHAMPION</div>
+                    <div style={{fontSize:28,marginTop:4}}><Crest team={finalMatch.winner} size={34}/></div>
+                    <div style={{fontSize:14,color:C.gold,fontWeight:900,marginTop:4}}>{finalMatch.winner}</div>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
           </div>
 
-          {right.map(r => renderColumn(r, "right"))}
+          {rightRounds.map(r=>renderRound(r,"right"))}
         </div>
       </div>
     </div>
@@ -2756,7 +2997,7 @@ function VisualBracketTree({ bracket, pickMode="auto", onPick=()=>{}, view="comp
         })}
       </div>
 
-      <div style={{marginTop:16,background:`linear-gradient(135deg,${C.green}22,${C.gold}18)`,border:`1px solid ${bracket?.champion?C.greenS:C.gold}66`,borderRadius:18,padding:16,textAlign:"center",boxShadow:"0 10px 26px rgba(0,0,0,0.28)"}}>
+      <div style={{marginTop:16,background:`linear-gradient(135deg,${C.green}22,${C.gold}18)`,border:`1px solid ${bracket?.champion?C.greenS:C.gold}66`,borderRadius:18,padding:16,textAlign:"center",boxShadow:DS.shadow.panel}}>
         <div style={{fontSize:9,color:C.dim,fontWeight:900,letterSpacing:"0.15em",marginBottom:8}}>CHAMPION</div>
         {bracket?.champion ? (
           <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:12}}>
@@ -2774,12 +3015,47 @@ function VisualBracketTree({ bracket, pickMode="auto", onPick=()=>{}, view="comp
   );
 }
 
-const MY_BRACKET_STORAGE_KEY = "wc2026_my_bracket_v1";
+const MY_BRACKET_STORAGE_KEY = "wc2026_my_bracket_v3";
+const MY_BRACKET_VERSION = "3.0"; // bump this to force reset groups/result for all users
 
 function readSavedMyBracket() {
   try {
     const raw = localStorage.getItem(MY_BRACKET_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : {};
+    const saved = raw ? JSON.parse(raw) : {};
+
+    // Version check — if outdated, reset groups/result but keep manual picks
+    if (saved._version !== MY_BRACKET_VERSION) {
+      console.log(`[bracket] Version mismatch (${saved._version} → ${MY_BRACKET_VERSION}) — resetting groups/result, keeping picks`);
+      return {
+        _version: MY_BRACKET_VERSION,
+        manualPicks: saved.manualPicks || {},
+        bracketView: saved.bracketView || "tree",
+        bracketMode: saved.bracketMode || "simulation",
+        stage: "groups",
+        groups: defaultBracketGroups(),
+        thirds: [],
+        result: null,
+        playMode: "manual",
+      };
+    }
+
+    // Validate groups — teams must belong to their correct group
+    if (saved.groups) {
+      const valid = Object.entries(saved.groups).every(([g, teams]) => {
+        const expected = GROUPS[g]?.teams || [];
+        return Array.isArray(teams) &&
+          teams.length === expected.length &&
+          teams.every(t => expected.includes(t));
+      });
+      if (!valid) {
+        console.warn("[bracket] Corrupted groups detected — resetting");
+        saved.groups = defaultBracketGroups();
+        saved.result = null;
+        saved.stage = "groups";
+      }
+    }
+
+    return saved;
   } catch {
     return {};
   }
@@ -2787,7 +3063,7 @@ function readSavedMyBracket() {
 
 function writeSavedMyBracket(state) {
   try {
-    localStorage.setItem(MY_BRACKET_STORAGE_KEY, JSON.stringify(state));
+    localStorage.setItem(MY_BRACKET_STORAGE_KEY, JSON.stringify({ ...state, _version: MY_BRACKET_VERSION }));
     window.dispatchEvent(new CustomEvent("wc2026_my_bracket_changed", { detail: state }));
   } catch {}
 }
@@ -2825,7 +3101,7 @@ function MyBracketTab({ tabTop=116 }) {
   const [running,setRunning]=useState(false);
   const [sharing,setSharing]=useState(false);
   const [showBracketActions,setShowBracketActions]=useState(false);
-  const [annexStatus,setAnnexStatus]=useState({state:"loading",message:"Loading FIFA Annex C table..."});
+  const annexStatus = {state:"ready",message:"FIFA Annex C ready (495 combinations)."};
   const allThirds=Object.entries(groups).map(([g,teams])=>({group:g,team:teams[2]}));
   const toggleThird=(t)=>{setThirds(p=>p.includes(t)?p.filter(x=>x!==t):[...p,t].slice(0,8));};
   const _mbhRef = useRef(null); const _mbhH = useElemHeight(_mbhRef);
@@ -2844,22 +3120,6 @@ function MyBracketTab({ tabTop=116 }) {
     };
     window.addEventListener("wc2026_my_bracket_synced", applySyncedBracket);
     return () => window.removeEventListener("wc2026_my_bracket_synced", applySyncedBracket);
-  },[]);
-
-  useEffect(()=>{
-    let alive=true;
-    setAnnexStatus({state:"loading",message:"Loading FIFA Annex C table..."});
-    loadAnnexCFromRemote()
-      .then(table=>{
-        if(!alive) return;
-        setAnnexStatus({state:"ready",message:`FIFA Annex C loaded (${Object.keys(table).length} combinations).`});
-      })
-      .catch(err=>{
-        if(!alive) return;
-        console.warn("Unable to load FIFA Annex C table:", err);
-        setAnnexStatus({state:"error",message:"FIFA Annex C could not be loaded. Brackets will use legacy fallback until the table is available."});
-      });
-    return()=>{alive=false};
   },[]);
 
   useEffect(()=>{
@@ -2893,9 +3153,23 @@ function MyBracketTab({ tabTop=116 }) {
   const runBracket=()=>{
     setRunning(true);
     setTimeout(()=>{
-      const qualifiedThirds = buildQualifiedThirdsFromSelectedTeams(groups, thirds);
+      // Auto-select best 8 third-place teams if user hasn't picked them
+      // (takes the 3rd team from each group, sorted by simulator strength, top 8)
+      let activeThirds = thirds;
+      if (!activeThirds || activeThirds.length !== 8) {
+        const allThirds = Object.entries(groups)
+          .map(([g, teams]) => ({ group: g, team: teams[2] }))
+          .filter(x => x.team)
+          .sort((a, b) => (STR[b.team] || 0) - (STR[a.team] || 0))
+          .slice(0, 8)
+          .map(x => x.team);
+        activeThirds = allThirds;
+        setThirds(allThirds);
+      }
+
+      const qualifiedThirds = buildQualifiedThirdsFromSelectedTeams(groups, activeThirds);
       let thirdGroupsKey = "";
-      try { thirdGroupsKey = buildThirdGroupsKey(groups, thirds); } catch(e) { thirdGroupsKey = ""; }
+      try { thirdGroupsKey = buildThirdGroupsKey(groups, activeThirds); } catch(e) { thirdGroupsKey = ""; }
 
       console.log("Qualified third-place teams:", qualifiedThirds);
       console.log("Annex C group key:", thirdGroupsKey);
@@ -2908,13 +3182,66 @@ function MyBracketTab({ tabTop=116 }) {
         : "Official FIFA bracket rules are still loading.";
 
       try {
-        const fifaBracket = buildFifa2026Bracket({ groups, qualifiedThirds });
-        r32 = fifaBracket.r32.map(m => ({...m, winner:null}));
+        // ── Build R32 directly from template using local Annex C ──────────
+        // We NEVER call buildFifa2026Bracket because it calls getAnnexCMapping
+        // which requires annexCStore to be populated (it never is).
+        // Instead we resolve slots ourselves using getAnnexCAssignment.
+
+        const annexMapping = getAnnexCAssignment(qualifiedThirds);
+        // annexMapping: { "1A": "3C", "1E": "3D", ... } — target col → third group
+
+        const thirdTeamByGroup = Object.fromEntries(
+          qualifiedThirds.map(t => [String(t.group).toUpperCase(), t.team])
+        );
+
+        const resolveSlot = (slot, homeSlot) => {
+          if (!slot || slot === "TBD") return "TBD";
+          if (slot === "3?") {
+            // homeSlot is the Annex C target column (e.g. "1E")
+            const assigned = annexMapping[homeSlot]; // e.g. "3D"
+            const grp = assigned ? assigned.replace(/^3/,"") : null;
+            return (grp && thirdTeamByGroup[grp]) || "TBD";
+          }
+          if (slot.startsWith("1")) return groups[slot[1]]?.[0] || slot;
+          if (slot.startsWith("2")) return groups[slot[1]]?.[1] || slot;
+          if (slot.startsWith("3")) return thirdTeamByGroup[slot.slice(1)] || slot;
+          return slot;
+        };
+
+        // Hardcoded R32 template (mirrors fifa2026Bracket.js ROUND_OF_32_TEMPLATE)
+        const R32 = [
+          {match:73, home:"2A", away:"2B"},
+          {match:74, home:"1E", away:"3?"},
+          {match:75, home:"1F", away:"2C"},
+          {match:76, home:"1C", away:"2F"},
+          {match:77, home:"1I", away:"3?"},
+          {match:78, home:"2E", away:"2I"},
+          {match:79, home:"1A", away:"3?"},
+          {match:80, home:"1L", away:"3?"},
+          {match:81, home:"1D", away:"3?"},
+          {match:82, home:"1G", away:"3?"},
+          {match:83, home:"2K", away:"2L"},
+          {match:84, home:"1H", away:"2J"},
+          {match:85, home:"1B", away:"3?"},
+          {match:86, home:"1J", away:"2H"},
+          {match:87, home:"1K", away:"3?"},
+          {match:88, home:"2D", away:"2G"},
+        ];
+
+        r32 = R32.map(m => ({
+          match: m.match,
+          homeSlot: m.home,
+          awaySlot: m.away,
+          home: resolveSlot(m.home, m.home),
+          away: resolveSlot(m.away, m.home),
+          winner: null,
+        }));
+
         roundTemplates = {
-          r16: fifaBracket.r16,
-          qf: fifaBracket.qf,
-          sf: fifaBracket.sf,
-          final: fifaBracket.final
+          r16: ROUND_OF_16_TEMPLATE,
+          qf:  QUARTER_FINAL_TEMPLATE,
+          sf:  SEMI_FINAL_TEMPLATE,
+          final: FINAL_TEMPLATE,
         };
         fifaEngineStatus="fifa-ready";
         fifaEngineMessage="FIFA 2026 bracket generated.";
@@ -2982,10 +3309,14 @@ function MyBracketTab({ tabTop=116 }) {
   const handleManualPick = (match, team) => {
     if (playMode !== "manual" || !match?.match || !team || team === "TBD") return;
     setManualPicks(prev => {
+      const existing = prev[match.match];
       const next = {...prev, [match.match]: team};
-      const m = Number(match.match);
-      const cutoff = m < 89 ? 89 : m < 97 ? 97 : m < 101 ? 101 : m < 104 ? 104 : 105;
-      Object.keys(next).forEach(k => { if (Number(k) >= cutoff) delete next[k]; });
+      // Only clear downstream picks if we're CHANGING an existing pick (not filling a new slot)
+      if (existing && existing !== team) {
+        const m = Number(match.match);
+        const cutoff = m < 89 ? 89 : m < 97 ? 97 : m < 101 ? 101 : m < 104 ? 104 : 105;
+        Object.keys(next).forEach(k => { if (Number(k) >= cutoff) delete next[k]; });
+      }
       return next;
     });
   };
@@ -3063,7 +3394,7 @@ function MyBracketTab({ tabTop=116 }) {
         zIndex:2,
         background:C.bg,
         borderBottom:`1px solid ${C.b2}`,
-        boxShadow:`0 2px 8px rgba(0,0,0,0.55)`,
+        boxShadow:DS.shadow.sticky,
         padding:isMobileBracket?"9px 10px 10px":"10px 13px 11px",
         marginTop:8,
         marginBottom:12,
@@ -3141,6 +3472,7 @@ function MyBracketTab({ tabTop=116 }) {
         <span style={{marginLeft:6,fontSize:11,color:C.dim,fontWeight:600}}>
           ({displayedResult?.completedCount || 0}/31)
         </span>
+        {bracketView==="tree" && <span style={{marginLeft:8,fontSize:10,color:C.dim,fontWeight:400,fontStyle:"italic"}}>tap a team to pick the winner</span>}
       </div>
 
       <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
@@ -3194,7 +3526,7 @@ function MyBracketTab({ tabTop=116 }) {
   );
 }
 // ── SAVED TAB ──────────────────────────────────────────────────────────────
-function SavedMatchCard({ item, onRemove, notifiedIds=new Set(), onNotified=()=>{} }) {
+function SavedMatchCard({ item, onRemove, onMatchTap, notifiedIds=new Set(), onNotified=()=>{} }) {
   const isPWA = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
   const [pushState, setPushState] = useState(() => {
     if (!("Notification" in window)) return "unsupported";
@@ -3226,7 +3558,7 @@ function SavedMatchCard({ item, onRemove, notifiedIds=new Set(), onNotified=()=>
     <div style={{background:C.s2,border:`1px solid ${C.gold}33`,borderLeft:`3px solid ${C.gold}`,borderRadius:12,marginBottom:6,overflow:"hidden"}}>
       <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px"}}>
         <Crest team={m.home} size={22}/>
-        <div style={{flex:1,minWidth:0}}>
+        <div onClick={()=>onMatchTap&&onMatchTap(m)} style={{flex:1,minWidth:0,cursor:onMatchTap?"pointer":"default"}}>
           <div style={{display:"flex",alignItems:"center",gap:5}}>
             <span style={{color:C.gold,fontSize:11}}>★</span>
             <span style={{fontWeight:700,color:C.text,fontSize:13,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{m.home} vs {m.away}</span>
@@ -3255,7 +3587,7 @@ function SavedMatchCard({ item, onRemove, notifiedIds=new Set(), onNotified=()=>
   );
 }
 
-function SavedTab({ saved, onRemove, tabTop=116 }) {
+function SavedTab({ saved, onRemove, onMatchTap, tabTop=116 }) {
   const _ref = useRef(null);
   const _h = useElemHeight(_ref);
   const savedStripRef = useRef(null);
@@ -3339,7 +3671,7 @@ function SavedTab({ saved, onRemove, tabTop=116 }) {
   return (
     <div style={{maxWidth:700,margin:"0 auto"}}>
       {/* Sticky controls */}
-      <div ref={_ref} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
+      <div ref={_ref} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:DS.shadow.sticky,padding:"8px 13px"}}>
         {/* Master actions */}
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
           <span style={{fontSize:12,fontWeight:700,color:C.mid,letterSpacing:"0.06em"}}>ALL MATCHES ({saved.length}){(filterMode!=="all"&&filterVal.size>0)&&filtered.length!==saved.length?<span style={{color:C.dim,fontWeight:400}}> · {filtered.length} shown</span>:null}</span>
@@ -3422,7 +3754,7 @@ function SavedTab({ saved, onRemove, tabTop=116 }) {
       <div style={{height:0}}/>
       {filtered.length === 0
         ? <div style={{textAlign:"center",padding:"32px 0",color:C.dim,fontSize:13}}>No matches match this filter.</div>
-        : filtered.map(item=>(<SavedMatchCard key={item.id} item={item} onRemove={onRemove} notifiedIds={notifiedIds} onNotified={(id)=>setNotifiedIds(prev=>new Set([...prev,id]))}/>))
+        : filtered.map(item=>(<SavedMatchCard key={item.id} item={item} onRemove={onRemove} onMatchTap={onMatchTap} notifiedIds={notifiedIds} onNotified={(id)=>setNotifiedIds(prev=>new Set([...prev,id]))}/>))
       }
     </div>
   );
@@ -3525,7 +3857,7 @@ function MatchdayCard({ m, onAction, favTeam }) {
   const cardBg = live ? `linear-gradient(135deg,#0a1f10,#0d2815)` : `linear-gradient(135deg,${C.s1},${C.s2})`;
 
   return (
-    <Card style={{marginBottom:8, border:`1px solid ${cardBorder}`, background:cardBg, opacity:finished?0.75:1}}>
+    <Card style={{marginBottom:8, border:`1px solid ${cardBorder}`, background:cardBg, opacity:finished?0.8:1}}>
       <div style={{padding:"11px 13px"}}>
         {/* Fav banner */}
         {isFav && !live && !finished && (
@@ -3547,7 +3879,7 @@ function MatchdayCard({ m, onAction, favTeam }) {
           {hasScore ? (
             <div style={{textAlign:"center",minWidth:64}}>
               <div style={{fontWeight:900,fontSize:22,color:live?C.green:C.text,fontFamily:"monospace",lineHeight:1}}>{sc.hg} – {sc.ag}</div>
-              {statusLabel(sc.status,sc.elapsed) && <div style={{fontSize:10,fontWeight:700,marginTop:2,color:live?C.green:C.dim}}>{live?"🔴 ":""}{statusLabel(sc.status,sc.elapsed)}</div>}
+              {statusLabel(sc.status,sc.elapsed,sc.elapsedExtra) && <div style={{fontSize:10,fontWeight:700,marginTop:2,color:live?C.green:C.dim}}>{live?"🔴 ":""}{statusLabel(sc.status,sc.elapsed,sc.elapsedExtra)}</div>}
             </div>
           ) : (
             <span style={{fontSize:11,color:C.dim,fontWeight:700,minWidth:40,textAlign:"center"}}>VS</span>
@@ -3694,6 +4026,24 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
     })();
   }, [fantasyUserId, displayName, userAvatar, syncProfile?.uid]);
 
+  // ── Auto-score finished matches ─────────────────────────────────────────
+  useEffect(() => {
+    const finishedWithScores = MATCHES
+      .filter(m => m.group && isFinished(m.home, m.away))
+      .map(m => {
+        const sc = getScore(m.home, m.away);
+        if (!sc || sc.hg === null || sc.ag === null) return null;
+        return { id: m.id, hg: sc.hg, ag: sc.ag };
+      })
+      .filter(Boolean);
+    if (!finishedWithScores.length) return;
+    fetch("/api/admin?action=score-matches", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ matches: finishedWithScores }),
+    }).catch(e => console.warn("[score-matches]", e.message));
+  }, [getScore, isFinished]);
+
   // ── Load leaderboard when that tab is active ────────────────────────────
   useEffect(() => {
   let cancelled = false;
@@ -3729,25 +4079,26 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
   };
 
   // ── Save a single prediction to KV (debounced) ──────────────────────────
-  const savePredToKV = useCallback(async (matchId, hg, ag) => {
-    if (!user) return;
-    setPSaving(p => ({...p, [matchId]: true}));
-    try {
-      await apiPred("savePred", {}, { userId: fantasyUserId, matchId, hg, ag });
-    } catch(e) { console.error("savePred", e); }
-    finally { setPSaving(p => ({...p, [matchId]: false})); }
-  }, [fantasyUserId, user]);
-
-  const debouncedSave = useDebounce(savePredToKV, 800);
+  const saveTimerRef = useRef({});
 
   const upd = (id, field, val) => {
     const clean = val.replace(/\D/,"");
-    const next = { ...preds, [id]: { ...(preds[id]||{}), [field]: clean }};
-    setPreds(next);
-    const updated = next[id];
-    if (updated?.hg !== undefined && updated?.ag !== undefined && updated.hg !== "" && updated.ag !== "") {
-      debouncedSave(id, parseInt(updated.hg), parseInt(updated.ag));
-    }
+    setPreds(prev => {
+      const next = { ...prev, [id]: { ...(prev[id]||{}), [field]: clean }};
+      // Debounce save using a per-match timer
+      clearTimeout(saveTimerRef.current[id]);
+      saveTimerRef.current[id] = setTimeout(async () => {
+        if (!user) return;
+        const latest = next[id];
+        if (!latest || latest.hg === "" || latest.ag === "" || latest.hg == null || latest.ag == null) return;
+        setPSaving(p => ({...p, [id]: true}));
+        try {
+          await apiPred("savePred", {}, { userId: fantasyUserId, matchId: id, hg: parseInt(latest.hg), ag: parseInt(latest.ag) });
+        } catch(e) { console.error("savePred", e); }
+        finally { setPSaving(p => ({...p, [id]: false})); }
+      }, 600);
+      return next;
+    });
   };
 
   // ── Score totals ────────────────────────────────────────────────────────
@@ -3955,7 +4306,7 @@ return (
                     <div style={{fontSize:9,color:C.dim}}>pts</div>
                   </div>
                 </div>
-                {i===0&&entry.pts>0&&<div style={{height:2,background:`linear-gradient(90deg,${C.gold},transparent)`}}/>}
+
               </Card>
             );
           })}
@@ -3984,7 +4335,7 @@ return (
             const hasPred = pred.hg!==undefined && pred.ag!==undefined && pred.hg!=="" && pred.ag!=="";
             const saving = predSaving[m.id];
             return (
-              <Card key={m.id} style={{marginBottom:8,border:`1px solid ${pts===3?C.green:pts===1?C.gold:pts===0?C.red:hasPred?`${C.green}44`:C.b1}`,opacity:locked&&!done?0.72:1}} >
+              <Card key={m.id} style={{marginBottom:8,border:`1px solid ${pts===3?C.green:pts===1?C.gold:pts===0?C.red:hasPred?`${C.green}44`:C.b1}`,opacity:done?0.45:locked?0.72:1}} >
                 <div style={{padding:"10px 13px"}}>
                   <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
                     <Badge>Group {m.group} · {m.date}</Badge>
@@ -4006,23 +4357,23 @@ return (
                     <span style={{fontWeight:700,color:C.text,flex:1,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.home}</span>
                     <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
                       {done && sc && (
-                        <div style={{textAlign:"center",minWidth:48}}>
-                          <div style={{fontSize:9,color:C.dim,marginBottom:1}}>Result</div>
+                        <div style={{textAlign:"center",minWidth:48,background:C.s2,borderRadius:8,padding:"4px 8px",border:`1px solid ${C.b2}`}}>
+                          <div style={{fontSize:9,color:C.mid,marginBottom:1,fontWeight:700,letterSpacing:"0.05em"}}>RESULT</div>
                           <div style={{fontWeight:800,fontSize:18,color:C.text,fontFamily:"monospace"}}>{sc.hg}–{sc.ag}</div>
                         </div>
                       )}
                       {!done && (
                         <>
-                          <input value={pred.hg||""} onChange={e=>!locked&&upd(m.id,"hg",e.target.value)} disabled={locked} placeholder="?" maxLength={2}
+                          <input value={pred.hg??""} onChange={e=>!locked&&upd(m.id,"hg",e.target.value)} disabled={locked} placeholder="?" maxLength={2}
                             style={{width:34,textAlign:"center",background:locked?C.bg:C.s2,border:`1px solid ${hasPred?C.green:C.b2}`,borderRadius:8,color:locked?C.dim:C.green,fontSize:16,fontWeight:700,padding:"4px 0",outline:"none",opacity:locked?0.65:1}}/>
                           <span style={{color:C.dim,fontWeight:700}}>–</span>
-                          <input value={pred.ag||""} onChange={e=>!locked&&upd(m.id,"ag",e.target.value)} disabled={locked} placeholder="?" maxLength={2}
+                          <input value={pred.ag??""} onChange={e=>!locked&&upd(m.id,"ag",e.target.value)} disabled={locked} placeholder="?" maxLength={2}
                             style={{width:34,textAlign:"center",background:locked?C.bg:C.s2,border:`1px solid ${hasPred?C.green:C.b2}`,borderRadius:8,color:locked?C.dim:C.green,fontSize:16,fontWeight:700,padding:"4px 0",outline:"none",opacity:locked?0.65:1}}/>
                         </>
                       )}
                       {done && hasPred && (
-                        <div style={{textAlign:"center",minWidth:48}}>
-                          <div style={{fontSize:9,color:C.dim,marginBottom:1}}>Your pick</div>
+                        <div style={{textAlign:"center",minWidth:48,background:`${ptColor}12`,borderRadius:8,padding:"4px 8px",border:`1px solid ${ptColor}44`}}>
+                          <div style={{fontSize:9,color:ptColor,marginBottom:1,fontWeight:700,letterSpacing:"0.05em"}}>YOUR PICK</div>
                           <div style={{fontWeight:800,fontSize:18,color:ptColor,fontFamily:"monospace"}}>{pred.hg}–{pred.ag}</div>
                         </div>
                       )}
@@ -4059,12 +4410,12 @@ const eventsCache = {};
 async function fetchMatchEvents(fixtureId) {
   if (eventsCache[fixtureId]) return eventsCache[fixtureId];
   try {
-    const res = await fetch(`/api/matchevents?fixtureId=${fixtureId}`);
+    const res = await fetch(`/api/matchevents?fixtureId=${encodeURIComponent(fixtureId)}`);
     if (!res.ok) throw new Error(res.statusText);
     const data = await res.json();
     // Handle both old format (array) and new format ({events, stats})
     const result = Array.isArray(data) ? { events: data, stats: null } : data;
-    eventsCache[fixtureId] = result;
+    if (result?.events?.length > 0) eventsCache[fixtureId] = result;
     return result;
   } catch(e) {
     console.error("[matchevents]", e.message);
@@ -4089,7 +4440,12 @@ function WeatherBadge({ lat, lon }) {
 function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), userPredHg, userPredAg }) {
   const [events, setEvents] = useState(null);
   const [matchStats, setMatchStats] = useState(null);
+  const [lineups, setLineups] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [evOpen, setEvOpen] = useState(false);
+  const [lineupsOpen, setLineupsOpen] = useState(false);
+  const [statsOpen, setStatsOpen] = useState(false);
+  const [evFilter, setEvFilter] = useState(["Goal","Card","subst"]);
   const { getScore } = useContext(LiveScoresCtx);
   const { favTeams=[] } = useContext(FavCtx);
   const country = useContext(CountryCtx);
@@ -4104,12 +4460,24 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
 
   useEffect(() => {
     if (!open || !match) return;
-    setEvents(null); setLoading(true);
+    setEvents(null); setLoading(true); setEvOpen(false); setEvFilter(["Goal","Card","subst"]); setLineups(null); setLineupsOpen(false); setStatsOpen(false);
     fetchMatchEvents(`${match.home}|${match.away}`)
       .then(d => {
         setEvents(d?.events || []);
         setMatchStats(d?.stats || null);
+        setLineups(d?.lineups || null);
         setLoading(false);
+        // Auto-open most useful section
+        const sc = getScore(match.home, match.away);
+        const isPastMatch = (() => { const iso = MATCH_UTC[match?.id]; return iso ? Date.now() > new Date(iso).getTime() + 90*60*1000 : false; })();
+        if (sc && statusIsFinished(sc.status) || isPastMatch) {
+          setEvOpen(true);
+          setStatsOpen(true);
+        } else if (sc && statusIsLive(sc.status)) {
+          setEvOpen(true);
+        } else if (d?.lineups?.home || d?.lineups?.away) {
+          setLineupsOpen(true);
+        }
       })
       .catch(() => setLoading(false));
   }, [open, match]);
@@ -4118,7 +4486,24 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
   const hasScore = sc && sc.hg !== null && sc.ag !== null;
   const live = sc ? statusIsLive(sc.status) : false;
   const finished = sc ? statusIsFinished(sc.status) : false;
+  // isPast: kickoff was >90min ago — treat as finished even if feed has no data
+  const isPast = (() => {
+    const iso = MATCH_UTC[match?.id];
+    if (!iso) return false;
+    return Date.now() > new Date(iso).getTime() + 90 * 60 * 1000;
+  })();
+  const isPlayed = live || finished || isPast;
   const { localTime } = match ? matchTimes(match) : {};
+
+  const isPastDay = (() => {
+    if (!finished || !match) return false;
+    const iso = MATCH_UTC[match.id];
+    if (!iso) return false;
+    const venueTzKey = VENUE_TZ[match.venue] || "America/New_York";
+    const matchDate = new Intl.DateTimeFormat("en-CA", { timeZone: venueTzKey }).format(new Date(iso));
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: venueTzKey }).format(new Date());
+    return matchDate < today;
+  })();
 
   // Polymarket odds
   const p1 = match ? PREDS.find(x=>x.team===match.home) : null;
@@ -4243,29 +4628,21 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
   };
 
   return (
-    <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",zIndex:1000,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
+    <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center"}}>
       <div onClick={e=>e.stopPropagation()} style={{background:C.bg,border:`1px solid ${C.b2}`,borderRadius:"18px 18px 0 0",width:"100%",maxWidth:620,maxHeight:"92vh",overflowY:"auto",paddingBottom:20,position:"relative"}}>
 
 
-        <button
-  onClick={onClose}
-  style={{
-    position: "absolute",
-    top: 12,
-    right: 12,
-    zIndex: 9999,
-    background: "rgba(0,0,0,.4)",
-    border: "none",
-    color: "white",
-    fontSize: 24,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    cursor: "pointer"
-  }}
->
-  ×
-</button>
+        <button onClick={onClose} style={{position:"absolute",top:12,right:12,zIndex:9999,background:"rgba(0,0,0,.4)",border:"none",color:"white",fontSize:24,width:36,height:36,borderRadius:18,cursor:"pointer"}}>×</button>
+
+        {/* Save + Share icon buttons — top left */}
+        <div style={{position:"absolute",top:12,left:12,zIndex:9999,display:"flex",gap:6}}>
+          {(()=>{ const isSaved=savedIds.has(match.id); return (
+            <button onClick={()=>{onAction(match);}} title={isSaved?"Saved":"Save Match"} style={{width:36,height:36,borderRadius:18,background:isSaved?`${C.gold}33`:"rgba(0,0,0,.4)",border:`1px solid ${isSaved?C.gold:"transparent"}`,color:isSaved?C.gold:"white",fontSize:17,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <StarIcon filled={isSaved} size={16}/>
+            </button>
+          ); })()}
+          <button onClick={shareMatch} title="Share" style={{width:36,height:36,borderRadius:18,background:"rgba(0,0,0,.4)",border:"none",color:"white",fontSize:16,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>📤</button>
+        </div>
         
         <MatchHeader
   match={match}
@@ -4284,28 +4661,93 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
           <MatchInfoSection
   match={match}
   modalWx={modalWx}
+  modalCity={modalCity}
   bc={bc}
   isUS={isUS}
   simOdds={simOdds}
   p1={p1}
   p2={p2}
   finished={finished}
+  isPastDay={isPastDay}
   openMaps={openMaps}
   C={C}
 />
 
-          {/* ── MATCH STATS ── */}
-          {matchStats && (live || finished) && (
+          {/* ── SECTION PILLS ── */}
+          {(isPlayed || lineups) && (() => {
+            const hasLineups = !!(lineups && (lineups.home || lineups.away));
+            const hasStats   = !!(matchStats && isPlayed);
+            const hasTimeline = isPlayed;
+            const goals = events ? events.filter(e=>e.type==="Goal").length : 0;
+            const cards = events ? events.filter(e=>e.type==="Card").length : 0;
+            const timelineLabel = evOpen ? "Timeline" : `Timeline${events?.length ? ` · ${goals}⚽ ${cards}🟨` : ""}`;
+            const pill = (label, active, onClick, disabled) => (
+              <button onClick={disabled ? undefined : onClick} style={{padding:"6px 14px",borderRadius:999,border:`1.5px solid ${active?C.green:disabled?C.b1:C.b2}`,background:active?`${C.green}18`:C.s2,color:active?C.green:disabled?C.dim:C.mid,fontSize:12,fontWeight:700,cursor:disabled?"default":"pointer",opacity:disabled?0.4:1,transition:"all .15s"}}>
+                {label}
+              </button>
+            );
+            return (
+              <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
+                {pill("Lineups",    lineupsOpen, ()=>setLineupsOpen(o=>!o), !hasLineups)}
+                {pill(timelineLabel, evOpen,     ()=>setEvOpen(o=>!o),      !hasTimeline)}
+                {pill("Match Stats", statsOpen,  ()=>setStatsOpen(o=>!o),   !hasStats)}
+              </div>
+            );
+          })()}
+
+          {/* ── LINEUPS ── */}
+          {lineups && (lineups.home || lineups.away) && lineupsOpen && (
             <div style={{marginBottom:12}}>
-              <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",marginBottom:8}}>MATCH STATS</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                  {[{side:"home",team:match.home},{side:"away",team:match.away}].map(({side,team})=>{
+                    const lu = lineups[side];
+                    if (!lu) return <div key={side}/>;
+                    return (
+                      <div key={side} style={{background:C.s1,border:`1px solid ${C.b1}`,borderRadius:10,padding:"8px 10px"}}>
+                        <div style={{fontSize:11,fontWeight:700,color:side==="home"?C.green:C.red,marginBottom:4,display:"flex",alignItems:"center",gap:4}}>
+                          <Crest team={team} size={14}/>
+                          <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{team}</span>
+                          {lu.formation && <span style={{marginLeft:"auto",fontSize:10,color:C.dim,fontWeight:600,flexShrink:0}}>{lu.formation}</span>}
+                        </div>
+                        <div style={{fontSize:10,color:C.dim,fontWeight:600,marginBottom:3}}>Starting XI</div>
+                        {lu.starters.map((p,i)=>(
+                          <div key={i} style={{display:"flex",alignItems:"center",gap:4,padding:"2px 0",borderBottom:i<lu.starters.length-1?`1px solid ${C.b1}`:"none"}}>
+                            {p.jersey && <span style={{fontSize:9,color:C.dim,minWidth:14,textAlign:"center"}}>{p.jersey}</span>}
+                            <span style={{fontSize:11,color:p.subbedOut?C.dim:C.text,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}{p.subbedOut?" ↓":""}</span>
+                            <span style={{fontSize:9,color:C.dim,flexShrink:0}}>{p.pos}</span>
+                          </div>
+                        ))}
+                        {lu.bench.length > 0 && <>
+                          <div style={{fontSize:10,color:C.dim,fontWeight:600,marginTop:6,marginBottom:3}}>Bench</div>
+                          {lu.bench.map((p,i)=>(
+                            <div key={i} style={{display:"flex",alignItems:"center",gap:4,padding:"2px 0"}}>
+                              {p.jersey && <span style={{fontSize:9,color:C.dim,minWidth:14,textAlign:"center"}}>{p.jersey}</span>}
+                              <span style={{fontSize:11,color:p.subbedIn?C.green:C.dim,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}{p.subbedIn?" ↑":""}</span>
+                              <span style={{fontSize:9,color:C.dim,flexShrink:0}}>{p.pos}</span>
+                            </div>
+                          ))}
+                        </>}
+                      </div>
+                    );
+                  })}
+                </div>
+            </div>
+          )}
+
+          {/* ── MATCH STATS ── */}
+          {matchStats && isPlayed && statsOpen && (
+            <div style={{marginBottom:12}}>
               {[
                 ["Possession", matchStats.home.possession, matchStats.away.possession, true, "%"],
                 ["Shots", matchStats.home.shots, matchStats.away.shots, false, ""],
                 ["Shots on Target", matchStats.home.shotsOn, matchStats.away.shotsOn, false, ""],
+                ["Saves", matchStats.home.saves, matchStats.away.saves, false, ""],
                 ["Corners", matchStats.home.corners, matchStats.away.corners, false, ""],
                 ["Fouls", matchStats.home.fouls, matchStats.away.fouls, true, ""],
+                ["Offsides", matchStats.home.offsides, matchStats.away.offsides, true, ""],
+                ["Passes", matchStats.home.passes, matchStats.away.passes, false, ""],
                 ["Pass Accuracy", matchStats.home.passAcc, matchStats.away.passAcc, true, "%"],
-              ].filter(([,h,a]) => h!==null && a!==null).map(([label, hv, av, lowerBetter, unit]) => {
+              ].filter(([,h,a]) => h!==null && a!==null && h!==undefined && a!==undefined).map(([label, hv, av, lowerBetter, unit]) => {
                 const total = hv + av || 1;
                 const hPct = Math.round((hv/total)*100);
                 return (
@@ -4326,48 +4768,50 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
           )}
 
           {/* ── MATCH EVENTS ── */}
-          {(live || finished) && (
-            <div style={{marginBottom:12}}>
-              <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",marginBottom:8}}>MATCH TIMELINE</div>
-              {loading && (
-                <div style={{textAlign:"center",padding:"20px 0"}}>
-                  <div style={{width:22,height:22,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto 8px"}}/>
-                  <div style={{fontSize:12,color:C.mid}}>Loading events…</div>
-                </div>
-              )}
-              {!loading && events && events.length > 0 && events.map((ev,i)=>{
-                const isHome = normTeam(ev.team?.name||"")=== match.home;
-                const icon = ev.type==="Goal"?(ev.detail==="Own Goal"?"⚽🔴":ev.detail==="Penalty"?"⚽🎯":"⚽"):ev.type==="Card"?(ev.detail==="Yellow Card"?"🟨":"🟥"):ev.type==="subst"?"🔄":"•";
-                return (
-                  <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 0",borderBottom:`1px solid ${C.b1}`}}>
-                    <div style={{flex:1,textAlign:"right"}}>
-                      {isHome && <span style={{fontSize:13,color:C.text,fontWeight:ev.type==="Goal"?700:400}}>{ev.player?.name||""}</span>}
-                      {isHome && ev.type==="subst" && <div style={{fontSize:10,color:C.dim}}>↑ {ev.assist?.name||""}</div>}
-                    </div>
-                    <div style={{display:"flex",flexDirection:"column",alignItems:"center",minWidth:52,flexShrink:0}}>
-                      <div style={{fontSize:11,fontWeight:700,color:C.gold}}>{ev.time?.elapsed}{ev.time?.extra?`+${ev.time.extra}`:""}'</div>
-                      <div style={{fontSize:16}}>{icon}</div>
-                    </div>
-                    <div style={{flex:1}}>
-                      {!isHome && <span style={{fontSize:13,color:C.text,fontWeight:ev.type==="Goal"?700:400}}>{ev.player?.name||""}</span>}
-                      {!isHome && ev.type==="subst" && <div style={{fontSize:10,color:C.dim}}>↑ {ev.assist?.name||""}</div>}
-                    </div>
-                  </div>
-                );
-              })}
-              {!loading && events && events.length === 0 && <div style={{fontSize:12,color:C.dim,textAlign:"center",padding:"16px 0"}}>No events yet.</div>}
-            </div>
-          )}
-
-          {/* ── ACTIONS ── */}
-          <div style={{display:"flex",gap:8,marginTop:8}}>
-            {!finished && (()=>{ const isSaved=savedIds.has(match.id); return (
-              <button onClick={()=>{onAction(match);onClose();}} style={{flex:1,padding:"11px 0",borderRadius:12,background:isSaved?`${C.gold}22`:`linear-gradient(135deg,${C.green},#22c55e)`,border:isSaved?`1px solid ${C.gold}`:"none",color:isSaved?"#f59e0b":"#030a05",fontWeight:700,fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
-                <StarIcon filled={isSaved} size={15}/>{isSaved?"Saved":"Save Match"}
-              </button>
-            ); })()}
-            <button onClick={shareMatch} style={{flex:1,padding:"11px 0",borderRadius:12,background:`${C.blue}22`,border:`1px solid ${C.blue}44`,color:C.blue,fontWeight:700,fontSize:14,cursor:"pointer"}}>{"📤 Share"}</button>
-          </div>
+          {isPlayed && evOpen && (() => {
+            const toggleFilter = (t) => setEvFilter(f => f.includes(t) ? f.filter(x=>x!==t) : [...f,t]);
+            const goals  = events ? events.filter(e=>e.type==="Goal").length : 0;
+            const cards  = events ? events.filter(e=>e.type==="Card").length : 0;
+            const subs   = events ? events.filter(e=>e.type==="subst").length : 0;
+            const filtered = events ? events.filter(e=>evFilter.includes(e.type)) : [];
+            const FILTERS = [{type:"Goal",label:`⚽ ${goals}`},{type:"Card",label:`🟨 ${cards}`},{type:"subst",label:`🔄 ${subs}`}];
+            return (
+              <div style={{marginBottom:12}}>
+                <>
+                    {events && events.length > 0 && (
+                      <div style={{display:"flex",gap:6,padding:"8px 0"}}>
+                        {FILTERS.map(f=>(
+                          <button key={f.type} onClick={()=>toggleFilter(f.type)} style={{padding:"4px 10px",borderRadius:20,border:`1px solid ${evFilter.includes(f.type)?C.green:C.b2}`,background:evFilter.includes(f.type)?`${C.green}22`:C.s2,color:evFilter.includes(f.type)?C.green:C.dim,fontSize:12,fontWeight:600,cursor:"pointer"}}>{f.label}</button>
+                        ))}
+                      </div>
+                    )}
+                    {loading && <div style={{textAlign:"center",padding:"20px 0"}}><div style={{width:22,height:22,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto 8px"}}/><div style={{fontSize:12,color:C.mid}}>Loading events…</div></div>}
+                    {!loading && filtered.length > 0 && filtered.map((ev,i)=>{
+                      const isHome = normTeam(ev.team?.name||"")=== match.home;
+                      const icon = ev.type==="Goal"?(ev.detail==="Own Goal"?"⚽🔴":ev.detail==="Penalty"?"⚽🎯":"⚽"):ev.type==="Card"?(ev.detail==="Yellow Card"?"🟨":"🟥"):ev.type==="subst"?"🔄":"•";
+                      return (
+                        <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 0",borderBottom:`1px solid ${C.b1}`}}>
+                          <div style={{flex:1,textAlign:"right"}}>
+                            {isHome && ev.type!=="subst" && <span style={{fontSize:13,color:C.text,fontWeight:ev.type==="Goal"?700:400}}>{ev.player?.name||""}</span>}
+                            {isHome && ev.type==="subst" && <div style={{fontSize:13}}><span style={{color:C.green,fontWeight:600}}>↑ {ev.player?.name||""}</span>{" "}<span style={{color:C.red,fontWeight:600}}>↓ {ev.assist?.name||""}</span></div>}
+                          </div>
+                          <div style={{display:"flex",flexDirection:"column",alignItems:"center",minWidth:52,flexShrink:0}}>
+                            <div style={{fontSize:11,fontWeight:700,color:C.gold}}>{ev.time?.elapsed}{ev.time?.extra?`+${ev.time.extra}`:""}'</div>
+                            <div style={{fontSize:16}}>{icon}</div>
+                          </div>
+                          <div style={{flex:1}}>
+                            {!isHome && ev.type!=="subst" && <span style={{fontSize:13,color:C.text,fontWeight:ev.type==="Goal"?700:400}}>{ev.player?.name||""}</span>}
+                            {!isHome && ev.type==="subst" && <div style={{fontSize:13}}><span style={{color:C.green,fontWeight:600}}>↑ {ev.player?.name||""}</span>{" "}<span style={{color:C.red,fontWeight:600}}>↓ {ev.assist?.name||""}</span></div>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {!loading && filtered.length===0 && events && events.length>0 && <div style={{fontSize:12,color:C.dim,textAlign:"center",padding:"12px 0"}}>No events match filter.</div>}
+                    {!loading && (!events||events.length===0) && <div style={{fontSize:12,color:C.dim,textAlign:"center",padding:"16px 0"}}>No events yet.</div>}
+                  </>
+              </div>
+            );
+          })()}
 
         </div>
       </div>
@@ -4401,43 +4845,25 @@ const ONES_TO_WATCH = [
 ];
 
 function TopScorersTab({ tabTop=116 }) {
-  const { allFixtures } = useContext(LiveScoresCtx);
   const [filter, setFilter] = useState("all");
+  const [liveScorers, setLiveScorers] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Try to build live scorers from allFixtures events
-  const liveScorers = useMemo(() => {
-    if (!allFixtures?.length) return [];
-    const scorers = {};
-    allFixtures.forEach(f => {
-      const events = f.events || [];
-      events.forEach(ev => {
-        if (ev.type !== "Goal" || ev.detail === "Own Goal") return;
-        const player = ev.player?.name;
-        const teamName = normTeam(ev.team?.name || "");
-        if (!player) return;
-        const key = player;
-        if (!scorers[key]) scorers[key] = { name:player, team:teamName, goals:0, assists:0 };
-        scorers[key].goals++;
-      });
-      // Assists
-      events.forEach(ev => {
-        if (ev.type !== "Goal" || ev.detail === "Own Goal") return;
-        const player = ev.assist?.name;
-        const teamName = normTeam(ev.team?.name || "");
-        if (!player) return;
-        if (!scorers[player]) scorers[player] = { name:player, team:teamName, goals:0, assists:0 };
-        scorers[player].assists++;
-      });
-    });
-    return Object.values(scorers).sort((a,b)=>b.goals-a.goals||(b.goals+b.assists)-(a.goals+a.assists));
-  }, [allFixtures]);
+  useEffect(() => {
+    setLoading(true);
+    fetch("/api/matchevents?action=scorers")
+      .then(r => r.json())
+      .then(d => { if (d.scorers?.length) setLiveScorers(d.scorers); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
 
   const hasLive = liveScorers.length > 0;
   const _tshRef = useRef(null); const _tshH = useElemHeight(_tshRef);
 
   return (
     <div>
-      <div ref={_tshRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
+      <div ref={_tshRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:DS.shadow.sticky,padding:"8px 13px"}}>
         <div style={{fontWeight:700,fontSize:15,color:C.green,marginBottom:!hasLive?4:0}}>{"TOP SCORERS"} <span style={{fontSize:11,color:C.dim,fontWeight:400}}>{hasLive?"· "+"Live data":"· "+"Pre-tournament"}</span></div>
         {!hasLive && (
           <div style={{display:"flex",gap:6}}>
@@ -4628,7 +5054,7 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
   const homeContent = (
     <div style={{padding:isDesktop?"14px 24px 0":"16px 20px 0"}}>
       {/* Account card */}
-      <div style={{padding:isDesktop?"14px 18px":"16px 18px",background:`linear-gradient(135deg,${C.s2},${C.s1})`,borderRadius:18,marginBottom:12,border:`1px solid ${isSynced?C.green+"66":C.b1}`,boxShadow:"0 10px 24px rgba(0,0,0,0.20)",maxWidth:isDesktop?380:"none",marginLeft:isDesktop?"auto":0,marginRight:isDesktop?"auto":0}}>
+      <div style={{padding:isDesktop?"14px 18px":"16px 18px",background:`linear-gradient(135deg,${C.s2},${C.s1})`,borderRadius:18,marginBottom:12,border:`1px solid ${isSynced?C.green+"66":C.b1}`,boxShadow:DS.shadow.panel,maxWidth:isDesktop?380:"none",marginLeft:isDesktop?"auto":0,marginRight:isDesktop?"auto":0}}>
         <div style={{display:"flex",alignItems:"center",gap:isDesktop?14:14}}>
           <div onClick={()=>setShowAvatarPicker(true)} style={{position:"relative",width:isDesktop?58:62,height:isDesktop?58:62,borderRadius:"50%",flexShrink:0,background:isSynced?`${C.green}22`:C.bg,border:`3px solid ${isSynced?C.green:C.b2}`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",overflow:"hidden"}}>
             {renderAvatarImg(isDesktop?40:42)}
@@ -4642,7 +5068,7 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
                   maxLength={24}
                   style={{background:"none",border:"none",borderBottom:`1px solid ${C.green}`,outline:"none",color:C.text,fontSize:16,fontWeight:800,width:"100%",padding:"2px 0"}}/>
               : <div onClick={()=>{setNameInput(displayName||"");setNameEditing(true);}} style={{cursor:"text"}}>
-                  <div style={{fontWeight:displayName?900:700,color:displayName?C.text:C.dim,fontSize:displayName?(isDesktop?19:19):(isDesktop?14:13),lineHeight:1.08,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
+                  <div style={{fontWeight:displayName?900:700,color:displayName?C.text:C.dim,fontSize:displayName?(isDesktop?19:17):(isDesktop?14:13),lineHeight:1.15,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
                     {displayName||<span style={{color:C.dim,fontStyle:"italic"}}>Tap to add your name</span>}
                     {displayName && <span style={{fontSize:10,color:C.dim,marginLeft:6,fontWeight:400}}>✏️</span>}
                   </div>
@@ -4651,11 +5077,10 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
             {isSynced ? <>
               <div style={{fontSize:isDesktop?12:13,color:C.dim,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginTop:6}}>{syncProfile.email||"PIN User"}</div>
               {syncProfile.pin && <div style={{fontSize:isDesktop?12:13,color:C.mid,marginTop:2}}>PIN: <strong style={{color:C.gold,letterSpacing:"0.1em"}}>{syncProfile.pin}</strong></div>}
-              <div style={{fontSize:isDesktop?12:13,color:C.green,fontWeight:800,marginTop:3}}>✅ Syncing</div>
             </> : <div style={{fontSize:11,color:C.dim,marginTop:3}}>Sign in to sync your saved matches, teams and bracket picks.</div>}
           </div>
-          {isSynced && <button onClick={()=>{persistProfile(null);onSignOut();setToast("Signed out.");onClose();}} style={{fontSize:isDesktop?14:12,color:C.mid,background:C.bg,border:`1px solid ${C.b2}`,borderRadius:12,padding:isDesktop?"7px 11px":"7px 12px",cursor:"pointer",fontWeight:700,flexShrink:0}}>Sign out</button>}
         </div>
+
       </div>
 
       {/* My Teams — collapsible */}
@@ -4703,6 +5128,7 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
         <>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>
           <div style={{fontSize:11,color:C.dim,flex:1}}>✅ Syncing across devices</div>
+          {isSynced && <button onClick={()=>{persistProfile(null);onSignOut();setToast("Signed out.");onClose();}} style={{padding:"6px 12px",borderRadius:8,border:`1px solid ${C.b2}`,background:C.s2,color:C.mid,fontSize:11,fontWeight:600,cursor:"pointer",flexShrink:0}}>Sign out</button>}
           {syncProfile?.pin&&<button onClick={()=>{setPin("");setScreen("pin-change");setError("");}} style={{padding:"6px 12px",borderRadius:8,border:`1px solid ${C.b2}`,background:C.s2,color:C.mid,fontSize:11,fontWeight:600,cursor:"pointer",flexShrink:0}}>🔁 Change PIN</button>}
         </div>
         <div style={{textAlign:"center",marginTop:10}}>
@@ -4803,7 +5229,7 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
     return (
       <>
         <div onClick={onClose} style={{position:"fixed",inset:0,zIndex:999}}/>
-        <div onClick={e=>e.stopPropagation()} style={{position:"fixed",top:58,right:14,width:440,maxWidth:"calc(100% - 28px)",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:18,boxShadow:"0 8px 32px rgba(0,0,0,0.4)",zIndex:1000,overflow:"hidden",maxHeight:"calc(92dvh - env(safe-area-inset-bottom))",overflowY:"auto",WebkitOverflowScrolling:"touch",paddingBottom:"env(safe-area-inset-bottom)"}}>
+        <div onClick={e=>e.stopPropagation()} style={{position:"fixed",top:58,right:14,width:440,maxWidth:"calc(100% - 28px)",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:18,boxShadow:DS.shadow.modal,zIndex:1000,overflow:"hidden",maxHeight:"calc(92dvh - env(safe-area-inset-bottom))",overflowY:"auto",WebkitOverflowScrolling:"touch",paddingBottom:"env(safe-area-inset-bottom)"}}>
           {header(!isHome)}
           {isHome ? homeContent : subScreenContent}
         </div>
@@ -4894,20 +5320,69 @@ function QuickFacts({ tabTop }) {
 function WCNewsTab({ tabTop=116 }) {
   const _ref = useRef(null);
   const _h = useElemHeight(_ref);
+  const NEWS_LOCALES = [
+    { flag:"🇺🇸", label:"USA",       lang:"en", country:"us" },
+    { flag:"🇬🇧", label:"UK",        lang:"en", country:"gb" },
+    { flag:"🇧🇷", label:"Brazil",    lang:"pt", country:"br" },
+    { flag:"🇦🇷", label:"Argentina", lang:"es", country:"ar" },
+    { flag:"🇲🇽", label:"Mexico",    lang:"es", country:"mx" },
+    { flag:"🇪🇸", label:"Spain",     lang:"es", country:"es" },
+    { flag:"🇩🇪", label:"Germany",   lang:"de", country:"de" },
+    { flag:"🇫🇷", label:"France",    lang:"fr", country:"fr" },
+    { flag:"🇮🇹", label:"Italy",     lang:"it", country:"it" },
+    { flag:"🇯🇵", label:"Japan",     lang:"ja", country:"jp" },
+  ];
+
+  const [selectedLocales, setSelectedLocales] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("wc2026_news_locales") || "null");
+      return Array.isArray(saved) && saved.length ? saved : ["us"];
+    } catch { return ["us"]; }
+  });
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastFetch, setLastFetch] = useState(null);
 
-  const fetchNews = async () => {
+  const fetchNews = async (countries = selectedLocales) => {
     setLoading(true); setError(null);
     try {
-      const r = await fetch("/api/news");
-      const d = await r.json();
-      if (d.articles?.length) { setArticles(d.articles); setLastFetch(Date.now()); }
-      else setError("No articles found.");
+      // Fetch all selected countries in parallel
+      const locales = NEWS_LOCALES.filter(l => countries.includes(l.country));
+      const results = await Promise.all(
+        locales.map(loc => fetch(`/api/news?lang=${loc.lang}&country=${loc.country}`)
+          .then(r => r.json())
+          .then(d => {
+            if (d._quota === "exhausted") return [];
+            return (d.articles || []).map(a => ({...a, _country: loc.country, _flag: loc.flag}));
+          })
+          .catch(() => [])
+        )
+      );
+      // Interleave: zip articles from all sources round-robin
+      const merged = [];
+      const maxLen = Math.max(...results.map(r => r.length));
+      for (let i = 0; i < maxLen; i++) {
+        results.forEach(r => { if (r[i]) merged.push(r[i]); });
+      }
+      // Dedupe by url
+      const seen = new Set();
+      const deduped = merged.filter(a => { if (seen.has(a.url)) return false; seen.add(a.url); return true; });
+      if (deduped.length) { setArticles(deduped); setLastFetch(Date.now()); }
+      else setError("No articles available — daily news quota may be reached. Cached articles refresh overnight.");
     } catch(e) { setError("Couldn't load news. Try again."); }
     setLoading(false);
+  };
+
+  const toggleLocale = (country) => {
+    setSelectedLocales(prev => {
+      const next = prev.includes(country)
+        ? prev.length > 1 ? prev.filter(c => c !== country) : prev // keep at least 1
+        : [...prev, country];
+      try { localStorage.setItem("wc2026_news_locales", JSON.stringify(next)); } catch {}
+      fetchNews(next);
+      return next;
+    });
   };
 
   useEffect(() => { fetchNews(); }, []);
@@ -4915,21 +5390,32 @@ function WCNewsTab({ tabTop=116 }) {
   return (
     <div>
       {/* Sticky header */}
-      <div ref={_ref} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+      <div ref={_ref} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:DS.shadow.sticky,padding:"8px 13px"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
           <span style={{fontSize:15,fontWeight:700,color:C.green}}>{"📰 World Cup 2026 News"}</span>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
             {lastFetch && <span style={{fontSize:11,color:C.dim}}>Updated {timeAgo(new Date(lastFetch).toISOString())}</span>}
-            <button onClick={fetchNews} disabled={loading} style={{padding:"4px 10px",borderRadius:8,border:`1px solid ${C.b2}`,background:C.s2,color:C.mid,fontSize:11,cursor:"pointer",opacity:loading?0.5:1}}>↻ Refresh</button>
+            <button onClick={()=>fetchNews()} disabled={loading} style={{padding:"4px 10px",borderRadius:8,border:`1px solid ${C.b2}`,background:C.s2,color:C.mid,fontSize:11,cursor:"pointer",opacity:loading?0.5:1}}>↻ Refresh</button>
           </div>
+        </div>
+        {/* Source country picker */}
+        <div style={{fontSize:10,color:C.dim,fontWeight:700,letterSpacing:"0.08em",marginBottom:5}}>NEWS SOURCE COUNTRY</div>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+          {NEWS_LOCALES.map(loc=>{
+            const active = selectedLocales.includes(loc.country);
+            return (
+              <button key={loc.country} onClick={()=>toggleLocale(loc.country)} style={{padding:"4px 10px",borderRadius:999,border:`1px solid ${active?C.green:C.b2}`,background:active?`${C.green}18`:C.s2,color:active?C.green:C.mid,fontSize:11,fontWeight:600,cursor:"pointer",flexShrink:0}}>
+                {loc.flag} {loc.label}
+              </button>
+            );
+          })}
         </div>
       </div>
       
 
       <div style={{height:0}}/>
       <div style={{padding:"0 0 20px"}}>
-        {/* Tournament facts */}
-        <QuickFacts tabTop={tabTop}/>
+        {/* News articles below */}
 
         {/* News feed */}
         <div style={{fontSize:12,fontWeight:700,color:C.mid,letterSpacing:"0.08em",marginBottom:10}}>{"🗞️ LATEST HEADLINES"}</div>
@@ -4960,6 +5446,7 @@ function WCNewsTab({ tabTop=116 }) {
                 <div style={{fontSize:13,fontWeight:700,color:C.text,lineHeight:1.4,marginBottom:4,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{a.title}</div>
                 {a.description && <div style={{fontSize:11,color:C.dim,lineHeight:1.4,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden",marginBottom:6}}>{a.description}</div>}
                 <div style={{display:"flex",alignItems:"center",gap:6}}>
+                  {a._flag && selectedLocales.length > 1 && <span style={{fontSize:12}}>{a._flag}</span>}
                   <span style={{fontSize:10,color:C.mid,fontWeight:600}}>{a.source}</span>
                   <span style={{fontSize:10,color:C.dim}}>·</span>
                   <span style={{fontSize:10,color:C.dim}}>{timeAgo(a.publishedAt)}</span>
@@ -5033,6 +5520,7 @@ function PullToRefresh({ onRefresh, children }) {
   const [pullY, setPullY] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const startY = useRef(0);
+  const startX = useRef(0);
   const pullingRef = useRef(false);
   const pullYRef = useRef(0);
   const refreshingRef = useRef(false);
@@ -5043,6 +5531,7 @@ function PullToRefresh({ onRefresh, children }) {
       const scroller = document.getElementById("scroll-area");
       if (scroller && scroller.scrollTop > 0) return;
       startY.current = e.touches[0].clientY;
+      startX.current = e.touches[0].clientX;
     };
 
     const onTouchMove = (e) => {
@@ -5050,8 +5539,10 @@ function PullToRefresh({ onRefresh, children }) {
       if (scroller && scroller.scrollTop > 0) return;
 
       const dy = e.touches[0].clientY - startY.current;
-      if (dy > 8) {
-        // Prevent iOS native bounce — only prevent when pulling down from top
+      const dx = Math.abs(e.touches[0].clientX - startX.current);
+
+      // Only intercept if clearly pulling DOWN and not swiping horizontally
+      if (dy > 8 && dx < 10) {
         e.preventDefault();
         const clamped = Math.min(dy * 0.45, THRESHOLD + 20);
         pullingRef.current = true;
@@ -5102,7 +5593,7 @@ function PullToRefresh({ onRefresh, children }) {
             width:44, height:44, borderRadius:"50%",
             background:C.s1, border:`2px solid ${C.green}`,
             display:"flex", alignItems:"center", justifyContent:"center",
-            boxShadow:"0 4px 20px rgba(0,0,0,.5)",
+            boxShadow:DS.shadow.panel,
             opacity: Math.min(pullY / 20, 1),
           }}>
             {refreshing
@@ -5177,20 +5668,33 @@ function AskWorldCupTab({ tabTop=116 }) {
   const [q, setQ] = useState("");
   const [answer, setAnswer] = useState(null);
   const [loading, setLoading] = useState(false);
+  const { scores } = useContext(LiveScoresCtx);
+  const scoresRef = scores || {};
 
   const examples = [
+    "Teams at WC for first time",
+    "Most international caps",
+    "Top players by goals",
+    "Most titled teams",
+    "Championship odds",
+    "Strongest teams",
+    "Best form teams",
+    "Total goals scored",
+    "Highest scoring match",
+    "Biggest win so far",
+    "Which teams have won so far",
+    "Unbeaten teams",
+    "How many matches left",
+    "Matches today",
     "Next match",
-    "Next 5 matches",
     "Next Brazil match",
-    "Next match involving Messi",
-    "Show matches at 12AM ET",
-    "Show matches at 9PM ET",
-    "Show matches in Miami",
     "Group A matches",
-    "Brazil matches",
-    "Final match",
-    "Most yellow cards",
+    "Matches in Miami",
+    "Germany all-time top scorers",
     "Brazil vs France history",
+    "Who is coaching Spain",
+    "Teams from Africa",
+    "Final match",
   ];
 
   const norm = (v) => String(v || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
@@ -5333,8 +5837,174 @@ function AskWorldCupTab({ tabTop=116 }) {
       return { title:"Final / knockout matches", summary: rows.length ? `${rows.length} match${rows.length!==1?"es":""} found.` : "The final will appear here once the schedule data includes it.", rows };
     }
 
-    // Cards / events placeholder.
-    if (text.includes("yellow") || text.includes("card")) {
+    // First-time / debut WC teams
+    if (text.includes("first time") || text.includes("debut") || text.includes("first wc") || text.includes("first world cup") || text.includes("never been") || text.includes("new team") || text.includes("historic")) {
+      const DEBUTS = {
+        "Uzbekistan": "🇺🇿 Uzbekistan — first ever World Cup",
+        "Cape Verde": "🇨🇻 Cape Verde — first ever World Cup",
+        "Curacao": "🇨🇼 Curaçao — first ever World Cup",
+        "Jordan": "🇯🇴 Jordan — first ever World Cup",
+        "Haiti": "🇭🇹 Haiti — return after 52 years (last: 1974)",
+        "Iraq": "🇮🇶 Iraq — return after 40 years (last: 1986)",
+        "Bosnia & Herz.": "🇧🇦 Bosnia & Herz. — second appearance (last: 2014)",
+        "DR Congo": "🇨🇩 DR Congo — return after 48 years (last: 1974 as Zaire)",
+      };
+      return { title:"First-timers & long-absent teams", summary:Object.values(DEBUTS).join(" · "), rows:[] };
+    }
+
+    // Most international caps (from player data across all teams)
+    if (text.includes("most cap") || text.includes("most international") || text.includes("most appear") || text.includes("experienced player") || text.includes("veteran player")) {
+      const allPlayers = [];
+      Object.entries(TEAM_DATA||{}).forEach(([team, data]) => {
+        (data.players||[]).forEach(p => { if (p.caps > 0) allPlayers.push({...p, team, flag:data.flag}); });
+      });
+      const top = allPlayers.sort((a,b)=>b.caps-a.caps).slice(0,8);
+      return { title:"Most international caps at this WC", summary:top.map((p,i)=>`${i+1}. ${p.flag} ${p.name} (${p.team}) — ${p.caps} caps`).join(" · "), rows:[] };
+    }
+
+    // Top players by international goals
+    if ((text.includes("top player") || text.includes("most goal") || text.includes("top goal") || text.includes("international goal")) && !text.includes("match")) {
+      const allPlayers = [];
+      Object.entries(TEAM_DATA||{}).forEach(([team, data]) => {
+        (data.players||[]).forEach(p => { if (p.goals > 0) allPlayers.push({...p, team, flag:data.flag}); });
+      });
+      const top = allPlayers.sort((a,b)=>b.goals-a.goals).slice(0,8);
+      return { title:"Top international goalscorers at this WC", summary:top.map((p,i)=>`${i+1}. ${p.flag} ${p.name} (${p.team}) — ${p.goals} goals`).join(" · "), rows:[] };
+    }
+
+    // Most WC titles
+    if (text.includes("title") || text.includes("winner") && text.includes("most") || text.includes("champion") && !text.includes("chance") || text.includes("won the world cup") || text.includes("how many title")) {
+      const withTitles = Object.entries(TEAM_DATA||{}).filter(([,d])=>d.titles>0).sort((a,b)=>b[1].titles-a[1].titles);
+      if (!withTitles.length) return { title:"WC title holders", summary:"No title data found.", rows:[] };
+      return { title:"World Cup winners", summary:withTitles.map(([t,d])=>`${d.flag} ${t}: ${d.titles} 🏆`).join(" · "), rows:[] };
+    }
+
+    // Coaches
+    if (text.includes("coach") || text.includes("manager") || text.includes("head coach")) {
+      const teamMatch = findTeamInText(text);
+      if (teamMatch && TEAM_DATA?.[teamMatch]) {
+        const d = TEAM_DATA[teamMatch];
+        return { title:`${d.flag} ${teamMatch} coach`, summary:`${d.coach} is the head coach of ${teamMatch}.`, rows:[] };
+      }
+      // List all coaches
+      const coaches = Object.entries(TEAM_DATA||{}).filter(([,d])=>d.coach).slice(0,12);
+      return { title:"Head coaches at this World Cup", summary:coaches.map(([t,d])=>`${d.flag} ${t}: ${d.coach}`).join(" · "), rows:[] };
+    }
+
+    // Teams by confederation
+    if (text.includes("africa") || text.includes("caf") || text.includes("south america") || text.includes("conmebol") || text.includes("europe") || text.includes("uefa") || text.includes("asia") || text.includes("afc") || text.includes("concacaf") || text.includes("north america") || text.includes("central america")) {
+      const confMap = {africa:"CAF", "south america":"CONMEBOL", europe:"UEFA", asia:"AFC", concacaf:"CONCACAF", "north america":"CONCACAF", "central america":"CONCACAF"};
+      const confKey = Object.keys(confMap).find(k => text.includes(k)) || (text.includes("caf")?"CAF":text.includes("conmebol")?"CONMEBOL":text.includes("uefa")?"UEFA":text.includes("afc")?"AFC":"CONCACAF");
+      const conf = confMap[confKey] || confKey.toUpperCase();
+      const teams = Object.entries(TEAM_DATA||{}).filter(([,d])=>d.conf===conf);
+      return { title:`${conf} teams (${teams.length})`, summary:teams.map(([t,d])=>`${d.flag} ${t}`).join(" · "), rows:[] };
+    }
+
+    // Highest scoring / biggest win
+    if (text.includes("highest scor") || (text.includes("most goal") && text.includes("match")) || text.includes("biggest win") || text.includes("best result")) {
+      const finished = MATCHES.filter(m => {
+        const sc = scoresRef[`${m.home}|${m.away}`];
+        return sc && sc.hg !== null && sc.ag !== null && (sc.status==="FT"||sc.status==="AET"||sc.status==="finished"||sc.status==="ended");
+      });
+      if (!finished.length) return { title:"No finished matches yet", summary:"Check back once matches have been played.", rows:[] };
+      const withScores = finished.map(m => { const sc = scoresRef[`${m.home}|${m.away}`]; return {...m, hg:sc.hg, ag:sc.ag, total:sc.hg+sc.ag, diff:Math.abs(sc.hg-sc.ag)}; });
+      if (text.includes("biggest win")) {
+        const top = [...withScores].sort((a,b)=>b.diff-a.diff).slice(0,3);
+        const rows = top.map(m => ({ title:`${getFlag(m.home)} ${m.home} ${m.hg}–${m.ag} ${getFlag(m.away)} ${m.away}`, meta:`${m.date} · Margin: ${m.diff}`, match:m }));
+        return { title:"Biggest wins so far", summary:`Top ${rows.length} by goal margin.`, rows };
+      }
+      const top = [...withScores].sort((a,b)=>b.total-a.total).slice(0,3);
+      const rows = top.map(m => ({ title:`${getFlag(m.home)} ${m.home} ${m.hg}–${m.ag} ${getFlag(m.away)} ${m.away}`, meta:`${m.date} · ${m.total} goals`, match:m }));
+      return { title:"Highest scoring matches", summary:`Top ${rows.length} by total goals.`, rows };
+    }
+
+    // Which teams have won / unbeaten
+    if (text.includes("won so far") || text.includes("which team") && text.includes("win") || text.includes("unbeaten") || text.includes("no loss")) {
+      const teamRecord = {};
+      MATCHES.forEach(m => {
+        const sc = scoresRef[`${m.home}|${m.away}`];
+        if (!sc || sc.hg === null || !(sc.status==="FT"||sc.status==="AET"||sc.status==="finished"||sc.status==="ended")) return;
+        [m.home, m.away].forEach(t => { if (!teamRecord[t]) teamRecord[t] = {w:0,d:0,l:0}; });
+        if (sc.hg > sc.ag) { teamRecord[m.home].w++; teamRecord[m.away].l++; }
+        else if (sc.hg < sc.ag) { teamRecord[m.away].w++; teamRecord[m.home].l++; }
+        else { teamRecord[m.home].d++; teamRecord[m.away].d++; }
+      });
+      if (text.includes("unbeaten")) {
+        const unbeaten = Object.entries(teamRecord).filter(([,r])=>r.l===0&&(r.w>0||r.d>0)).sort((a,b)=>b[1].w-a[1].w);
+        if (!unbeaten.length) return { title:"Unbeaten teams", summary:"No finished matches yet.", rows:[] };
+        return { title:`Unbeaten teams (${unbeaten.length})`, summary:unbeaten.map(([t,r])=>`${getFlag(t)} ${t}: ${r.w}W ${r.d}D`).join(" · "), rows:[] };
+      }
+      const winners = Object.entries(teamRecord).filter(([,r])=>r.w>0).sort((a,b)=>b[1].w-a[1].w);
+      if (!winners.length) return { title:"No wins yet", summary:"No finished matches yet.", rows:[] };
+      return { title:`Teams with wins (${winners.length})`, summary:winners.map(([t,r])=>`${getFlag(t)} ${t}: ${r.w}W ${r.d}D ${r.l}L`).join(" · "), rows:[] };
+    }
+
+    // How many matches left / remaining
+    if (text.includes("how many match") || text.includes("matches left") || text.includes("remaining match")) {
+      const finished = MATCHES.filter(m => { const sc = scoresRef[`${m.home}|${m.away}`]; return sc && (sc.status==="FT"||sc.status==="AET"||sc.status==="finished"||sc.status==="ended"); });
+      const remaining = MATCHES.length - finished.length;
+      return { title:"Tournament progress", summary:`${finished.length} of ${MATCHES.length} matches played · ${remaining} remaining.`, rows:[] };
+    }
+
+    // Championship odds
+    if (text.includes("odd") || text.includes("favorite") || text.includes("favourite") || text.includes("champion") && text.includes("chance") || text.includes("polymarket")) {
+      const top = PREDS.filter(p=>p.team!=="Others").sort((a,b)=>b.poly-a.poly).slice(0,8);
+      return { title:"Championship odds (Polymarket)", summary:top.map(p=>`${getFlag(p.team)} ${p.team} ${p.poly}% ${p.trend}`).join(" · "), rows:[] };
+    }
+
+    // Strongest teams / team ratings
+    if (text.includes("strong") || text.includes("best team") || text.includes("top team") || text.includes("rated")) {
+      const top = Object.entries(STR).sort((a,b)=>b[1]-a[1]).slice(0,10);
+      return { title:"Strongest teams (simulator ratings)", summary:top.map(([t,r],i)=>`${i+1}. ${getFlag(t)} ${t} (${r})`).join(" · "), rows:[] };
+    }
+
+    // Best form teams
+    if (text.includes("form") || text.includes("in-form") || text.includes("hot team") || text.includes("on a run")) {
+      const scored = Object.entries(FORM_DATA).map(([t,f])=>{
+        const pts = f.slice(-5).reduce((s,r)=>s+(r==="W"?3:r==="D"?1:0),0);
+        return [t, pts, f.slice(-5)];
+      }).sort((a,b)=>b[1]-a[1]).slice(0,8);
+      return { title:"Best recent form (last 5 games)", summary:scored.map(([t,,f])=>`${getFlag(t)} ${t}: ${f.join("")}`).join(" · "), rows:[] };
+    }
+
+    // Matches today
+    if (text.includes("today") || text.includes("match today")) {
+      const todayStr = new Date().toLocaleDateString("en-US",{month:"short",day:"numeric"});
+      const rows = MATCHES.filter(m => m.date === todayStr).map(fmtMatch);
+      return { title:`Matches today (${todayStr})`, summary: rows.length ? `${rows.length} match${rows.length!==1?"es":""} today.` : "No matches today.", rows };
+    }
+
+    // All-time WC top scorers for a team
+    const scorerTeam = Object.keys(WC_TOP_SCORERS).find(t => norm(text).includes(norm(t)));
+    if (scorerTeam && (text.includes("scor") || text.includes("goal") || text.includes("history") || text.includes("all.time"))) {
+      const scorers = WC_TOP_SCORERS[scorerTeam];
+      return { title:`${getFlag(scorerTeam)} ${scorerTeam} all-time WC top scorers`, summary:scorers.map((s,i)=>`${i+1}. ${s.name} (${s.goals})`).join(" · "), rows:[] };
+    }
+
+    // Tournament stats queries
+    if (text.includes("top scor") && !scorerTeam) {
+      return { title:"Top scorers", summary:"Live top-scorer data comes from the match events feed. Open any finished match card → Match Events to see goals. A dedicated leaderboard is on the roadmap.", rows:[] };
+    }
+
+    if (text.includes("total goal") || text.includes("goals scored") || text.includes("how many goal")) {
+      const finished = MATCHES.filter(m => {
+        const sc = scoresRef[`${m.home}|${m.away}`];
+        return sc && (sc.status==="FT"||sc.status==="AET"||sc.status==="PEN"||sc.status==="finished"||sc.status==="ended"||sc.status==="after_extra_time"||sc.status==="after_penalties");
+      });
+      const total = finished.reduce((sum,m)=>{
+        const sc = scoresRef[`${m.home}|${m.away}`];
+        return sum + (sc?.hg||0) + (sc?.ag||0);
+      }, 0);
+      const played = finished.length;
+      const avg = played > 0 ? (total/played).toFixed(2) : "—";
+      return { title:"Total goals scored", summary: played > 0 ? `${total} goals scored across ${played} finished match${played!==1?"es":""} (avg ${avg} per game).` : "No finished matches yet — check back during the tournament.", rows:[] };
+    }
+
+    if (text.includes("red card") || (text.includes("red") && text.includes("card"))) {
+      return { title:"Red cards", summary:"Red card counts per match are available in Match Events — tap any finished match card and expand the Match Timeline. A tournament-wide red card tally is on the roadmap once the events API returns card data across all matches.", rows:[] };
+    }
+
+    if (text.includes("yellow card") || text.includes("card") || text.includes("yellow")) {
       return { title:"Yellow-card leaders", summary:"This question will become available once match-event feeds return player card data. The app already has a match-events API path ready for this type of query.", rows:[] };
     }
 
@@ -5376,8 +6046,8 @@ function AskWorldCupTab({ tabTop=116 }) {
       </Card>
 
       <div style={{fontSize:11,color:C.dim,fontWeight:800,letterSpacing:"0.12em",textTransform:"uppercase",margin:"12px 2px 8px"}}>Popular Questions</div>
-      <div style={{display:"flex",gap:8,overflowX:"auto",paddingBottom:8,scrollbarWidth:"none"}}>
-        {examples.map(ex=><button key={ex} onClick={()=>runAsk(ex)} style={{flex:"0 0 auto",border:`1px solid ${C.b2}`,background:C.s1,color:C.text,borderRadius:999,padding:"8px 11px",fontWeight:750,fontSize:12,cursor:"pointer"}}>{ex}</button>)}
+      <div style={{display:"flex",flexWrap:"wrap",gap:8,paddingBottom:4}}>
+        {examples.map(ex=><button key={ex} onClick={()=>runAsk(ex)} style={{border:`1px solid ${C.b2}`,background:C.s1,color:C.text,borderRadius:999,padding:"7px 11px",fontWeight:600,fontSize:12,cursor:"pointer"}}>{ex}</button>)}
       </div>
 
       {loading && <Card><div style={{padding:14,color:C.mid}}>Searching World Cup data...</div></Card>}
@@ -5407,7 +6077,7 @@ function StatsHubTab({ initial="", tabTop=116 }) {
 
   return (
     <div>
-      <div ref={_statsHubRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:`0 2px 8px rgba(0,0,0,0.8)`,padding:"8px 13px"}}>
+      <div ref={_statsHubRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:DS.shadow.sticky,padding:"8px 13px"}}>
         <div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none"}}>
           <Pill active={mode==="team"} onClick={()=>setMode("team")} color={C.green}>📊 Team Stats</Pill>
           <Pill active={mode==="h2h"} onClick={()=>setMode("h2h")} color={C.rival}>⚔️ Head to Head</Pill>
@@ -5493,7 +6163,7 @@ function InstallBanner() {
   return (
     <>
       {/* Install banner */}
-      <div style={{position:"fixed",bottom:0,left:0,right:0,zIndex:500,maxWidth:700,margin:"0 auto",padding:"12px 14px",background:`linear-gradient(135deg,${C.s1},${C.s2})`,borderTop:`1px solid ${C.green}44`,display:"flex",alignItems:"center",gap:10,boxShadow:"0 -4px 20px rgba(0,0,0,0.3)"}}>
+      <div style={{position:"fixed",bottom:0,left:0,right:0,zIndex:500,maxWidth:700,margin:"0 auto",padding:"12px 14px",background:`linear-gradient(135deg,${C.s1},${C.s2})`,borderTop:`1px solid ${C.green}44`,display:"flex",alignItems:"center",gap:10,boxShadow:DS.shadow.panel}}>
         <img src="/icons/icon-192.png" alt="icon" style={{width:36,height:36,borderRadius:8,flexShrink:0}}/>
         <div style={{flex:1}}>
           <div style={{fontWeight:700,color:C.text,fontSize:13}}>Install World Cup 2026</div>
@@ -5620,7 +6290,32 @@ export default function App() {
   useEffect(() => {
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("/sw.js")
-        .then(() => console.log("[PWA] Service worker registered"))
+        .then(reg => {
+          console.log("[PWA] Service worker registered");
+
+          // Check for updates every 60 seconds
+          setInterval(() => reg.update(), 60 * 1000);
+
+          // When a new SW is waiting — force it to activate immediately
+          const onUpdateFound = () => {
+            const newWorker = reg.installing;
+            if (!newWorker) return;
+            newWorker.addEventListener("statechange", () => {
+              if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+                // New version ready — tell SW to skip waiting then reload
+                newWorker.postMessage({ type: "SKIP_WAITING" });
+              }
+            });
+          };
+
+          reg.addEventListener("updatefound", onUpdateFound);
+
+          // When SW activates (after skipWaiting) — reload all clients
+          let refreshing = false;
+          navigator.serviceWorker.addEventListener("controllerchange", () => {
+            if (!refreshing) { refreshing = true; window.location.reload(); }
+          });
+        })
         .catch(e => console.warn("[PWA] SW registration failed:", e));
     }
   }, []);
@@ -5769,9 +6464,18 @@ export default function App() {
   };
 
   const onTeam=(t)=>{setStatsTeam(t);setTab("stats");};
-  const { isLive: isMatchLive, refresh: refreshScores } = useContext(LiveScoresCtx);
+  const { isLive: isMatchLive, getScore: getScoreMain, refresh: refreshScores } = useContext(LiveScoresCtx);
 
-  const hasLiveMatches = MATCHES.some(m => isMatchLive(m.home, m.away));
+  const hasLiveMatches = MATCHES.some(m => {
+    if (isMatchLive(m.home, m.away)) return true;
+    const sc = getScoreMain(m.home, m.away);
+    if (sc && statusIsFinished(sc.status)) return false;
+    const iso = MATCH_UTC[m.id];
+    if (!iso) return false;
+    const ko = new Date(iso).getTime();
+    const msSince = Date.now() - ko;
+    return msSince > -60000 && msSince < 130 * 60 * 1000;
+  });
   const savedIds = new Set(saved.map(x=>x.match?.id));
   const onAction=(m)=>{
     if(savedIds.has(m.id)){ setSaved(s=>s.filter(x=>x.match?.id!==m.id)); setToast("Removed from saved"); }
@@ -5791,7 +6495,7 @@ export default function App() {
     <div style={{position:"fixed",inset:0,background:"#060e0a",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",zIndex:9999}}>
       <div style={{animation:"splashIn .5s ease forwards",opacity:0}}>
         {/* App icon */}
-        <div style={{width:100,height:100,margin:"0 auto 24px",borderRadius:22,overflow:"hidden",boxShadow:"0 8px 32px rgba(0,0,0,.5)"}}>
+        <div style={{width:100,height:100,margin:"0 auto 24px",borderRadius:22,overflow:"hidden",boxShadow:DS.shadow.modal}}>
           <img src="/icons/icon-512.png" alt="WC 2026" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
         </div>
         <div style={{textAlign:"center",marginBottom:8}}>
@@ -5844,11 +6548,8 @@ export default function App() {
             <div style={{display:"flex",overflowX:"auto",scrollbarWidth:"none",marginBottom:-1}}>
               {TABS.map(t=>(
                 <button key={t.id} onClick={()=>setTab(t.id)} style={{flex:"0 0 auto",padding:"8px 8px",background:"none",border:"none",borderBottom:`2px solid ${tab===t.id?C.green:"transparent"}`,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,color:tab===t.id?C.green:C.dim,position:"relative"}}>
-                  <span style={{fontSize:14}}>{t.icon}</span>
+                  <span style={{fontSize:14,animation:t.id==="live"&&hasLiveMatches?"pulse 1.5s infinite":undefined}}>{t.icon}</span>
                   <span style={{fontSize:9,fontWeight:600,whiteSpace:"nowrap"}}>{t.label}</span>
-                  {t.id==="live" && hasLiveMatches && tab!=="live" && (
-                    <span style={{position:"absolute",top:6,right:6,width:7,height:7,borderRadius:"50%",background:"#ef4444",boxShadow:"0 0 0 2px #ef444488",animation:"pulse 1.5s infinite"}}/>
-                  )}
                 </button>
               ))}
             </div>
@@ -5868,7 +6569,7 @@ export default function App() {
           {tab==="bracket"   && <MyBracketTab tabTop={tabBarBottom}/>}
           {tab==="ask"       && <AskWorldCupTab tabTop={tabBarBottom}/>}
           {tab==="news"       && <WCNewsTab tabTop={tabBarBottom}/>}
-          {tab==="saved"     && <div style={{paddingTop:14}}><SavedTab saved={saved} onRemove={onRemove}/></div>}
+          {tab==="saved"     && <div style={{paddingTop:14}}><SavedTab saved={saved} onRemove={onRemove} onMatchTap={onMatchTap}/></div>}
         </div>
         </PullToRefresh>
         {/* Saved view overlay */}
@@ -5887,7 +6588,7 @@ export default function App() {
             {/* Scrollable content */}
             <div style={{flex:1,overflowY:"auto",position:"relative"}} id="saved-scroll">
               <div style={{maxWidth:700,margin:"0 auto",padding:"0 13px 80px"}}>
-                <SavedTab saved={saved} onRemove={onRemove} tabTop={57}/>
+                <SavedTab saved={saved} onRemove={onRemove} onMatchTap={onMatchTap} tabTop={57}/>
               </div>
             </div>
           </div>
@@ -5919,4 +6620,3 @@ export default function App() {
     </LiveScoresProvider>
   );
 }
-

@@ -1582,7 +1582,10 @@ function GrpTab({ onTeam, onMatchTap, tabTop=116 }) {
             {standings.map((row,i)=>(
               <div key={row.team} onClick={()=>onTeam(row.team)} style={{display:"grid",gridTemplateColumns:"22px 1fr 28px 28px 28px 28px 32px 32px",padding:"9px 10px",borderBottom:i<3?`1px solid ${C.b1}`:"none",cursor:"pointer",borderLeft:`3px solid ${qc(row.pos)}`,background:row.pos<=2?`${C.green}08`:row.pos===3?`${C.gold}08`:"transparent"}} onMouseEnter={e=>e.currentTarget.style.background=`${C.green}12`} onMouseLeave={e=>e.currentTarget.style.background=row.pos<=2?`${C.green}08`:row.pos===3?`${C.gold}08`:"transparent"}>
                 <div style={{fontSize:11,color:C.dim,display:"flex",alignItems:"center"}}>{row.pos}</div>
-                <div style={{display:"flex",alignItems:"center",gap:6}}><Crest team={row.team} size={30}/><span style={{fontSize:14,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{row.team}</span></div>
+                <div style={{display:"flex",alignItems:"center",gap:6}}>
+                  <Crest team={row.team} size={30}/>
+                  <span style={{fontSize:14,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{row.team}</span>
+                </div>
                 {[row.p,row.w,row.d,row.l].map((v,j)=><div key={j} style={{fontSize:14,color:C.mid,textAlign:"center",display:"flex",alignItems:"center",justifyContent:"center"}}>{v}</div>)}
                 <div style={{fontSize:14,color:row.gd>0?C.green:row.gd<0?C.red:C.mid,textAlign:"center",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:600}}>{row.gd>0?"+":""}{row.gd}</div>
                 <div style={{fontSize:17,fontWeight:800,color:C.text,textAlign:"center",display:"flex",alignItems:"center",justifyContent:"center"}}>{row.pts}</div>
@@ -1780,14 +1783,16 @@ function StatsTab({ initial="", tabTop=116 }) {
                 <div style={{flex:1}}>
                   <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:8}}>
                     <div style={{fontWeight:700,fontSize:20,color:C.text}}>{sel}</div>
-                    {(() => { const p=PREDS.find(x=>x.team===sel); return p ? (
-                      <a href="https://polymarket.com/event/world-cup-winner" target="_blank" rel="noopener noreferrer" style={{textDecoration:"none",flexShrink:0}}>
-                        <div style={{textAlign:"center",background:`${C.green}18`,border:`1px solid ${C.green}44`,borderRadius:10,padding:"5px 10px",cursor:"pointer"}}>
-                          <div style={{fontSize:16,fontWeight:900,color:C.green,lineHeight:1}}>{p.poly}%</div>
-                          <div style={{fontSize:9,color:C.dim,marginTop:2}}>to win</div>
-                        </div>
-                      </a>
-                    ) : null; })()}
+                    <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
+                      {(() => { const p=PREDS.find(x=>x.team===sel); return p ? (
+                        <a href="https://polymarket.com/event/world-cup-winner" target="_blank" rel="noopener noreferrer" style={{textDecoration:"none",flexShrink:0}}>
+                          <div style={{textAlign:"center",background:`${C.green}18`,border:`1px solid ${C.green}44`,borderRadius:10,padding:"5px 10px",cursor:"pointer"}}>
+                            <div style={{fontSize:16,fontWeight:900,color:C.green,lineHeight:1}}>{p.poly}%</div>
+                            <div style={{fontSize:9,color:C.dim,marginTop:2}}>to win</div>
+                          </div>
+                        </a>
+                      ) : null; })()}
+                    </div>
                   </div>
                   <div style={{fontSize:12,color:C.mid,marginTop:3}}>{d.conf} · Coach: {d.coach}</div>
                   <div style={{display:"flex",gap:6,marginTop:6,flexWrap:"wrap"}}>
@@ -5456,6 +5461,25 @@ function WCNewsTab({ tabTop=116 }) {
           </a>
         ))}
       </div>
+
+      {/* Fan Shop */}
+      <div style={{marginTop:24,borderTop:`1px solid ${C.b2}`,paddingTop:16}}>
+        <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:12}}>🛍️ Fan Shop</div>
+        <div style={{display:"flex",flexDirection:"column",gap:8}}>
+          {SHOP_CATEGORIES.map(cat => (
+            <a key={cat.id} href={AFFILIATE.amazon(cat.q)} target="_blank" rel="noopener noreferrer sponsored" style={{textDecoration:"none"}}>
+              <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:10,cursor:"pointer"}}>
+                <span style={{fontSize:20}}>{cat.icon}</span>
+                <span style={{fontSize:13,fontWeight:600,color:C.text,flex:1}}>{cat.label}</span>
+                <span style={{fontSize:11,color:C.gold}}>Shop →</span>
+              </div>
+            </a>
+          ))}
+        </div>
+        <div style={{fontSize:10,color:C.dim,marginTop:10,lineHeight:1.5}}>
+          Affiliate links — we earn a small commission at no cost to you.
+        </div>
+      </div>
     </div>
   );
 }
@@ -6092,12 +6116,152 @@ function StatsHubTab({ initial="", tabTop=116 }) {
   );
 }
 
+// ── AFFILIATE CONFIG ─────────────────────────────────────────────────────────
+const AFFILIATE = {
+  amazon: (q) => `https://www.amazon.com/s?k=${encodeURIComponent(q)}&tag=worldcupapp-20`,
+  fubo:   "PLACEHOLDER_FUBO_AFFILIATE_URL",
+  nordvpn:"PLACEHOLDER_NORDVPN_AFFILIATE_URL",
+  hrb:    "PLACEHOLDER_HARDROCK_AFFILIATE_URL",
+};
+
+const HRB_STATES = new Set(["AZ","CO","FL","IL","IN","MI","NJ","OH","TN","VA"]);
+
+const SHOP_CATEGORIES = [
+  { id:"jerseys",  icon:"👕", label:"Jerseys",          q:"World Cup 2026 national team jersey" },
+  { id:"balls",    icon:"⚽", label:"Soccer Balls",     q:"World Cup 2026 soccer ball official" },
+  { id:"decor",    icon:"🎉", label:"Watch Party Decor",q:"World Cup 2026 party decorations flags banner" },
+  { id:"devices",  icon:"📺", label:"Streaming Devices",q:"streaming device fire tv stick 4k" },
+  { id:"merch",    icon:"🧣", label:"WC Merchandise",   q:"FIFA World Cup 2026 merchandise scarf hat" },
+];
+
+function AmazonBtn({ q, label }) {
+  return (
+    <a href={AFFILIATE.amazon(q)} target="_blank" rel="noopener noreferrer sponsored" style={{textDecoration:"none"}}>
+      <div style={{display:"flex",alignItems:"center",gap:6,padding:"8px 14px",background:`${C.gold}18`,border:`1px solid ${C.gold}44`,borderRadius:10,cursor:"pointer"}}>
+        <span style={{fontSize:13}}>🛒</span>
+        <span style={{fontSize:12,fontWeight:700,color:C.gold}}>{label}</span>
+        <span style={{fontSize:10,color:C.dim,marginLeft:"auto"}}>Amazon ↗</span>
+      </div>
+    </a>
+  );
+}
+
+function ShopTab({ tabTop=116, geoData=null }) {
+  const userState = geoData?.region || "";
+  const showHRB = HRB_STATES.has(userState);
+  const [amazonOpen, setAmazonOpen] = useState(false);
+
+  return (
+    <div style={{padding:"0 0 32px"}}>
+
+      {/* Header */}
+      <div style={{padding:"16px 16px 8px"}}>
+        <div style={{fontWeight:800,fontSize:18,color:C.green,marginBottom:4}}>⚽ Fan Shop</div>
+        <div style={{fontSize:12,color:C.dim}}>Support the app — we earn a small commission at no cost to you.</div>
+      </div>
+
+      {/* Watch Live — Fubo */}
+      <div style={{padding:"0 16px",marginTop:8}}>
+        <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10}}>📡 Watch Live</div>
+        <a href={AFFILIATE.fubo} target="_blank" rel="noopener noreferrer sponsored" style={{textDecoration:"none"}}>
+          <div style={{display:"flex",alignItems:"center",gap:12,padding:"14px",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:12,cursor:"pointer"}}>
+            <span style={{fontSize:28,flexShrink:0}}>📺</span>
+            <div style={{flex:1}}>
+              <div style={{fontWeight:700,fontSize:14,color:C.text}}>Watch on Fubo</div>
+              <div style={{fontSize:11,color:C.mid,marginTop:2}}>Stream every World Cup match live</div>
+              <div style={{fontSize:10,color:C.dim,marginTop:2}}>FOX · FS1 · Telemundo · Peacock</div>
+            </div>
+            <div style={{background:`${C.green}22`,border:`1px solid ${C.green}44`,borderRadius:8,padding:"4px 10px"}}>
+              <div style={{fontSize:11,fontWeight:700,color:C.green}}>Try Free →</div>
+            </div>
+          </div>
+        </a>
+      </div>
+
+      {/* Watch Abroad — NordVPN */}
+      <div style={{padding:"0 16px",marginTop:12}}>
+        <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10}}>🌍 Watch Abroad</div>
+        <a href={AFFILIATE.nordvpn} target="_blank" rel="noopener noreferrer sponsored" style={{textDecoration:"none"}}>
+          <div style={{display:"flex",alignItems:"center",gap:12,padding:"14px",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:12,cursor:"pointer"}}>
+            <span style={{fontSize:28,flexShrink:0}}>🔒</span>
+            <div style={{flex:1}}>
+              <div style={{fontWeight:700,fontSize:14,color:C.text}}>NordVPN</div>
+              <div style={{fontSize:11,color:C.mid,marginTop:2}}>Watch WC from anywhere in the world</div>
+              <div style={{fontSize:10,color:C.dim,marginTop:2}}>Unblock regional streams · 30-day guarantee</div>
+            </div>
+            <div style={{background:`${C.blue}22`,border:`1px solid ${C.blue}44`,borderRadius:8,padding:"4px 10px"}}>
+              <div style={{fontSize:11,fontWeight:700,color:C.blue}}>Get Deal →</div>
+            </div>
+          </div>
+        </a>
+      </div>
+
+      {/* Hard Rock Bet — geo-gated */}
+      {showHRB && (
+        <div style={{padding:"0 16px",marginTop:12}}>
+          <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10}}>🎰 Bet on It</div>
+          <a href={AFFILIATE.hrb} target="_blank" rel="noopener noreferrer sponsored" style={{textDecoration:"none"}}>
+            <div style={{display:"flex",alignItems:"center",gap:12,padding:"14px",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:12,cursor:"pointer"}}>
+              <span style={{fontSize:28,flexShrink:0}}>🎯</span>
+              <div style={{flex:1}}>
+                <div style={{fontWeight:700,fontSize:14,color:C.text}}>Hard Rock Bet</div>
+                <div style={{fontSize:11,color:C.mid,marginTop:2}}>Bet on every World Cup match</div>
+                <div style={{fontSize:10,color:C.dim,marginTop:2}}>21+ · Gambling problem? Call 1-800-GAMBLER</div>
+              </div>
+              <div style={{background:`${C.red}22`,border:`1px solid ${C.red}44`,borderRadius:8,padding:"4px 10px"}}>
+                <div style={{fontSize:11,fontWeight:700,color:C.red}}>Bet Now →</div>
+              </div>
+            </div>
+          </a>
+        </div>
+      )}
+
+      {/* Amazon — collapsible */}
+      <div style={{padding:"0 16px",marginTop:16}}>
+        <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10}}>🛍️ Buy World Cup Merchandise</div>
+        <button onClick={()=>setAmazonOpen(v=>!v)} style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 14px",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:amazonOpen?"12px 12px 0 0":12,cursor:"pointer",color:C.text}}>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <span style={{fontSize:20}}>🛒</span>
+            <div style={{textAlign:"left"}}>
+              <div style={{fontWeight:700,fontSize:14,color:C.text}}>Shop on Amazon</div>
+              <div style={{fontSize:11,color:C.dim,marginTop:1}}>Jerseys, balls, decor & more</div>
+            </div>
+          </div>
+          <span style={{fontSize:16,color:C.gold,transform:amazonOpen?"rotate(90deg)":"none",transition:"transform .2s"}}>›</span>
+        </button>
+        {amazonOpen && (
+          <div style={{border:`1px solid ${C.b2}`,borderTop:"none",borderRadius:"0 0 12px 12px",overflow:"hidden"}}>
+            {SHOP_CATEGORIES.map((cat,i) => (
+              <a key={cat.id} href={AFFILIATE.amazon(cat.q)} target="_blank" rel="noopener noreferrer sponsored" style={{textDecoration:"none"}}>
+                <div style={{display:"flex",alignItems:"center",gap:12,padding:"11px 14px",background:C.s1,borderTop:i>0?`1px solid ${C.b1}`:"none",cursor:"pointer"}}>
+                  <span style={{fontSize:20,flexShrink:0}}>{cat.icon}</span>
+                  <span style={{fontSize:13,fontWeight:600,color:C.text,flex:1}}>{cat.label}</span>
+                  <span style={{fontSize:11,color:C.gold}}>Shop →</span>
+                </div>
+              </a>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Disclaimer */}
+      <div style={{padding:"16px",marginTop:8}}>
+        <div style={{fontSize:10,color:C.dim,lineHeight:1.6,borderTop:`1px solid ${C.b1}`,paddingTop:12}}>
+          This page contains affiliate links. We may earn a commission when you make a purchase or sign up through these links, at no extra cost to you. Amazon and the Amazon logo are trademarks of Amazon.com, Inc. Hard Rock Bet: Must be 21+ and physically located in an eligible state. Gambling problem? Call 1-800-GAMBLER.
+        </div>
+      </div>
+
+    </div>
+  );
+}
+
 const TABS = [
   {id:"live",      icon:"🔴", label:"Live"},
   {id:"schedule",  icon:"📋", label:"Schedule"},
   {id:"groups",    icon:"🗂️", label:"Groups"},
   {id:"bracket",   icon:"🏆", label:"My Bracket"},
   {id:"predictor", icon:"🎯", label:"Fantasy"},
+  {id:"shop",      icon:"🏪", label:"Shop"},
   {id:"ask",       icon:"🔎", label:"Ask"},
   {id:"stats",     icon:"📊", label:"Stats"},
   {id:"news",      icon:"📰", label:"WC News"},
@@ -6565,6 +6729,7 @@ export default function App() {
           {tab==="stats"     && <StatsHubTab initial={statsTeam} tabTop={tabBarBottom}/>}
           {tab==="predict"   && <PredTab tabTop={tabBarBottom} geoData={geoData}/>}
           {tab==="predictor" && <PredictorTab syncProfile={syncProfile} displayName={displayName} onShowSync={()=>setShowSyncModal(true)} userAvatar={userAvatar}/>}
+          {tab==="shop"      && <ShopTab tabTop={tabBarBottom} geoData={geoData}/>}
           {tab==="sim"       && <SimTab tabTop={tabBarBottom}/>}
           {tab==="bracket"   && <MyBracketTab tabTop={tabBarBottom}/>}
           {tab==="ask"       && <AskWorldCupTab tabTop={tabBarBottom}/>}
