@@ -71,10 +71,10 @@ const HARDCODED_ESPN_IDS = {
   "Canada|Bosnia & Herz.":"760416","United States|Paraguay":"760417",
   "Qatar|Switzerland":"760418","Brazil|Morocco":"760419",
   "Haiti|Scotland":"760420","Australia|Turkiye":"760421",
-  "Germany|Curacao":"760422","Netherlands|Japan":"760425",
-  "Ivory Coast|Ecuador":"760423","Sweden|Tunisia":"760424",
-  "Spain|Cape Verde":"760428","Belgium|Egypt":"760426",
-  "Saudi Arabia|Uruguay":"760429","Iran|New Zealand":"760427",
+  "Germany|Curacao":"760422","Netherlands|Japan":"760423",
+  "Ivory Coast|Ecuador":"760424","Sweden|Tunisia":"760425",
+  "Spain|Cape Verde":"760426","Belgium|Egypt":"760427",
+  "Saudi Arabia|Uruguay":"760428","Iran|New Zealand":"760429",
   "France|Senegal":"760430","Iraq|Norway":"760431",
   "Argentina|Algeria":"760432","Austria|Jordan":"760433",
   "Portugal|DR Congo":"760434","England|Croatia":"760435",
@@ -84,10 +84,7 @@ const HARDCODED_ESPN_IDS = {
 async function getESPNEventId(home, away) {
   const key = `${home}|${away}`;
 
-  // 1. Hardcoded map (fastest, always works for known matches)
-  if (HARDCODED_ESPN_IDS[key]) return HARDCODED_ESPN_IDS[key];
-
-  // 2. Try livescores cache (works for recent/live matches)
+  // 1. Livescores KV — always has correct real ESPN IDs from the live feed
   try {
     const cached = await kv.get("wc2026:livescores");
     if (cached) {
@@ -97,7 +94,7 @@ async function getESPNEventId(home, away) {
         const a = normESPN(f?.teams?.away?.name || "");
         return h === home && a === away;
       });
-      if (match?.fixture?.id) {
+      if (match?.fixture?.id && !String(match.fixture.id).includes("|")) {
         saveESPNId(home, away, match.fixture.id);
         return match.fixture.id;
       }
@@ -106,13 +103,16 @@ async function getESPNEventId(home, away) {
     console.warn("[matchevents] livescores KV lookup:", e.message);
   }
 
-  // 3. Fall back to persisted ID map
+  // 2. Persisted ID map — IDs saved from previous correct lookups
   try {
     const idMap = await kv.get(ESPN_ID_MAP_KEY) || {};
     if (idMap[key]) return idMap[key];
   } catch(e) {
     console.warn("[matchevents] ESPN ID map lookup:", e.message);
   }
+
+  // 3. Hardcoded map — last resort only (may have wrong IDs)
+  if (HARDCODED_ESPN_IDS[key]) return HARDCODED_ESPN_IDS[key];
 
   return null;
 }
@@ -435,8 +435,8 @@ async function seedESPNIds() {
   // Fetch next 7 days to cover upcoming matchdays
   const dates = Array.from({length: 7}, (_, i) => dateStr(new Date(now.getTime() + i * 86400000)));
 
-  // Start with hardcoded IDs as base
-  const idMap = { ...HARDCODED_ESPN_IDS, ...(await kv.get(ESPN_ID_MAP_KEY).catch(() => ({})) || {}) };
+  // Start from existing KV only — never seed from hardcoded (they may be wrong)
+  const idMap = await kv.get(ESPN_ID_MAP_KEY).catch(() => ({})) || {};
   const before = Object.keys(idMap).length;
 
   for (const date of dates) {
@@ -451,10 +451,9 @@ async function seedESPNIds() {
         const away = normESPN(comp.competitors?.find(c => c.homeAway === "away")?.team?.displayName || "");
         if (!home || !away || !event.id) continue;
         const key = `${home}|${away}`;
-        if (!idMap[key]) {
-          idMap[key] = event.id;
-          console.log(`[seed-ids] ${key} → ${event.id}`);
-        }
+        // Always overwrite with real ESPN data — fixes any previously wrong IDs
+        idMap[key] = event.id;
+        console.log(`[seed-ids] ${key} → ${event.id}`);
       }
     } catch(e) {
       console.warn(`[seed-ids] failed for ${date}:`, e.message);
