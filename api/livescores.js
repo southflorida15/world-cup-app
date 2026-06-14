@@ -199,8 +199,13 @@ function mapESPNEvent(event) {
   }
   // e.g. displayClock "90:04" during injury time → elapsedCurrent = 4
   // detail "90+7'" → totalAdded = 7
+  // We store both: elapsed=90, elapsedExtra=currentExtraMin, elapsedTotal=totalAdded
   let elapsedExtra = null;
+  let elapsedTotal = null;
   const detailMatch = detail.match(/(\d+)\+(\d+)/);
+  if (detailMatch) {
+    elapsedTotal = parseInt(detailMatch[2]); // total added time (e.g. 7)
+  }
   if (clock && elapsed !== null && elapsed >= 45) {
     const secs = parseInt(clock.split(":")[1] || "0");
     if (secs > 0 || elapsed > 90) {
@@ -225,7 +230,7 @@ function mapESPNEvent(event) {
     fixture: {
       id: event.id,
       date: comp.date || event.date,
-      status: { short, elapsed, elapsedExtra },
+      status: { short, elapsed, elapsedExtra, elapsedTotal },
       venue: { name: comp.venue?.fullName || "", city: comp.venue?.address?.city || "" },
     },
     league: { id: 1635, season: 2026 },
@@ -325,8 +330,17 @@ export default async function handler(req, res) {
   // Seed known results that predate the persistence system
   if (req.query.seed === "1") {
     const known = {
-      "Mexico|South Africa": { hg: 2, ag: 0, status: "FT", elapsed: 90 },
-      "South Korea|Czechia":  { hg: 2, ag: 1, status: "FT", elapsed: 90 },
+      "Mexico|South Africa":        { hg: 2, ag: 0, status: "FT", elapsed: 90 },
+      "South Korea|Czechia":         { hg: 2, ag: 1, status: "FT", elapsed: 90 },
+      "Canada|Bosnia-Herzegovina":   { hg: 1, ag: 1, status: "FT", elapsed: 90 },
+      "United States|Paraguay":      { hg: 4, ag: 1, status: "FT", elapsed: 90 },
+      "Qatar|Switzerland":           { hg: 1, ag: 1, status: "FT", elapsed: 90 },
+      "Brazil|Morocco":              { hg: 1, ag: 1, status: "FT", elapsed: 90 },
+      "Haiti|Scotland":              { hg: 0, ag: 1, status: "FT", elapsed: 90 },
+      "Australia|Turkiye":           { hg: 2, ag: 0, status: "FT", elapsed: 90 },
+      "Australia|Türkiye":           { hg: 2, ag: 0, status: "FT", elapsed: 90 },
+      "Germany|Curacao":             { hg: 7, ag: 1, status: "FT", elapsed: 90 },
+      "Netherlands|Japan":           { hg: 2, ag: 2, status: "FT", elapsed: 90 },
     };
     try {
       const existing = await loadPersistedResults();
@@ -344,8 +358,17 @@ export default async function handler(req, res) {
   // Auto-seed known results if store is empty (self-healing)
   if (Object.keys(persisted).length === 0) {
     const known = {
-      "Mexico|South Africa": { hg: 2, ag: 0, status: "FT", elapsed: 90 },
-      "South Korea|Czechia":  { hg: 2, ag: 1, status: "FT", elapsed: 90 },
+      "Mexico|South Africa":        { hg: 2, ag: 0, status: "FT", elapsed: 90 },
+      "South Korea|Czechia":         { hg: 2, ag: 1, status: "FT", elapsed: 90 },
+      "Canada|Bosnia-Herzegovina":   { hg: 1, ag: 1, status: "FT", elapsed: 90 },
+      "United States|Paraguay":      { hg: 4, ag: 1, status: "FT", elapsed: 90 },
+      "Qatar|Switzerland":           { hg: 1, ag: 1, status: "FT", elapsed: 90 },
+      "Brazil|Morocco":              { hg: 1, ag: 1, status: "FT", elapsed: 90 },
+      "Haiti|Scotland":              { hg: 0, ag: 1, status: "FT", elapsed: 90 },
+      "Australia|Turkiye":           { hg: 2, ag: 0, status: "FT", elapsed: 90 },
+      "Australia|Türkiye":           { hg: 2, ag: 0, status: "FT", elapsed: 90 },
+      "Germany|Curacao":             { hg: 7, ag: 1, status: "FT", elapsed: 90 },
+      "Netherlands|Japan":           { hg: 2, ag: 2, status: "FT", elapsed: 90 },
     };
     try { await kv.set(RESULTS_KEY, known); persisted = known; } catch(e) {}
   }
