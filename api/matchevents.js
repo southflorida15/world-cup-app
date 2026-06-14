@@ -28,6 +28,7 @@ const TTL_DONE = 60 * 60 * 1000;
 const ESPN_NAME_MAP = {
   "USA": "United States",
   "Bosnia and Herzegovina": "Bosnia & Herz.",
+  "Bosnia-Herzegovina": "Bosnia & Herz.",
   "Cape Verde Islands": "Cape Verde",
   "Turkey": "Turkiye",
   "Türkiye": "Turkiye",

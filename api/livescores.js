@@ -154,6 +154,7 @@ const ESPN_STATUS_MAP = {
 const ESPN_NAME_MAP = {
   "USA": "United States",
   "Bosnia and Herzegovina": "Bosnia & Herz.",
+  "Bosnia-Herzegovina": "Bosnia & Herz.",
   "Cape Verde Islands": "Cape Verde",
   "Turkey": "Turkiye",
   "Türkiye": "Turkiye",
@@ -326,8 +327,10 @@ export default async function handler(req, res) {
       "Qatar|Switzerland":     { hg: 1, ag: 1, status: "FT", elapsed: 90 },
       "Brazil|Morocco":        { hg: 1, ag: 1, status: "FT", elapsed: 90 },
       "Haiti|Scotland":        { hg: 0, ag: 1, status: "FT", elapsed: 90 },
-      "Australia|Turkiye":     { hg: 2, ag: 0, status: "FT", elapsed: 90 },
-      "Australia|Türkiye":     { hg: 2, ag: 0, status: "FT", elapsed: 90 },
+      "Canada|Bosnia-Herzegovina": { hg: 1, ag: 1, status: "FT", elapsed: 90 },
+      "United States|Paraguay":    { hg: 4, ag: 1, status: "FT", elapsed: 90 },
+      "Australia|Turkiye":         { hg: 2, ag: 0, status: "FT", elapsed: 90 },
+      "Australia|Türkiye":         { hg: 2, ag: 0, status: "FT", elapsed: 90 },
     };
     try {
       const existing = await loadPersistedResults();
@@ -350,8 +353,10 @@ export default async function handler(req, res) {
       "Qatar|Switzerland":     { hg: 1, ag: 1, status: "FT", elapsed: 90 },
       "Brazil|Morocco":        { hg: 1, ag: 1, status: "FT", elapsed: 90 },
       "Haiti|Scotland":        { hg: 0, ag: 1, status: "FT", elapsed: 90 },
-      "Australia|Turkiye":     { hg: 2, ag: 0, status: "FT", elapsed: 90 },
-      "Australia|Türkiye":     { hg: 2, ag: 0, status: "FT", elapsed: 90 },
+      "Canada|Bosnia-Herzegovina": { hg: 1, ag: 1, status: "FT", elapsed: 90 },
+      "United States|Paraguay":    { hg: 4, ag: 1, status: "FT", elapsed: 90 },
+      "Australia|Turkiye":         { hg: 2, ag: 0, status: "FT", elapsed: 90 },
+      "Australia|Türkiye":         { hg: 2, ag: 0, status: "FT", elapsed: 90 },
     };
     try { await kv.set(RESULTS_KEY, known); persisted = known; } catch(e) {}
   }
