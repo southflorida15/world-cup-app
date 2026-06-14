@@ -5068,7 +5068,7 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
                   maxLength={24}
                   style={{background:"none",border:"none",borderBottom:`1px solid ${C.green}`,outline:"none",color:C.text,fontSize:16,fontWeight:800,width:"100%",padding:"2px 0"}}/>
               : <div onClick={()=>{setNameInput(displayName||"");setNameEditing(true);}} style={{cursor:"text"}}>
-                  <div style={{fontWeight:displayName?900:700,color:displayName?C.text:C.dim,fontSize:displayName?(isDesktop?19:17):(isDesktop?14:13),lineHeight:1.15,wordBreak:"break-word"}}>
+                  <div style={{fontWeight:displayName?900:700,color:displayName?C.text:C.dim,fontSize:displayName?(isDesktop?19:17):(isDesktop?14:13),lineHeight:1.15,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
                     {displayName||<span style={{color:C.dim,fontStyle:"italic"}}>Tap to add your name</span>}
                     {displayName && <span style={{fontSize:10,color:C.dim,marginLeft:6,fontWeight:400}}>✏️</span>}
                   </div>
@@ -5080,8 +5080,10 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
               <div style={{fontSize:isDesktop?12:13,color:C.green,fontWeight:800,marginTop:3}}>✅ Syncing</div>
             </> : <div style={{fontSize:11,color:C.dim,marginTop:3}}>Sign in to sync your saved matches, teams and bracket picks.</div>}
           </div>
-          {isSynced && <button onClick={()=>{persistProfile(null);onSignOut();setToast("Signed out.");onClose();}} style={{fontSize:isDesktop?14:12,color:C.mid,background:C.bg,border:`1px solid ${C.b2}`,borderRadius:12,padding:isDesktop?"7px 11px":"7px 12px",cursor:"pointer",fontWeight:700,flexShrink:0}}>Sign out</button>}
         </div>
+        {isSynced && <div style={{display:"flex",justifyContent:"flex-end",marginTop:10}}>
+          <button onClick={()=>{persistProfile(null);onSignOut();setToast("Signed out.");onClose();}} style={{fontSize:isDesktop?12:11,color:C.mid,background:C.bg,border:`1px solid ${C.b2}`,borderRadius:10,padding:"4px 12px",cursor:"pointer",fontWeight:700}}>Sign out</button>
+        </div>}
       </div>
 
       {/* My Teams — collapsible */}
