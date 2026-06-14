@@ -184,10 +184,19 @@ function mapESPNEvent(event) {
   const statusType = comp.status?.type?.name || "STATUS_SCHEDULED";
   let short = ESPN_STATUS_MAP[statusType] || "NS";
   const clock = comp.status?.displayClock;
-  const detail = comp.status?.detail || "";
+  const detail = comp.status?.detail || comp.status?.type?.detail || comp.status?.type?.shortDetail || comp.status?.type?.description || "";
   const elapsed = clock && clock !== "0:00" ? parseInt(clock.split(":")[0]) : null;
 
-  // elapsedExtra: how many extra minutes have actually elapsed (from clock seconds)
+  if (elapsed >= 45 && elapsed <= 50 || elapsed >= 90) {
+    console.log(`[livescores] injury time status fields:`, JSON.stringify({
+      displayClock: clock,
+      detail: comp.status?.detail,
+      typeDetail: comp.status?.type?.detail,
+      shortDetail: comp.status?.type?.shortDetail,
+      description: comp.status?.type?.description,
+      statusType: comp.status?.type,
+    }));
+  }
   // e.g. displayClock "90:04" during injury time → elapsedCurrent = 4
   // detail "90+7'" → totalAdded = 7
   // We store both: elapsed=90, elapsedExtra=currentExtraMin, elapsedTotal=totalAdded
