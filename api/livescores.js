@@ -58,11 +58,20 @@ function isMatchWindowActive() {
   return KICKOFFS.some(k => { const ko = new Date(k).getTime(); return now >= ko && now <= ko + WINDOW_MS; });
 }
 
+function isKickoffImminent() {
+  const now = Date.now();
+  return KICKOFFS.some(k => {
+    const ko = new Date(k).getTime();
+    return now >= ko - 10 * 60 * 1000 && now <= ko + 20 * 60 * 1000;
+  });
+}
+
 function getSmartTTL(fixtures) {
   const liveCount = fixtures.filter(f => LIVE_STATUSES.includes(f?.fixture?.status?.short)).length;
   if (liveCount >= 4) return 3 * 60;
   if (liveCount >= 2) return 2 * 60;
   if (liveCount >= 1) return 60;
+  if (isKickoffImminent()) return 30;
   return 60 * 60;
 }
 
@@ -154,26 +163,16 @@ const ESPN_STATUS_MAP = {
 const ESPN_NAME_MAP = {
   "USA": "United States",
   "Bosnia and Herzegovina": "Bosnia & Herz.",
-  "Bosnia-Herzegovina": "Bosnia & Herz.",
   "Cape Verde Islands": "Cape Verde",
   "Turkey": "Turkiye",
-  "Türkiye": "Turkiye",
   "Curaçao": "Curacao",
   "Congo, DR": "DR Congo",
-  "Congo DR": "DR Congo",
   "DR Congo": "DR Congo",
   "Côte d'Ivoire": "Ivory Coast",
   "Korea Republic": "South Korea",
   "Czech Republic": "Czechia",
 };
-const normESPN = n => {
-  if (!n) return n;
-  // Check direct map first
-  if (ESPN_NAME_MAP[n]) return ESPN_NAME_MAP[n];
-  // Strip accents and retry (handles Türkiye→Turkiye, Curaçao→Curacao, etc.)
-  const stripped = n.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  return ESPN_NAME_MAP[stripped] || stripped;
-};
+const normESPN = n => ESPN_NAME_MAP[n] || n;
 
 function mapESPNEvent(event) {
   const comp = event.competitions?.[0];
@@ -215,43 +214,19 @@ function mapESPNEvent(event) {
 }
 
 async function fetchFromESPN() {
-  // Fetch today AND tomorrow to catch late-night matches that are next day UTC
-  const now = new Date();
-  const pad = n => String(n).padStart(2,'0');
-  const dateStr = d => `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`;
-  const today = dateStr(now);
-  const tomorrow = dateStr(new Date(now.getTime() + 24*60*60*1000));
-
-  const fetchDate = async (date) => {
-    const r = await fetch(`${ESPN_BASE}/scoreboard?dates=${date}&limit=20`, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-        "Accept": "application/json",
-        "Origin": "https://www.espn.com",
-        "Referer": "https://www.espn.com/",
-      },
-    });
-    if (!r.ok) throw new Error(`ESPN ${r.status}`);
-    const data = await r.json();
-    return data.events || [];
-  };
-
-  const [todayEvents, tomorrowEvents] = await Promise.allSettled([
-    fetchDate(today),
-    fetchDate(tomorrow),
-  ]);
-
-  const allEvents = [
-    ...(todayEvents.status === "fulfilled" ? todayEvents.value : []),
-    ...(tomorrowEvents.status === "fulfilled" ? tomorrowEvents.value : []),
-  ];
-
-  // Deduplicate by event id
-  const seen = new Set();
-  const unique = allEvents.filter(e => { if (seen.has(e.id)) return false; seen.add(e.id); return true; });
-
-  console.log(`[livescores] ESPN: ${unique.length} events (today=${todayEvents.status === "fulfilled" ? todayEvents.value.length : 0}, tomorrow=${tomorrowEvents.status === "fulfilled" ? tomorrowEvents.value.length : 0})`);
-  return unique.map(mapESPNEvent).filter(Boolean);
+  const r = await fetch(`${ESPN_BASE}/scoreboard`, {
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+      "Accept": "application/json",
+      "Origin": "https://www.espn.com",
+      "Referer": "https://www.espn.com/",
+    },
+  });
+  if (!r.ok) throw new Error(`ESPN ${r.status}`);
+  const data = await r.json();
+  const events = data.events || [];
+  console.log(`[livescores] ESPN: ${events.length} events`);
+  return events.map(mapESPNEvent).filter(Boolean);
 }
 
 // ── Highlightly mapper ─────────────────────────────────────────────────────
@@ -323,15 +298,8 @@ export default async function handler(req, res) {
   // Seed known results that predate the persistence system
   if (req.query.seed === "1") {
     const known = {
-      "Mexico|South Africa":   { hg: 2, ag: 0, status: "FT", elapsed: 90 },
-      "South Korea|Czechia":   { hg: 2, ag: 1, status: "FT", elapsed: 90 },
-      "Qatar|Switzerland":     { hg: 1, ag: 1, status: "FT", elapsed: 90 },
-      "Brazil|Morocco":        { hg: 1, ag: 1, status: "FT", elapsed: 90 },
-      "Haiti|Scotland":        { hg: 0, ag: 1, status: "FT", elapsed: 90 },
-      "Canada|Bosnia-Herzegovina": { hg: 1, ag: 1, status: "FT", elapsed: 90 },
-      "United States|Paraguay":    { hg: 4, ag: 1, status: "FT", elapsed: 90 },
-      "Australia|Turkiye":         { hg: 2, ag: 0, status: "FT", elapsed: 90 },
-      "Australia|Türkiye":         { hg: 2, ag: 0, status: "FT", elapsed: 90 },
+      "Mexico|South Africa": { hg: 2, ag: 0, status: "FT", elapsed: 90 },
+      "South Korea|Czechia":  { hg: 2, ag: 1, status: "FT", elapsed: 90 },
     };
     try {
       const existing = await loadPersistedResults();
@@ -349,21 +317,15 @@ export default async function handler(req, res) {
   // Auto-seed known results if store is empty (self-healing)
   if (Object.keys(persisted).length === 0) {
     const known = {
-      "Mexico|South Africa":   { hg: 2, ag: 0, status: "FT", elapsed: 90 },
-      "South Korea|Czechia":   { hg: 2, ag: 1, status: "FT", elapsed: 90 },
-      "Qatar|Switzerland":     { hg: 1, ag: 1, status: "FT", elapsed: 90 },
-      "Brazil|Morocco":        { hg: 1, ag: 1, status: "FT", elapsed: 90 },
-      "Haiti|Scotland":        { hg: 0, ag: 1, status: "FT", elapsed: 90 },
-      "Canada|Bosnia-Herzegovina": { hg: 1, ag: 1, status: "FT", elapsed: 90 },
-      "United States|Paraguay":    { hg: 4, ag: 1, status: "FT", elapsed: 90 },
-      "Australia|Turkiye":         { hg: 2, ag: 0, status: "FT", elapsed: 90 },
-      "Australia|Türkiye":         { hg: 2, ag: 0, status: "FT", elapsed: 90 },
+      "Mexico|South Africa": { hg: 2, ag: 0, status: "FT", elapsed: 90 },
+      "South Korea|Czechia":  { hg: 2, ag: 1, status: "FT", elapsed: 90 },
     };
     try { await kv.set(RESULTS_KEY, known); persisted = known; } catch(e) {}
   }
 
   // Outside match window — return persisted results only
-  if (!debug && !isMatchWindowActive()) {
+  // Exception: if kickoff is imminent, fall through to fresh fetch
+  if (!debug && !isMatchWindowActive() && !isKickoffImminent()) {
     let frozen = null;
     try { frozen = await kv.get(CACHE_KEY); } catch(e) {}
     const combined = mergePersistedResults(frozen || [], persisted);
@@ -371,8 +333,8 @@ export default async function handler(req, res) {
     return res.status(200).json({ response: combined, cached: true, windowActive: false });
   }
 
-  // KV cache check
-  if (!debug) {
+  // KV cache check — skip entirely when kickoff is imminent
+  if (!debug && !isKickoffImminent()) {
     let cached = null, cachedTs = 0;
     try {
       const [raw, ts] = await Promise.all([kv.get(CACHE_KEY), kv.get(CACHE_TS_KEY)]);
