@@ -3187,26 +3187,54 @@ function MyBracketTab({ tabTop=116 }) {
         : "Official FIFA bracket rules are still loading.";
 
       try {
-        // Build r32 directly using local Annex C assignment (bypasses Wikipedia fetch)
+        // Build Annex C assignment locally — maps target slots to third-place groups
         const annexMapping = getAnnexCAssignment(qualifiedThirds);
         const thirdTeamByGroup = Object.fromEntries(
           qualifiedThirds.map(t => [String(t.group).toUpperCase(), t.team])
         );
-        const resolveSlot = (slot) => {
+
+        // Resolve a slot like "1C", "2A", "3?" to an actual team name
+        const resolveSlot = (slot, matchHome) => {
           if (!slot || slot === "TBD") return "TBD";
+          if (slot === "3?") {
+            // annexMapping keys are the home slot of this match (e.g. "1A", "1E")
+            const thirdGroup = annexMapping[matchHome]; // e.g. "3C"
+            const groupLetter = thirdGroup ? thirdGroup.replace(/^3/,"") : null;
+            return (groupLetter && thirdTeamByGroup[groupLetter]) || "TBD";
+          }
           if (slot.startsWith("1")) return groups[slot[1]]?.[0] || slot;
           if (slot.startsWith("2")) return groups[slot[1]]?.[1] || slot;
-          if (slot.startsWith("3")) return thirdTeamByGroup[slot[1]] || slot;
           return slot;
         };
+
+        // Build r32 directly from the hardcoded template — no engine call needed
+        const R32_TEMPLATE = [
+          { match:73, home:"2A", away:"2B" },
+          { match:74, home:"1E", away:"3?" },
+          { match:75, home:"1F", away:"2C" },
+          { match:76, home:"1C", away:"2F" },
+          { match:77, home:"1I", away:"3?" },
+          { match:78, home:"2E", away:"2I" },
+          { match:79, home:"1A", away:"3?" },
+          { match:80, home:"1L", away:"3?" },
+          { match:81, home:"1D", away:"3?" },
+          { match:82, home:"1G", away:"3?" },
+          { match:83, home:"2K", away:"2L" },
+          { match:84, home:"1H", away:"2J" },
+          { match:85, home:"1B", away:"3?" },
+          { match:86, home:"1J", away:"2H" },
+          { match:87, home:"1K", away:"3?" },
+          { match:88, home:"2D", away:"2G" },
+        ];
+        r32 = R32_TEMPLATE.map(m => ({
+          match: m.match,
+          home: resolveSlot(m.home, m.home),
+          away: resolveSlot(m.away, m.home),
+          winner: null,
+        }));
+
+        // Use engine only for R16/QF/SF/Final templates (these never throw)
         const fifaBracket = buildFifa2026Bracket({ groups, qualifiedThirds });
-        // Override the thirds assignment with our local computation
-        r32 = fifaBracket.r32.map(m => {
-          const home = resolveSlot(m.homeSlot || m.home);
-          const awaySlot = m.awaySlot === "3?" ? (annexMapping[m.homeSlot] || m.awaySlot) : m.awaySlot;
-          const away = resolveSlot(awaySlot);
-          return { ...m, home, away, winner: null };
-        });
         roundTemplates = {
           r16: fifaBracket.r16,
           qf: fifaBracket.qf,
