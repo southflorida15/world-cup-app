@@ -1115,7 +1115,7 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="",
 
   if (isPastDay && finished && hasScore) {
     return (
-      <div onClick={()=>onMatchTap&&onMatchTap(m)} style={{marginBottom:8,background:C.s1,border:`1px solid ${C.b1}`,borderRadius:12,overflow:"hidden",opacity:0.45,cursor:onMatchTap?"pointer":"default"}}>
+      <div onClick={()=>onMatchTap&&onMatchTap(m)} style={{marginBottom:8,background:C.s1,border:`1px solid ${C.b1}`,borderRadius:12,overflow:"hidden",opacity:0.65,cursor:onMatchTap?"pointer":"default"}}>
         {/* Header: keep group/venue/time */}
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 13px",borderBottom:`1px solid ${C.b1}`,background:C.s2}}>
           <div style={{display:"flex",alignItems:"center",gap:6,minWidth:0,flex:1}}>
@@ -1147,7 +1147,7 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="",
   }
 
   return (
-    <div onClick={()=>onMatchTap&&onMatchTap(m)} style={{marginBottom:8,background:isKickingOff?countdownBg:C.s1,border:`${isKickingOff?"2.5px":"1px"} solid ${isKickingOff?C.gold:live?C.green:isFav?`${C.gold}55`:C.b1}`,borderRadius:12,overflow:"hidden",opacity:finished?0.45:1,cursor:onMatchTap?"pointer":"default",boxShadow:isKickingOff?`0 0 0 1px ${C.gold}33,0 4px 20px ${C.gold}28`:"none",transition:"border-color .3s,box-shadow .3s,background .3s"}}>
+    <div onClick={()=>onMatchTap&&onMatchTap(m)} style={{marginBottom:8,background:isKickingOff?countdownBg:C.s1,border:`${isKickingOff?"2.5px":"1px"} solid ${isKickingOff?C.gold:live?C.green:isFav?`${C.gold}55`:C.b1}`,borderRadius:12,overflow:"hidden",opacity:finished?0.65:1,cursor:onMatchTap?"pointer":"default",boxShadow:isKickingOff?`0 0 0 1px ${C.gold}33,0 4px 20px ${C.gold}28`:"none",transition:"border-color .3s,box-shadow .3s,background .3s"}}>
       {/* Header: group/stage + venue + time */}
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 13px",borderBottom:`1px solid ${C.b1}`,background:C.s2}}>
         <div style={{display:"flex",alignItems:"center",gap:6,minWidth:0,flex:1}}>
@@ -1318,7 +1318,7 @@ const MATCH_DATES = (() => {
 
 function SchedTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=new Set() }) {
   const { favTeams=[] } = useContext(FavCtx);
-  const [filterMode, setFilterMode] = useState("group");
+  const [filterMode, setFilterMode] = useState("none");
   const [timeMode, setTimeMode] = useState("local");
   const [groupF, setGroupF] = useState("All");
   const [teamF, setTeamF] = useState("");
@@ -1353,6 +1353,7 @@ function SchedTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=
       const key = new Date(iso).toLocaleDateString("en-US",{month:"short",day:"numeric"});
       if (key !== selDate) return false;
     }
+    if(filterMode==="none") return true;
     if(filterMode==="fav") return favTeams?.length && (favTeams.includes(m.home)||favTeams.includes(m.away));
     if(filterMode==="group") { if(groupF==="All")return true; if(groupF==="Knockout")return!m.group; return m.group===groupF; }
     if(filterMode==="team") return !teamF||m.home===teamF||m.away===teamF;
@@ -3856,7 +3857,7 @@ function MatchdayCard({ m, onAction, favTeam }) {
   const cardBg = live ? `linear-gradient(135deg,#0a1f10,#0d2815)` : `linear-gradient(135deg,${C.s1},${C.s2})`;
 
   return (
-    <Card style={{marginBottom:8, border:`1px solid ${cardBorder}`, background:cardBg, opacity:finished?0.45:1}}>
+    <Card style={{marginBottom:8, border:`1px solid ${cardBorder}`, background:cardBg, opacity:finished?0.65:1}}>
       <div style={{padding:"11px 13px"}}>
         {/* Fav banner */}
         {isFav && !live && !finished && (
