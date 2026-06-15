@@ -6007,6 +6007,17 @@ function AskWorldCupTab({ tabTop=116 }) {
       return { title:"Tournament progress", summary:`${finished.length} of ${MATCHES.length} matches played · ${remaining} remaining.`, rows:[] };
     }
 
+    if (text.includes("how many team") || text.includes("teams have played") || text.includes("teams played") || text.includes("teams already played")) {
+      const finished = MATCHES.filter(m => { const sc = scoresRef[`${m.home}|${m.away}`]; return sc && (sc.status==="FT"||sc.status==="AET"||sc.status==="finished"||sc.status==="ended"); });
+      const teams = new Set(finished.flatMap(m=>[m.home,m.away]));
+      const notPlayed = allTeams().filter(t => !teams.has(t));
+      return {
+        title:`${teams.size} of 48 teams have played`,
+        summary:`${finished.length} matches completed so far. ${notPlayed.length} teams yet to play.`,
+        rows: notPlayed.length <= 20 ? notPlayed.map(t => ({ title:`${getFlag(t)} ${t}`, meta:"Yet to play" })) : []
+      };
+    }
+
     // Championship odds
     if (text.includes("odd") || text.includes("favorite") || text.includes("favourite") || text.includes("champion") && text.includes("chance") || text.includes("polymarket")) {
       const top = PREDS.filter(p=>p.team!=="Others").sort((a,b)=>b.poly-a.poly).slice(0,8);
