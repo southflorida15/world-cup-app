@@ -414,6 +414,19 @@ async function sendPush() {
 function markAdminDevice() {
   localStorage.setItem("wc2026_disable_analytics", "1");
   document.getElementById("admin-device-note").textContent = "✅ This browser is now marked as admin/test.";
+  document.getElementById("admin-device-note").style.color = "var(--green)";
+}
+
+function checkAdminDevice() {
+  const isAdmin = localStorage.getItem("wc2026_disable_analytics") === "1";
+  const note = document.getElementById("admin-device-note");
+  if (isAdmin) {
+    note.textContent = "✅ This browser is marked as admin/test — your visits are excluded from analytics.";
+    note.style.color = "var(--green)";
+  } else {
+    note.textContent = "Mark your devices so your own visits don't count as new users.";
+    note.style.color = "";
+  }
 }
 
 async function resetAnalytics() {
@@ -447,6 +460,7 @@ async function loadData() {
     document.getElementById("loading").style.display = "none";
     document.getElementById("content").style.display = "block";
     renderDashboard(d);
+    checkAdminDevice();
   } catch(e) {
     document.getElementById("loading").innerHTML = `<div style="color:var(--red)">Error: ${e.message}</div>`;
   }
