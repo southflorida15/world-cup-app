@@ -6,101 +6,76 @@
   <title>WC 2026 · Admin</title>
   <style>
     :root {
-      --bg: #060e0a;
-      --s1: #0c1a12;
-      --s2: #112618;
-      --b1: #1a3828;
-      --b2: #234833;
-      --green: #4ade80;
-      --gold: #fbbf24;
-      --blue: #60a5fa;
-      --red: #f87171;
-      --text: #d4ead9;
-      --mid: #7aaa8a;
-      --dim: #3d6a4d;
+      --bg: #060e0a; --s1: #0c1a12; --s2: #112618; --b1: #1a3828; --b2: #234833;
+      --green: #4ade80; --gold: #fbbf24; --blue: #60a5fa; --red: #f87171;
+      --text: #d4ead9; --mid: #7aaa8a; --dim: #3d6a4d;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; min-height: 100vh; }
-
-    /* Login */
     #login { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
     .login-box { background: var(--s1); border: 1px solid var(--b2); border-radius: 16px; padding: 40px 32px; width: 100%; max-width: 360px; text-align: center; }
     .login-box h1 { font-size: 22px; font-weight: 800; color: var(--green); margin-bottom: 6px; }
     .login-box p { font-size: 13px; color: var(--mid); margin-bottom: 28px; }
-    .login-box input { width: 100%; padding: 12px 16px; background: var(--s2); border: 1px solid var(--b2); border-radius: 10px; color: var(--text); font-size: 16px; outline: none; margin-bottom: 12px; letter-spacing: 0.05em; }
+    .login-box input { width: 100%; padding: 12px 16px; background: var(--s2); border: 1px solid var(--b2); border-radius: 10px; color: var(--text); font-size: 16px; outline: none; margin-bottom: 12px; }
     .login-box button { width: 100%; padding: 13px; background: linear-gradient(135deg, var(--green), #22c55e); border: none; border-radius: 10px; color: #030a05; font-weight: 800; font-size: 15px; cursor: pointer; }
     .error { color: var(--red); font-size: 12px; margin-top: 8px; }
-
-    /* Dashboard */
-    #dashboard { display: none; max-width: 900px; margin: 0 auto; padding: 24px 16px 60px; }
+    #dashboard { display: none; max-width: 960px; margin: 0 auto; padding: 24px 16px 80px; }
     .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
     .header h1 { font-size: 20px; font-weight: 800; color: var(--green); }
     .header-meta { font-size: 11px; color: var(--dim); }
-    .logout { font-size: 12px; color: var(--mid); background: none; border: 1px solid var(--b2); border-radius: 8px; padding: 5px 12px; cursor: pointer; color: var(--dim); }
-    .tool-row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
-    .admin-btn { font-size:12px; font-weight:700; border:1px solid var(--b2); background:var(--s1); color:var(--green); border-radius:10px; padding:9px 12px; cursor:pointer; }
-    .admin-btn.warn { color:var(--gold); border-color:rgba(251,191,36,.45); background:rgba(251,191,36,.08); }
-    .admin-btn.danger { color:var(--red); border-color:rgba(248,113,113,.45); background:rgba(248,113,113,.08); }
-    .admin-note { color:var(--mid); font-size:12px; line-height:1.45; margin-top:8px; }
-
-    /* Stat cards */
-    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 28px; }
+    .logout { font-size: 12px; background: none; border: 1px solid var(--b2); border-radius: 8px; padding: 5px 12px; cursor: pointer; color: var(--dim); }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 28px; }
     .stat-card { background: var(--s1); border: 1px solid var(--b1); border-radius: 12px; padding: 16px; }
     .stat-card .val { font-size: 32px; font-weight: 900; color: var(--green); line-height: 1; }
     .stat-card .lbl { font-size: 11px; color: var(--mid); margin-top: 4px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
-
-    /* Section */
     .section { margin-bottom: 28px; }
     .section-title { font-size: 11px; font-weight: 700; color: var(--dim); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px; }
-
-    /* Daily chart */
+    .card { background: var(--s1); border: 1px solid var(--b1); border-radius: 12px; padding: 16px; }
+    .tool-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+    .tool-row:last-child { margin-bottom: 0; }
+    .admin-btn { font-size: 12px; font-weight: 700; border: 1px solid var(--b2); background: var(--s1); color: var(--green); border-radius: 10px; padding: 9px 14px; cursor: pointer; white-space: nowrap; }
+    .admin-btn:hover { background: var(--s2); }
+    .admin-btn.warn { color: var(--gold); border-color: rgba(251,191,36,.45); background: rgba(251,191,36,.08); }
+    .admin-btn.danger { color: var(--red); border-color: rgba(248,113,113,.45); background: rgba(248,113,113,.08); }
+    .admin-btn.blue { color: var(--blue); border-color: rgba(96,165,250,.45); background: rgba(96,165,250,.08); }
+    .admin-note { color: var(--mid); font-size: 12px; line-height: 1.5; margin-top: 8px; }
+    .input-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
+    .input-row input, .input-row textarea { background: var(--s2); border: 1px solid var(--b2); border-radius: 8px; color: var(--text); font-size: 13px; padding: 8px 12px; outline: none; flex: 1; min-width: 120px; }
+    .input-row textarea { min-height: 70px; resize: vertical; font-family: inherit; }
+    .result-box { margin-top: 10px; padding: 10px 12px; background: var(--bg); border: 1px solid var(--b2); border-radius: 8px; font-size: 12px; color: var(--mid); white-space: pre-wrap; font-family: monospace; max-height: 200px; overflow-y: auto; display: none; }
     .chart { background: var(--s1); border: 1px solid var(--b1); border-radius: 12px; padding: 16px; }
     .bars { display: flex; align-items: flex-end; gap: 4px; height: 80px; margin-bottom: 8px; }
     .bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; justify-content: flex-end; }
-    .bar { background: var(--green); border-radius: 3px 3px 0 0; width: 100%; min-height: 2px; transition: height .3s; }
+    .bar { background: var(--green); border-radius: 3px 3px 0 0; width: 100%; min-height: 2px; }
     .bar.today { background: var(--gold); }
     .bar-label { font-size: 8px; color: var(--dim); white-space: nowrap; }
-
-    /* Tab usage */
     .tabs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
     .tab-bar { background: var(--s1); border: 1px solid var(--b1); border-radius: 10px; padding: 10px 12px; }
     .tab-bar-name { font-size: 11px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
     .tab-bar-track { background: var(--b1); border-radius: 3px; height: 6px; overflow: hidden; }
-    .tab-bar-fill { background: var(--blue); height: 100%; border-radius: 3px; transition: width .4s; }
+    .tab-bar-fill { background: var(--blue); height: 100%; border-radius: 3px; }
     .tab-bar-count { font-size: 10px; color: var(--mid); margin-top: 4px; }
-
-    /* User table */
-    .user-table { background: var(--s1); border: 1px solid var(--b1); border-radius: 12px; overflow: hidden; }
-    .user-row { display: grid; grid-template-columns: 32px 1fr 120px 100px 80px; gap: 10px; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--b1); font-size: 12px; }
-    .user-row:last-child { border-bottom: none; }
-    .user-row.head { font-size: 10px; font-weight: 700; color: var(--dim); text-transform: uppercase; letter-spacing: 0.08em; padding: 8px 14px; background: var(--s2); }
-    .avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--s2); border: 1px solid var(--b2); display: flex; align-items: center; justify-content: center; font-size: 12px; overflow: hidden; flex-shrink: 0; }
-    .avatar img { width: 100%; height: 100%; object-fit: cover; }
-    .device-badge { font-size: 9px; padding: 2px 7px; border-radius: 10px; font-weight: 600; display: inline-block; }
-    .device-ios { background: rgba(96,165,250,.15); color: var(--blue); }
-    .device-android { background: rgba(74,222,128,.15); color: var(--green); }
-    .device-desktop { background: rgba(251,191,36,.15); color: var(--gold); }
-    .device-unknown { background: var(--s2); color: var(--dim); }
-
-    /* Visitors table */
-    .vis-table { background: var(--s1); border: 1px solid var(--b1); border-radius: 12px; overflow: hidden; }
-    .vis-row { display: grid; grid-template-columns: 1fr 90px 80px 80px 80px; gap: 10px; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--b1); font-size: 12px; }
-    .vis-row:last-child { border-bottom: none; }
-    .vis-row.head { font-size: 10px; font-weight: 700; color: var(--dim); text-transform: uppercase; letter-spacing: 0.08em; padding: 8px 14px; background: var(--s2); }
-    .acct-table { background: var(--s1); border: 1px solid var(--b1); border-radius: 12px; overflow: hidden; }
-    .acct-row { display: grid; grid-template-columns: 1fr 90px 110px 100px; gap: 10px; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--b1); font-size: 12px; }
-    .acct-row:last-child { border-bottom: none; }
-    .acct-row.head { font-size: 10px; font-weight: 700; color: var(--dim); text-transform: uppercase; letter-spacing: 0.08em; padding: 8px 14px; background: var(--s2); }
-    @media(max-width:700px){ .acct-row { grid-template-columns: 1fr; gap:6px; } .acct-row.head { display:none; } }
-
+    .table { background: var(--s1); border: 1px solid var(--b1); border-radius: 12px; overflow: hidden; }
+    .row { display: grid; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--b1); font-size: 12px; gap: 10px; }
+    .row:last-child { border-bottom: none; }
+    .row.head { font-size: 10px; font-weight: 700; color: var(--dim); text-transform: uppercase; letter-spacing: 0.08em; padding: 8px 14px; background: var(--s2); }
+    .badge { font-size: 9px; padding: 2px 7px; border-radius: 10px; font-weight: 600; display: inline-block; }
+    .badge-ios { background: rgba(96,165,250,.15); color: var(--blue); }
+    .badge-android { background: rgba(74,222,128,.15); color: var(--green); }
+    .badge-desktop { background: rgba(251,191,36,.15); color: var(--gold); }
+    .badge-unknown { background: var(--s2); color: var(--dim); }
+    .badge-active { background: rgba(74,222,128,.2); color: var(--green); border: 1px solid rgba(74,222,128,.4); }
     .loading { text-align: center; padding: 60px 20px; color: var(--dim); font-size: 14px; }
     .spinner { width: 24px; height: 24px; border: 3px solid var(--green); border-top-color: transparent; border-radius: 50%; animation: spin .7s linear infinite; margin: 0 auto 16px; }
     @keyframes spin { to { transform: rotate(360deg); } }
+    .divider { border: none; border-top: 1px solid var(--b1); margin: 14px 0; }
+    .active-dot { width: 7px; height: 7px; background: var(--green); border-radius: 50%; display: inline-block; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    @media(max-width:600px){ .row { grid-template-columns: 1fr !important; } .row.head { display: none; } }
   </style>
 </head>
 <body>
 
-<!-- Login -->
 <div id="login">
   <div class="login-box">
     <div style="font-size:36px;margin-bottom:12px">⚽</div>
@@ -112,16 +87,12 @@
   </div>
 </div>
 
-<!-- Dashboard -->
 <div id="dashboard">
-  <div class="loading" id="loading">
-    <div class="spinner"></div>
-    Loading analytics...
-  </div>
+  <div class="loading" id="loading"><div class="spinner"></div>Loading...</div>
   <div id="content" style="display:none">
     <div class="header">
       <div>
-        <h1>⚽ WC 2026 Analytics</h1>
+        <h1>⚽ WC 2026 Admin</h1>
         <div class="header-meta" id="generated-at"></div>
       </div>
       <button class="logout" onclick="logout()">Sign out</button>
@@ -130,21 +101,103 @@
     <!-- Top stats -->
     <div class="stats-grid" id="stats-grid"></div>
 
-    <!-- Admin tools -->
+    <!-- Live Operations -->
     <div class="section">
-      <div class="section-title">Admin Tools</div>
-      <div class="chart">
+      <div class="section-title">🔧 Live Operations</div>
+      <div class="card">
+
+        <!-- 1. Flush cache -->
+        <div class="tool-row">
+          <button class="admin-btn warn" onclick="doAction('flush-livescores',{},'flush-result')">🔄 Flush Livescores Cache</button>
+          <button class="admin-btn" onclick="doAction('seed-livescores',{},'seed-ls-result')">🌱 Seed Livescores</button>
+          <button class="admin-btn" onclick="doAction('seed-espn-ids',{},'seed-ids-result')">🔢 Seed ESPN IDs</button>
+          <button class="admin-btn blue" onclick="doAction('active-today',{},'active-result')">👥 Active Users Now</button>
+        </div>
+        <div class="result-box" id="flush-result"></div>
+        <div class="result-box" id="seed-ls-result"></div>
+        <div class="result-box" id="seed-ids-result"></div>
+        <div class="result-box" id="active-result"></div>
+
+        <hr class="divider"/>
+
+        <!-- 2. Persisted Results -->
+        <div style="font-size:11px;font-weight:700;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">📊 Persisted Match Results</div>
+        <div class="tool-row">
+          <button class="admin-btn" onclick="doAction('get-results',{},'results-view')">View All Results</button>
+        </div>
+        <div class="result-box" id="results-view"></div>
+        <div class="input-row" style="margin-top:10px">
+          <input id="r-home" placeholder="Home team (e.g. Germany)"/>
+          <input id="r-away" placeholder="Away team (e.g. Curacao)"/>
+          <input id="r-hg" placeholder="Home goals" style="max-width:90px"/>
+          <input id="r-ag" placeholder="Away goals" style="max-width:90px"/>
+          <button class="admin-btn" onclick="setResult()">Set Result</button>
+          <button class="admin-btn danger" onclick="delResult()">Delete</button>
+        </div>
+        <div class="result-box" id="result-edit-box"></div>
+
+        <hr class="divider"/>
+
+        <!-- 3. Force re-score -->
+        <div style="font-size:11px;font-weight:700;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">🎯 Fantasy Scoring</div>
+        <div class="tool-row">
+          <button class="admin-btn warn" onclick="doAction('rescore-all',{},'rescore-result')">⚡ Force Re-score All Picks</button>
+        </div>
+        <div class="result-box" id="rescore-result"></div>
+
+        <hr class="divider"/>
+
+        <!-- 4. ESPN ID map -->
+        <div style="font-size:11px;font-weight:700;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">🔢 ESPN ID Map</div>
+        <div class="tool-row">
+          <button class="admin-btn" onclick="doAction('get-espn-ids',{},'espn-ids-view')">View All IDs</button>
+        </div>
+        <div class="result-box" id="espn-ids-view"></div>
+        <div class="input-row" style="margin-top:10px">
+          <input id="espn-home" placeholder="Home team"/>
+          <input id="espn-away" placeholder="Away team"/>
+          <input id="espn-id" placeholder="ESPN event ID" style="max-width:110px"/>
+          <button class="admin-btn" onclick="setESPNId()">Set ID</button>
+          <button class="admin-btn danger" onclick="delESPNId()">Delete</button>
+        </div>
+        <div class="result-box" id="espn-id-edit-box"></div>
+      </div>
+    </div>
+
+    <!-- 9. Push Notifications -->
+    <div class="section">
+      <div class="section-title">🔔 Push Notifications</div>
+      <div class="card">
+        <div class="admin-note" style="margin-bottom:12px">Send a broadcast notification to all subscribers.</div>
+        <div class="input-row">
+          <input id="push-title" placeholder="Title (e.g. ⚽ USA vs Mexico kicks off in 30 min!)"/>
+        </div>
+        <div class="input-row">
+          <textarea id="push-body" placeholder="Body text (e.g. Open the app for live scores and match events)"></textarea>
+        </div>
+        <div class="input-row">
+          <input id="push-url" placeholder="URL to open (default: /)" value="/"/>
+          <button class="admin-btn blue" onclick="sendPush()">📤 Send to All</button>
+        </div>
+        <div class="result-box" id="push-result"></div>
+      </div>
+    </div>
+
+    <!-- Analytics -->
+    <div class="section">
+      <div class="section-title">⚙️ Analytics Tools</div>
+      <div class="card">
         <div class="tool-row">
           <button class="admin-btn" onclick="markAdminDevice()">🧪 Mark this device as admin/test</button>
-          <button class="admin-btn warn" onclick="resetAnalytics()">🗑 Reset Analytics</button>
+          <button class="admin-btn danger" onclick="resetAnalytics()">🗑 Reset Analytics</button>
         </div>
-        <div class="admin-note" id="admin-device-note">Use this on your desktop and iPhone test devices so your own deploy/cache testing stops counting as new visitors.</div>
+        <div class="admin-note" id="admin-device-note">Mark your devices so your own visits don't count as new users.</div>
       </div>
     </div>
 
     <!-- Daily chart -->
     <div class="section">
-      <div class="section-title">Daily Unique Visitors (last 14 days)</div>
+      <div class="section-title">📈 Daily Unique Visitors (last 14 days)</div>
       <div class="chart">
         <div class="bars" id="bars"></div>
         <div style="font-size:10px;color:var(--dim);text-align:right">Today highlighted in gold</div>
@@ -153,27 +206,27 @@
 
     <!-- Tab usage -->
     <div class="section">
-      <div class="section-title">Tab Usage</div>
+      <div class="section-title">📊 Tab Usage</div>
       <div class="tabs-grid" id="tabs-grid"></div>
     </div>
 
     <!-- Accounts -->
     <div class="section">
-      <div class="section-title">Accounts</div>
-      <div class="acct-table">
-        <div class="acct-row head">
+      <div class="section-title">👤 Accounts</div>
+      <div class="table">
+        <div class="row head" style="grid-template-columns:1fr 80px 120px 80px">
           <div>User</div><div>PIN</div><div>Saved</div><div>Actions</div>
         </div>
         <div id="accounts-list"></div>
       </div>
     </div>
 
-    <!-- Registered users -->
+    <!-- Predictor Users -->
     <div class="section">
-      <div class="section-title">Predictor Users</div>
-      <div class="user-table">
-        <div class="user-row head">
-          <div></div><div>Name</div><div>Location</div><div>Joined</div><div>Device</div>
+      <div class="section-title">🎯 Predictor Users</div>
+      <div class="table">
+        <div class="row head" style="grid-template-columns:1fr 120px 90px 80px">
+          <div>Name</div><div>Location</div><div>Joined</div><div>Device</div>
         </div>
         <div id="users-list"></div>
       </div>
@@ -181,9 +234,9 @@
 
     <!-- All visitors -->
     <div class="section">
-      <div class="section-title">All Visitors</div>
-      <div class="vis-table">
-        <div class="vis-row head">
+      <div class="section-title">🌍 All Visitors</div>
+      <div class="table">
+        <div class="row head" style="grid-template-columns:1fr 80px 60px 100px 100px">
           <div>Location</div><div>Device</div><div>Visits</div><div>First seen</div><div>Last seen</div>
         </div>
         <div id="visitors-list"></div>
@@ -220,17 +273,73 @@ async function adminAction(payload) {
     body: JSON.stringify(payload),
   });
   const d = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(d.error || `Admin action failed: ${r.status}`);
+  if (!r.ok) throw new Error(d.error || `${r.status}`);
   return d;
+}
+
+async function doAction(action, extra, resultId) {
+  const box = document.getElementById(resultId);
+  box.style.display = "block";
+  box.textContent = "⏳ Working...";
+  try {
+    const d = await adminAction({ adminAction: action, ...extra });
+    box.textContent = JSON.stringify(d, null, 2);
+    box.style.color = "var(--green)";
+  } catch(e) {
+    box.textContent = "❌ " + e.message;
+    box.style.color = "var(--red)";
+  }
+}
+
+async function setResult() {
+  const home = document.getElementById("r-home").value.trim();
+  const away = document.getElementById("r-away").value.trim();
+  const hg = document.getElementById("r-hg").value.trim();
+  const ag = document.getElementById("r-ag").value.trim();
+  if (!home || !away || hg === "" || ag === "") return alert("All fields required");
+  await doAction("set-result", { home, away, hg, ag }, "result-edit-box");
+}
+
+async function delResult() {
+  const home = document.getElementById("r-home").value.trim();
+  const away = document.getElementById("r-away").value.trim();
+  if (!home || !away) return alert("Home and away required");
+  if (!confirm(`Delete result for ${home} vs ${away}?`)) return;
+  await doAction("delete-result", { home, away }, "result-edit-box");
+}
+
+async function setESPNId() {
+  const home = document.getElementById("espn-home").value.trim();
+  const away = document.getElementById("espn-away").value.trim();
+  const id = document.getElementById("espn-id").value.trim();
+  if (!home || !away || !id) return alert("All fields required");
+  await doAction("set-espn-id", { home, away, id }, "espn-id-edit-box");
+}
+
+async function delESPNId() {
+  const home = document.getElementById("espn-home").value.trim();
+  const away = document.getElementById("espn-away").value.trim();
+  if (!home || !away) return alert("Home and away required");
+  if (!confirm(`Delete ESPN ID for ${home} vs ${away}?`)) return;
+  await doAction("delete-espn-id", { home, away }, "espn-id-edit-box");
+}
+
+async function sendPush() {
+  const title = document.getElementById("push-title").value.trim();
+  const body = document.getElementById("push-body").value.trim();
+  const url = document.getElementById("push-url").value.trim() || "/";
+  if (!title || !body) return alert("Title and body required");
+  if (!confirm(`Send push notification to ALL subscribers?\n\n"${title}"\n${body}`)) return;
+  await doAction("send-push", { title, body, url }, "push-result");
 }
 
 function markAdminDevice() {
   localStorage.setItem("wc2026_disable_analytics", "1");
-  document.getElementById("admin-device-note").textContent = "✅ This browser is now marked as admin/test. App visits from this device will not be tracked unless you clear site data again.";
+  document.getElementById("admin-device-note").textContent = "✅ This browser is now marked as admin/test.";
 }
 
 async function resetAnalytics() {
-  if (!confirm("Reset visitor analytics and tab usage? Accounts, predictions, brackets, saved matches, and notifications will be kept.")) return;
+  if (!confirm("Reset visitor analytics and tab usage? Accounts, predictions, brackets, and notifications will be kept.")) return;
   try {
     await adminAction({ adminAction: "reset-analytics" });
     await loadData();
@@ -240,7 +349,7 @@ async function resetAnalytics() {
 
 async function deleteAccount(uid, label) {
   if (!uid) return;
-  if (!confirm(`Delete account ${label || uid}? This removes the sync profile and fantasy identity for that user. This cannot be undone.`)) return;
+  if (!confirm(`Delete account ${label || uid}? This cannot be undone.`)) return;
   try {
     await adminAction({ adminAction: "delete-account", uid });
     await loadData();
@@ -249,9 +358,7 @@ async function deleteAccount(uid, label) {
 
 async function loadData() {
   try {
-    const r = await fetch("/api/admin", {
-      headers: { "Authorization": `Bearer ${SECRET}` }
-    });
+    const r = await fetch("/api/admin", { headers: { "Authorization": `Bearer ${SECRET}` } });
     if (r.status === 401) {
       document.getElementById("login-error").textContent = "Incorrect secret.";
       logout();
@@ -263,23 +370,21 @@ async function loadData() {
     document.getElementById("content").style.display = "block";
     renderDashboard(d);
   } catch(e) {
-    document.getElementById("loading").innerHTML = `<div style="color:var(--red)">Error loading data: ${e.message}</div>`;
+    document.getElementById("loading").innerHTML = `<div style="color:var(--red)">Error: ${e.message}</div>`;
   }
 }
 
 function renderDashboard(d) {
   document.getElementById("generated-at").textContent = `Updated ${new Date(d.generatedAt).toLocaleString()}`;
 
-  // Top stats
   const todayKey = new Date().toISOString().slice(0,10);
   const todayCount = d.visitors.daily.find(x => x.date === todayKey)?.count || 0;
-  const totalPreds = d.predictions?.total || 0;
   const stats = [
     { val: d.visitors.total, lbl: "Unique Visitors" },
     { val: todayCount, lbl: "Visitors Today" },
     { val: d.accounts?.total || d.users.total, lbl: "Accounts" },
     { val: d.pins.total, lbl: "PIN Accounts" },
-    { val: totalPreds, lbl: "Predictions Made" },
+    { val: d.predictions?.total || 0, lbl: "Predictions Made" },
   ];
   document.getElementById("stats-grid").innerHTML = stats.map(s =>
     `<div class="stat-card"><div class="val">${s.val}</div><div class="lbl">${s.lbl}</div></div>`
@@ -291,79 +396,71 @@ function renderDashboard(d) {
   document.getElementById("bars").innerHTML = daily.map(x => {
     const isToday = x.date === todayKey;
     const h = Math.max((x.count / maxCount) * 72, x.count > 0 ? 4 : 2);
-    const label = x.date.slice(5); // MM-DD
     return `<div class="bar-wrap">
       <div class="bar${isToday?" today":""}" style="height:${h}px" title="${x.count} visitors"></div>
-      <div class="bar-label">${label}</div>
+      <div class="bar-label">${x.date.slice(5)}</div>
     </div>`;
   }).join("");
 
   // Tab usage
   const tabs = d.tabs || {};
-  const tabLabels = { live:"🔴 Live", schedule:"📋 Schedule", groups:"🗂️ Groups", scorers:"⚽ Scorers", stats:"📊 Stats", h2h:"⚔️ H2H", news:"📰 News", predict:"🎯 Odds", predictor:"🔮 Predictor", sim:"🎮 Simulator", bracket:"🏆 Bracket" };
+  const tabLabels = { live:"🔴 Live", schedule:"📋 Schedule", groups:"🗂️ Groups", stats:"📊 Stats", ask:"🔎 Ask", predictor:"🎯 Fantasy", shop:"🏪 Shop", news:"📰 WC News", predict:"📈 Odds", sim:"🎮 Simulator", bracket:"🏆 Bracket" };
   const maxTab = Math.max(...Object.values(tabs), 1);
   document.getElementById("tabs-grid").innerHTML = Object.entries(tabLabels).map(([id, label]) => {
     const count = tabs[id] || 0;
-    const pct = Math.round((count / maxTab) * 100);
     return `<div class="tab-bar">
       <div class="tab-bar-name">${label}</div>
-      <div class="tab-bar-track"><div class="tab-bar-fill" style="width:${pct}%"></div></div>
+      <div class="tab-bar-track"><div class="tab-bar-fill" style="width:${Math.round((count/maxTab)*100)}%"></div></div>
       <div class="tab-bar-count">${count.toLocaleString()} taps</div>
     </div>`;
   }).join("");
 
   // Accounts
-  const accounts = (d.accounts?.records || []).sort((a,b) => (b.updatedAt||b.predictorRegisteredAt||0) - (a.updatedAt||a.predictorRegisteredAt||0));
+  const accounts = (d.accounts?.records || []).sort((a,b) => (b.updatedAt||0) - (a.updatedAt||0));
   document.getElementById("accounts-list").innerHTML = accounts.length ? accounts.map(a => {
     const label = a.displayName || a.predictorName || a.email || a.uid;
-    const saved = `${a.savedMatches || 0} matches${a.hasBracket ? " · bracket" : ""}`;
-    const sub = [a.email, a.favTeams?.length ? `Teams: ${a.favTeams.join(", ")}` : ""].filter(Boolean).join(" · ");
-    return `<div class="acct-row">
-      <div><div style="font-weight:700;color:var(--text)">${escHtml(label)}</div><div style="font-size:10px;color:var(--dim)">${escHtml(a.uid)}${sub ? " · "+escHtml(sub) : ""}</div></div>
-      <div style="color:var(--gold);font-weight:700">${escHtml(a.pin || "—")}</div>
-      <div style="color:var(--mid)">${escHtml(saved)}</div>
-      <div><button class="admin-btn danger" onclick="deleteAccount('${escAttr(a.uid)}','${escAttr(label)}')">Delete</button></div>
+    const saved = `${a.savedMatches||0} matches${a.hasBracket?" · bracket":""}`;
+    return `<div class="row" style="grid-template-columns:1fr 80px 120px 80px">
+      <div><div style="font-weight:700;color:var(--text)">${esc(label)}</div><div style="font-size:10px;color:var(--dim)">${esc(a.pin?`PIN: ${a.pin}`:"")} ${esc(a.email||"")}</div></div>
+      <div style="color:var(--gold);font-weight:700">${esc(a.pin||"—")}</div>
+      <div style="color:var(--mid);font-size:11px">${esc(saved)}</div>
+      <div><button class="admin-btn danger" style="padding:5px 8px;font-size:11px" onclick="deleteAccount('${escA(a.uid)}','${escA(label)}')">Delete</button></div>
     </div>`;
   }).join("") : `<div style="padding:20px;text-align:center;color:var(--dim);font-size:13px">No accounts yet</div>`;
 
-  // Registered users
+  // Users
   const users = (d.users.records || []).sort((a,b) => (b.registeredAt||0) - (a.registeredAt||0));
   document.getElementById("users-list").innerHTML = users.length ? users.map(u => {
-    const joined = u.registeredAt ? new Date(u.registeredAt).toLocaleDateString() : "—";
     const loc = [u.city, u.country].filter(Boolean).join(", ") || "—";
-    const deviceClass = (u.device||"").includes("iOS") ? "ios" : (u.device||"").includes("Android") ? "android" : (u.device||"").includes("Desktop") ? "desktop" : "unknown";
-    return `<div class="user-row">
-      <div class="avatar">👤</div>
-      <div style="font-weight:600;color:var(--text)">${escHtml(u.name || "—")}</div>
-      <div style="color:var(--mid)">${escHtml(loc)}</div>
+    const joined = u.registeredAt ? new Date(u.registeredAt).toLocaleDateString() : "—";
+    const dc = (u.device||"").includes("iOS")?"ios":(u.device||"").includes("Android")?"android":(u.device||"").includes("Desktop")?"desktop":"unknown";
+    return `<div class="row" style="grid-template-columns:1fr 120px 90px 80px">
+      <div style="font-weight:600;color:var(--text)">${esc(u.name||"—")}</div>
+      <div style="color:var(--mid)">${esc(loc)}</div>
       <div style="color:var(--dim)">${joined}</div>
-      <div><span class="device-badge device-${deviceClass}">${escHtml(u.device||"—")}</span></div>
+      <div><span class="badge badge-${dc}">${esc(u.device||"—")}</span></div>
     </div>`;
-  }).join("") : `<div style="padding:20px;text-align:center;color:var(--dim);font-size:13px">No registered users yet</div>`;
+  }).join("") : `<div style="padding:20px;text-align:center;color:var(--dim);font-size:13px">No users yet</div>`;
 
   // Visitors
   const visitors = (d.visitors.records || []).sort((a,b) => (b.lastSeen||0) - (a.lastSeen||0));
+  const now = Date.now();
   document.getElementById("visitors-list").innerHTML = visitors.length ? visitors.map(v => {
     const loc = [v.city, v.country].filter(Boolean).join(", ") || "—";
-    const deviceClass = (v.device||"").includes("iOS") ? "ios" : (v.device||"").includes("Android") ? "android" : (v.device||"").includes("Desktop") ? "desktop" : "unknown";
-    const firstSeen = v.firstSeen ? new Date(v.firstSeen).toLocaleDateString() : "—";
-    const lastSeen = v.lastSeen ? new Date(v.lastSeen).toLocaleString() : "—";
-    return `<div class="vis-row">
-      <div style="color:var(--mid)">${escHtml(loc)}</div>
-      <div><span class="device-badge device-${deviceClass}">${escHtml(v.device||"—")}</span></div>
-      <div style="color:var(--text);font-weight:600">${v.visits||1}</div>
-      <div style="color:var(--dim);font-size:11px">${firstSeen}</div>
-      <div style="color:var(--dim);font-size:11px">${lastSeen}</div>
+    const dc = (v.device||"").includes("iOS")?"ios":(v.device||"").includes("Android")?"android":(v.device||"").includes("Desktop")?"desktop":"unknown";
+    const isActive = v.lastSeen && now - v.lastSeen < 30 * 60 * 1000;
+    return `<div class="row" style="grid-template-columns:1fr 80px 60px 100px 100px">
+      <div style="display:flex;align-items:center;gap:6px">${isActive?`<span class="active-dot"></span>`:""}${esc(loc)}</div>
+      <div><span class="badge badge-${dc}">${esc(v.device||"—")}</span></div>
+      <div style="font-weight:600">${v.visits||1}</div>
+      <div style="color:var(--dim);font-size:11px">${v.firstSeen?new Date(v.firstSeen).toLocaleDateString():"—"}</div>
+      <div style="color:var(--dim);font-size:11px">${v.lastSeen?new Date(v.lastSeen).toLocaleString():"—"}</div>
     </div>`;
   }).join("") : `<div style="padding:20px;text-align:center;color:var(--dim);font-size:13px">No visitor data yet</div>`;
 }
 
-function escHtml(s) {
-  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-}
-function escAttr(s) {
-  return escHtml(s).replace(/'/g,"&#39;").replace(/"/g,"&quot;");
-}
+function esc(s) { return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function escA(s) { return esc(s).replace(/'/g,"&#39;").replace(/"/g,"&quot;"); }
 </script>
 </body>
 </html>
