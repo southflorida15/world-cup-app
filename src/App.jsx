@@ -6884,7 +6884,7 @@ export default function App() {
               <div style={{fontSize:18,fontWeight:800,color:C.text,marginBottom:8}}>Get Kickoff Alerts</div>
               <div style={{fontSize:13,color:C.mid,lineHeight:1.6,marginBottom:20}}>Save matches + tap <strong style={{color:C.gold}}>&ldquo;Notify all&rdquo;</strong> in My Matches to get 30-min alerts before every kickoff — automatically.</div>
               <button onClick={()=>{dismissBanner();setTab("saved");}} style={{width:"100%",padding:"13px",background:`linear-gradient(135deg,${C.gold},#f59e0b)`,border:"none",borderRadius:12,color:"#030a05",fontSize:15,fontWeight:800,cursor:"pointer",marginBottom:8}}>Set up notifications →</button>
-              <button onClick={dismissBanner} style={{width:"100%",padding:"8px",background:"none",border:"none",color:C.dim,fontSize:12,cursor:"pointer"}}>Maybe later</button>
+              <button onClick={dismissBanner} style={{width:"100%",padding:"8px",background:"none",border:"none",color:C.dim,fontSize:12,cursor:"pointer"}}>Already set up on another device · dismiss</button>
             </div>
           </div>
         )}
@@ -6896,15 +6896,15 @@ export default function App() {
               <div style={{fontSize:18,fontWeight:800,color:C.text,marginBottom:8}}>Almost There!</div>
               <div style={{fontSize:13,color:C.mid,lineHeight:1.6,marginBottom:20}}>Notifications are enabled — tap <strong style={{color:C.green}}>&ldquo;Notify all&rdquo;</strong> in My Matches to complete setup and start receiving kickoff alerts.</div>
               <button onClick={()=>{dismissBanner();setTab("saved");}} style={{width:"100%",padding:"13px",background:`linear-gradient(135deg,${C.green},#22c55e)`,border:"none",borderRadius:12,color:"#030a05",fontSize:15,fontWeight:800,cursor:"pointer",marginBottom:8}}>Finish setup →</button>
-              <button onClick={dismissBanner} style={{width:"100%",padding:"8px",background:"none",border:"none",color:C.dim,fontSize:12,cursor:"pointer"}}>Maybe later</button>
+              <button onClick={dismissBanner} style={{width:"100%",padding:"8px",background:"none",border:"none",color:C.dim,fontSize:12,cursor:"pointer"}}>Already set up on another device · dismiss</button>
             </div>
           </div>
         )}
 
         {/* Notification inbox modal */}
         {showInbox && (
-          <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",zIndex:500,display:"flex",alignItems:"flex-end"}} onClick={()=>setShowInbox(false)}>
-            <div onClick={e=>e.stopPropagation()} style={{width:"100%",background:C.bg,borderRadius:"20px 20px 0 0",maxHeight:"70vh",overflow:"hidden",display:"flex",flexDirection:"column"}}>
+          <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",zIndex:500,display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={()=>setShowInbox(false)}>
+            <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:480,background:C.bg,borderRadius:"20px 20px 0 0",maxHeight:"70vh",overflow:"hidden",display:"flex",flexDirection:"column"}}>
               <div style={{padding:"16px 16px 12px",borderBottom:`1px solid ${C.b2}`,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                 <div style={{fontWeight:800,fontSize:17,color:C.text}}>🔔 Notifications</div>
                 <div style={{display:"flex",gap:10,alignItems:"center"}}>
