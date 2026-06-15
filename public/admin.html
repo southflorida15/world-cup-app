@@ -30,6 +30,12 @@
     .stat-card .lbl { font-size: 11px; color: var(--mid); margin-top: 4px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
     .section { margin-bottom: 28px; }
     .section-title { font-size: 11px; font-weight: 700; color: var(--dim); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px; }
+    .collapsible { cursor: pointer; display: flex; align-items: center; justify-content: space-between; user-select: none; }
+    .collapsible:hover { color: var(--mid); }
+    .collapsible .chevron { font-size: 14px; transition: transform .2s; color: var(--dim); }
+    .collapsible.open .chevron { transform: rotate(90deg); }
+    .collapsible-body { display: none; }
+    .collapsible.open + .collapsible-body { display: block; }
     .card { background: var(--s1); border: 1px solid var(--b1); border-radius: 12px; padding: 16px; }
     .tool-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
     .tool-row:last-child { margin-bottom: 0; }
@@ -42,7 +48,12 @@
     .input-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
     .input-row input, .input-row textarea { background: var(--s2); border: 1px solid var(--b2); border-radius: 8px; color: var(--text); font-size: 13px; padding: 8px 12px; outline: none; flex: 1; min-width: 120px; }
     .input-row textarea { min-height: 70px; resize: vertical; font-family: inherit; }
-    .result-box { margin-top: 10px; padding: 10px 12px; background: var(--bg); border: 1px solid var(--b2); border-radius: 8px; font-size: 12px; color: var(--mid); white-space: pre-wrap; font-family: monospace; max-height: 200px; overflow-y: auto; display: none; }
+    .result-box { margin-top: 10px; padding: 10px 12px; background: var(--bg); border: 1px solid var(--b2); border-radius: 8px; font-size: 12px; color: var(--mid); white-space: pre-wrap; font-family: monospace; max-height: 200px; overflow-y: auto; display: none; cursor: pointer; }
+    .result-box::after { content: "✕ click to close"; display: block; text-align: right; font-size: 10px; color: var(--dim); margin-top: 6px; font-family: sans-serif; }
+    /* Tooltips */
+    [data-tip] { position: relative; }
+    [data-tip]:hover::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); background: #1a3828; border: 1px solid var(--b2); color: var(--text); font-size: 11px; font-weight: 400; padding: 6px 10px; border-radius: 8px; white-space: nowrap; max-width: 260px; white-space: normal; text-align: center; z-index: 100; pointer-events: none; line-height: 1.4; }
+    [data-tip]:hover::before { content: ""; position: absolute; bottom: calc(100% + 1px); left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: var(--b2); z-index: 101; pointer-events: none; }
     .chart { background: var(--s1); border: 1px solid var(--b1); border-radius: 12px; padding: 16px; }
     .bars { display: flex; align-items: flex-end; gap: 4px; height: 80px; margin-bottom: 8px; }
     .bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; justify-content: flex-end; }
@@ -108,10 +119,10 @@
 
         <!-- 1. Flush cache -->
         <div class="tool-row">
-          <button class="admin-btn warn" onclick="doAction('flush-livescores',{},'flush-result')">🔄 Flush Livescores Cache</button>
-          <button class="admin-btn" onclick="doAction('seed-livescores',{},'seed-ls-result')">🌱 Seed Livescores</button>
-          <button class="admin-btn" onclick="doAction('seed-espn-ids',{},'seed-ids-result')">🔢 Seed ESPN IDs</button>
-          <button class="admin-btn blue" onclick="doAction('active-today',{},'active-result')">👥 Active Users Now</button>
+          <button class="admin-btn warn" data-tip="Clears the KV livescores cache so the next app request fetches fresh data from ESPN. Use when scores are stuck." onclick="doAction('flush-livescores',{},'flush-result')">🔄 Flush Livescores Cache</button>
+          <button class="admin-btn" data-tip="Writes all known FT results to KV permanently. Use after a matchday if Fantasy Scored tab is missing matches." onclick="doAction('seed-livescores',{},'seed-ls-result')">🌱 Seed Livescores</button>
+          <button class="admin-btn" data-tip="Pre-populates ESPN event IDs for the next 7 days. Run before each matchday to ensure Match Events load correctly." onclick="doAction('seed-espn-ids',{},'seed-ids-result')">🔢 Seed ESPN IDs</button>
+          <button class="admin-btn blue" data-tip="Shows users who have been active in the last 30 minutes." onclick="doAction('active-today',{},'active-result')">👥 Active Users Now</button>
         </div>
         <div class="result-box" id="flush-result"></div>
         <div class="result-box" id="seed-ls-result"></div>
@@ -123,7 +134,7 @@
         <!-- 2. Persisted Results -->
         <div style="font-size:11px;font-weight:700;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">📊 Persisted Match Results</div>
         <div class="tool-row">
-          <button class="admin-btn" onclick="doAction('get-results',{},'results-view')">View All Results</button>
+          <button class="admin-btn" data-tip="Shows all match results currently persisted in KV." onclick="doAction('get-results',{},'results-view')">View All Results</button>
         </div>
         <div class="result-box" id="results-view"></div>
         <div class="input-row" style="margin-top:10px">
@@ -131,8 +142,8 @@
           <input id="r-away" placeholder="Away team (e.g. Curacao)"/>
           <input id="r-hg" placeholder="Home goals" style="max-width:90px"/>
           <input id="r-ag" placeholder="Away goals" style="max-width:90px"/>
-          <button class="admin-btn" onclick="setResult()">Set Result</button>
-          <button class="admin-btn danger" onclick="delResult()">Delete</button>
+          <button class="admin-btn" data-tip="Save or correct a match result. Then run Force Re-score to update fantasy points." onclick="setResult()">Set Result</button>
+          <button class="admin-btn danger" data-tip="Remove a persisted result entirely. The live feed will re-populate it on next fetch." onclick="delResult()">Delete</button>
         </div>
         <div class="result-box" id="result-edit-box"></div>
 
@@ -141,7 +152,7 @@
         <!-- 3. Force re-score -->
         <div style="font-size:11px;font-weight:700;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">🎯 Fantasy Scoring</div>
         <div class="tool-row">
-          <button class="admin-btn warn" onclick="doAction('rescore-all',{},'rescore-result')">⚡ Force Re-score All Picks</button>
+          <button class="admin-btn warn" data-tip="Re-runs fantasy scoring for all users using current persisted results. Use after correcting a wrong result." onclick="doAction('rescore-all',{},'rescore-result')">⚡ Force Re-score All Picks</button>
         </div>
         <div class="result-box" id="rescore-result"></div>
 
@@ -150,15 +161,15 @@
         <!-- 4. ESPN ID map -->
         <div style="font-size:11px;font-weight:700;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">🔢 ESPN ID Map</div>
         <div class="tool-row">
-          <button class="admin-btn" onclick="doAction('get-espn-ids',{},'espn-ids-view')">View All IDs</button>
+          <button class="admin-btn" data-tip="Shows all ESPN event IDs stored in KV. Use to spot wrong mappings." onclick="doAction('get-espn-ids',{},'espn-ids-view')">View All IDs</button>
         </div>
         <div class="result-box" id="espn-ids-view"></div>
         <div class="input-row" style="margin-top:10px">
           <input id="espn-home" placeholder="Home team"/>
           <input id="espn-away" placeholder="Away team"/>
           <input id="espn-id" placeholder="ESPN event ID" style="max-width:110px"/>
-          <button class="admin-btn" onclick="setESPNId()">Set ID</button>
-          <button class="admin-btn danger" onclick="delESPNId()">Delete</button>
+          <button class="admin-btn" data-tip="Manually set the correct ESPN event ID for a match. Use when Match Events load the wrong game." onclick="setESPNId()">Set ID</button>
+          <button class="admin-btn danger" data-tip="Remove a wrong ESPN ID. The livescores feed will auto-correct it on next fetch." onclick="delESPNId()">Delete</button>
         </div>
         <div class="result-box" id="espn-id-edit-box"></div>
       </div>
@@ -197,55 +208,69 @@
 
     <!-- Daily chart -->
     <div class="section">
-      <div class="section-title">📈 Daily Unique Visitors (last 14 days)</div>
-      <div class="chart">
-        <div class="bars" id="bars"></div>
-        <div style="font-size:10px;color:var(--dim);text-align:right">Today highlighted in gold</div>
+      <div class="section-title collapsible" onclick="toggle(this)">📈 Daily Unique Visitors (last 14 days) <span class="chevron">›</span></div>
+      <div class="collapsible-body">
+        <div class="chart">
+          <div class="bars" id="bars"></div>
+          <div style="font-size:10px;color:var(--dim);text-align:right">Today highlighted in gold</div>
+        </div>
       </div>
     </div>
 
     <!-- Tab usage -->
     <div class="section">
-      <div class="section-title">📊 Tab Usage</div>
-      <div class="tabs-grid" id="tabs-grid"></div>
+      <div class="section-title collapsible" onclick="toggle(this)">📊 Tab Usage <span class="chevron">›</span></div>
+      <div class="collapsible-body">
+        <div class="tabs-grid" id="tabs-grid"></div>
+      </div>
     </div>
 
     <!-- Accounts -->
     <div class="section">
-      <div class="section-title">👤 Accounts</div>
-      <div class="table">
-        <div class="row head" style="grid-template-columns:1fr 80px 120px 80px">
-          <div>User</div><div>PIN</div><div>Saved</div><div>Actions</div>
+      <div class="section-title collapsible" onclick="toggle(this)">👤 Accounts <span class="chevron">›</span></div>
+      <div class="collapsible-body">
+        <div class="table">
+          <div class="row head" style="grid-template-columns:1fr 80px 120px 80px">
+            <div>User</div><div>PIN</div><div>Saved</div><div>Actions</div>
+          </div>
+          <div id="accounts-list"></div>
         </div>
-        <div id="accounts-list"></div>
       </div>
     </div>
 
     <!-- Predictor Users -->
     <div class="section">
-      <div class="section-title">🎯 Predictor Users</div>
-      <div class="table">
-        <div class="row head" style="grid-template-columns:1fr 120px 90px 80px">
-          <div>Name</div><div>Location</div><div>Joined</div><div>Device</div>
+      <div class="section-title collapsible" onclick="toggle(this)">🎯 Predictor Users <span class="chevron">›</span></div>
+      <div class="collapsible-body">
+        <div class="table">
+          <div class="row head" style="grid-template-columns:1fr 120px 90px 80px">
+            <div>Name</div><div>Location</div><div>Joined</div><div>Device</div>
+          </div>
+          <div id="users-list"></div>
         </div>
-        <div id="users-list"></div>
       </div>
     </div>
 
     <!-- All visitors -->
     <div class="section">
-      <div class="section-title">🌍 All Visitors</div>
-      <div class="table">
-        <div class="row head" style="grid-template-columns:1fr 80px 60px 100px 100px">
-          <div>Location</div><div>Device</div><div>Visits</div><div>First seen</div><div>Last seen</div>
+      <div class="section-title collapsible" onclick="toggle(this)">🌍 All Visitors <span class="chevron">›</span></div>
+      <div class="collapsible-body">
+        <div class="table">
+          <div class="row head" style="grid-template-columns:1fr 80px 60px 100px 100px">
+            <div>Location</div><div>Device</div><div>Visits</div><div>First seen</div><div>Last seen</div>
+          </div>
+          <div id="visitors-list"></div>
         </div>
-        <div id="visitors-list"></div>
       </div>
     </div>
   </div>
 </div>
 
 <script>
+function toggle(el) {
+  el.classList.toggle("open");
+}
+
 let SECRET = "";
 
 function doLogin() {
@@ -281,6 +306,8 @@ async function doAction(action, extra, resultId) {
   const box = document.getElementById(resultId);
   box.style.display = "block";
   box.textContent = "⏳ Working...";
+  box.style.color = "var(--mid)";
+  box.onclick = () => { box.style.display = "none"; box.onclick = null; };
   try {
     const d = await adminAction({ adminAction: action, ...extra });
     box.textContent = JSON.stringify(d, null, 2);
