@@ -5553,9 +5553,13 @@ function PullToRefresh({ onRefresh, children }) {
   const THRESHOLD = 72;
 
   useEffect(() => {
+    const getScrollTop = () => {
+      const el = document.getElementById("scroll-area") || document.scrollingElement || document.documentElement;
+      return el ? el.scrollTop : 0;
+    };
+
     const onTouchStart = (e) => {
-      const scroller = document.getElementById("scroll-area");
-      atTop.current = !scroller || scroller.scrollTop <= 0;
+      atTop.current = getScrollTop() <= 0;
       startY.current = e.touches[0].clientY;
       startX.current = e.touches[0].clientX;
       directionLocked.current = null;
