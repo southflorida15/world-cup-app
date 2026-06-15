@@ -6873,25 +6873,27 @@ export default function App() {
 
         {/* Notification prompt banner */}
         {tab==="live" && !bannerDismissed && typeof Notification !== "undefined" && Notification.permission !== "granted" && (
-          <div style={{position:"fixed",bottom:72,left:12,right:12,background:`linear-gradient(135deg,${C.s2},${C.s1})`,border:`1px solid ${C.gold}44`,borderRadius:14,padding:"12px 14px",zIndex:200,display:"flex",alignItems:"center",gap:10,boxShadow:`0 4px 20px rgba(0,0,0,0.4)`}}>
-            <span style={{fontSize:22,flexShrink:0}}>🔔</span>
-            <div style={{flex:1}}>
-              <div style={{fontSize:13,fontWeight:700,color:C.text}}>Get kickoff alerts</div>
-              <div style={{fontSize:11,color:C.mid,marginTop:2}}>Save matches + tap "Notify all" in My Matches to get 30-min alerts before kickoff</div>
+          <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 24px"}} onClick={dismissBanner}>
+            <div onClick={e=>e.stopPropagation()} style={{background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.gold}44`,borderRadius:20,padding:"28px 24px",width:"100%",maxWidth:360,boxShadow:"0 8px 40px rgba(0,0,0,0.6)",textAlign:"center",position:"relative"}}>
+              <button onClick={dismissBanner} style={{position:"absolute",top:12,right:14,background:"none",border:"none",color:C.dim,fontSize:20,cursor:"pointer"}}>✕</button>
+              <div style={{fontSize:48,marginBottom:12}}>🔔</div>
+              <div style={{fontSize:18,fontWeight:800,color:C.text,marginBottom:8}}>Get Kickoff Alerts</div>
+              <div style={{fontSize:13,color:C.mid,lineHeight:1.6,marginBottom:20}}>Save matches + tap <strong style={{color:C.gold}}>&ldquo;Notify all&rdquo;</strong> in My Matches to get 30-min alerts before every kickoff — automatically.</div>
+              <button onClick={()=>{dismissBanner();setTab("saved");}} style={{width:"100%",padding:"13px",background:`linear-gradient(135deg,${C.gold},#f59e0b)`,border:"none",borderRadius:12,color:"#030a05",fontSize:15,fontWeight:800,cursor:"pointer",marginBottom:8}}>Set up notifications →</button>
+              <button onClick={dismissBanner} style={{width:"100%",padding:"8px",background:"none",border:"none",color:C.dim,fontSize:12,cursor:"pointer"}}>Maybe later</button>
             </div>
-            <button onClick={()=>setTab("saved")} style={{background:`${C.gold}22`,border:`1px solid ${C.gold}44`,borderRadius:8,padding:"6px 10px",color:C.gold,fontSize:12,fontWeight:700,cursor:"pointer",flexShrink:0}}>Set up →</button>
-            <button onClick={dismissBanner} style={{background:"none",border:"none",color:C.dim,fontSize:18,cursor:"pointer",flexShrink:0,padding:"0 2px"}}>✕</button>
           </div>
         )}
         {tab==="live" && !bannerDismissed && typeof Notification !== "undefined" && Notification.permission === "granted" && !masterPushSubscribed && (
-          <div style={{position:"fixed",bottom:72,left:12,right:12,background:`linear-gradient(135deg,${C.s2},${C.s1})`,border:`1px solid ${C.green}44`,borderRadius:14,padding:"12px 14px",zIndex:200,display:"flex",alignItems:"center",gap:10,boxShadow:`0 4px 20px rgba(0,0,0,0.4)`}}>
-            <span style={{fontSize:22,flexShrink:0}}>🔔</span>
-            <div style={{flex:1}}>
-              <div style={{fontSize:13,fontWeight:700,color:C.text}}>Almost there!</div>
-              <div style={{fontSize:11,color:C.mid,marginTop:2}}>Notifications are enabled — tap "Notify all" in My Matches to complete setup</div>
+          <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 24px"}} onClick={dismissBanner}>
+            <div onClick={e=>e.stopPropagation()} style={{background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.green}44`,borderRadius:20,padding:"28px 24px",width:"100%",maxWidth:360,boxShadow:"0 8px 40px rgba(0,0,0,0.6)",textAlign:"center",position:"relative"}}>
+              <button onClick={dismissBanner} style={{position:"absolute",top:12,right:14,background:"none",border:"none",color:C.dim,fontSize:20,cursor:"pointer"}}>✕</button>
+              <div style={{fontSize:48,marginBottom:12}}>🔔</div>
+              <div style={{fontSize:18,fontWeight:800,color:C.text,marginBottom:8}}>Almost There!</div>
+              <div style={{fontSize:13,color:C.mid,lineHeight:1.6,marginBottom:20}}>Notifications are enabled — tap <strong style={{color:C.green}}>&ldquo;Notify all&rdquo;</strong> in My Matches to complete setup and start receiving kickoff alerts.</div>
+              <button onClick={()=>{dismissBanner();setTab("saved");}} style={{width:"100%",padding:"13px",background:`linear-gradient(135deg,${C.green},#22c55e)`,border:"none",borderRadius:12,color:"#030a05",fontSize:15,fontWeight:800,cursor:"pointer",marginBottom:8}}>Finish setup →</button>
+              <button onClick={dismissBanner} style={{width:"100%",padding:"8px",background:"none",border:"none",color:C.dim,fontSize:12,cursor:"pointer"}}>Maybe later</button>
             </div>
-            <button onClick={()=>setTab("saved")} style={{background:`${C.green}22`,border:`1px solid ${C.green}44`,borderRadius:8,padding:"6px 10px",color:C.green,fontSize:12,fontWeight:700,cursor:"pointer",flexShrink:0}}>Finish →</button>
-            <button onClick={dismissBanner} style={{background:"none",border:"none",color:C.dim,fontSize:18,cursor:"pointer",flexShrink:0,padding:"0 2px"}}>✕</button>
           </div>
         )}
 
