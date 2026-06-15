@@ -205,7 +205,7 @@ export default async function handler(req, res) {
           if (!record?.subscription) return;
           // Match by: stored UID, stored PIN, or targetUids set
           const matchUid = record.uid && targetUids.has(record.uid);
-          const matchPin = targetPin && record.pin === targetPin;
+          const matchPin = targetPin && String(record.pin) === String(targetPin);
           // Also match if the subscription's UID appears in the sync profile's saved data
           if (!matchUid && !matchPin) return;
           found = true;

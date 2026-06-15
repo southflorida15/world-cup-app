@@ -189,7 +189,7 @@
         <div class="result-box" id="seed-ls-result"></div>
         <div class="result-box" id="seed-ids-result"></div>
         <div class="result-box" id="active-result"></div>
-        <div class="result-box" id="push-subs-result"></div>
+        <div class="result-box" id="push-subs-result" style="cursor:default"></div>
 
         <hr class="divider"/>
 
@@ -359,7 +359,9 @@ async function doAction(action, extra, resultId) {
   box.style.display = "block";
   box.textContent = "⏳ Working...";
   box.style.color = "var(--mid)";
-  box.onclick = () => { box.style.display = "none"; box.onclick = null; };
+  if (resultId !== "push-subs-result") {
+    box.onclick = () => { box.style.display = "none"; box.onclick = null; };
+  }
   try {
     const d = await adminAction({ adminAction: action, ...extra });
     box.textContent = JSON.stringify(d, null, 2);
