@@ -3659,6 +3659,7 @@ function SavedTab({ saved, onRemove, onMatchTap, tabTop=116, syncUid="", syncPin
       if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey:urlBase64ToUint8Array("BHlG2j1aEN_PheVmM_kw6eG5ho26LSMdtxSVEjiz9HnYqKTWWlOrdFdX-U3qUqR-VLxDrvOBik17FS7NJ1kJdr8") });
       await fetch("/api/push?action=subscribe", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ subscription:sub.toJSON(), matches:saved.map(x=>x.match), minsBefore:60, uid: syncUid, pin: syncPin || null }) });
       setMasterPushDone(true);
+      setMasterPushSubscribed(true);
       try {
         const ids = saved.map(x=>x.match?.id).filter(Boolean);
         const existing = JSON.parse(localStorage.getItem("wc2026_push_set") || "[]");
@@ -6438,6 +6439,34 @@ export default function App() {
     return () => clearTimeout(t);
   }, []);
   const [tab, setTab] = useState("live");
+  const [masterPushSubscribed, setMasterPushSubscribed] = useState(false);
+  const [bannerDismissed, setBannerDismissed] = useState(() => {
+    try {
+      const dismissed = localStorage.getItem("wc2026_push_banner_dismissed");
+      if (!dismissed) return false;
+      // Re-show on Jun 18 if dismissed before that date
+      const reshowDate = new Date("2026-06-18T00:00:00");
+      const dismissedAt = parseInt(dismissed);
+      if (!isNaN(dismissedAt) && dismissedAt < reshowDate.getTime() && Date.now() >= reshowDate.getTime()) {
+        return false; // re-show it
+      }
+      return true;
+    } catch { return false; }
+  });
+  const dismissBanner = () => {
+    setBannerDismissed(true);
+    try { localStorage.setItem("wc2026_push_banner_dismissed", String(Date.now())); } catch {}
+  };
+
+  // Check if browser has active push subscription
+  useEffect(() => {
+    if (!navigator.serviceWorker) return;
+    navigator.serviceWorker.ready.then(reg => {
+      reg.pushManager.getSubscription().then(sub => {
+        setMasterPushSubscribed(!!sub);
+      }).catch(() => {});
+    }).catch(() => {});
+  }, []);
   const [showInbox, setShowInbox] = useState(false);
   const [inbox, setInbox] = useState(() => {
     try { return JSON.parse(localStorage.getItem("wc2026_inbox") || "[]"); } catch { return []; }
@@ -6842,8 +6871,8 @@ export default function App() {
         <Toast msg={toast} onDone={()=>setToast("")}/>
         <InstallBanner/>
 
-        {/* Notification prompt banner — show on Live tab for anyone without notifications */}
-        {tab==="live" && typeof Notification !== "undefined" && Notification.permission !== "granted" && (
+        {/* Notification prompt banner */}
+        {tab==="live" && !bannerDismissed && typeof Notification !== "undefined" && Notification.permission !== "granted" && (
           <div style={{position:"fixed",bottom:72,left:12,right:12,background:`linear-gradient(135deg,${C.s2},${C.s1})`,border:`1px solid ${C.gold}44`,borderRadius:14,padding:"12px 14px",zIndex:200,display:"flex",alignItems:"center",gap:10,boxShadow:`0 4px 20px rgba(0,0,0,0.4)`}}>
             <span style={{fontSize:22,flexShrink:0}}>🔔</span>
             <div style={{flex:1}}>
@@ -6851,6 +6880,18 @@ export default function App() {
               <div style={{fontSize:11,color:C.mid,marginTop:2}}>Save matches + tap "Notify all" in My Matches to get 30-min alerts before kickoff</div>
             </div>
             <button onClick={()=>setTab("saved")} style={{background:`${C.gold}22`,border:`1px solid ${C.gold}44`,borderRadius:8,padding:"6px 10px",color:C.gold,fontSize:12,fontWeight:700,cursor:"pointer",flexShrink:0}}>Set up →</button>
+            <button onClick={dismissBanner} style={{background:"none",border:"none",color:C.dim,fontSize:18,cursor:"pointer",flexShrink:0,padding:"0 2px"}}>✕</button>
+          </div>
+        )}
+        {tab==="live" && !bannerDismissed && typeof Notification !== "undefined" && Notification.permission === "granted" && !masterPushSubscribed && (
+          <div style={{position:"fixed",bottom:72,left:12,right:12,background:`linear-gradient(135deg,${C.s2},${C.s1})`,border:`1px solid ${C.green}44`,borderRadius:14,padding:"12px 14px",zIndex:200,display:"flex",alignItems:"center",gap:10,boxShadow:`0 4px 20px rgba(0,0,0,0.4)`}}>
+            <span style={{fontSize:22,flexShrink:0}}>🔔</span>
+            <div style={{flex:1}}>
+              <div style={{fontSize:13,fontWeight:700,color:C.text}}>Almost there!</div>
+              <div style={{fontSize:11,color:C.mid,marginTop:2}}>Notifications are enabled — tap "Notify all" in My Matches to complete setup</div>
+            </div>
+            <button onClick={()=>setTab("saved")} style={{background:`${C.green}22`,border:`1px solid ${C.green}44`,borderRadius:8,padding:"6px 10px",color:C.green,fontSize:12,fontWeight:700,cursor:"pointer",flexShrink:0}}>Finish →</button>
+            <button onClick={dismissBanner} style={{background:"none",border:"none",color:C.dim,fontSize:18,cursor:"pointer",flexShrink:0,padding:"0 2px"}}>✕</button>
           </div>
         )}
 
