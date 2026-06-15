@@ -4972,6 +4972,59 @@ const FOOTBALL_ICONS = [
 ];
 
 // ── SYNC MODAL ─────────────────────────────────────────────────────────────
+// ── NOTIFY ENABLE BUTTON ──────────────────────────────────────────────────
+function NotifyEnableBtn({ syncUid, syncPin }) {
+  const [state, setState] = useState("idle"); // idle | loading | done | denied
+  useEffect(() => {
+    if (!navigator.serviceWorker) return;
+    navigator.serviceWorker.ready.then(reg => {
+      reg.pushManager.getSubscription().then(sub => {
+        if (sub) setState("done");
+      }).catch(() => {});
+    }).catch(() => {});
+  }, []);
+
+  const handleEnable = async () => {
+    if (state === "done") return;
+    setState("loading");
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") { setState("denied"); return; }
+      const reg = await navigator.serviceWorker.ready;
+      let sub = await reg.pushManager.getSubscription();
+      if (!sub) sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array("BHlG2j1aEN_PheVmM_kw6eG5ho26LSMdtxSVEjiz9HnYqKTWWlOrdFdX-U3qUqR-VLxDrvOBik17FS7NJ1kJdr8")
+      });
+      await fetch("/api/push?action=subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subscription: sub.toJSON(), matches: [], minsBefore: 60, uid: syncUid, pin: syncPin || null })
+      });
+      setState("done");
+    } catch(e) {
+      console.warn("NotifyEnableBtn:", e);
+      setState("idle");
+    }
+  };
+
+  if (state === "done") return (
+    <div style={{marginTop:10,padding:"8px 12px",background:`${C.green}12`,border:`1px solid ${C.green}33`,borderRadius:8,fontSize:12,color:C.green,textAlign:"center"}}>
+      🔔 Notifications enabled on this device
+    </div>
+  );
+  if (state === "denied") return (
+    <div style={{marginTop:10,padding:"8px 12px",background:`${C.red}12`,border:`1px solid ${C.red}33`,borderRadius:8,fontSize:12,color:C.red,textAlign:"center"}}>
+      ❌ Notifications blocked — enable in browser settings
+    </div>
+  );
+  return (
+    <button onClick={handleEnable} disabled={state==="loading"} style={{width:"100%",marginTop:10,padding:"9px",borderRadius:8,border:`1px solid ${C.gold}44`,background:`${C.gold}15`,color:C.gold,fontSize:12,fontWeight:700,cursor:"pointer",opacity:state==="loading"?0.6:1}}>
+      {state==="loading" ? "Enabling..." : "🔔 Enable notifications on this device"}
+    </button>
+  );
+}
+
 function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved, favTeams, setToast, setSaved, setFavTeams, dark, setDark, geoData, locationOverride, setLocationOverride, onShowSaved, userAvatar, persistAvatar, displayName, persistDisplayName, onSignOut=()=>{} }) {
   const [screen, setScreen] = useState("home");
   const [pin, setPin] = useState("");
@@ -5153,6 +5206,9 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
           {isSynced && <button onClick={()=>{persistProfile(null);onSignOut();setToast("Signed out.");onClose();}} style={{padding:"6px 12px",borderRadius:8,border:`1px solid ${C.b2}`,background:C.s2,color:C.mid,fontSize:11,fontWeight:600,cursor:"pointer",flexShrink:0}}>Sign out</button>}
           {syncProfile?.pin&&<button onClick={()=>{setPin("");setScreen("pin-change");setError("");}} style={{padding:"6px 12px",borderRadius:8,border:`1px solid ${C.b2}`,background:C.s2,color:C.mid,fontSize:11,fontWeight:600,cursor:"pointer",flexShrink:0}}>🔁 Change PIN</button>}
         </div>
+        {syncProfile?.pin && (
+          <NotifyEnableBtn syncUid={syncUid} syncPin={syncProfile.pin}/>
+        )}
         <div style={{textAlign:"center",marginTop:10}}>
           <span style={{fontSize:10,color:C.dim}}>v{APP_VERSION} · {APP_DATE}</span>
         </div>
