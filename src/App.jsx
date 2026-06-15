@@ -5620,12 +5620,18 @@ function PullToRefresh({ onRefresh, children }) {
 
   return (
     <>
-      {children}
-      {/* Pull indicator — sticky at top of scroll area */}
+      <div style={{
+        transform: pulling || refreshing ? `translateY(${Math.min(pullY, THRESHOLD + 20)}px)` : "translateY(0)",
+        transition: pulling ? "none" : "transform .25s ease",
+        willChange: "transform",
+      }}>
+        {children}
+      </div>
+      {/* Pull indicator — follows the pull */}
       {(pulling || refreshing) && (
         <div style={{
-          position:"fixed", top:"50%", left:"50%",
-          transform:"translate(-50%,-50%)",
+          position:"fixed", top: Math.min(pullY - 36, THRESHOLD - 16), left:"50%",
+          transform:"translateX(-50%)",
           zIndex:500, pointerEvents:"none",
         }}>
           <div style={{
@@ -5633,11 +5639,11 @@ function PullToRefresh({ onRefresh, children }) {
             background:C.s1, border:`2px solid ${C.green}`,
             display:"flex", alignItems:"center", justifyContent:"center",
             boxShadow:DS.shadow.panel,
-            opacity: Math.min(pullY / 20, 1),
+            opacity: Math.min(pullY / 30, 1),
           }}>
             {refreshing
               ? <div style={{width:18,height:18,border:`2.5px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .7s linear infinite"}}/>
-              : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={pullY>=THRESHOLD?C.green:C.mid} strokeWidth="2.5" strokeLinecap="round" style={{transform:`rotate(${(pullY/THRESHOLD)*180}deg)`,transition:"transform .1s"}}><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+              : <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={pullY>=THRESHOLD?C.green:C.mid} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{transform:`rotate(${(pullY/THRESHOLD)*270}deg)`,transition:"transform .1s"}}><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
             }
           </div>
         </div>
@@ -5646,8 +5652,7 @@ function PullToRefresh({ onRefresh, children }) {
   );
 }
 
-
-// ── ONBOARDING ─────────────────────────────────────────────────────────────
+// ── ONBOARDING
 const ONBOARDING_SLIDES = [
   {
     icon: "⚽",
