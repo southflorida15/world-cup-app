@@ -6746,6 +6746,12 @@ export default function App() {
     const msSince = Date.now() - ko;
     return msSince > -60000 && msSince < 130 * 60 * 1000;
   });
+  const hasImminentKickoff = !hasLiveMatches && MATCHES.some(m => {
+    const iso = MATCH_UTC[m.id];
+    if (!iso) return false;
+    const msUntil = new Date(iso).getTime() - Date.now();
+    return msUntil >= 0 && msUntil <= 60000; // within 1 minute
+  });
   const savedIds = new Set(saved.map(x=>x.match?.id));
   const onAction=(m)=>{
     if(savedIds.has(m.id)){ setSaved(s=>s.filter(x=>x.match?.id!==m.id)); setToast("Removed from saved"); }
@@ -6823,7 +6829,7 @@ export default function App() {
             <div style={{display:"flex",overflowX:"auto",scrollbarWidth:"none",marginBottom:-1}}>
               {TABS.map(t=>(
                 <button key={t.id} onClick={()=>setTab(t.id)} style={{flex:"0 0 auto",padding:"8px 8px",background:"none",border:"none",borderBottom:`2px solid ${tab===t.id?C.green:"transparent"}`,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,color:tab===t.id?C.green:C.dim,position:"relative"}}>
-                  <span style={{fontSize:14,animation:t.id==="live"&&hasLiveMatches?"pulse 1.5s infinite":undefined}}>{t.icon}</span>
+                  <span style={{fontSize:14,animation:t.id==="live"&&(hasLiveMatches||hasImminentKickoff)?(hasImminentKickoff?"pulse 0.5s infinite":"pulse 1.5s infinite"):undefined}}>{t.icon}</span>
                   <span style={{fontSize:9,fontWeight:600,whiteSpace:"nowrap"}}>{t.label}</span>
                 </button>
               ))}
