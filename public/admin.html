@@ -48,8 +48,9 @@
     .input-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
     .input-row input, .input-row textarea { background: var(--s2); border: 1px solid var(--b2); border-radius: 8px; color: var(--text); font-size: 13px; padding: 8px 12px; outline: none; flex: 1; min-width: 120px; }
     .input-row textarea { min-height: 70px; resize: vertical; font-family: inherit; }
-    .result-box { margin-top: 10px; padding: 10px 12px; background: var(--bg); border: 1px solid var(--b2); border-radius: 8px; font-size: 12px; color: var(--mid); white-space: pre-wrap; font-family: monospace; max-height: 200px; overflow-y: auto; display: none; cursor: pointer; }
-    .result-box::after { content: "✕ click to close"; display: block; text-align: right; font-size: 10px; color: var(--dim); margin-top: 6px; font-family: sans-serif; }
+    .result-box { margin-top: 10px; padding: 10px 12px; background: var(--bg); border: 1px solid var(--b2); border-radius: 8px; font-size: 12px; color: var(--mid); white-space: pre-wrap; font-family: monospace; max-height: 200px; overflow-y: auto; display: none; position: relative; }
+    .result-close { position: sticky; bottom: 0; display: block; text-align: right; font-size: 10px; color: var(--dim); margin-top: 6px; font-family: sans-serif; cursor: pointer; background: var(--bg); padding-top: 4px; }
+    .result-close:hover { color: var(--red); }
     /* Tooltips */
     [data-tip] { position: relative; }
     [data-tip]:hover::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); background: #1a3828; border: 1px solid var(--b2); color: var(--text); font-size: 11px; font-weight: 400; padding: 6px 10px; border-radius: 8px; white-space: nowrap; max-width: 260px; white-space: normal; text-align: center; z-index: 100; pointer-events: none; line-height: 1.4; }
@@ -357,18 +358,14 @@ async function adminAction(payload) {
 async function doAction(action, extra, resultId) {
   const box = document.getElementById(resultId);
   box.style.display = "block";
-  box.textContent = "⏳ Working...";
   box.style.color = "var(--mid)";
-  if (resultId !== "push-subs-result") {
-    box.onclick = () => { box.style.display = "none"; box.onclick = null; };
-  }
+  box.onclick = null;
+  box.innerHTML = "⏳ Working...";
   try {
     const d = await adminAction({ adminAction: action, ...extra });
-    box.textContent = JSON.stringify(d, null, 2);
-    box.style.color = "var(--green)";
+    box.innerHTML = `<span style="color:var(--green)">${JSON.stringify(d, null, 2)}</span><span class="result-close" onclick="this.parentElement.style.display='none'">✕ close</span>`;
   } catch(e) {
-    box.textContent = "❌ " + e.message;
-    box.style.color = "var(--red)";
+    box.innerHTML = `<span style="color:var(--red)">❌ ${e.message}</span><span class="result-close" onclick="this.parentElement.style.display='none'">✕ close</span>`;
   }
 }
 

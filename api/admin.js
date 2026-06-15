@@ -285,15 +285,16 @@ async function sendPushToAll({ title, body, url }, req) {
   return { ok: true, ...data };
 }
 
-async function sendPushToUser({ uid, title, body, url }, req) {
-  if (!uid || !title || !body) throw new Error("uid, title and body required");
+async function sendPushToUser({ uid, pin, title, body, url }, req) {
+  if (!uid && !pin) throw new Error("uid or pin required");
+  if (!title || !body) throw new Error("title and body required");
   const host = req.headers.host;
   const proto = req.headers["x-forwarded-proto"] || "https";
   const secret = process.env.PREDICTOR_ADMIN_SECRET || process.env.CRON_SECRET;
   const r = await fetch(`${proto}://${host}/api/push?action=notify-user`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${secret}` },
-    body: JSON.stringify({ uid, title, body, url: url || "/" }),
+    body: JSON.stringify({ uid: uid||undefined, pin: pin||undefined, title, body, url: url || "/" }),
   });
   const data = await r.json().catch(() => ({}));
   return { ok: true, ...data };
