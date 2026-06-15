@@ -285,6 +285,20 @@ async function sendPushToAll({ title, body, url }, req) {
   return { ok: true, ...data };
 }
 
+async function sendPushToUser({ uid, title, body, url }, req) {
+  if (!uid || !title || !body) throw new Error("uid, title and body required");
+  const host = req.headers.host;
+  const proto = req.headers["x-forwarded-proto"] || "https";
+  const secret = process.env.PREDICTOR_ADMIN_SECRET || process.env.CRON_SECRET;
+  const r = await fetch(`${proto}://${host}/api/push?action=notify-user`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${secret}` },
+    body: JSON.stringify({ uid, title, body, url: url || "/" }),
+  });
+  const data = await r.json().catch(() => ({}));
+  return { ok: true, ...data };
+}
+
 // ── Score-matches (fantasy auto-scoring) ─────────────────────────────────
 async function handleScoreMatches(req, res) {
   const { matches } = req.body || {};
@@ -376,6 +390,9 @@ export default async function handler(req, res) {
       // 9. Send push notification
       if (req.body.adminAction === "send-push") {
         return res.status(200).json(await sendPushToAll(req.body, req));
+      }
+      if (req.body.adminAction === "send-push-user") {
+        return res.status(200).json(await sendPushToUser(req.body, req));
       }
       return res.status(400).json({ error: "unknown adminAction" });
     } catch (err) {

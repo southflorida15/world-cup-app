@@ -162,5 +162,47 @@ export default async function handler(req, res) {
     }
   }
 
-  return res.status(400).json({ error: "Missing action. Use ?action=subscribe, ?action=notify, or ?action=broadcast" });
+  // ── Notify single user by UID ─────────────────────────────────────────────
+  if (action === "notify-user") {
+    const auth = req.headers.authorization || "";
+    const validSecret = process.env.CRON_SECRET || process.env.PREDICTOR_ADMIN_SECRET;
+    if (!validSecret || auth !== `Bearer ${validSecret}`) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const { uid, title, body, url = "/" } = req.body || {};
+    if (!uid || !title || !body) return res.status(400).json({ error: "uid, title and body required" });
+
+    try {
+      let cursor = 0;
+      const keys = [];
+      do {
+        const [nextCursor, batch] = await kv.scan(cursor, { match: "push:*", count: 100 });
+        cursor = parseInt(nextCursor) || 0;
+        keys.push(...batch);
+      } while (cursor !== 0);
+
+      const payload = JSON.stringify({ title, body, tag: `wc2026-user-${Date.now()}`, url });
+      let sent = 0, notFound = true;
+
+      await Promise.all(keys.map(async key => {
+        try {
+          const record = await kv.get(key);
+          if (!record?.subscription || record?.uid !== uid) return;
+          notFound = false;
+          await webpush.sendNotification(record.subscription, payload);
+          sent++;
+        } catch(e) {
+          if (e.statusCode === 410) await kv.del(key).catch(() => {});
+        }
+      }));
+
+      if (notFound) return res.status(404).json({ ok: false, error: "No subscription found for this UID" });
+      return res.status(200).json({ ok: true, sent });
+    } catch(err) {
+      return res.status(500).json({ error: err.message });
+    }
+  }
+
+  return res.status(400).json({ error: "Missing action. Use ?action=subscribe, ?action=notify, ?action=broadcast, or ?action=notify-user" });
 }

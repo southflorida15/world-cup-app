@@ -76,7 +76,9 @@
     .badge-desktop { background: rgba(251,191,36,.15); color: var(--gold); }
     .badge-unknown { background: var(--s2); color: var(--dim); }
     .badge-active { background: rgba(74,222,128,.2); color: var(--green); border: 1px solid rgba(74,222,128,.4); }
-    .loading { text-align: center; padding: 60px 20px; color: var(--dim); font-size: 14px; }
+    .pill-btn { font-size: 12px; font-weight: 700; border: 1px solid var(--b2); background: var(--s1); color: var(--mid); border-radius: 20px; padding: 7px 14px; cursor: pointer; transition: all .15s; }
+    .pill-btn:hover { background: var(--s2); color: var(--text); }
+    .pill-btn.active { background: rgba(74,222,128,.12); border-color: var(--green); color: var(--green); }
     .spinner { width: 24px; height: 24px; border: 3px solid var(--green); border-top-color: transparent; border-radius: 50%; animation: spin .7s linear infinite; margin: 0 auto 16px; }
     @keyframes spin { to { transform: rotate(360deg); } }
     .divider { border: none; border-top: 1px solid var(--b1); margin: 14px 0; }
@@ -114,7 +116,8 @@
 
     <!-- Live Operations -->
     <div class="section">
-      <div class="section-title">🔧 Live Operations</div>
+      <div class="section-title collapsible open" onclick="toggle(this)">🔧 Live Operations <span class="chevron">›</span></div>
+      <div class="collapsible-body" style="display:block">
       <div class="card">
 
         <!-- 1. Flush cache -->
@@ -173,13 +176,18 @@
         </div>
         <div class="result-box" id="espn-id-edit-box"></div>
       </div>
+      </div>
     </div>
 
-    <!-- 9. Push Notifications -->
+    <!-- Push Notifications -->
     <div class="section">
-      <div class="section-title">🔔 Push Notifications</div>
+      <div class="section-title collapsible open" onclick="toggle(this)">🔔 Push Notifications <span class="chevron">›</span></div>
+      <div class="collapsible-body" style="display:block">
       <div class="card">
-        <div class="admin-note" style="margin-bottom:12px">Send a broadcast notification to all subscribers.</div>
+        <div class="admin-note" style="margin-bottom:12px">Send notifications to all subscribers or to a specific user by UID.</div>
+
+        <!-- Broadcast -->
+        <div style="font-size:11px;font-weight:700;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">📢 Broadcast — Send to All</div>
         <div class="input-row">
           <input id="push-title" placeholder="Title (e.g. ⚽ USA vs Mexico kicks off in 30 min!)"/>
         </div>
@@ -188,15 +196,36 @@
         </div>
         <div class="input-row">
           <input id="push-url" placeholder="URL to open (default: /)" value="/"/>
-          <button class="admin-btn blue" onclick="sendPush()">📤 Send to All</button>
+          <button class="admin-btn blue" data-tip="Sends a push notification to every subscriber." onclick="sendPush()">📤 Send to All</button>
         </div>
         <div class="result-box" id="push-result"></div>
+
+        <hr class="divider"/>
+
+        <!-- Individual -->
+        <div style="font-size:11px;font-weight:700;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">🎯 Individual — Send to One User</div>
+        <div class="input-row">
+          <input id="push-uid" placeholder="User UID (copy from Accounts section)"/>
+        </div>
+        <div class="input-row">
+          <input id="push-title-uid" placeholder="Title"/>
+        </div>
+        <div class="input-row">
+          <textarea id="push-body-uid" placeholder="Body text"></textarea>
+        </div>
+        <div class="input-row">
+          <input id="push-url-uid" placeholder="URL to open (default: /)" value="/"/>
+          <button class="admin-btn blue" data-tip="Sends a push notification to a single user by their UID." onclick="sendPushToUser()">📤 Send to User</button>
+        </div>
+        <div class="result-box" id="push-uid-result"></div>
+      </div>
       </div>
     </div>
 
     <!-- Analytics -->
     <div class="section">
-      <div class="section-title">⚙️ Analytics Tools</div>
+      <div class="section-title collapsible open" onclick="toggle(this)">⚙️ Analytics Tools <span class="chevron">›</span></div>
+      <div class="collapsible-body" style="display:block">
       <div class="card">
         <div class="tool-row">
           <button class="admin-btn" onclick="markAdminDevice()">🧪 Mark this device as admin/test</button>
@@ -204,31 +233,31 @@
         </div>
         <div class="admin-note" id="admin-device-note">Mark your devices so your own visits don't count as new users.</div>
       </div>
+      </div>
     </div>
 
-    <!-- Daily chart -->
+    <!-- Analytics data pills -->
     <div class="section">
-      <div class="section-title collapsible" onclick="toggle(this)">📈 Daily Unique Visitors (last 14 days) <span class="chevron">›</span></div>
-      <div class="collapsible-body">
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+        <button class="pill-btn" onclick="togglePill('pill-chart')">📈 Daily Visitors</button>
+        <button class="pill-btn" onclick="togglePill('pill-tabs')">📊 Tab Usage</button>
+        <button class="pill-btn" onclick="togglePill('pill-accounts')">👤 Accounts</button>
+        <button class="pill-btn" onclick="togglePill('pill-users')">🎯 Predictor Users</button>
+        <button class="pill-btn" onclick="togglePill('pill-visitors')">🌍 All Visitors</button>
+      </div>
+
+      <div id="pill-chart" style="display:none;margin-bottom:16px">
         <div class="chart">
           <div class="bars" id="bars"></div>
-          <div style="font-size:10px;color:var(--dim);text-align:right">Today highlighted in gold</div>
+          <div style="font-size:10px;color:var(--dim);text-align:right;margin-top:4px">Today highlighted in gold</div>
         </div>
       </div>
-    </div>
 
-    <!-- Tab usage -->
-    <div class="section">
-      <div class="section-title collapsible" onclick="toggle(this)">📊 Tab Usage <span class="chevron">›</span></div>
-      <div class="collapsible-body">
+      <div id="pill-tabs" style="display:none;margin-bottom:16px">
         <div class="tabs-grid" id="tabs-grid"></div>
       </div>
-    </div>
 
-    <!-- Accounts -->
-    <div class="section">
-      <div class="section-title collapsible" onclick="toggle(this)">👤 Accounts <span class="chevron">›</span></div>
-      <div class="collapsible-body">
+      <div id="pill-accounts" style="display:none;margin-bottom:16px">
         <div class="table">
           <div class="row head" style="grid-template-columns:1fr 80px 120px 80px">
             <div>User</div><div>PIN</div><div>Saved</div><div>Actions</div>
@@ -236,12 +265,8 @@
           <div id="accounts-list"></div>
         </div>
       </div>
-    </div>
 
-    <!-- Predictor Users -->
-    <div class="section">
-      <div class="section-title collapsible" onclick="toggle(this)">🎯 Predictor Users <span class="chevron">›</span></div>
-      <div class="collapsible-body">
+      <div id="pill-users" style="display:none;margin-bottom:16px">
         <div class="table">
           <div class="row head" style="grid-template-columns:1fr 120px 90px 80px">
             <div>Name</div><div>Location</div><div>Joined</div><div>Device</div>
@@ -249,12 +274,8 @@
           <div id="users-list"></div>
         </div>
       </div>
-    </div>
 
-    <!-- All visitors -->
-    <div class="section">
-      <div class="section-title collapsible" onclick="toggle(this)">🌍 All Visitors <span class="chevron">›</span></div>
-      <div class="collapsible-body">
+      <div id="pill-visitors" style="display:none;margin-bottom:16px">
         <div class="table">
           <div class="row head" style="grid-template-columns:1fr 80px 60px 100px 100px">
             <div>Location</div><div>Device</div><div>Visits</div><div>First seen</div><div>Last seen</div>
@@ -267,6 +288,24 @@
 </div>
 
 <script>
+function togglePill(id) {
+  const el = document.getElementById(id);
+  const btn = document.querySelector(`[onclick="togglePill('${id}')"]`);
+  const isOpen = el.style.display !== "none";
+  el.style.display = isOpen ? "none" : "block";
+  btn.classList.toggle("active", !isOpen);
+}
+
+async function sendPushToUser() {
+  const uid = document.getElementById("push-uid").value.trim();
+  const title = document.getElementById("push-title-uid").value.trim();
+  const body = document.getElementById("push-body-uid").value.trim();
+  const url = document.getElementById("push-url-uid").value.trim() || "/";
+  if (!uid || !title || !body) return alert("UID, title and body all required");
+  if (!confirm(`Send push to user ${uid}?\n\n"${title}"\n${body}`)) return;
+  await doAction("send-push-user", { uid, title, body, url }, "push-uid-result");
+}
+
 function toggle(el) {
   el.classList.toggle("open");
 }
