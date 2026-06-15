@@ -6453,6 +6453,11 @@ export default function App() {
       return true;
     } catch { return false; }
   });
+  const [bannerReady, setBannerReady] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setBannerReady(true), 5000);
+    return () => clearTimeout(t);
+  }, []);
   const dismissBanner = () => {
     setBannerDismissed(true);
     try { localStorage.setItem("wc2026_push_banner_dismissed", String(Date.now())); } catch {}
@@ -6872,7 +6877,7 @@ export default function App() {
         <InstallBanner/>
 
         {/* Notification prompt banner */}
-        {tab==="live" && !bannerDismissed && typeof Notification !== "undefined" && Notification.permission !== "granted" && (
+        {tab==="live" && !bannerDismissed && bannerReady && typeof Notification !== "undefined" && Notification.permission !== "granted" && (
           <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 24px"}} onClick={dismissBanner}>
             <div onClick={e=>e.stopPropagation()} style={{background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.gold}44`,borderRadius:20,padding:"28px 24px",width:"100%",maxWidth:360,boxShadow:"0 8px 40px rgba(0,0,0,0.6)",textAlign:"center",position:"relative"}}>
               <button onClick={dismissBanner} style={{position:"absolute",top:12,right:14,background:"none",border:"none",color:C.dim,fontSize:20,cursor:"pointer"}}>✕</button>
@@ -6884,7 +6889,7 @@ export default function App() {
             </div>
           </div>
         )}
-        {tab==="live" && !bannerDismissed && typeof Notification !== "undefined" && Notification.permission === "granted" && !masterPushSubscribed && (
+        {tab==="live" && !bannerDismissed && bannerReady && typeof Notification !== "undefined" && Notification.permission === "granted" && !masterPushSubscribed && (
           <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 24px"}} onClick={dismissBanner}>
             <div onClick={e=>e.stopPropagation()} style={{background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.green}44`,borderRadius:20,padding:"28px 24px",width:"100%",maxWidth:360,boxShadow:"0 8px 40px rgba(0,0,0,0.6)",textAlign:"center",position:"relative"}}>
               <button onClick={dismissBanner} style={{position:"absolute",top:12,right:14,background:"none",border:"none",color:C.dim,fontSize:20,cursor:"pointer"}}>✕</button>
