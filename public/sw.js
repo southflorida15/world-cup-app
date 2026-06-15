@@ -3,7 +3,7 @@
 // Never cache JS/CSS bundles — Vite uses content hashes so stale caches
 // cause users to run old versions. Let Vercel's HTTP cache handle assets.
 
-const CACHE_NAME = "wc2026-v5";
+const CACHE_NAME = "wc2026-v6";
 const OFFLINE_URLS = [
   "/",
   "/index.html",
@@ -72,31 +72,48 @@ self.addEventListener("push", event => {
   if (!event.data) return;
   let data;
   try { data = event.data.json(); } catch { data = { title: "World Cup 2026", body: event.data.text() }; }
+
+  // Store message in localStorage via postMessage to all clients
+  const message = {
+    id: Date.now(),
+    title: data.title || "⚽ World Cup 2026",
+    body: data.body || "",
+    url: data.url || "/",
+    receivedAt: Date.now(),
+    read: false,
+  };
+
   event.waitUntil(
-    self.registration.showNotification(data.title || "⚽ World Cup 2026", {
-      body: data.body || "",
-      icon: "/icons/icon-192.png",
-      badge: "/icons/icon-192.png",
-      tag: data.tag || "wc2026",
-      data: { url: data.url || "/" },
-    })
+    Promise.all([
+      self.registration.showNotification(data.title || "⚽ World Cup 2026", {
+        body: data.body || "",
+        icon: "/icons/icon-192.png",
+        badge: "/icons/icon-192.png",
+        tag: data.tag || "wc2026",
+        data: { url: data.url || "/", message },
+      }),
+      // Broadcast to all open clients so they can store it
+      clients.matchAll({ includeUncontrolled: true }).then(cls => {
+        cls.forEach(c => c.postMessage({ type: "PUSH_RECEIVED", message }));
+      }),
+    ])
   );
 });
 
 self.addEventListener("notificationclick", event => {
   event.notification.close();
   const targetUrl = event.notification.data?.url || "/";
+  const message = event.notification.data?.message;
   event.waitUntil(
     clients.matchAll({ type: "window", includeUncontrolled: true }).then(windowClients => {
-      // Focus existing PWA window if open
       for (const client of windowClients) {
         if (client.url.includes(self.location.origin) && "focus" in client) {
           client.focus();
+          if (message) client.postMessage({ type: "PUSH_RECEIVED", message });
           if ("navigate" in client) client.navigate(targetUrl);
           return;
         }
       }
-      // No existing window — open a new one
       if (clients.openWindow) return clients.openWindow(targetUrl);
     })
   );

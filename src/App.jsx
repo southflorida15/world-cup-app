@@ -6430,6 +6430,27 @@ export default function App() {
     return () => clearTimeout(t);
   }, []);
   const [tab, setTab] = useState("live");
+  const [showInbox, setShowInbox] = useState(false);
+  const [inbox, setInbox] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("wc2026_inbox") || "[]"); } catch { return []; }
+  });
+  const unreadCount = inbox.filter(m => !m.read).length;
+
+  // Listen for push messages from service worker
+  useEffect(() => {
+    const handler = (event) => {
+      if (event.data?.type === "PUSH_RECEIVED") {
+        const msg = event.data.message;
+        setInbox(prev => {
+          const updated = [msg, ...prev].slice(0, 20); // keep last 20
+          try { localStorage.setItem("wc2026_inbox", JSON.stringify(updated)); } catch {}
+          return updated;
+        });
+      }
+    };
+    navigator.serviceWorker?.addEventListener("message", handler);
+    return () => navigator.serviceWorker?.removeEventListener("message", handler);
+  }, []);
   const geoData = useCountry();
   const [locationOverride, setLocationOverride] = useState(() => {
     try { return JSON.parse(localStorage.getItem("wc2026_location") || "null"); } catch { return null; }
@@ -6725,6 +6746,11 @@ export default function App() {
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(5,50,20,0.8)" strokeWidth="2.5" strokeLinecap="round" style={{position:"absolute",left:7,top:7,opacity:dark?1:0,transition:"opacity .2s",pointerEvents:"none"}}><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.22" y1="19.78" x2="6.34" y2="17.66"/><line x1="17.66" y1="6.34" x2="19.78" y2="4.22"/></svg>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="rgba(255,255,255,0.9)" stroke="none" style={{position:"absolute",right:7,top:8,opacity:dark?0:1,transition:"opacity .2s",pointerEvents:"none"}}><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
               </button>
+              {/* Notification inbox bell */}
+              <button onClick={()=>setShowInbox(true)} title="Notifications" style={{position:"relative",width:36,height:36,borderRadius:"50%",border:`2px solid ${unreadCount>0?C.gold:dark?"#2a4f38":"#1a3828"}`,background:unreadCount>0?`${C.gold}18`:dark?"#0c1a12":"#1a3828",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,flexShrink:0,padding:0}}>
+                🔔
+                {unreadCount>0 && <span style={{position:"absolute",top:-2,right:-2,width:16,height:16,borderRadius:"50%",background:C.red,border:`2px solid ${C.bg}`,fontSize:9,fontWeight:900,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2}}>{unreadCount}</span>}
+              </button>
               {/* Profile / sync avatar */}
               <button onClick={()=>setShowSyncModal(true)} title={"My Account"} style={{position:"relative",width:36,height:36,borderRadius:"50%",border:`2px solid ${syncProfile?C.green:dark?"#2a4f38":"#1a3828"}`,background:syncProfile?`${C.green}18`:dark?"#0c1a12":"#1a3828",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,flexShrink:0,overflow:"hidden",padding:0}}>
                 {userAvatar?.startsWith("data:") ? <img src={userAvatar} style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:"50%"}} alt="avatar"/>
@@ -6807,6 +6833,67 @@ export default function App() {
         <MatchEventsModal match={eventsModal.match} open={eventsModal.open} onClose={()=>setEventsModal({open:false,match:null})} onAction={onAction} savedIds={savedIds} userPredHg={eventsModal.predHg} userPredAg={eventsModal.predAg}/>
         <Toast msg={toast} onDone={()=>setToast("")}/>
         <InstallBanner/>
+
+        {/* Notification prompt banner */}
+        {tab==="live" && Notification.permission==="default" && (
+          <div style={{position:"fixed",bottom:72,left:12,right:12,background:`linear-gradient(135deg,${C.s2},${C.s1})`,border:`1px solid ${C.gold}44`,borderRadius:14,padding:"12px 14px",zIndex:200,display:"flex",alignItems:"center",gap:10,boxShadow:`0 4px 20px rgba(0,0,0,0.4)`}}>
+            <span style={{fontSize:22,flexShrink:0}}>🔔</span>
+            <div style={{flex:1}}>
+              <div style={{fontSize:13,fontWeight:700,color:C.text}}>Get kickoff alerts</div>
+              <div style={{fontSize:11,color:C.mid,marginTop:2}}>Save matches + enable notifications to get 30-min alerts before kickoff</div>
+            </div>
+            <button onClick={()=>setTab("saved")} style={{background:`${C.gold}22`,border:`1px solid ${C.gold}44`,borderRadius:8,padding:"6px 10px",color:C.gold,fontSize:12,fontWeight:700,cursor:"pointer",flexShrink:0}}>Set up →</button>
+          </div>
+        )}
+
+        {/* Notification inbox modal */}
+        {showInbox && (
+          <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",zIndex:500,display:"flex",alignItems:"flex-end"}} onClick={()=>setShowInbox(false)}>
+            <div onClick={e=>e.stopPropagation()} style={{width:"100%",background:C.bg,borderRadius:"20px 20px 0 0",maxHeight:"70vh",overflow:"hidden",display:"flex",flexDirection:"column"}}>
+              <div style={{padding:"16px 16px 12px",borderBottom:`1px solid ${C.b2}`,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                <div style={{fontWeight:800,fontSize:17,color:C.text}}>🔔 Notifications</div>
+                <div style={{display:"flex",gap:10,alignItems:"center"}}>
+                  {inbox.length>0 && <button onClick={()=>{
+                    const cleared=[];
+                    setInbox(cleared);
+                    try{localStorage.setItem("wc2026_inbox",JSON.stringify(cleared));}catch{}
+                  }} style={{fontSize:11,color:C.dim,background:"none",border:"none",cursor:"pointer"}}>Clear all</button>}
+                  <button onClick={()=>setShowInbox(false)} style={{fontSize:18,color:C.dim,background:"none",border:"none",cursor:"pointer"}}>✕</button>
+                </div>
+              </div>
+              <div style={{overflowY:"auto",flex:1,padding:"8px 0"}}>
+                {inbox.length===0 ? (
+                  <div style={{padding:"40px 20px",textAlign:"center",color:C.dim}}>
+                    <div style={{fontSize:32,marginBottom:8}}>🔕</div>
+                    <div style={{fontSize:14}}>No notifications yet</div>
+                    <div style={{fontSize:12,marginTop:4}}>Save matches and enable notifications to get kickoff alerts</div>
+                  </div>
+                ) : inbox.map((msg,i) => {
+                  const isUnread = !msg.read;
+                  if (isUnread) {
+                    const updated = [...inbox];
+                    updated[i] = {...msg, read:true};
+                    setTimeout(()=>{
+                      setInbox(updated);
+                      try{localStorage.setItem("wc2026_inbox",JSON.stringify(updated));}catch{}
+                    }, 500);
+                  }
+                  return (
+                    <div key={msg.id} style={{padding:"12px 16px",borderBottom:`1px solid ${C.b1}`,background:isUnread?`${C.gold}08`:"transparent",display:"flex",gap:12,alignItems:"flex-start"}}>
+                      <span style={{fontSize:22,flexShrink:0}}>⚽</span>
+                      <div style={{flex:1}}>
+                        <div style={{fontWeight:700,fontSize:14,color:C.text}}>{msg.title}</div>
+                        <div style={{fontSize:12,color:C.mid,marginTop:3,lineHeight:1.5}}>{msg.body}</div>
+                        <div style={{fontSize:10,color:C.dim,marginTop:4}}>{new Date(msg.receivedAt).toLocaleString()}</div>
+                      </div>
+                      {isUnread && <span style={{width:8,height:8,borderRadius:"50%",background:C.gold,flexShrink:0,marginTop:4}}/>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
       </FavCtx.Provider>
       </ThemeCtx.Provider>
