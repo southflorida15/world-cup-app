@@ -37,6 +37,15 @@ export default async function handler(req, res) {
       if (!subscription?.endpoint) return res.status(400).json({ error: "No subscription" });
       const key = "push:" + Buffer.from(subscription.endpoint).toString("base64").slice(-40);
       await kv.set(key, { subscription, matches, minsBefore: minsBefore || 60, uid: uid || null, pin: pin || null, updatedAt: Date.now() }, { ex: 60 * 60 * 24 * 90 });
+      // If PIN provided, add this device UID to the sync profile's known UIDs
+      if (pin && uid) {
+        const profile = await kv.get(`pin:${pin}`).catch(() => null);
+        if (profile) {
+          const knownUids = new Set(profile.knownUids || []);
+          knownUids.add(uid);
+          await kv.set(`pin:${pin}`, { ...profile, knownUids: [...knownUids] }).catch(() => {});
+        }
+      }
       return res.status(200).json({ ok: true });
     } catch (err) {
       console.error("push-subscribe error:", err.message);
@@ -174,20 +183,8 @@ export default async function handler(req, res) {
     const { uid, pin, title, body, url = "/" } = req.body || {};
     if ((!uid && !pin) || !title || !body) return res.status(400).json({ error: "uid or pin, plus title and body required" });
 
-    // Resolve target UIDs from PIN lookup
-    let targetUids = new Set();
-    let targetPin = pin || null;
-    if (uid) targetUids.add(uid);
-    if (pin) {
-      // Look up sync profile by PIN — get the canonical UID
-      const profile = await kv.get(`pin:${pin}`).catch(() => null);
-      if (profile?.uid) targetUids.add(profile.uid);
-      // Also check uid:* keys for any device UIDs linked to this profile
-      const uidKey = await kv.get(`uid:${profile?.uid}`).catch(() => null);
-      if (uidKey?.uid) targetUids.add(uidKey.uid);
-    }
-
     try {
+      // First pass: collect all subscription keys
       let cursor = 0;
       const keys = [];
       do {
@@ -196,6 +193,16 @@ export default async function handler(req, res) {
         keys.push(...batch);
       } while (cursor !== 0);
 
+      // Resolve target UIDs from PIN lookup
+      let targetUids = new Set();
+      if (uid) targetUids.add(uid);
+      if (pin) {
+        const profile = await kv.get(`pin:${pin}`).catch(() => null);
+        if (profile?.uid) targetUids.add(profile.uid);
+        // Add all known device UIDs registered under this PIN
+        if (profile?.knownUids) profile.knownUids.forEach(u => targetUids.add(u));
+      }
+
       const payload = JSON.stringify({ title, body, tag: `wc2026-user-${Date.now()}`, url });
       let sent = 0, found = false;
 
@@ -203,10 +210,10 @@ export default async function handler(req, res) {
         try {
           const record = await kv.get(key);
           if (!record?.subscription) return;
-          // Match by: stored UID, stored PIN, or targetUids set
+          // Match by UID in targetUids OR by PIN directly stored in subscription
           const matchUid = record.uid && targetUids.has(record.uid);
-          const matchPin = targetPin && String(record.pin) === String(targetPin);
-          // Also match if the subscription's UID appears in the sync profile's saved data
+          const matchPin = pin && record.pin !== null && record.pin !== undefined && 
+                           String(record.pin) === String(pin);
           if (!matchUid && !matchPin) return;
           found = true;
           await webpush.sendNotification(record.subscription, payload);
