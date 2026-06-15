@@ -3560,7 +3560,7 @@ function SavedMatchCard({ item, onRemove, onMatchTap, notifiedIds=new Set(), onN
       const reg = await navigator.serviceWorker.ready;
       let sub = await reg.pushManager.getSubscription();
       if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array("BHlG2j1aEN_PheVmM_kw6eG5ho26LSMdtxSVEjiz9HnYqKTWWlOrdFdX-U3qUqR-VLxDrvOBik17FS7NJ1kJdr8") });
-      await fetch("/api/push?action=subscribe", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ subscription: sub.toJSON(), matches:[m], minsBefore:60, uid: syncUid }) });
+      await fetch("/api/push?action=subscribe", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ subscription: sub.toJSON(), matches:[m], minsBefore:60, uid: syncUid, pin: syncPin || null }) });
     } catch(e) { console.warn("Push subscribe failed:", e); }
     try {
       const set = JSON.parse(localStorage.getItem("wc2026_push_set") || "[]");
@@ -3601,7 +3601,7 @@ function SavedMatchCard({ item, onRemove, onMatchTap, notifiedIds=new Set(), onN
   );
 }
 
-function SavedTab({ saved, onRemove, onMatchTap, tabTop=116, syncUid="" }) {
+function SavedTab({ saved, onRemove, onMatchTap, tabTop=116, syncUid="", syncPin="" }) {
   const _ref = useRef(null);
   const _h = useElemHeight(_ref);
   const savedStripRef = useRef(null);
@@ -3651,13 +3651,12 @@ function SavedTab({ saved, onRemove, onMatchTap, tabTop=116, syncUid="" }) {
     if (!isPWA) { alert("Install the app first to enable push notifications"); return; }
     let state = "Notification" in window ? Notification.permission : "unsupported";
     if (state !== "granted") { state = await requestPushPermission(); if (state !== "granted") return; }
-    alert(`DEBUG: syncUid = "${syncUid}" (${syncUid ? "OK" : "MISSING"})`);
     saved.forEach(it => scheduleNotification(it.match, 60));
     try {
       const reg = await navigator.serviceWorker.ready;
       let sub = await reg.pushManager.getSubscription();
       if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey:urlBase64ToUint8Array("BHlG2j1aEN_PheVmM_kw6eG5ho26LSMdtxSVEjiz9HnYqKTWWlOrdFdX-U3qUqR-VLxDrvOBik17FS7NJ1kJdr8") });
-      await fetch("/api/push?action=subscribe", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ subscription:sub.toJSON(), matches:saved.map(x=>x.match), minsBefore:60, uid: syncUid }) });
+      await fetch("/api/push?action=subscribe", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ subscription:sub.toJSON(), matches:saved.map(x=>x.match), minsBefore:60, uid: syncUid, pin: syncPin || null }) });
       setMasterPushDone(true);
       try {
         const ids = saved.map(x=>x.match?.id).filter(Boolean);
@@ -6764,7 +6763,7 @@ export default function App() {
           {tab==="bracket"   && <MyBracketTab tabTop={tabBarBottom}/>}
           {tab==="ask"       && <AskWorldCupTab tabTop={tabBarBottom}/>}
           {tab==="news"       && <WCNewsTab tabTop={tabBarBottom}/>}
-          {tab==="saved"     && <div style={{paddingTop:14}}><SavedTab saved={saved} onRemove={onRemove} onMatchTap={onMatchTap} syncUid={syncUid}/></div>}
+          {tab==="saved"     && <div style={{paddingTop:14}}><SavedTab saved={saved} onRemove={onRemove} onMatchTap={onMatchTap} syncUid={syncUid} syncPin={syncProfile?.pin||""}/></div>}
         </div>
         </PullToRefresh>
         {/* Saved view overlay */}
@@ -6783,7 +6782,7 @@ export default function App() {
             {/* Scrollable content */}
             <div style={{flex:1,overflowY:"auto",position:"relative"}} id="saved-scroll">
               <div style={{maxWidth:700,margin:"0 auto",padding:"0 13px 80px"}}>
-                <SavedTab saved={saved} onRemove={onRemove} onMatchTap={onMatchTap} tabTop={57} syncUid={syncUid}/>
+                <SavedTab saved={saved} onRemove={onRemove} onMatchTap={onMatchTap} tabTop={57} syncUid={syncUid} syncPin={syncProfile?.pin||""}/>
               </div>
             </div>
           </div>

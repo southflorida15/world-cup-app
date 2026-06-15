@@ -33,10 +33,10 @@ export default async function handler(req, res) {
   // ── Save subscription ─────────────────────────────────────────────────────
   if (action === "subscribe") {
     try {
-      const { subscription, matches, minsBefore, uid } = req.body;
+      const { subscription, matches, minsBefore, uid, pin } = req.body;
       if (!subscription?.endpoint) return res.status(400).json({ error: "No subscription" });
       const key = "push:" + Buffer.from(subscription.endpoint).toString("base64").slice(-40);
-      await kv.set(key, { subscription, matches, minsBefore: minsBefore || 60, uid: uid || null, updatedAt: Date.now() }, { ex: 60 * 60 * 24 * 90 });
+      await kv.set(key, { subscription, matches, minsBefore: minsBefore || 60, uid: uid || null, pin: pin || null, updatedAt: Date.now() }, { ex: 60 * 60 * 24 * 90 });
       return res.status(200).json({ ok: true });
     } catch (err) {
       console.error("push-subscribe error:", err.message);
@@ -173,12 +173,13 @@ export default async function handler(req, res) {
     const { uid, pin, title, body, url = "/" } = req.body || {};
     if ((!uid && !pin) || !title || !body) return res.status(400).json({ error: "uid or pin, plus title and body required" });
 
-    // If PIN provided, resolve to UID via KV
-    let targetUid = uid;
-    if (pin && !uid) {
+    // Resolve target UIDs — PIN may have multiple devices
+    let targetUids = new Set();
+    if (uid) targetUids.add(uid);
+    if (pin) {
+      // Look up sync profile by PIN
       const profile = await kv.get(`pin:${pin}`).catch(() => null);
-      if (!profile?.uid) return res.status(404).json({ ok: false, error: `No account found for PIN ${pin}` });
-      targetUid = profile.uid;
+      if (profile?.uid) targetUids.add(profile.uid);
     }
 
     try {
@@ -196,7 +197,11 @@ export default async function handler(req, res) {
       await Promise.all(keys.map(async key => {
         try {
           const record = await kv.get(key);
-          if (!record?.subscription || record?.uid !== targetUid) return;
+          if (!record?.subscription) return;
+          // Match by uid OR pin stored in subscription
+          const matchUid = record.uid && targetUids.has(record.uid);
+          const matchPin = pin && record.pin === pin;
+          if (!matchUid && !matchPin) return;
           found = true;
           await webpush.sendNotification(record.subscription, payload);
           sent++;
@@ -205,8 +210,8 @@ export default async function handler(req, res) {
         }
       }));
 
-      if (!found) return res.status(404).json({ ok: false, error: `No push subscription found for this user` });
-      return res.status(200).json({ ok: true, sent, uid: targetUid });
+      if (!found) return res.status(404).json({ ok: false, error: `No push subscription found for this user. They need to tap "Notify all" in My Matches first.` });
+      return res.status(200).json({ ok: true, sent, targetUids: [...targetUids] });
     } catch(err) {
       return res.status(500).json({ error: err.message });
     }
