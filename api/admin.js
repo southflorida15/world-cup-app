@@ -366,6 +366,21 @@ export default async function handler(req, res) {
         return res.status(200).json(await reScoreAll(req));
       }
       // 4. ESPN ID map
+      // Debug: view all push subscriptions
+      if (req.body.adminAction === "get-push-subs") {
+        let cursor = 0;
+        const keys = [];
+        do {
+          const [next, batch] = await kv.scan(cursor, { match: "push:*", count: 100 });
+          cursor = parseInt(next) || 0;
+          keys.push(...batch);
+        } while (cursor !== 0);
+        const subs = await Promise.all(keys.map(async k => {
+          const r = await kv.get(k).catch(() => null);
+          return r ? { key: k, uid: r.uid, pin: r.pin, matchCount: r.matches?.length || 0, updatedAt: r.updatedAt } : null;
+        }));
+        return res.status(200).json({ ok: true, total: keys.length, subs: subs.filter(Boolean) });
+      }
       if (req.body.adminAction === "get-espn-ids") {
         return res.status(200).json(await getESPNIds());
       }

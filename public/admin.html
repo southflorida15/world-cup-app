@@ -183,11 +183,13 @@
           <button class="admin-btn" data-tip="Writes all known FT results to KV permanently. Use after a matchday if Fantasy Scored tab is missing matches." onclick="doAction('seed-livescores',{},'seed-ls-result')">🌱 Seed Livescores</button>
           <button class="admin-btn" data-tip="Pre-populates ESPN event IDs for the next 7 days. Run before each matchday to ensure Match Events load correctly." onclick="doAction('seed-espn-ids',{},'seed-ids-result')">🔢 Seed ESPN IDs</button>
           <button class="admin-btn blue" data-tip="Shows users who have been active in the last 30 minutes." onclick="doAction('active-today',{},'active-result')">👥 Active Users Now</button>
+          <button class="admin-btn" data-tip="Debug: shows all push subscriptions with their stored UID and PIN." onclick="doAction('get-push-subs',{},'push-subs-result')">🔔 View Push Subs</button>
         </div>
         <div class="result-box" id="flush-result"></div>
         <div class="result-box" id="seed-ls-result"></div>
         <div class="result-box" id="seed-ids-result"></div>
         <div class="result-box" id="active-result"></div>
+        <div class="result-box" id="push-subs-result"></div>
 
         <hr class="divider"/>
 
