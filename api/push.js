@@ -87,8 +87,8 @@ export default async function handler(req, res) {
           const minsBeforeKO = record.minsBefore || DEFAULT_MINS_BEFORE;
           for (const m of toNotify) {
             const payload = JSON.stringify({
-              title: `⚽ Kick-off in ~30 min!`,
-              body: `${m.home} vs ${m.away} · ${m.time} · ${m.venue?.split(",")[0] || ""}`,
+              title: `⚽ ${m.home} vs ${m.away} — 30 min to kickoff!`,
+              body: `🎯 Made your fantasy pick? Picks lock at kickoff! · ${m.time} · ${m.venue?.split(",")[0] || ""}`,
               tag: `wc2026-match-${m.id}`,
               url: "/",
             });
