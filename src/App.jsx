@@ -6649,6 +6649,10 @@ export default function App() {
           persistAvatar(p.avatar);
         }
         if (p.displayName) persistDisplayName(p.displayName);
+        if (p.saved?.length) setSaved(prev => {
+          // Use remote if it has more recent updatedAt, otherwise keep local
+          return p.saved;
+        });
         if (p.favTeams?.length) setFavTeams(p.favTeams);
         if (p.myBracket) restoreSavedMyBracket(p.myBracket);
         if (p.dark !== undefined) setDark(p.dark);
