@@ -4447,7 +4447,7 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
   const [matchStats, setMatchStats] = useState(null);
   const [lineups, setLineups] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [evOpen, setEvOpen] = useState(false);
+  const [evOpen, setEvOpen] = useState(true);
   const [lineupsOpen, setLineupsOpen] = useState(false);
   const [statsOpen, setStatsOpen] = useState(false);
   const [evFilter, setEvFilter] = useState(["Goal","Card","subst"]);
@@ -4465,7 +4465,7 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
 
   useEffect(() => {
     if (!open || !match) return;
-    setEvents(null); setLoading(true); setEvOpen(false); setEvFilter(["Goal","Card","subst"]); setLineups(null); setLineupsOpen(false); setStatsOpen(false);
+    setEvents(null); setLoading(true); setEvOpen(true); setEvFilter(["Goal","Card","subst"]); setLineups(null); setLineupsOpen(false); setStatsOpen(false);
     fetchMatchEvents(`${match.home}|${match.away}`)
       .then(d => {
         setEvents(d?.events || []);
@@ -5548,25 +5548,36 @@ function PullToRefresh({ onRefresh, children }) {
   const pullingRef = useRef(false);
   const pullYRef = useRef(0);
   const refreshingRef = useRef(false);
+  const directionLocked = useRef(null);
+  const atTop = useRef(false); // snapshot at touchStart
   const THRESHOLD = 72;
 
   useEffect(() => {
     const onTouchStart = (e) => {
       const scroller = document.getElementById("scroll-area");
-      if (scroller && scroller.scrollTop > 0) return;
+      atTop.current = !scroller || scroller.scrollTop <= 0;
       startY.current = e.touches[0].clientY;
       startX.current = e.touches[0].clientX;
+      directionLocked.current = null;
+      pullingRef.current = false;
+      pullYRef.current = 0;
     };
 
     const onTouchMove = (e) => {
-      const scroller = document.getElementById("scroll-area");
-      if (scroller && scroller.scrollTop > 0) return;
+      if (!atTop.current) return; // not at top when gesture started
 
       const dy = e.touches[0].clientY - startY.current;
       const dx = Math.abs(e.touches[0].clientX - startX.current);
 
-      // Only intercept if clearly pulling DOWN and not swiping horizontally
-      if (dy > 8 && dx < 10) {
+      // Lock direction on first significant movement
+      if (!directionLocked.current) {
+        if (Math.abs(dy) < 6 && dx < 6) return;
+        directionLocked.current = (Math.abs(dy) > dx && dy > 0) ? "vertical" : "horizontal";
+      }
+
+      if (directionLocked.current !== "vertical") return;
+
+      if (dy > 0) {
         e.preventDefault();
         const clamped = Math.min(dy * 0.45, THRESHOLD + 20);
         pullingRef.current = true;
@@ -5588,11 +5599,11 @@ function PullToRefresh({ onRefresh, children }) {
       }
       pullingRef.current = false;
       pullYRef.current = 0;
+      directionLocked.current = null;
       setPulling(false);
       setPullY(0);
     };
 
-    // passive:false required to allow preventDefault on touchmove
     document.addEventListener("touchstart", onTouchStart, { passive: true });
     document.addEventListener("touchmove", onTouchMove, { passive: false });
     document.addEventListener("touchend", onTouchEnd, { passive: true });
