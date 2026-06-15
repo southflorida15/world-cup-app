@@ -33,10 +33,10 @@ export default async function handler(req, res) {
   // ── Save subscription ─────────────────────────────────────────────────────
   if (action === "subscribe") {
     try {
-      const { subscription, matches, minsBefore } = req.body;
+      const { subscription, matches, minsBefore, uid } = req.body;
       if (!subscription?.endpoint) return res.status(400).json({ error: "No subscription" });
       const key = "push:" + Buffer.from(subscription.endpoint).toString("base64").slice(-40);
-      await kv.set(key, { subscription, matches, minsBefore: minsBefore || 60, updatedAt: Date.now() }, { ex: 60 * 60 * 24 * 90 });
+      await kv.set(key, { subscription, matches, minsBefore: minsBefore || 60, uid: uid || null, updatedAt: Date.now() }, { ex: 60 * 60 * 24 * 90 });
       return res.status(200).json({ ok: true });
     } catch (err) {
       console.error("push-subscribe error:", err.message);
@@ -170,8 +170,16 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    const { uid, title, body, url = "/" } = req.body || {};
-    if (!uid || !title || !body) return res.status(400).json({ error: "uid, title and body required" });
+    const { uid, pin, title, body, url = "/" } = req.body || {};
+    if ((!uid && !pin) || !title || !body) return res.status(400).json({ error: "uid or pin, plus title and body required" });
+
+    // If PIN provided, resolve to UID via KV
+    let targetUid = uid;
+    if (pin && !uid) {
+      const profile = await kv.get(`pin:${pin}`).catch(() => null);
+      if (!profile?.uid) return res.status(404).json({ ok: false, error: `No account found for PIN ${pin}` });
+      targetUid = profile.uid;
+    }
 
     try {
       let cursor = 0;
@@ -183,13 +191,13 @@ export default async function handler(req, res) {
       } while (cursor !== 0);
 
       const payload = JSON.stringify({ title, body, tag: `wc2026-user-${Date.now()}`, url });
-      let sent = 0, notFound = true;
+      let sent = 0, found = false;
 
       await Promise.all(keys.map(async key => {
         try {
           const record = await kv.get(key);
-          if (!record?.subscription || record?.uid !== uid) return;
-          notFound = false;
+          if (!record?.subscription || record?.uid !== targetUid) return;
+          found = true;
           await webpush.sendNotification(record.subscription, payload);
           sent++;
         } catch(e) {
@@ -197,8 +205,8 @@ export default async function handler(req, res) {
         }
       }));
 
-      if (notFound) return res.status(404).json({ ok: false, error: "No subscription found for this UID" });
-      return res.status(200).json({ ok: true, sent });
+      if (!found) return res.status(404).json({ ok: false, error: `No push subscription found for this user` });
+      return res.status(200).json({ ok: true, sent, uid: targetUid });
     } catch(err) {
       return res.status(500).json({ error: err.message });
     }

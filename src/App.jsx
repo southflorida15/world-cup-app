@@ -3560,7 +3560,7 @@ function SavedMatchCard({ item, onRemove, onMatchTap, notifiedIds=new Set(), onN
       const reg = await navigator.serviceWorker.ready;
       let sub = await reg.pushManager.getSubscription();
       if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array("BHlG2j1aEN_PheVmM_kw6eG5ho26LSMdtxSVEjiz9HnYqKTWWlOrdFdX-U3qUqR-VLxDrvOBik17FS7NJ1kJdr8") });
-      await fetch("/api/push?action=subscribe", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ subscription: sub.toJSON(), matches:[m], minsBefore:60 }) });
+      await fetch("/api/push?action=subscribe", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ subscription: sub.toJSON(), matches:[m], minsBefore:60, uid: syncUid }) });
     } catch(e) { console.warn("Push subscribe failed:", e); }
     try {
       const set = JSON.parse(localStorage.getItem("wc2026_push_set") || "[]");
@@ -3656,7 +3656,7 @@ function SavedTab({ saved, onRemove, onMatchTap, tabTop=116 }) {
       const reg = await navigator.serviceWorker.ready;
       let sub = await reg.pushManager.getSubscription();
       if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey:urlBase64ToUint8Array("BHlG2j1aEN_PheVmM_kw6eG5ho26LSMdtxSVEjiz9HnYqKTWWlOrdFdX-U3qUqR-VLxDrvOBik17FS7NJ1kJdr8") });
-      await fetch("/api/push?action=subscribe", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ subscription:sub.toJSON(), matches:saved.map(x=>x.match), minsBefore:60 }) });
+      await fetch("/api/push?action=subscribe", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ subscription:sub.toJSON(), matches:saved.map(x=>x.match), minsBefore:60, uid: syncUid }) });
       setMasterPushDone(true);
       try {
         const ids = saved.map(x=>x.match?.id).filter(Boolean);

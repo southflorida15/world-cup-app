@@ -114,6 +114,20 @@
     <!-- Top stats -->
     <div class="stats-grid" id="stats-grid"></div>
 
+    <!-- Analytics Tools -->
+    <div class="section">
+      <div class="section-title collapsible open" onclick="toggle(this)">⚙️ Analytics Tools <span class="chevron">›</span></div>
+      <div class="collapsible-body" style="display:block">
+      <div class="card">
+        <div class="tool-row">
+          <button class="admin-btn" onclick="markAdminDevice()">🧪 Mark this device as admin/test</button>
+          <button class="admin-btn danger" onclick="resetAnalytics()">🗑 Reset Analytics</button>
+        </div>
+        <div class="admin-note" id="admin-device-note">Mark your devices so your own visits don't count as new users.</div>
+      </div>
+      </div>
+    </div>
+
     <!-- Live Operations -->
     <div class="section">
       <div class="section-title collapsible open" onclick="toggle(this)">🔧 Live Operations <span class="chevron">›</span></div>
@@ -205,7 +219,9 @@
         <!-- Individual -->
         <div style="font-size:11px;font-weight:700;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">🎯 Individual — Send to One User</div>
         <div class="input-row">
-          <input id="push-uid" placeholder="User UID (copy from Accounts section)"/>
+          <input id="push-pin" placeholder="PIN (e.g. 161116) — easiest way to target a user"/>
+          <span style="color:var(--dim);font-size:12px;white-space:nowrap">or UID:</span>
+          <input id="push-uid" placeholder="User UID (from Accounts ↑)"/>
         </div>
         <div class="input-row">
           <input id="push-title-uid" placeholder="Title"/>
@@ -222,19 +238,6 @@
       </div>
     </div>
 
-    <!-- Analytics -->
-    <div class="section">
-      <div class="section-title collapsible open" onclick="toggle(this)">⚙️ Analytics Tools <span class="chevron">›</span></div>
-      <div class="collapsible-body" style="display:block">
-      <div class="card">
-        <div class="tool-row">
-          <button class="admin-btn" onclick="markAdminDevice()">🧪 Mark this device as admin/test</button>
-          <button class="admin-btn danger" onclick="resetAnalytics()">🗑 Reset Analytics</button>
-        </div>
-        <div class="admin-note" id="admin-device-note">Mark your devices so your own visits don't count as new users.</div>
-      </div>
-      </div>
-    </div>
 
     <!-- Analytics data pills -->
     <div class="section">
@@ -288,6 +291,16 @@
 </div>
 
 <script>
+function copyUID(uid) {
+  navigator.clipboard.writeText(uid).then(() => {
+    document.getElementById("push-uid").value = uid;
+    alert(`UID copied and pasted into the notification field:\n${uid}`);
+  }).catch(() => {
+    document.getElementById("push-uid").value = uid;
+    alert(`UID pasted into the notification field:\n${uid}`);
+  });
+}
+
 function togglePill(id) {
   const el = document.getElementById(id);
   const btn = document.querySelector(`[onclick="togglePill('${id}')"]`);
@@ -297,13 +310,16 @@ function togglePill(id) {
 }
 
 async function sendPushToUser() {
+  const pin = document.getElementById("push-pin").value.trim();
   const uid = document.getElementById("push-uid").value.trim();
   const title = document.getElementById("push-title-uid").value.trim();
   const body = document.getElementById("push-body-uid").value.trim();
   const url = document.getElementById("push-url-uid").value.trim() || "/";
-  if (!uid || !title || !body) return alert("UID, title and body all required");
-  if (!confirm(`Send push to user ${uid}?\n\n"${title}"\n${body}`)) return;
-  await doAction("send-push-user", { uid, title, body, url }, "push-uid-result");
+  if (!pin && !uid) return alert("Enter a PIN or UID");
+  if (!title || !body) return alert("Title and body required");
+  const target = pin ? `PIN ${pin}` : `UID ${uid}`;
+  if (!confirm(`Send push to ${target}?\n\n"${title}"\n${body}`)) return;
+  await doAction("send-push-user", { pin: pin||undefined, uid: uid||undefined, title, body, url }, "push-uid-result");
 }
 
 function toggle(el) {
@@ -487,10 +503,13 @@ function renderDashboard(d) {
     const label = a.displayName || a.predictorName || a.email || a.uid;
     const saved = `${a.savedMatches||0} matches${a.hasBracket?" · bracket":""}`;
     return `<div class="row" style="grid-template-columns:1fr 80px 120px 80px">
-      <div><div style="font-weight:700;color:var(--text)">${esc(label)}</div><div style="font-size:10px;color:var(--dim)">${esc(a.pin?`PIN: ${a.pin}`:"")} ${esc(a.email||"")}</div></div>
+      <div><div style="font-weight:700;color:var(--text)">${esc(label)}</div><div style="font-size:10px;color:var(--dim)">${esc(a.pin?`PIN: ${a.pin}`:"")} ${esc(a.email||"")}</div><div style="font-size:10px;color:var(--dim);font-family:monospace">${esc(a.uid)}</div></div>
       <div style="color:var(--gold);font-weight:700">${esc(a.pin||"—")}</div>
       <div style="color:var(--mid);font-size:11px">${esc(saved)}</div>
-      <div><button class="admin-btn danger" style="padding:5px 8px;font-size:11px" onclick="deleteAccount('${escA(a.uid)}','${escA(label)}')">Delete</button></div>
+      <div style="display:flex;gap:6px">
+        <button class="admin-btn" style="padding:5px 8px;font-size:11px" onclick="copyUID('${escA(a.uid)}')">📋 UID</button>
+        <button class="admin-btn danger" style="padding:5px 8px;font-size:11px" onclick="deleteAccount('${escA(a.uid)}','${escA(label)}')">Delete</button>
+      </div>
     </div>`;
   }).join("") : `<div style="padding:20px;text-align:center;color:var(--dim);font-size:13px">No accounts yet</div>`;
 
