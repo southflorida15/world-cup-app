@@ -3,7 +3,7 @@
 // Never cache JS/CSS bundles — Vite uses content hashes so stale caches
 // cause users to run old versions. Let Vercel's HTTP cache handle assets.
 
-const CACHE_NAME = "wc2026-v4";
+const CACHE_NAME = "wc2026-v5";
 const OFFLINE_URLS = [
   "/",
   "/index.html",
@@ -85,7 +85,19 @@ self.addEventListener("push", event => {
 
 self.addEventListener("notificationclick", event => {
   event.notification.close();
+  const targetUrl = event.notification.data?.url || "/";
   event.waitUntil(
-    clients.openWindow(event.notification.data?.url || "/")
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then(windowClients => {
+      // Focus existing PWA window if open
+      for (const client of windowClients) {
+        if (client.url.includes(self.location.origin) && "focus" in client) {
+          client.focus();
+          if ("navigate" in client) client.navigate(targetUrl);
+          return;
+        }
+      }
+      // No existing window — open a new one
+      if (clients.openWindow) return clients.openWindow(targetUrl);
+    })
   );
 });

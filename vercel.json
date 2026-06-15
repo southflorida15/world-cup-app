@@ -2,6 +2,12 @@
   "rewrites": [
     { "source": "/admin", "destination": "/admin.html" }
   ],
+  "crons": [
+    {
+      "path": "/api/push?action=notify",
+      "schedule": "*/15 * * * *"
+    }
+  ],
   "headers": [
     {
       "source": "/sw.js",

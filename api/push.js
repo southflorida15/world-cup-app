@@ -19,9 +19,9 @@ webpush.setVapidDetails(
 
 const MATCH_UTC = {1:"2026-06-11T19:00:00Z",2:"2026-06-12T02:00:00Z",3:"2026-06-12T19:00:00Z",4:"2026-06-13T01:00:00Z",5:"2026-06-13T19:00:00Z",6:"2026-06-13T22:00:00Z",7:"2026-06-14T01:00:00Z",8:"2026-06-14T03:59:00Z",9:"2026-06-14T17:00:00Z",10:"2026-06-14T20:00:00Z",11:"2026-06-14T23:00:00Z",12:"2026-06-15T02:00:00Z",13:"2026-06-15T16:00:00Z",14:"2026-06-15T19:00:00Z",15:"2026-06-15T22:00:00Z",16:"2026-06-16T01:00:00Z",17:"2026-06-16T19:00:00Z",18:"2026-06-16T22:00:00Z",19:"2026-06-17T01:00:00Z",20:"2026-06-17T03:59:00Z",21:"2026-06-17T17:00:00Z",22:"2026-06-17T20:00:00Z",23:"2026-06-17T23:00:00Z",24:"2026-06-18T02:00:00Z",25:"2026-06-18T16:00:00Z",26:"2026-06-18T19:00:00Z",27:"2026-06-18T22:00:00Z",28:"2026-06-19T01:00:00Z",29:"2026-06-19T19:00:00Z",30:"2026-06-19T22:00:00Z",31:"2026-06-20T00:30:00Z",32:"2026-06-20T03:00:00Z",33:"2026-06-20T17:00:00Z",34:"2026-06-20T20:00:00Z",35:"2026-06-21T01:00:00Z",36:"2026-06-21T03:59:00Z",37:"2026-06-21T16:00:00Z",38:"2026-06-21T19:00:00Z",39:"2026-06-21T22:00:00Z",40:"2026-06-22T01:00:00Z",41:"2026-06-22T17:00:00Z",42:"2026-06-22T21:00:00Z",43:"2026-06-23T00:00:00Z",44:"2026-06-23T03:00:00Z",45:"2026-06-23T17:00:00Z",46:"2026-06-23T20:00:00Z",47:"2026-06-23T23:00:00Z",48:"2026-06-24T02:00:00Z",49:"2026-06-24T19:00:00Z",50:"2026-06-24T19:00:00Z",51:"2026-06-24T22:00:00Z",52:"2026-06-24T22:00:00Z",53:"2026-06-25T01:00:00Z",54:"2026-06-25T01:00:00Z",55:"2026-06-25T20:00:00Z",56:"2026-06-25T20:00:00Z",57:"2026-06-25T23:00:00Z",58:"2026-06-25T23:00:00Z",59:"2026-06-26T02:00:00Z",60:"2026-06-26T02:00:00Z",61:"2026-06-26T19:00:00Z",62:"2026-06-26T19:00:00Z",63:"2026-06-27T00:00:00Z",64:"2026-06-27T00:00:00Z",65:"2026-06-27T03:00:00Z",66:"2026-06-27T03:00:00Z",67:"2026-06-27T21:00:00Z",68:"2026-06-27T21:00:00Z",69:"2026-06-27T23:30:00Z",70:"2026-06-27T23:30:00Z",71:"2026-06-28T02:00:00Z",72:"2026-06-28T02:00:00Z"};
 
-const DEFAULT_MINS_BEFORE = 60;
-const WINDOW_MIN = 45;
-const WINDOW_MAX = 75;
+const DEFAULT_MINS_BEFORE = 30;
+const WINDOW_MIN = 25;
+const WINDOW_MAX = 35;
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -48,7 +48,8 @@ export default async function handler(req, res) {
   if (action === "notify") {
     const auth = req.headers.authorization || "";
     const validSecret = process.env.CRON_SECRET || process.env.PREDICTOR_ADMIN_SECRET;
-    if (!validSecret || auth !== `Bearer ${validSecret}`) {
+    // Vercel cron sends Authorization: Bearer $CRON_SECRET
+    if (!validSecret || (auth !== `Bearer ${validSecret}` && req.headers["x-vercel-cron"] !== "1")) {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
@@ -86,7 +87,7 @@ export default async function handler(req, res) {
           const minsBeforeKO = record.minsBefore || DEFAULT_MINS_BEFORE;
           for (const m of toNotify) {
             const payload = JSON.stringify({
-              title: `⚽ Kick-off in ${minsBeforeKO} min!`,
+              title: `⚽ Kick-off in ~30 min!`,
               body: `${m.home} vs ${m.away} · ${m.time} · ${m.venue?.split(",")[0] || ""}`,
               tag: `wc2026-match-${m.id}`,
               url: "/",
