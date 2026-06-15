@@ -174,13 +174,17 @@ export default async function handler(req, res) {
     const { uid, pin, title, body, url = "/" } = req.body || {};
     if ((!uid && !pin) || !title || !body) return res.status(400).json({ error: "uid or pin, plus title and body required" });
 
-    // Resolve target UIDs — PIN may have multiple devices
+    // Resolve target UIDs from PIN lookup
     let targetUids = new Set();
+    let targetPin = pin || null;
     if (uid) targetUids.add(uid);
     if (pin) {
-      // Look up sync profile by PIN
+      // Look up sync profile by PIN — get the canonical UID
       const profile = await kv.get(`pin:${pin}`).catch(() => null);
       if (profile?.uid) targetUids.add(profile.uid);
+      // Also check uid:* keys for any device UIDs linked to this profile
+      const uidKey = await kv.get(`uid:${profile?.uid}`).catch(() => null);
+      if (uidKey?.uid) targetUids.add(uidKey.uid);
     }
 
     try {
@@ -199,9 +203,10 @@ export default async function handler(req, res) {
         try {
           const record = await kv.get(key);
           if (!record?.subscription) return;
-          // Match by uid OR pin stored in subscription
+          // Match by: stored UID, stored PIN, or targetUids set
           const matchUid = record.uid && targetUids.has(record.uid);
-          const matchPin = pin && record.pin === pin;
+          const matchPin = targetPin && record.pin === targetPin;
+          // Also match if the subscription's UID appears in the sync profile's saved data
           if (!matchUid && !matchPin) return;
           found = true;
           await webpush.sendNotification(record.subscription, payload);
@@ -211,7 +216,7 @@ export default async function handler(req, res) {
         }
       }));
 
-      if (!found) return res.status(404).json({ ok: false, error: `No push subscription found for this user. They need to tap "Notify all" in My Matches first.` });
+      if (!found) return res.status(404).json({ ok: false, error: `No subscription found. User needs to tap "Notify all" in My Matches first.`, targetUids: [...targetUids] });
       return res.status(200).json({ ok: true, sent, targetUids: [...targetUids] });
     } catch(err) {
       return res.status(500).json({ error: err.message });
