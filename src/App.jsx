@@ -6907,8 +6907,8 @@ export default function App() {
 
         {/* Notification inbox modal */}
         {showInbox && (
-          <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",zIndex:500,display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={()=>setShowInbox(false)}>
-            <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:480,background:C.bg,borderRadius:"20px 20px 0 0",maxHeight:"70vh",overflow:"hidden",display:"flex",flexDirection:"column"}}>
+          <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",zIndex:500,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 16px"}} onClick={()=>setShowInbox(false)}>
+            <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:480,background:C.bg,borderRadius:20,maxHeight:"70vh",overflow:"hidden",display:"flex",flexDirection:"column",boxShadow:"0 8px 40px rgba(0,0,0,0.6)"}}>
               <div style={{padding:"16px 16px 12px",borderBottom:`1px solid ${C.b2}`,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                 <div style={{fontWeight:800,fontSize:17,color:C.text}}>🔔 Notifications</div>
                 <div style={{display:"flex",gap:10,alignItems:"center"}}>
@@ -6923,9 +6923,15 @@ export default function App() {
               <div style={{overflowY:"auto",flex:1,padding:"8px 0"}}>
                 {inbox.length===0 ? (
                   <div style={{padding:"40px 20px",textAlign:"center",color:C.dim}}>
-                    <div style={{fontSize:32,marginBottom:8}}>🔕</div>
-                    <div style={{fontSize:14}}>No notifications yet</div>
-                    <div style={{fontSize:12,marginTop:4}}>Save matches and enable notifications to get kickoff alerts</div>
+                    <div style={{fontSize:32,marginBottom:8}}>{masterPushSubscribed && saved.length>0 ? "⏳" : "🔕"}</div>
+                    <div style={{fontSize:14,color:C.mid,fontWeight:600}}>No notifications yet</div>
+                    <div style={{fontSize:12,marginTop:6,lineHeight:1.6,color:C.dim}}>
+                      {masterPushSubscribed && saved.length>0
+                        ? "You're all set! Notifications will appear here when a saved match is about to kick off."
+                        : saved.length>0
+                        ? <>Tap <strong style={{color:C.gold}}>"Notify all"</strong> in My Matches to enable kickoff alerts.</>
+                        : "Save matches and enable notifications to get kickoff alerts."}
+                    </div>
                   </div>
                 ) : inbox.map((msg,i) => {
                   const isUnread = !msg.read;
