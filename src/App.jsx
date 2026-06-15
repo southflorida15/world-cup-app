@@ -3540,7 +3540,7 @@ function MyBracketTab({ tabTop=116 }) {
   );
 }
 // ── SAVED TAB ──────────────────────────────────────────────────────────────
-function SavedMatchCard({ item, onRemove, onMatchTap, notifiedIds=new Set(), onNotified=()=>{} }) {
+function SavedMatchCard({ item, onRemove, onMatchTap, notifiedIds=new Set(), onNotified=()=>{}, syncUid="" }) {
   const isPWA = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
   const [pushState, setPushState] = useState(() => {
     if (!("Notification" in window)) return "unsupported";
@@ -3601,7 +3601,7 @@ function SavedMatchCard({ item, onRemove, onMatchTap, notifiedIds=new Set(), onN
   );
 }
 
-function SavedTab({ saved, onRemove, onMatchTap, tabTop=116 }) {
+function SavedTab({ saved, onRemove, onMatchTap, tabTop=116, syncUid="" }) {
   const _ref = useRef(null);
   const _h = useElemHeight(_ref);
   const savedStripRef = useRef(null);
@@ -3768,7 +3768,7 @@ function SavedTab({ saved, onRemove, onMatchTap, tabTop=116 }) {
       <div style={{height:0}}/>
       {filtered.length === 0
         ? <div style={{textAlign:"center",padding:"32px 0",color:C.dim,fontSize:13}}>No matches match this filter.</div>
-        : filtered.map(item=>(<SavedMatchCard key={item.id} item={item} onRemove={onRemove} onMatchTap={onMatchTap} notifiedIds={notifiedIds} onNotified={(id)=>setNotifiedIds(prev=>new Set([...prev,id]))}/>))
+        : filtered.map(item=>(<SavedMatchCard key={item.id} item={item} onRemove={onRemove} onMatchTap={onMatchTap} notifiedIds={notifiedIds} onNotified={(id)=>setNotifiedIds(prev=>new Set([...prev,id]))} syncUid={syncUid}/>))
       }
     </div>
   );
@@ -6763,7 +6763,7 @@ export default function App() {
           {tab==="bracket"   && <MyBracketTab tabTop={tabBarBottom}/>}
           {tab==="ask"       && <AskWorldCupTab tabTop={tabBarBottom}/>}
           {tab==="news"       && <WCNewsTab tabTop={tabBarBottom}/>}
-          {tab==="saved"     && <div style={{paddingTop:14}}><SavedTab saved={saved} onRemove={onRemove} onMatchTap={onMatchTap}/></div>}
+          {tab==="saved"     && <div style={{paddingTop:14}}><SavedTab saved={saved} onRemove={onRemove} onMatchTap={onMatchTap} syncUid={syncUid}/></div>}
         </div>
         </PullToRefresh>
         {/* Saved view overlay */}
@@ -6782,7 +6782,7 @@ export default function App() {
             {/* Scrollable content */}
             <div style={{flex:1,overflowY:"auto",position:"relative"}} id="saved-scroll">
               <div style={{maxWidth:700,margin:"0 auto",padding:"0 13px 80px"}}>
-                <SavedTab saved={saved} onRemove={onRemove} onMatchTap={onMatchTap} tabTop={57}/>
+                <SavedTab saved={saved} onRemove={onRemove} onMatchTap={onMatchTap} tabTop={57} syncUid={syncUid}/>
               </div>
             </div>
           </div>
