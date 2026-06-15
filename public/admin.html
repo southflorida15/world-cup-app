@@ -452,7 +452,10 @@ async function deleteAccount(uid, label) {
 
 async function loadData() {
   try {
-    const r = await fetch("/api/admin", { headers: { "Authorization": `Bearer ${SECRET}` } });
+    const [r, subsR] = await Promise.all([
+      fetch("/api/admin", { headers: { "Authorization": `Bearer ${SECRET}` } }),
+      fetch("/api/admin", { method:"POST", headers: { "Authorization": `Bearer ${SECRET}`, "Content-Type":"application/json" }, body: JSON.stringify({ adminAction:"get-push-subs" }) })
+    ]);
     if (r.status === 401) {
       document.getElementById("login-error").textContent = "Incorrect secret.";
       logout();
@@ -460,16 +463,21 @@ async function loadData() {
       return;
     }
     const d = await r.json();
+    const subsData = await subsR.json().catch(() => ({}));
+    const subs = subsData.subs || [];
     document.getElementById("loading").style.display = "none";
     document.getElementById("content").style.display = "block";
-    renderDashboard(d);
+    renderDashboard(d, subs);
     checkAdminDevice();
   } catch(e) {
     document.getElementById("loading").innerHTML = `<div style="color:var(--red)">Error: ${e.message}</div>`;
   }
 }
 
-function renderDashboard(d) {
+function renderDashboard(d, subs=[]) {
+  // Build a set of subscribed UIDs and PINs for quick lookup
+  const subbedUids = new Set(subs.map(s => s.uid).filter(Boolean));
+  const subbedPins = new Set(subs.map(s => s.pin).filter(Boolean).map(String));
   document.getElementById("generated-at").textContent = `Updated ${new Date(d.generatedAt).toLocaleString()}`;
 
   const todayKey = new Date().toISOString().slice(0,10);
@@ -515,9 +523,13 @@ function renderDashboard(d) {
   document.getElementById("accounts-list").innerHTML = accounts.length ? accounts.map(a => {
     const label = a.displayName || a.predictorName || a.email || a.uid;
     const saved = `${a.savedMatches||0} matches${a.hasBracket?" · bracket":""}`;
+    const isSubbed = subbedUids.has(a.uid) || (a.pin && subbedPins.has(String(a.pin)));
+    const notifBadge = isSubbed
+      ? `<span style="font-size:10px;color:var(--green)">🔔</span>`
+      : `<span style="font-size:10px;color:var(--dim)" title="Not subscribed to notifications">🔕</span>`;
     return `<div class="row" style="grid-template-columns:2fr 90px 110px 100px">
       <div style="overflow:hidden">
-        <div style="font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(label)}</div>
+        <div style="font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${notifBadge} ${esc(label)}</div>
         <div style="font-size:9px;color:var(--dim);font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(a.uid)}</div>
       </div>
       <div style="color:var(--gold);font-weight:700">${esc(a.pin||"—")}</div>
