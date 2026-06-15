@@ -732,12 +732,21 @@ const BROADCAST = {
 function useCountry() {
   const [geoData, setGeoData] = useState({ country: "US", city: "", region: "" });
   useEffect(() => {
-    fetch("https://ipapi.co/json/")
+    // ip-api.com: 45 req/min free, no daily cap, returns city reliably
+    fetch("http://ip-api.com/json/?fields=countryCode,city,regionName")
       .then(r => r.json())
       .then(d => {
-        if (d?.country_code) setGeoData({ country: d.country_code, city: d.city || "", region: d.region || "" });
+        if (d?.countryCode) setGeoData({ country: d.countryCode, city: d.city || "", region: d.regionName || "" });
       })
-      .catch(() => {});
+      .catch(() => {
+        // Fallback to ipapi.co
+        fetch("https://ipapi.co/json/")
+          .then(r => r.json())
+          .then(d => {
+            if (d?.country_code) setGeoData({ country: d.country_code, city: d.city || "", region: d.region || "" });
+          })
+          .catch(() => {});
+      });
   }, []);
   return geoData;
 }
