@@ -150,8 +150,8 @@
       </div>
       <div id="pill-accounts" style="display:none;margin-top:12px">
         <div class="table">
-          <div class="row head" style="grid-template-columns:2fr 90px 110px 100px">
-            <div>User</div><div>PIN</div><div>Saved</div><div>Actions</div>
+          <div class="row head" style="grid-template-columns:2fr 90px 110px 60px 100px">
+            <div>User</div><div>PIN</div><div>Saved</div><div>Notif</div><div>Actions</div>
           </div>
           <div id="accounts-list"></div>
         </div>
@@ -527,13 +527,14 @@ function renderDashboard(d, subs=[]) {
     const notifBadge = isSubbed
       ? `<span style="font-size:10px;color:var(--green)">🔔</span>`
       : `<span style="font-size:10px;color:var(--dim)" title="Not subscribed to notifications">🔕</span>`;
-    return `<div class="row" style="grid-template-columns:2fr 90px 110px 100px">
+    return `<div class="row" style="grid-template-columns:2fr 90px 110px 60px 100px">
       <div style="overflow:hidden">
-        <div style="font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${notifBadge} ${esc(label)}</div>
+        <div style="font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(label)}</div>
         <div style="font-size:9px;color:var(--dim);font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(a.uid)}</div>
       </div>
       <div style="color:var(--gold);font-weight:700">${esc(a.pin||"—")}</div>
       <div style="color:var(--mid);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(saved)}</div>
+      <div style="text-align:center;font-size:16px" title="${isSubbed?'Subscribed to notifications':'Not subscribed'}">${isSubbed?'🔔':'🔕'}</div>
       <div style="display:flex;gap:4px">
         <button class="admin-btn" style="padding:4px 7px;font-size:10px" title="Copy UID" onclick="copyUID('${escA(a.uid)}')">📋</button>
         <button class="admin-btn danger" style="padding:4px 7px;font-size:10px" onclick="deleteAccount('${escA(a.uid)}','${escA(label)}')">Del</button>
