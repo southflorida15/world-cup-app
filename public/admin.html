@@ -125,6 +125,49 @@
         </div>
         <div class="admin-note" id="admin-device-note">Mark your devices so your own visits don't count as new users.</div>
       </div>
+
+      <!-- Analytics data pills -->
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">
+        <button class="pill-btn" onclick="togglePill('pill-chart')">📈 Daily Visitors</button>
+        <button class="pill-btn" onclick="togglePill('pill-tabs')">📊 Tab Usage</button>
+        <button class="pill-btn" onclick="togglePill('pill-accounts')">👤 Accounts</button>
+        <button class="pill-btn" onclick="togglePill('pill-users')">🎯 Predictor Users</button>
+        <button class="pill-btn" onclick="togglePill('pill-visitors')">🌍 All Visitors</button>
+      </div>
+
+      <div id="pill-chart" style="display:none;margin-top:12px">
+        <div class="chart">
+          <div class="bars" id="bars"></div>
+          <div style="font-size:10px;color:var(--dim);text-align:right;margin-top:4px">Today highlighted in gold</div>
+        </div>
+      </div>
+      <div id="pill-tabs" style="display:none;margin-top:12px">
+        <div class="tabs-grid" id="tabs-grid"></div>
+      </div>
+      <div id="pill-accounts" style="display:none;margin-top:12px">
+        <div class="table">
+          <div class="row head" style="grid-template-columns:1fr 80px 120px 80px">
+            <div>User</div><div>PIN</div><div>Saved</div><div>Actions</div>
+          </div>
+          <div id="accounts-list"></div>
+        </div>
+      </div>
+      <div id="pill-users" style="display:none;margin-top:12px">
+        <div class="table">
+          <div class="row head" style="grid-template-columns:1fr 120px 90px 80px">
+            <div>Name</div><div>Location</div><div>Joined</div><div>Device</div>
+          </div>
+          <div id="users-list"></div>
+        </div>
+      </div>
+      <div id="pill-visitors" style="display:none;margin-top:12px">
+        <div class="table">
+          <div class="row head" style="grid-template-columns:1fr 80px 60px 100px 100px">
+            <div>Location</div><div>Device</div><div>Visits</div><div>First seen</div><div>Last seen</div>
+          </div>
+          <div id="visitors-list"></div>
+        </div>
+      </div>
       </div>
     </div>
 
@@ -239,54 +282,6 @@
     </div>
 
 
-    <!-- Analytics data pills -->
-    <div class="section">
-      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">
-        <button class="pill-btn" onclick="togglePill('pill-chart')">📈 Daily Visitors</button>
-        <button class="pill-btn" onclick="togglePill('pill-tabs')">📊 Tab Usage</button>
-        <button class="pill-btn" onclick="togglePill('pill-accounts')">👤 Accounts</button>
-        <button class="pill-btn" onclick="togglePill('pill-users')">🎯 Predictor Users</button>
-        <button class="pill-btn" onclick="togglePill('pill-visitors')">🌍 All Visitors</button>
-      </div>
-
-      <div id="pill-chart" style="display:none;margin-bottom:16px">
-        <div class="chart">
-          <div class="bars" id="bars"></div>
-          <div style="font-size:10px;color:var(--dim);text-align:right;margin-top:4px">Today highlighted in gold</div>
-        </div>
-      </div>
-
-      <div id="pill-tabs" style="display:none;margin-bottom:16px">
-        <div class="tabs-grid" id="tabs-grid"></div>
-      </div>
-
-      <div id="pill-accounts" style="display:none;margin-bottom:16px">
-        <div class="table">
-          <div class="row head" style="grid-template-columns:1fr 80px 120px 80px">
-            <div>User</div><div>PIN</div><div>Saved</div><div>Actions</div>
-          </div>
-          <div id="accounts-list"></div>
-        </div>
-      </div>
-
-      <div id="pill-users" style="display:none;margin-bottom:16px">
-        <div class="table">
-          <div class="row head" style="grid-template-columns:1fr 120px 90px 80px">
-            <div>Name</div><div>Location</div><div>Joined</div><div>Device</div>
-          </div>
-          <div id="users-list"></div>
-        </div>
-      </div>
-
-      <div id="pill-visitors" style="display:none;margin-bottom:16px">
-        <div class="table">
-          <div class="row head" style="grid-template-columns:1fr 80px 60px 100px 100px">
-            <div>Location</div><div>Device</div><div>Visits</div><div>First seen</div><div>Last seen</div>
-          </div>
-          <div id="visitors-list"></div>
-        </div>
-      </div>
-    </div>
   </div>
 </div>
 
