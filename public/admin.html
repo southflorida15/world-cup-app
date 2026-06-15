@@ -147,7 +147,7 @@
       </div>
       <div id="pill-accounts" style="display:none;margin-top:12px">
         <div class="table">
-          <div class="row head" style="grid-template-columns:1fr 80px 120px 80px">
+          <div class="row head" style="grid-template-columns:2fr 90px 110px 100px">
             <div>User</div><div>PIN</div><div>Saved</div><div>Actions</div>
           </div>
           <div id="accounts-list"></div>
@@ -498,13 +498,16 @@ function renderDashboard(d) {
   document.getElementById("accounts-list").innerHTML = accounts.length ? accounts.map(a => {
     const label = a.displayName || a.predictorName || a.email || a.uid;
     const saved = `${a.savedMatches||0} matches${a.hasBracket?" · bracket":""}`;
-    return `<div class="row" style="grid-template-columns:1fr 80px 120px 80px">
-      <div><div style="font-weight:700;color:var(--text)">${esc(label)}</div><div style="font-size:10px;color:var(--dim)">${esc(a.pin?`PIN: ${a.pin}`:"")} ${esc(a.email||"")}</div><div style="font-size:10px;color:var(--dim);font-family:monospace">${esc(a.uid)}</div></div>
+    return `<div class="row" style="grid-template-columns:2fr 90px 110px 100px">
+      <div style="overflow:hidden">
+        <div style="font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(label)}</div>
+        <div style="font-size:9px;color:var(--dim);font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(a.uid)}</div>
+      </div>
       <div style="color:var(--gold);font-weight:700">${esc(a.pin||"—")}</div>
-      <div style="color:var(--mid);font-size:11px">${esc(saved)}</div>
-      <div style="display:flex;gap:6px">
-        <button class="admin-btn" style="padding:5px 8px;font-size:11px" onclick="copyUID('${escA(a.uid)}')">📋 UID</button>
-        <button class="admin-btn danger" style="padding:5px 8px;font-size:11px" onclick="deleteAccount('${escA(a.uid)}','${escA(label)}')">Delete</button>
+      <div style="color:var(--mid);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(saved)}</div>
+      <div style="display:flex;gap:4px">
+        <button class="admin-btn" style="padding:4px 7px;font-size:10px" title="Copy UID" onclick="copyUID('${escA(a.uid)}')">📋</button>
+        <button class="admin-btn danger" style="padding:4px 7px;font-size:10px" onclick="deleteAccount('${escA(a.uid)}','${escA(label)}')">Del</button>
       </div>
     </div>`;
   }).join("") : `<div style="padding:20px;text-align:center;color:var(--dim);font-size:13px">No accounts yet</div>`;
