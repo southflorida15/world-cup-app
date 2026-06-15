@@ -112,5 +112,55 @@ export default async function handler(req, res) {
     }
   }
 
-  return res.status(400).json({ error: "Missing action. Use ?action=subscribe or ?action=notify" });
+  // ── Broadcast — send custom push to ALL subscribers ──────────────────────
+  if (action === "broadcast") {
+    const auth = req.headers.authorization || "";
+    const validSecret = process.env.CRON_SECRET || process.env.PREDICTOR_ADMIN_SECRET;
+    if (!validSecret || auth !== `Bearer ${validSecret}`) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const { title, body, url = "/" } = req.body || {};
+    if (!title || !body) return res.status(400).json({ error: "title and body required" });
+
+    const results = { sent: 0, skipped: 0, errors: 0, removed: 0 };
+
+    try {
+      let cursor = 0;
+      const keys = [];
+      do {
+        const [nextCursor, batch] = await kv.scan(cursor, { match: "push:*", count: 100 });
+        cursor = parseInt(nextCursor) || 0;
+        keys.push(...batch);
+      } while (cursor !== 0);
+
+      if (!keys.length) return res.status(200).json({ ...results, message: "No subscribers" });
+
+      const payload = JSON.stringify({ title, body, tag: `wc2026-broadcast-${Date.now()}`, url });
+
+      await Promise.all(keys.map(async key => {
+        try {
+          const record = await kv.get(key);
+          if (!record?.subscription) { results.skipped++; return; }
+          await webpush.sendNotification(record.subscription, payload);
+          results.sent++;
+        } catch (err) {
+          if (err.statusCode === 410) {
+            await kv.del(key);
+            results.removed++;
+          } else {
+            console.error("Broadcast push error:", err.message);
+            results.errors++;
+          }
+        }
+      }));
+
+      return res.status(200).json({ ok: true, ...results });
+    } catch (err) {
+      console.error("push-broadcast error:", err.message);
+      return res.status(500).json({ error: err.message });
+    }
+  }
+
+  return res.status(400).json({ error: "Missing action. Use ?action=subscribe, ?action=notify, or ?action=broadcast" });
 }

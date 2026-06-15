@@ -158,6 +158,133 @@ async function buildDashboard() {
   };
 }
 
+// ── 1. Flush livescores KV cache ─────────────────────────────────────────
+async function flushLivescores() {
+  await kv.del("wc2026:livescores").catch(() => {});
+  await kv.del("wc2026:livescores:ts").catch(() => {});
+  return { ok: true, flushed: ["wc2026:livescores", "wc2026:livescores:ts"] };
+}
+
+// ── 2. View/edit persisted results ───────────────────────────────────────
+async function getPersistedResults() {
+  const results = await kv.get("wc2026:results").catch(() => ({})) || {};
+  return { ok: true, results, total: Object.keys(results).length };
+}
+
+async function setPersistedResult({ home, away, hg, ag }) {
+  if (!home || !away || hg === undefined || ag === undefined) throw new Error("home, away, hg, ag required");
+  const results = await kv.get("wc2026:results").catch(() => ({})) || {};
+  const key = `${home}|${away}`;
+  results[key] = { hg: parseInt(hg), ag: parseInt(ag), status: "FT", elapsed: 90 };
+  await kv.set("wc2026:results", results);
+  return { ok: true, key, result: results[key] };
+}
+
+async function deletePersistedResult({ home, away }) {
+  if (!home || !away) throw new Error("home and away required");
+  const results = await kv.get("wc2026:results").catch(() => ({})) || {};
+  const key = `${home}|${away}`;
+  delete results[key];
+  await kv.set("wc2026:results", results);
+  return { ok: true, deleted: key };
+}
+
+// ── 3. Force fantasy re-score ────────────────────────────────────────────
+async function reScoreAll(req) {
+  const secret = process.env.PREDICTOR_ADMIN_SECRET || process.env.CRON_SECRET;
+  const host = req.headers.host;
+  const proto = req.headers["x-forwarded-proto"] || "https";
+  const base = proto + "://" + host;
+
+  // Get all persisted results
+  const results = await kv.get("wc2026:results").catch(() => ({})) || {};
+  let scored = 0, skipped = 0;
+
+  for (const [key, { hg, ag }] of Object.entries(results)) {
+    const [home, away] = key.split("|");
+    // Find match ID from MATCHES by home/away name
+    try {
+      const r = await fetch(base + "/api/predictor?action=score", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-admin-secret": secret },
+        body: JSON.stringify({ matchKey: key, hg: parseInt(hg), ag: parseInt(ag) }),
+      });
+      if (r.ok) scored++; else skipped++;
+    } catch(e) { skipped++; }
+  }
+  return { ok: true, scored, skipped, total: Object.keys(results).length };
+}
+
+// ── 4. ESPN ID map viewer/editor ─────────────────────────────────────────
+async function getESPNIds() {
+  const idMap = await kv.get("wc2026:espn_id_map").catch(() => ({})) || {};
+  return { ok: true, idMap, total: Object.keys(idMap).length };
+}
+
+async function deleteESPNId({ home, away }) {
+  if (!home || !away) throw new Error("home and away required");
+  const idMap = await kv.get("wc2026:espn_id_map").catch(() => ({})) || {};
+  const key = `${home}|${away}`;
+  delete idMap[key];
+  await kv.set("wc2026:espn_id_map", idMap);
+  return { ok: true, deleted: key };
+}
+
+async function setESPNId({ home, away, id }) {
+  if (!home || !away || !id) throw new Error("home, away, id required");
+  const idMap = await kv.get("wc2026:espn_id_map").catch(() => ({})) || {};
+  const key = `${home}|${away}`;
+  idMap[key] = String(id);
+  await kv.set("wc2026:espn_id_map", idMap);
+  return { ok: true, key, id: idMap[key] };
+}
+
+// ── 6. Active users today ────────────────────────────────────────────────
+async function getActiveToday() {
+  const today = new Date().toISOString().slice(0, 10);
+  const uids = await kv.smembers(`daily:${today}`).catch(() => []) || [];
+  const records = uids.length
+    ? (await kv.mget(...uids.map(uid => `visitor:${uid}`))).filter(Boolean)
+    : [];
+  const active = records
+    .filter(r => r.lastSeen && Date.now() - r.lastSeen < 30 * 60 * 1000)
+    .map(r => ({ uid: r.uid, device: r.device, city: r.city, country: r.country, lastSeen: new Date(r.lastSeen).toISOString() }));
+  return { ok: true, totalToday: uids.length, activeNow: active.length, active };
+}
+
+// ── 7. Seed livescores ───────────────────────────────────────────────────
+async function triggerLivescoresSeed(req) {
+  const host = req.headers.host;
+  const proto = req.headers["x-forwarded-proto"] || "https";
+  const r = await fetch(`${proto}://${host}/api/livescores?seed=1`);
+  const data = await r.json();
+  return { ok: true, ...data };
+}
+
+// ── 8. Seed ESPN IDs ─────────────────────────────────────────────────────
+async function triggerESPNIdSeed(req) {
+  const host = req.headers.host;
+  const proto = req.headers["x-forwarded-proto"] || "https";
+  const r = await fetch(`${proto}://${host}/api/matchevents?action=seed-ids`);
+  const data = await r.json();
+  return { ok: true, ...data };
+}
+
+// ── 9. Send push notification to all subscribers ─────────────────────────
+async function sendPushToAll({ title, body, url }, req) {
+  if (!title || !body) throw new Error("title and body required");
+  const host = req.headers.host;
+  const proto = req.headers["x-forwarded-proto"] || "https";
+  const secret = process.env.PREDICTOR_ADMIN_SECRET || process.env.CRON_SECRET;
+  const r = await fetch(`${proto}://${host}/api/push?action=broadcast`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${secret}` },
+    body: JSON.stringify({ title, body, url: url || "/" }),
+  });
+  const data = await r.json().catch(() => ({}));
+  return { ok: true, ...data };
+}
+
 // ── Score-matches (fantasy auto-scoring) ─────────────────────────────────
 async function handleScoreMatches(req, res) {
   const { matches } = req.body || {};
@@ -205,6 +332,50 @@ export default async function handler(req, res) {
       if (req.body.adminAction === "delete-account") {
         const result = await deleteAccount(req.body.uid);
         return res.status(200).json({ ok: true, ...result });
+      }
+      // 1. Flush livescores cache
+      if (req.body.adminAction === "flush-livescores") {
+        return res.status(200).json(await flushLivescores());
+      }
+      // 2. Persisted results
+      if (req.body.adminAction === "get-results") {
+        return res.status(200).json(await getPersistedResults());
+      }
+      if (req.body.adminAction === "set-result") {
+        return res.status(200).json(await setPersistedResult(req.body));
+      }
+      if (req.body.adminAction === "delete-result") {
+        return res.status(200).json(await deletePersistedResult(req.body));
+      }
+      // 3. Force re-score
+      if (req.body.adminAction === "rescore-all") {
+        return res.status(200).json(await reScoreAll(req));
+      }
+      // 4. ESPN ID map
+      if (req.body.adminAction === "get-espn-ids") {
+        return res.status(200).json(await getESPNIds());
+      }
+      if (req.body.adminAction === "set-espn-id") {
+        return res.status(200).json(await setESPNId(req.body));
+      }
+      if (req.body.adminAction === "delete-espn-id") {
+        return res.status(200).json(await deleteESPNId(req.body));
+      }
+      // 6. Active users today
+      if (req.body.adminAction === "active-today") {
+        return res.status(200).json(await getActiveToday());
+      }
+      // 7. Seed livescores
+      if (req.body.adminAction === "seed-livescores") {
+        return res.status(200).json(await triggerLivescoresSeed(req));
+      }
+      // 8. Seed ESPN IDs
+      if (req.body.adminAction === "seed-espn-ids") {
+        return res.status(200).json(await triggerESPNIdSeed(req));
+      }
+      // 9. Send push notification
+      if (req.body.adminAction === "send-push") {
+        return res.status(200).json(await sendPushToAll(req.body, req));
       }
       return res.status(400).json({ error: "unknown adminAction" });
     } catch (err) {
