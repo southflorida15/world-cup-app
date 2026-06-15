@@ -3647,9 +3647,8 @@ function SavedTab({ saved, onRemove, onMatchTap, tabTop=116, syncUid="", syncPin
 
   const handleMasterCalendar = () => downloadICS(saved);
   const handleMasterPush = async () => {
-    const isPWA = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
-    if (!isPWA) { alert("Install the app first to enable push notifications"); return; }
     let state = "Notification" in window ? Notification.permission : "unsupported";
+    if (state === "unsupported") { alert("Push notifications aren't supported in this browser."); return; }
     if (state !== "granted") { state = await requestPushPermission(); if (state !== "granted") return; }
     setMasterPushDone(false); // reset so user sees it re-subscribing
     saved.forEach(it => scheduleNotification(it.match, 60));
