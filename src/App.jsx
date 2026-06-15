@@ -3651,6 +3651,7 @@ function SavedTab({ saved, onRemove, onMatchTap, tabTop=116, syncUid="", syncPin
     if (!isPWA) { alert("Install the app first to enable push notifications"); return; }
     let state = "Notification" in window ? Notification.permission : "unsupported";
     if (state !== "granted") { state = await requestPushPermission(); if (state !== "granted") return; }
+    setMasterPushDone(false); // reset so user sees it re-subscribing
     saved.forEach(it => scheduleNotification(it.match, 60));
     try {
       const reg = await navigator.serviceWorker.ready;
@@ -3695,6 +3696,13 @@ function SavedTab({ saved, onRemove, onMatchTap, tabTop=116, syncUid="", syncPin
           <button onClick={handleMasterCalendar} style={{flex:1,padding:"6px 4px",borderRadius:8,cursor:"pointer",border:`1px solid ${C.green}44`,background:`${C.green}15`,color:C.green,fontSize:11,fontWeight:600}}>📅 Export all</button>
           <button onClick={handleMasterPush} style={{flex:1,padding:"6px 4px",borderRadius:8,cursor:"pointer",border:`1px solid ${masterPushDone?C.green:C.gold}44`,background:masterPushDone?`${C.green}15`:`${C.gold}15`,color:masterPushDone?C.green:C.gold,fontSize:11,fontWeight:600}}>{masterPushDone?"🔔 All set!":"🔔 Notify all"}</button>
         </div>
+        {/* Notification prompt if not yet subscribed */}
+        {typeof Notification !== "undefined" && Notification.permission !== "granted" && (
+          <div style={{background:`${C.gold}12`,border:`1px solid ${C.gold}33`,borderRadius:8,padding:"8px 10px",marginBottom:4,display:"flex",alignItems:"center",gap:8}}>
+            <span style={{fontSize:14}}>🔔</span>
+            <div style={{flex:1,fontSize:11,color:C.mid}}>Tap <strong style={{color:C.gold}}>"Notify all"</strong> above to get 30-min kickoff alerts for all your saved matches</div>
+          </div>
+        )}
         {/* Filter pills */}
         <div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none"}}>
           <button style={ss(filterMode==="all")} onClick={()=>{setFilterMode("all");setFilterVal(new Set());}}>{"All"}</button>
@@ -6834,13 +6842,13 @@ export default function App() {
         <Toast msg={toast} onDone={()=>setToast("")}/>
         <InstallBanner/>
 
-        {/* Notification prompt banner */}
-        {tab==="live" && Notification.permission==="default" && (
+        {/* Notification prompt banner — show on Live tab for anyone without notifications */}
+        {tab==="live" && typeof Notification !== "undefined" && Notification.permission !== "granted" && (
           <div style={{position:"fixed",bottom:72,left:12,right:12,background:`linear-gradient(135deg,${C.s2},${C.s1})`,border:`1px solid ${C.gold}44`,borderRadius:14,padding:"12px 14px",zIndex:200,display:"flex",alignItems:"center",gap:10,boxShadow:`0 4px 20px rgba(0,0,0,0.4)`}}>
             <span style={{fontSize:22,flexShrink:0}}>🔔</span>
             <div style={{flex:1}}>
               <div style={{fontSize:13,fontWeight:700,color:C.text}}>Get kickoff alerts</div>
-              <div style={{fontSize:11,color:C.mid,marginTop:2}}>Save matches + enable notifications to get 30-min alerts before kickoff</div>
+              <div style={{fontSize:11,color:C.mid,marginTop:2}}>Save matches + tap "Notify all" in My Matches to get 30-min alerts before kickoff</div>
             </div>
             <button onClick={()=>setTab("saved")} style={{background:`${C.gold}22`,border:`1px solid ${C.gold}44`,borderRadius:8,padding:"6px 10px",color:C.gold,fontSize:12,fontWeight:700,cursor:"pointer",flexShrink:0}}>Set up →</button>
           </div>
