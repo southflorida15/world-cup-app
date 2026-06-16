@@ -4649,10 +4649,46 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
     }
   };
 
+  const modalRef = useRef(null);
+  const swipeStartY = useRef(0);
+  const swipeDelta = useRef(0);
+  const isSwipeGesture = useRef(false);
+
+  const onSwipeStart = (e) => {
+    swipeStartY.current = e.touches[0].clientY;
+    swipeDelta.current = 0;
+    isSwipeGesture.current = false;
+  };
+  const onSwipeMove = (e) => {
+    const dy = e.touches[0].clientY - swipeStartY.current;
+    const atTop = (modalRef.current?.scrollTop || 0) <= 0;
+    // Only intercept if pulling DOWN and scrolled to top
+    if (atTop && dy > 10) {
+      isSwipeGesture.current = true;
+    }
+    if (!isSwipeGesture.current) return;
+    e.preventDefault();
+    swipeDelta.current = dy;
+    if (modalRef.current) modalRef.current.style.transform = `translateY(${Math.min(dy * 0.4, 80)}px)`;
+  };
+  const onSwipeEnd = () => {
+    if (isSwipeGesture.current && swipeDelta.current > 80) {
+      onClose();
+    } else {
+      if (modalRef.current) modalRef.current.style.transform = "translateY(0)";
+    }
+    swipeDelta.current = 0;
+    isSwipeGesture.current = false;
+  };
+
   return (
     <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center"}}>
-      <div onClick={e=>e.stopPropagation()} style={{background:C.bg,border:`1px solid ${C.b2}`,borderRadius:"18px 18px 0 0",width:"100%",maxWidth:620,maxHeight:"92vh",overflowY:"auto",paddingBottom:20,position:"relative"}}>
+      <div ref={modalRef} onClick={e=>e.stopPropagation()}
+        onTouchStart={onSwipeStart} onTouchMove={onSwipeMove} onTouchEnd={onSwipeEnd}
+        style={{background:C.bg,border:`1px solid ${C.b2}`,borderRadius:"18px 18px 0 0",width:"100%",maxWidth:620,maxHeight:"92vh",overflowY:"auto",paddingBottom:20,position:"relative",transition:"transform .2s ease",touchAction:"pan-y"}}>
 
+        {/* Drag handle */}
+        <div style={{width:40,height:4,borderRadius:2,background:C.b2,margin:"10px auto 0",flexShrink:0}}/>
 
         <button onClick={onClose} style={{position:"sticky",top:8,float:"right",marginRight:8,zIndex:9999,background:"rgba(0,0,0,.5)",border:`1px solid ${C.b2}`,color:"white",fontSize:22,width:36,height:36,borderRadius:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>×</button>
 
