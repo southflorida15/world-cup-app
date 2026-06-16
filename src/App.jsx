@@ -4013,36 +4013,6 @@ function SingleLeagueView({ league, pin, fantasyUserId, userStats, leagueBoard, 
         </div>}
       </div>
       <div style={{background:C.s1,border:`1px solid ${C.b2}`,borderRadius:12,padding:"12px 14px",marginBottom:14}}>
-        {myEntry && (
-          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:14}}>
-            {[
-              {val:myEntry.pts, lbl:"POINTS", color:C.green},
-              {val:myEntry.exact, lbl:"EXACT", color:C.gold},
-              {val:myEntry.correct, lbl:"CORRECT", color:C.blue},
-              {val:userStats?.total?Math.round((myEntry.correct/userStats.total)*100)+"%":"—", lbl:"ACCURACY", color:C.mid},
-            ].map(s => (
-              <div key={s.lbl} style={{background:C.s1,border:`1px solid ${C.b2}`,borderRadius:10,padding:"10px 6px",textAlign:"center"}}>
-                <div style={{fontSize:22,fontWeight:900,color:s.color}}>{s.val}</div>
-                <div style={{fontSize:9,color:C.dim,marginTop:2,fontWeight:700,letterSpacing:"0.08em"}}>{s.lbl}</div>
-              </div>
-            ))}
-          </div>
-        )}
-        {myEntry && (
-          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:14}}>
-            {[
-              {val:myEntry.pts, lbl:"POINTS", color:C.green},
-              {val:myEntry.exact, lbl:"EXACT", color:C.gold},
-              {val:myEntry.correct, lbl:"CORRECT", color:C.blue},
-              {val:userStats?.total?Math.round((myEntry.correct/userStats.total)*100)+"%":"—", lbl:"ACCURACY", color:C.mid},
-            ].map(s => (
-              <div key={s.lbl} style={{background:C.s1,border:`1px solid ${C.b2}`,borderRadius:10,padding:"10px 6px",textAlign:"center"}}>
-                <div style={{fontSize:22,fontWeight:900,color:s.color}}>{s.val}</div>
-                <div style={{fontSize:9,color:C.dim,marginTop:2,fontWeight:700,letterSpacing:"0.08em"}}>{s.lbl}</div>
-              </div>
-            ))}
-          </div>
-        )}
                                 <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.08em",marginBottom:8}}>📨 INVITE FRIENDS</div>
         <div style={{display:"flex",gap:8}}>
           <div style={{flex:1,background:C.s2,border:`1px solid ${C.b2}`,borderRadius:8,padding:"8px 12px",display:"flex",alignItems:"center",gap:8}}>
@@ -4238,36 +4208,6 @@ function LeaguesPanel({ pin, fantasyUserId, syncProfile, userStats }) {
 
         {/* Invite section */}
         <div style={{background:C.s1,border:`1px solid ${C.b2}`,borderRadius:12,padding:"12px 14px",marginBottom:14}}>
-          {myEntry && (
-          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:14}}>
-            {[
-              {val:myEntry.pts, lbl:"POINTS", color:C.green},
-              {val:myEntry.exact, lbl:"EXACT", color:C.gold},
-              {val:myEntry.correct, lbl:"CORRECT", color:C.blue},
-              {val:userStats?.total?Math.round((myEntry.correct/userStats.total)*100)+"%":"—", lbl:"ACCURACY", color:C.mid},
-            ].map(s => (
-              <div key={s.lbl} style={{background:C.s1,border:`1px solid ${C.b2}`,borderRadius:10,padding:"10px 6px",textAlign:"center"}}>
-                <div style={{fontSize:22,fontWeight:900,color:s.color}}>{s.val}</div>
-                <div style={{fontSize:9,color:C.dim,marginTop:2,fontWeight:700,letterSpacing:"0.08em"}}>{s.lbl}</div>
-              </div>
-            ))}
-          </div>
-        )}
-        {myEntry && (
-          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:14}}>
-            {[
-              {val:myEntry.pts, lbl:"POINTS", color:C.green},
-              {val:myEntry.exact, lbl:"EXACT", color:C.gold},
-              {val:myEntry.correct, lbl:"CORRECT", color:C.blue},
-              {val:userStats?.total?Math.round((myEntry.correct/userStats.total)*100)+"%":"—", lbl:"ACCURACY", color:C.mid},
-            ].map(s => (
-              <div key={s.lbl} style={{background:C.s1,border:`1px solid ${C.b2}`,borderRadius:10,padding:"10px 6px",textAlign:"center"}}>
-                <div style={{fontSize:22,fontWeight:900,color:s.color}}>{s.val}</div>
-                <div style={{fontSize:9,color:C.dim,marginTop:2,fontWeight:700,letterSpacing:"0.08em"}}>{s.lbl}</div>
-              </div>
-            ))}
-          </div>
-        )}
                                 <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.08em",marginBottom:8}}>📨 INVITE FRIENDS</div>
           <div style={{display:"flex",gap:8}}>
             <div style={{flex:1,background:C.s2,border:`1px solid ${C.b2}`,borderRadius:8,padding:"8px 12px",display:"flex",alignItems:"center",gap:8}}>
