@@ -4664,7 +4664,7 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
         <button onClick={onClose} style={{position:"absolute",top:10,right:10,zIndex:9999,background:"rgba(0,0,0,.5)",border:`1px solid ${C.b2}`,color:"white",fontSize:22,width:34,height:34,borderRadius:17,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
       <div ref={modalRef} onClick={e=>e.stopPropagation()}
         onTouchMove={e=>e.stopPropagation()}
-        style={{background:C.bg,border:`1px solid ${C.b2}`,borderRadius:"18px 18px 18px 18px",width:"100%",maxHeight:"calc(100dvh - 50px)",overflowY:"auto",overscrollBehavior:"contain",WebkitOverflowScrolling:"touch",paddingBottom:20,position:"relative"}}>
+        style={{background:C.bg,border:`1px solid ${C.b2}`,borderRadius:"18px 18px 18px 18px",width:"100%",maxHeight:"calc(100dvh - 50px)",overflowY:"auto",overscrollBehavior:"contain",WebkitOverflowScrolling:"touch",paddingBottom:8,position:"relative"}}>
         <button onClick={onClose} style={{position:"absolute",top:12,right:12,zIndex:10,background:"rgba(0,0,0,.4)",border:"none",color:"white",fontSize:22,width:34,height:34,borderRadius:17,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
 
         {/* Save + Share icon buttons — top left */}
@@ -4720,10 +4720,19 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
               </button>
             );
             return (
-              <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
-                {pill("Lineups",    lineupsOpen, ()=>setLineupsOpen(o=>!o), !hasLineups)}
-                {pill(timelineLabel, evOpen,     ()=>setEvOpen(o=>!o),      !hasTimeline)}
-                {pill("Match Stats", statsOpen,  ()=>setStatsOpen(o=>!o),   !hasStats)}
+              <div style={{display:"flex",gap:8,marginBottom:14}}>
+                {["Lineups", timelineLabel, "Match Stats"].map((label, i) => {
+                  const [active, toggle, disabled] = [
+                    [lineupsOpen, ()=>setLineupsOpen(o=>!o), !hasLineups],
+                    [evOpen,      ()=>setEvOpen(o=>!o),      !hasTimeline],
+                    [statsOpen,   ()=>setStatsOpen(o=>!o),   !hasStats],
+                  ][i];
+                  return (
+                    <button key={label} onClick={disabled ? undefined : toggle} style={{flex:1,padding:"6px 4px",borderRadius:999,border:`1.5px solid ${active?C.green:disabled?C.b1:C.b2}`,background:active?`${C.green}18`:C.s2,color:active?C.green:disabled?C.dim:C.mid,fontSize:12,fontWeight:700,cursor:disabled?"default":"pointer",opacity:disabled?0.4:1,transition:"all .15s",textAlign:"center"}}>
+                      {label}
+                    </button>
+                  );
+                })}
               </div>
             );
           })()}
