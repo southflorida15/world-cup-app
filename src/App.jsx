@@ -4459,13 +4459,11 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
   const [viewingLoading, setViewingLoading] = useState(false);
 
   const openUserProfile = async (entry) => {
-    if (entry.userId === fantasyUserId) return; // don't open own profile — already visible
+    if (entry.userId === fantasyUserId) return;
     setViewingUser(entry);
     setViewingPreds(null);
     setViewingLoading(true);
     try {
-      const d = await apiPred("allPreds", { matchId: "all", viewUserId: entry.userId });
-      // Fetch all scored picks for this user
       const r = await fetch(`/api/predictor?action=getPreds&userId=${entry.userId}`);
       const predsData = await r.json();
       setViewingPreds(predsData);
@@ -4902,30 +4900,40 @@ return (
                   const sc = getScore(m.home, m.away);
                   return sc && statusIsFinished(sc.status) && viewingPreds[m.id];
                 });
-                return scoredMatches.length === 0 ? (
-                  <div style={{textAlign:"center",padding:"20px",color:C.dim,fontSize:13}}>No scored picks yet.</div>
-                ) : scoredMatches.map(m => {
+                if (scoredMatches.length === 0) return <div style={{textAlign:"center",padding:"20px",color:C.dim,fontSize:13}}>No scored picks yet.</div>;
+                return scoredMatches.map(m => {
                   const sc = getScore(m.home, m.away);
                   const pred = viewingPreds[m.id] || {};
                   const pts = scoreOnePred(pred, sc);
                   const ptColor = pts===3?C.green:pts===1?C.gold:pts===0?C.red:C.dim;
+                  const hasPred = pred.hg!==undefined && pred.ag!==undefined;
                   return (
-                    <div key={m.id} style={{marginBottom:8,background:C.s1,border:`1px solid ${C.b2}`,borderRadius:10,padding:"10px 12px",opacity:0.9}}>
-                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
-                        <div style={{fontSize:11,color:C.dim}}>{m.home} vs {m.away}</div>
-                        <div style={{fontSize:12,fontWeight:800,color:ptColor}}>{pts===3?"✓ Exact":pts===1?"✓ Correct":pts===0?"✗ Wrong":"—"}</div>
-                      </div>
-                      <div style={{display:"flex",gap:8,fontSize:12}}>
-                        <div style={{flex:1,background:C.s2,borderRadius:6,padding:"4px 8px",textAlign:"center"}}>
-                          <div style={{fontSize:9,color:C.dim,marginBottom:2}}>RESULT</div>
-                          <div style={{fontWeight:700,color:C.text}}>{sc.hg} – {sc.ag}</div>
+                    <Card key={m.id} style={{marginBottom:8,border:`1px solid ${pts===3?C.green:pts===1?C.gold:pts===0?C.red:C.b2}`,opacity:0.45,background:C.s2}}>
+                      <div style={{padding:"10px 13px"}}>
+                        <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+                          <Badge>Group {m.group} · {m.date}</Badge>
+                          <div style={{fontWeight:700,color:ptColor,fontSize:12}}>{pts===3?"⚽⚽⚽ +3":pts===1?"⚽ +1":"❌ 0"}pts</div>
                         </div>
-                        <div style={{flex:1,background:C.s2,border:`1px solid ${ptColor}44`,borderRadius:6,padding:"4px 8px",textAlign:"center"}}>
-                          <div style={{fontSize:9,color:C.dim,marginBottom:2}}>PICK</div>
-                          <div style={{fontWeight:700,color:ptColor}}>{pred.hg} – {pred.ag}</div>
+                        <div style={{display:"flex",alignItems:"center",gap:8}}>
+                          <Crest team={m.home} size={22}/>
+                          <span style={{fontWeight:800,color:C.text,flex:1,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.home}</span>
+                          <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
+                            <div style={{textAlign:"center",minWidth:52,background:C.bg,borderRadius:8,padding:"5px 10px",border:`1px solid ${C.b2}`}}>
+                              <div style={{fontSize:9,color:C.text,marginBottom:1,fontWeight:700,letterSpacing:"0.05em"}}>RESULT</div>
+                              <div style={{fontWeight:900,fontSize:20,color:C.text,fontFamily:"monospace"}}>{sc.hg} – {sc.ag}</div>
+                            </div>
+                            {hasPred && (
+                              <div style={{textAlign:"center",minWidth:52,background:C.bg,borderRadius:8,padding:"5px 10px",border:`1px solid ${ptColor}`}}>
+                                <div style={{fontSize:9,color:ptColor,marginBottom:1,fontWeight:700,letterSpacing:"0.05em"}}>PICK</div>
+                                <div style={{fontWeight:900,fontSize:20,color:ptColor,fontFamily:"monospace"}}>{pred.hg}–{pred.ag}</div>
+                              </div>
+                            )}
+                          </div>
+                          <span style={{fontWeight:800,color:C.text,flex:1,fontSize:13,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.away}</span>
+                          <Crest team={m.away} size={22}/>
                         </div>
                       </div>
-                    </div>
+                    </Card>
                   );
                 });
               })()}
