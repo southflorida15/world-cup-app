@@ -270,7 +270,15 @@
 
         <hr class="divider"/>
 
-        <!-- Add/Remove user -->
+        <!-- Merge users -->
+        <div style="font-size:11px;font-weight:700;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">🔀 Merge User Picks</div>
+        <div class="admin-note" style="margin-bottom:8px">Copies picks from one user into another, only for matches where the target has no pick. Scores are also copied if available.</div>
+        <div class="input-row">
+          <input id="merge-from-uid" placeholder="From UID (e.g. Mike Bar's UID)"/>
+          <input id="merge-to-uid" placeholder="To UID (e.g. Maykel's UID)"/>
+          <button class="admin-btn warn" onclick="mergeUser()">🔀 Merge</button>
+        </div>
+        <div class="result-box" id="merge-result"></div>
         <div style="font-size:11px;font-weight:700;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">👤 Add / Remove User</div>
         <div class="input-row">
           <input id="league-pin" placeholder="User PIN"/>
@@ -363,6 +371,14 @@ async function sendPushToUser() {
   const target = pin ? `PIN ${pin}` : `UID ${uid}`;
   if (!confirm(`Send push to ${target}?\n\n"${title}"\n${body}`)) return;
   await doAction("send-push-user", { pin: pin||undefined, uid: uid||undefined, title, body, url }, "push-uid-result");
+}
+
+async function mergeUser() {
+  const fromUid = document.getElementById("merge-from-uid").value.trim();
+  const toUid = document.getElementById("merge-to-uid").value.trim();
+  if (!fromUid || !toUid) return alert("Both UIDs required");
+  if (!confirm(`Merge picks from\n${fromUid}\ninto\n${toUid}?\n\nOnly matches where the target has no pick will be copied.`)) return;
+  await doAction("merge-user", { fromUid, toUid }, "merge-result");
 }
 
 async function crossRefLeague() {

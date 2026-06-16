@@ -431,7 +431,24 @@ export default async function handler(req, res) {
         return res.status(200).json(await sendPushToUser(req.body, req));
       }
 
-      // League management
+      if (req.body.adminAction === "merge-user") {
+        const { fromUid, toUid } = req.body;
+        if (!fromUid || !toUid) return res.status(400).json({ error: "fromUid and toUid required" });
+        const fromIds = await kv.smembers(`predSet:${fromUid}`).catch(() => []) || [];
+        const toIds = new Set(await kv.smembers(`predSet:${toUid}`).catch(() => []) || []);
+        const toMerge = fromIds.filter(id => !toIds.has(id));
+        let merged = 0, scored = 0;
+        for (const matchId of toMerge) {
+          const pred = await kv.get(`pred:${fromUid}:${matchId}`).catch(() => null);
+          if (!pred) continue;
+          await kv.set(`pred:${toUid}:${matchId}`, { ...pred, userId: toUid });
+          await kv.sadd(`predSet:${toUid}`, matchId);
+          merged++;
+          const score = await kv.get(`score:${fromUid}:${matchId}`).catch(() => null);
+          if (score) { await kv.set(`score:${toUid}:${matchId}`, score); scored++; }
+        }
+        return res.status(200).json({ ok: true, merged, scored, toMerge });
+      }
       if (req.body.adminAction === "league-list") {
         let cursor = 0; const keys = [];
         do { const [next, batch] = await kv.scan(cursor, { match: "league:*", count: 100 }); cursor = parseInt(next)||0; keys.push(...batch); } while (cursor !== 0);
