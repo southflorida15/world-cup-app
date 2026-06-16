@@ -4459,7 +4459,6 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
   const [viewingLoading, setViewingLoading] = useState(false);
 
   const openUserProfile = async (entry) => {
-    if (entry.userId === fantasyUserId) return;
     setViewingUser(entry);
     setViewingPreds(null);
     setViewingLoading(true);
@@ -4880,7 +4879,7 @@ return (
       {/* ── USER PROFILE MODAL ── */}
       {viewingUser && (
         <div onClick={()=>setViewingUser(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:"8px 3px"}}>
-          <div onClick={e=>e.stopPropagation()} style={{background:C.bg,border:`1px solid ${C.b2}`,borderRadius:18,width:"100%",maxWidth:620,maxHeight:"calc(100dvh - 50px)",overflowY:"auto",overscrollBehavior:"contain",WebkitOverflowScrolling:"touch",paddingBottom:20,position:"relative"}}>
+          <div onClick={e=>e.stopPropagation()} onTouchMove={e=>e.stopPropagation()} style={{background:C.bg,border:`1px solid ${C.b2}`,borderRadius:18,width:"100%",maxWidth:620,maxHeight:"calc(100dvh - 50px)",overflowY:"auto",overscrollBehavior:"contain",WebkitOverflowScrolling:"touch",paddingBottom:20,position:"relative"}}>
             <button onClick={()=>setViewingUser(null)} style={{position:"absolute",top:12,right:12,zIndex:10,background:"rgba(0,0,0,.4)",border:"none",color:"white",fontSize:22,width:34,height:34,borderRadius:17,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
             <div style={{padding:"20px 16px 12px"}}>
               <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16}}>
