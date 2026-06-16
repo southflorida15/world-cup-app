@@ -4726,7 +4726,7 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
                     [evOpen,      ()=>setEvOpen(o=>!o),      !hasTimeline],
                     [statsOpen,   ()=>setStatsOpen(o=>!o),   !hasStats],
                   ][i];
-                  const flexes = [1, 1.6, 1];
+                  const flexes = [0.8, 2, 1];
                   return (
                     <button key={label} onClick={disabled ? undefined : toggle} style={{flex:flexes[i],padding:"6px 4px",borderRadius:999,border:`1.5px solid ${active?C.green:disabled?C.b1:C.b2}`,background:active?`${C.green}18`:C.s2,color:active?C.green:disabled?C.dim:C.mid,fontSize:12,fontWeight:700,cursor:disabled?"default":"pointer",opacity:disabled?0.4:1,transition:"all .15s",textAlign:"center",whiteSpace:"nowrap"}}>
                       {label}
