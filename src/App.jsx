@@ -4468,6 +4468,7 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
   const [lineupsOpen, setLineupsOpen] = useState(false);
   const [statsOpen, setStatsOpen] = useState(false);
   const [evFilter, setEvFilter] = useState(["Goal","Card","subst"]);
+  const modalRef = useRef(null);
   const { getScore } = useContext(LiveScoresCtx);
   const { favTeams=[] } = useContext(FavCtx);
   const country = useContext(CountryCtx);
@@ -4648,8 +4649,6 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
       copyOrOpen();
     }
   };
-
-  const modalRef = useRef(null);
 
   return (
     <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center"}}>
