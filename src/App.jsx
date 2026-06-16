@@ -4652,13 +4652,13 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
 
   return (
     <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center"}}>
+      <div style={{position:"relative",width:"100%",maxWidth:620}}>
+        <button onClick={onClose} style={{position:"absolute",top:10,right:10,zIndex:9999,background:"rgba(0,0,0,.5)",border:`1px solid ${C.b2}`,color:"white",fontSize:22,width:36,height:36,borderRadius:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
       <div ref={modalRef} onClick={e=>e.stopPropagation()}
-        style={{background:C.bg,border:`1px solid ${C.b2}`,borderRadius:"18px 18px 0 0",width:"100%",maxWidth:620,maxHeight:"92vh",overflowY:"auto",paddingBottom:20,position:"relative"}}>
+        style={{background:C.bg,border:`1px solid ${C.b2}`,borderRadius:"18px 18px 0 0",width:"100%",maxWidth:620,maxHeight:"92vh",overflowY:"auto",overscrollBehavior:"contain",WebkitOverflowScrolling:"touch",paddingBottom:20,position:"relative"}}>
 
         {/* Drag handle */}
         <div style={{width:40,height:4,borderRadius:2,background:C.b2,margin:"10px auto 0",flexShrink:0}}/>
-
-        <button onClick={onClose} style={{position:"sticky",top:8,float:"right",marginRight:8,zIndex:9999,background:"rgba(0,0,0,.5)",border:`1px solid ${C.b2}`,color:"white",fontSize:22,width:36,height:36,borderRadius:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>×</button>
 
         {/* Save + Share icon buttons — top left */}
         <div style={{position:"absolute",top:12,left:12,zIndex:9999,display:"flex",gap:6}}>
@@ -4840,6 +4840,7 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
           })()}
 
         </div>
+      </div>
       </div>
     </div>
   );
