@@ -4462,12 +4462,18 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
     setViewingUser(entry);
     setViewingPreds(null);
     setViewingLoading(true);
+    document.body.style.overflow = "hidden";
     try {
       const r = await fetch(`/api/predictor?action=getPreds&userId=${entry.userId}`);
       const predsData = await r.json();
       setViewingPreds(predsData);
     } catch(e) {}
     setViewingLoading(false);
+  };
+
+  const closeUserProfile = () => {
+    setViewingUser(null);
+    document.body.style.overflow = "";
   };
 
   // ── Load user + their predictions on mount ──────────────────────────────
@@ -4878,9 +4884,9 @@ return (
       )}
       {/* ── USER PROFILE MODAL ── */}
       {viewingUser && (
-        <div onClick={()=>setViewingUser(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",zIndex:1000,display:"flex",alignItems:"flex-start",justifyContent:"center",padding:"8px 3px 0"}}>
+        <div onClick={closeUserProfile} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",zIndex:1000,display:"flex",alignItems:"flex-start",justifyContent:"center",padding:"8px 3px 0"}}>
           <div onClick={e=>e.stopPropagation()} onTouchMove={e=>e.stopPropagation()} style={{background:C.bg,border:`1px solid ${C.b2}`,borderRadius:18,width:"100%",maxWidth:620,maxHeight:"calc(100dvh - 50px)",overflowY:"auto",overscrollBehavior:"contain",WebkitOverflowScrolling:"touch",paddingBottom:20,position:"relative"}}>
-            <button onClick={()=>setViewingUser(null)} style={{position:"absolute",top:12,right:12,zIndex:10,background:"rgba(0,0,0,.4)",border:"none",color:"white",fontSize:22,width:34,height:34,borderRadius:17,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+            <button onClick={closeUserProfile} style={{position:"absolute",top:12,right:12,zIndex:10,background:"rgba(0,0,0,.4)",border:"none",color:"white",fontSize:22,width:34,height:34,borderRadius:17,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
             <div style={{padding:"20px 16px 12px"}}>
               <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16}}>
                 <div style={{width:48,height:48,borderRadius:"50%",background:C.s2,border:`2px solid ${C.b2}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>
@@ -4898,7 +4904,7 @@ return (
                 const scoredMatches = MATCHES.filter(m => {
                   const sc = getScore(m.home, m.away);
                   return sc && statusIsFinished(sc.status) && viewingPreds[m.id];
-                });
+                }).sort((a,b) => b.id - a.id);
                 if (scoredMatches.length === 0) return <div style={{textAlign:"center",padding:"20px",color:C.dim,fontSize:13}}>No scored picks yet.</div>;
                 return scoredMatches.map(m => {
                   const sc = getScore(m.home, m.away);
