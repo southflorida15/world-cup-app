@@ -4654,7 +4654,7 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
       <div onClick={e=>e.stopPropagation()} style={{background:C.bg,border:`1px solid ${C.b2}`,borderRadius:"18px 18px 0 0",width:"100%",maxWidth:620,maxHeight:"92vh",overflowY:"auto",paddingBottom:20,position:"relative"}}>
 
 
-        <button onClick={onClose} style={{position:"absolute",top:12,right:12,zIndex:9999,background:"rgba(0,0,0,.4)",border:"none",color:"white",fontSize:24,width:36,height:36,borderRadius:18,cursor:"pointer"}}>×</button>
+        <button onClick={onClose} style={{position:"sticky",top:8,float:"right",marginRight:8,zIndex:9999,background:"rgba(0,0,0,.5)",border:`1px solid ${C.b2}`,color:"white",fontSize:22,width:36,height:36,borderRadius:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>×</button>
 
         {/* Save + Share icon buttons — top left */}
         <div style={{position:"absolute",top:12,left:12,zIndex:9999,display:"flex",gap:6}}>
