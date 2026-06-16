@@ -4659,10 +4659,12 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
   };
 
   return (
-    <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",zIndex:1000,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
+    <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:"8px 0"}}>
+      <div style={{position:"relative",width:"100%",maxWidth:620,height:"calc(100dvh - 16px)"}}>
+        <button onClick={onClose} style={{position:"absolute",top:10,right:10,zIndex:9999,background:"rgba(0,0,0,.5)",border:`1px solid ${C.b2}`,color:"white",fontSize:22,width:34,height:34,borderRadius:17,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
       <div ref={modalRef} onClick={e=>e.stopPropagation()}
         onTouchMove={e=>e.stopPropagation()}
-        style={{background:C.bg,border:`1px solid ${C.b2}`,borderRadius:"18px 18px 18px 18px",width:"100%",maxWidth:620,maxHeight:"calc(82dvh - env(safe-area-inset-bottom))",overflowY:"auto",overscrollBehavior:"contain",WebkitOverflowScrolling:"touch",paddingBottom:20,position:"relative",marginBottom:"env(safe-area-inset-bottom)"}}>
+        style={{background:C.bg,border:`1px solid ${C.b2}`,borderRadius:"18px 18px 18px 18px",width:"100%",height:"100%",overflowY:"auto",overscrollBehavior:"contain",WebkitOverflowScrolling:"touch",paddingBottom:20,position:"relative"}}>
         <button onClick={onClose} style={{position:"absolute",top:12,right:12,zIndex:10,background:"rgba(0,0,0,.4)",border:"none",color:"white",fontSize:22,width:34,height:34,borderRadius:17,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
 
         {/* Save + Share icon buttons — top left */}
@@ -4845,6 +4847,7 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
           })()}
 
         </div>
+      </div>
       </div>
     </div>
   );
