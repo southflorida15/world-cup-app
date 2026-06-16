@@ -4453,6 +4453,24 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
   const [boardLoading, setBL]   = useState(false);
   const [filter, setFilter]     = useState("upcoming");
   const [showInfo, setShowInfo] = useState(false);
+  const [viewingUser, setViewingUser] = useState(null); // { userId, name, avatar }
+  const [viewingPreds, setViewingPreds] = useState(null);
+  const [viewingLoading, setViewingLoading] = useState(false);
+
+  const openUserProfile = async (entry) => {
+    if (entry.userId === fantasyUserId) return; // don't open own profile — already visible
+    setViewingUser(entry);
+    setViewingPreds(null);
+    setViewingLoading(true);
+    try {
+      const d = await apiPred("allPreds", { matchId: "all", viewUserId: entry.userId });
+      // Fetch all scored picks for this user
+      const r = await fetch(`/api/predictor?action=getPreds&userId=${entry.userId}`);
+      const predsData = await r.json();
+      setViewingPreds(predsData);
+    } catch(e) {}
+    setViewingLoading(false);
+  };
 
   // ── Load user + their predictions on mount ──────────────────────────────
   useEffect(() => {
@@ -4740,8 +4758,7 @@ return (
             const isMe = entry.userId === fantasyUserId;
             const medal = i===0?"🥇":i===1?"🥈":i===2?"🥉":null;
             return (
-              <Card key={entry.userId} style={{marginBottom:7,border:`1px solid ${isMe?C.gold:C.b1}`,background:isMe?`linear-gradient(135deg,${C.gold}0a,${C.s1})`:""}}>
-                <div style={{padding:"10px 13px",display:"flex",alignItems:"center",gap:10}}>
+              <Card key={entry.userId} onClick={()=>openUserProfile(entry)} style={{marginBottom:7,border:`1px solid ${isMe?C.gold:C.b1}`,background:isMe?`linear-gradient(135deg,${C.gold}0a,${C.s1})`:"",cursor:"pointer"}}>                <div style={{padding:"10px 13px",display:"flex",alignItems:"center",gap:10}}>
                   <div style={{fontWeight:700,color:C.dim,minWidth:26,fontSize:14,textAlign:"center"}}>{medal||`#${i+1}`}</div>
                   {/* Avatar */}
                   <div style={{width:34,height:34,borderRadius:"50%",background:isMe?`${C.gold}22`:C.s2,border:`1.5px solid ${isMe?C.gold:C.b2}`,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",flexShrink:0,fontSize:14}}>
@@ -4860,6 +4877,60 @@ return (
             );
           })}
         </>
+      )}
+      {/* ── USER PROFILE MODAL ── */}
+      {viewingUser && (
+        <div onClick={()=>setViewingUser(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:"8px 3px"}}>
+          <div onClick={e=>e.stopPropagation()} style={{background:C.bg,border:`1px solid ${C.b2}`,borderRadius:18,width:"100%",maxWidth:620,maxHeight:"calc(100dvh - 50px)",overflowY:"auto",overscrollBehavior:"contain",WebkitOverflowScrolling:"touch",paddingBottom:20,position:"relative"}}>
+            <button onClick={()=>setViewingUser(null)} style={{position:"absolute",top:12,right:12,zIndex:10,background:"rgba(0,0,0,.4)",border:"none",color:"white",fontSize:22,width:34,height:34,borderRadius:17,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+            <div style={{padding:"20px 16px 12px"}}>
+              <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16}}>
+                <div style={{width:48,height:48,borderRadius:"50%",background:C.s2,border:`2px solid ${C.b2}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>
+                  {viewingUser.avatar?.startsWith("icon:") ? (()=>{const ic=FOOTBALL_ICONS?.find(i=>i.id===viewingUser.avatar);return ic?ic.el(30):"👤";})() : "👤"}
+                </div>
+                <div>
+                  <div style={{fontWeight:800,fontSize:18,color:C.text}}>{viewingUser.name}</div>
+                  <div style={{fontSize:12,color:C.dim}}>{viewingUser.predCount} picks · {viewingUser.pts} pts · {viewingUser.exact} exact</div>
+                </div>
+              </div>
+
+              {viewingLoading && <div style={{textAlign:"center",padding:"32px 0"}}><div style={{width:24,height:24,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto"}}/></div>}
+
+              {!viewingLoading && viewingPreds && (() => {
+                const scoredMatches = MATCHES.filter(m => {
+                  const sc = getScore(m.home, m.away);
+                  return sc && statusIsFinished(sc.status) && viewingPreds[m.id];
+                });
+                return scoredMatches.length === 0 ? (
+                  <div style={{textAlign:"center",padding:"20px",color:C.dim,fontSize:13}}>No scored picks yet.</div>
+                ) : scoredMatches.map(m => {
+                  const sc = getScore(m.home, m.away);
+                  const pred = viewingPreds[m.id] || {};
+                  const pts = scoreOnePred(pred, sc);
+                  const ptColor = pts===3?C.green:pts===1?C.gold:pts===0?C.red:C.dim;
+                  return (
+                    <div key={m.id} style={{marginBottom:8,background:C.s1,border:`1px solid ${C.b2}`,borderRadius:10,padding:"10px 12px",opacity:0.9}}>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                        <div style={{fontSize:11,color:C.dim}}>{m.home} vs {m.away}</div>
+                        <div style={{fontSize:12,fontWeight:800,color:ptColor}}>{pts===3?"✓ Exact":pts===1?"✓ Correct":pts===0?"✗ Wrong":"—"}</div>
+                      </div>
+                      <div style={{display:"flex",gap:8,fontSize:12}}>
+                        <div style={{flex:1,background:C.s2,borderRadius:6,padding:"4px 8px",textAlign:"center"}}>
+                          <div style={{fontSize:9,color:C.dim,marginBottom:2}}>RESULT</div>
+                          <div style={{fontWeight:700,color:C.text}}>{sc.hg} – {sc.ag}</div>
+                        </div>
+                        <div style={{flex:1,background:C.s2,border:`1px solid ${ptColor}44`,borderRadius:6,padding:"4px 8px",textAlign:"center"}}>
+                          <div style={{fontSize:9,color:C.dim,marginBottom:2}}>PICK</div>
+                          <div style={{fontWeight:700,color:ptColor}}>{pred.hg} – {pred.ag}</div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
