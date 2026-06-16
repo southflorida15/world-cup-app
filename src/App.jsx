@@ -4662,7 +4662,7 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
     <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",zIndex:1000,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
       <div ref={modalRef} onClick={e=>e.stopPropagation()}
         onTouchMove={e=>e.stopPropagation()}
-        style={{background:C.bg,border:`1px solid ${C.b2}`,borderRadius:"18px 18px 0 0",width:"100%",maxWidth:620,maxHeight:"calc(92dvh - env(safe-area-inset-bottom))",overflowY:"auto",overscrollBehavior:"contain",WebkitOverflowScrolling:"touch",paddingBottom:"calc(80px + env(safe-area-inset-bottom))",position:"relative"}}>
+        style={{background:C.bg,border:`1px solid ${C.b2}`,borderRadius:"18px 18px 18px 18px",width:"100%",maxWidth:620,maxHeight:"calc(82dvh - env(safe-area-inset-bottom))",overflowY:"auto",overscrollBehavior:"contain",WebkitOverflowScrolling:"touch",paddingBottom:20,position:"relative",marginBottom:"env(safe-area-inset-bottom)"}}>
         <button onClick={onClose} style={{position:"absolute",top:12,right:12,zIndex:10,background:"rgba(0,0,0,.4)",border:"none",color:"white",fontSize:22,width:34,height:34,borderRadius:17,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
 
         {/* Save + Share icon buttons — top left */}
