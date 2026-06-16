@@ -4657,9 +4657,6 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
       <div ref={modalRef} onClick={e=>e.stopPropagation()}
         style={{background:C.bg,border:`1px solid ${C.b2}`,borderRadius:"18px 18px 0 0",width:"100%",maxWidth:620,maxHeight:"92vh",overflowY:"auto",overscrollBehavior:"contain",WebkitOverflowScrolling:"touch",paddingBottom:20,position:"relative"}}>
 
-        {/* Drag handle */}
-        <div style={{width:40,height:4,borderRadius:2,background:C.b2,margin:"10px auto 0",flexShrink:0}}/>
-
         {/* Save + Share icon buttons — top left */}
         <div style={{position:"absolute",top:12,left:12,zIndex:9999,display:"flex",gap:6}}>
           {(()=>{ const isSaved=savedIds.has(match.id); return (
