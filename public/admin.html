@@ -150,8 +150,8 @@
       </div>
       <div id="pill-accounts" style="display:none;margin-top:12px">
         <div class="table">
-          <div class="row head" style="grid-template-columns:2fr 90px 110px 60px 100px">
-            <div>User</div><div>PIN</div><div>Saved</div><div>Notif</div><div>Actions</div>
+          <div class="row head" style="grid-template-columns:2fr 90px 90px 60px 100px">
+            <div>User</div><div>PIN</div><div>Saved/Picks</div><div>Notif</div><div>Actions</div>
           </div>
           <div id="accounts-list"></div>
         </div>
@@ -252,6 +252,7 @@
         <div style="font-size:11px;font-weight:700;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">📋 Leagues</div>
         <div class="tool-row">
           <button class="admin-btn" data-tip="View all leagues and their members." onclick="doAction('league-list',{},'league-list-result')">View All Leagues</button>
+          <button class="admin-btn" data-tip="Cross-reference league members with accounts." onclick="crossRefLeague()">🔍 Cross-Reference</button>
         </div>
         <div class="result-box" id="league-list-result"></div>
 
@@ -362,6 +363,50 @@ async function sendPushToUser() {
   const target = pin ? `PIN ${pin}` : `UID ${uid}`;
   if (!confirm(`Send push to ${target}?\n\n"${title}"\n${body}`)) return;
   await doAction("send-push-user", { pin: pin||undefined, uid: uid||undefined, title, body, url }, "push-uid-result");
+}
+
+async function crossRefLeague() {
+  const box = document.getElementById("league-list-result");
+  box.style.display = "block";
+  box.innerHTML = "⏳ Cross-referencing...";
+
+  try {
+    // Fetch both leagues and accounts in parallel
+    const [leagueData, dashData] = await Promise.all([
+      adminAction({ adminAction: "league-list" }),
+      fetch("/api/admin", { headers: { "Authorization": `Bearer ${SECRET}` } }).then(r => r.json())
+    ]);
+
+    const accounts = dashData.accounts?.records || [];
+    const accountsByUid = Object.fromEntries(accounts.map(a => [a.uid, a]));
+
+    let html = "";
+    for (const league of (leagueData.leagues || [])) {
+      html += `<div style="margin-bottom:16px">`;
+      html += `<div style="font-weight:700;color:var(--green);margin-bottom:6px">🏆 ${league.name} (${league.code}) — ${league.members.length} members</div>`;
+      html += `<table style="width:100%;border-collapse:collapse;font-size:11px">`;
+      html += `<tr style="color:var(--dim);border-bottom:1px solid var(--b2)"><th style="text-align:left;padding:3px 6px">Name</th><th style="padding:3px 6px">PIN</th><th style="padding:3px 6px">Picks</th><th style="padding:3px 6px">Pts</th><th style="padding:3px 6px">In Accounts?</th></tr>`;
+      for (const m of league.members) {
+        const acc = accountsByUid[m.uid];
+        const inAccounts = !!acc;
+        const name = acc?.displayName || acc?.predictorName || m.name || m.uid.slice(0,8);
+        const picks = acc?.predCount || 0;
+        const pts = acc?.pts || 0;
+        html += `<tr style="border-bottom:1px solid var(--b1);color:${inAccounts?'var(--text)':'var(--red)'}">
+          <td style="padding:3px 6px">${esc(name)}</td>
+          <td style="padding:3px 6px;text-align:center;color:var(--gold)">${m.pin||'—'}</td>
+          <td style="padding:3px 6px;text-align:center">${picks}</td>
+          <td style="padding:3px 6px;text-align:center">${pts}</td>
+          <td style="padding:3px 6px;text-align:center">${inAccounts?'✅':'❌ No account'}</td>
+        </tr>`;
+      }
+      html += `</table></div>`;
+    }
+
+    box.innerHTML = html + `<span class="result-close" onclick="this.parentElement.style.display='none'">✕ close</span>`;
+  } catch(e) {
+    box.innerHTML = `<span style="color:var(--red)">❌ ${e.message}</span>`;
+  }
 }
 
 async function migrateAll() {
@@ -591,14 +636,14 @@ function renderDashboard(d, subs=[]) {
     const notifBadge = isSubbed
       ? `<span style="font-size:10px;color:var(--green)">🔔</span>`
       : `<span style="font-size:10px;color:var(--dim)" title="Not subscribed to notifications">🔕</span>`;
-    return `<div class="row" style="grid-template-columns:2fr 90px 110px 60px 100px">
+    return `<div class="row" style="grid-template-columns:2fr 90px 90px 60px 100px">
       <div style="overflow:hidden">
-        <div style="font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(label)}</div>
+        <div style="font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${isSubbed?'🔔':'🔕'} ${esc(label)}</div>
         <div style="font-size:9px;color:var(--dim);font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(a.uid)}</div>
       </div>
       <div style="color:var(--gold);font-weight:700">${esc(a.pin||"—")}</div>
-      <div style="color:var(--mid);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(saved)}</div>
-      <div style="text-align:center;font-size:16px" title="${isSubbed?'Subscribed to notifications':'Not subscribed'}">${isSubbed?'🔔':'🔕'}</div>
+      <div style="color:var(--mid);font-size:10px">${a.savedMatches||0}💾 ${a.predCount||0}🎯${a.pts?` ${a.pts}pts`:""}</div>
+      <div style="text-align:center;font-size:11px;color:${isSubbed?'var(--green)':'var(--dim)'}">${isSubbed?'✅':'—'}</div>
       <div style="display:flex;gap:4px">
         <button class="admin-btn" style="padding:4px 7px;font-size:10px" title="Copy UID" onclick="copyUID('${escA(a.uid)}')">📋</button>
         <button class="admin-btn danger" style="padding:4px 7px;font-size:10px" onclick="deleteAccount('${escA(a.uid)}','${escA(label)}')">Del</button>

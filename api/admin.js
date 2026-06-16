@@ -104,6 +104,24 @@ async function buildDashboard() {
   const pinKeys = pinKeysRaw.filter(k => !String(k).startsWith("pin:change"));
 
   const userByUid = Object.fromEntries(users.map(u => [u.userId, u]));
+
+  // Fetch predictor leaderboard to get predCount and pts per user
+  let leaderboardByUid = {};
+  try {
+    const lbKeys = await scanKeys("user:*");
+    const lbUsers = lbKeys.length ? (await kv.mget(...lbKeys)).filter(Boolean) : [];
+    await Promise.all(lbUsers.map(async u => {
+      if (!u?.userId) return;
+      const predIds = await kv.smembers(`predSet:${u.userId}`).catch(() => []) || [];
+      let pts = 0;
+      if (predIds.length) {
+        const scoreKeys = predIds.map(id => `score:${u.userId}:${id}`);
+        const scores = await kv.mget(...scoreKeys).catch(() => []);
+        for (const s of scores) { if (s?.pts) pts += s.pts; }
+      }
+      leaderboardByUid[u.userId] = { predCount: predIds.length, pts };
+    }));
+  } catch(e) {}
   const accountsMap = new Map();
   for (const p of syncProfiles) {
     if (!p?.uid) continue;
@@ -119,6 +137,8 @@ async function buildDashboard() {
       updatedAt: p.updatedAt || 0,
       predictorName: userByUid[p.uid]?.name || "",
       predictorRegisteredAt: userByUid[p.uid]?.registeredAt || 0,
+      predCount: leaderboardByUid[p.uid]?.predCount || 0,
+      pts: leaderboardByUid[p.uid]?.pts || 0,
     });
   }
   for (const u of users) {
