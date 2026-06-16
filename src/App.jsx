@@ -4381,7 +4381,7 @@ return (
                       {done && sc && (
                         <div style={{textAlign:"center",minWidth:52,background:C.bg,borderRadius:8,padding:"5px 10px",border:`1px solid ${C.b2}`}}>
                           <div style={{fontSize:9,color:C.text,marginBottom:1,fontWeight:700,letterSpacing:"0.05em"}}>RESULT</div>
-                          <div style={{fontWeight:900,fontSize:20,color:C.text,fontFamily:"monospace"}}>{sc.hg}–{sc.ag}</div>
+                          <div style={{fontWeight:900,fontSize:20,color:C.text,fontFamily:"monospace"}}>{sc.hg} – {sc.ag}</div>
                         </div>
                       )}
                       {!done && (
@@ -4665,7 +4665,6 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
       <div ref={modalRef} onClick={e=>e.stopPropagation()}
         onTouchMove={e=>e.stopPropagation()}
         style={{background:C.bg,border:`1px solid ${C.b2}`,borderRadius:"18px 18px 18px 18px",width:"100%",maxHeight:"calc(100dvh - 50px)",overflowY:"auto",overscrollBehavior:"contain",WebkitOverflowScrolling:"touch",paddingBottom:8,position:"relative"}}>
-        <button onClick={onClose} style={{position:"absolute",top:12,right:12,zIndex:10,background:"rgba(0,0,0,.4)",border:"none",color:"white",fontSize:22,width:34,height:34,borderRadius:17,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
 
         {/* Save + Share icon buttons — top left */}
         <div style={{position:"absolute",top:12,left:12,zIndex:9999,display:"flex",gap:6}}>

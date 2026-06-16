@@ -91,7 +91,7 @@ export default function MatchHeader({
                   lineHeight: 1,
                 }}
               >
-                {sc.hg}–{sc.ag}
+                {sc.hg} – {sc.ag}
               </div>
 
               <div
