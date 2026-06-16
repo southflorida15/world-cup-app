@@ -761,8 +761,8 @@ const VENUE_COORDS = {"Mexico City Stadium, Mexico City":"19.3029,-99.1505","Est
 const VENUE_TZ = {"Mexico City Stadium, Mexico City":"America/Mexico_City","Estadio Guadalajara, Zapopan":"America/Mexico_City","Estadio Monterrey, Guadalupe":"America/Monterrey","Toronto Stadium, Toronto":"America/Toronto","BC Place, Vancouver":"America/Vancouver","SoFi Stadium, Los Angeles":"America/Los_Angeles","San Francisco Bay Area Stadium, San Francisco":"America/Los_Angeles","Seattle Stadium, Seattle":"America/Los_Angeles","Dallas Stadium, Dallas":"America/Chicago","Houston Stadium, Houston":"America/Chicago","Kansas City Stadium, Kansas City":"America/Chicago","New York New Jersey Stadium, East Rutherford":"America/New_York","Boston Stadium, Boston":"America/New_York","Philadelphia Stadium, Philadelphia":"America/New_York","Atlanta Stadium, Atlanta":"America/New_York","Miami Stadium, Miami":"America/New_York"};
 const MATCH_UTC = {1:"2026-06-11T19:00:00Z",2:"2026-06-12T02:00:00Z",3:"2026-06-12T19:00:00Z",4:"2026-06-13T01:00:00Z",5:"2026-06-13T19:00:00Z",6:"2026-06-13T22:00:00Z",7:"2026-06-14T01:00:00Z",8:"2026-06-14T03:59:00Z",9:"2026-06-14T17:00:00Z",10:"2026-06-14T20:00:00Z",11:"2026-06-14T23:00:00Z",12:"2026-06-15T02:00:00Z",13:"2026-06-15T16:00:00Z",14:"2026-06-15T19:00:00Z",15:"2026-06-15T22:00:00Z",16:"2026-06-16T01:00:00Z",17:"2026-06-16T19:00:00Z",18:"2026-06-16T22:00:00Z",19:"2026-06-17T01:00:00Z",20:"2026-06-17T03:59:00Z",21:"2026-06-17T17:00:00Z",22:"2026-06-17T20:00:00Z",23:"2026-06-17T23:00:00Z",24:"2026-06-18T02:00:00Z",25:"2026-06-18T16:00:00Z",26:"2026-06-18T19:00:00Z",27:"2026-06-18T22:00:00Z",28:"2026-06-19T01:00:00Z",29:"2026-06-19T19:00:00Z",30:"2026-06-19T22:00:00Z",31:"2026-06-20T00:30:00Z",32:"2026-06-20T03:00:00Z",33:"2026-06-20T17:00:00Z",34:"2026-06-20T20:00:00Z",35:"2026-06-21T01:00:00Z",36:"2026-06-21T03:59:00Z",37:"2026-06-21T16:00:00Z",38:"2026-06-21T19:00:00Z",39:"2026-06-21T22:00:00Z",40:"2026-06-22T01:00:00Z",41:"2026-06-22T17:00:00Z",42:"2026-06-22T21:00:00Z",43:"2026-06-23T00:00:00Z",44:"2026-06-23T03:00:00Z",45:"2026-06-23T17:00:00Z",46:"2026-06-23T20:00:00Z",47:"2026-06-23T23:00:00Z",48:"2026-06-24T02:00:00Z",49:"2026-06-24T19:00:00Z",50:"2026-06-24T19:00:00Z",51:"2026-06-24T22:00:00Z",52:"2026-06-24T22:00:00Z",53:"2026-06-25T01:00:00Z",54:"2026-06-25T01:00:00Z",55:"2026-06-25T20:00:00Z",56:"2026-06-25T20:00:00Z",57:"2026-06-25T23:00:00Z",58:"2026-06-25T23:00:00Z",59:"2026-06-26T02:00:00Z",60:"2026-06-26T02:00:00Z",61:"2026-06-26T19:00:00Z",62:"2026-06-26T19:00:00Z",63:"2026-06-27T00:00:00Z",64:"2026-06-27T00:00:00Z",65:"2026-06-27T03:00:00Z",66:"2026-06-27T03:00:00Z",67:"2026-06-27T21:00:00Z",68:"2026-06-27T21:00:00Z",69:"2026-06-27T23:30:00Z",70:"2026-06-27T23:30:00Z",71:"2026-06-28T02:00:00Z",72:"2026-06-28T02:00:00Z",73:"2026-06-28T23:00:00Z",74:"2026-06-29T17:00:00Z",75:"2026-06-29T20:30:00Z",76:"2026-06-30T01:00:00Z",77:"2026-06-30T17:00:00Z",78:"2026-06-30T21:00:00Z",79:"2026-07-01T01:00:00Z",80:"2026-07-01T16:00:00Z",81:"2026-07-01T20:00:00Z",82:"2026-07-02T00:00:00Z",83:"2026-07-02T19:00:00Z",84:"2026-07-02T23:00:00Z",85:"2026-07-03T03:00:00Z",86:"2026-07-03T18:00:00Z",87:"2026-07-03T22:00:00Z",88:"2026-07-04T01:30:00Z",89:"2026-07-04T17:00:00Z",90:"2026-07-04T21:00:00Z",91:"2026-07-05T20:00:00Z",92:"2026-07-06T00:00:00Z",93:"2026-07-06T19:00:00Z",94:"2026-07-07T00:00:00Z",95:"2026-07-07T16:00:00Z",96:"2026-07-07T20:00:00Z",97:"2026-07-09T20:00:00Z",98:"2026-07-10T19:00:00Z",99:"2026-07-11T21:00:00Z",100:"2026-07-12T01:00:00Z",101:"2026-07-14T19:00:00Z",102:"2026-07-15T19:00:00Z",103:"2026-07-18T21:00:00Z",104:"2026-07-19T19:00:00Z"};
 const USER_TZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
-const APP_VERSION = "2.1.0";
-const APP_DATE = "Jun 14, 2026";
+const APP_VERSION = "2.2.0";
+const APP_DATE = "Jun 16, 2026";
 
 function getDeviceType() {
   const ua = navigator.userAgent;
@@ -4012,23 +4012,38 @@ function SingleLeagueView({ league, pin, fantasyUserId, userStats, leagueBoard, 
           <div style={{fontSize:16,fontWeight:900,color:C.gold}}>#{myRank}</div>
         </div>}
       </div>
-      {myEntry && (
-        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:14}}>
-          {[
-            {val:myEntry.pts, lbl:"POINTS", color:C.green},
-            {val:myEntry.exact, lbl:"EXACT", color:C.gold},
-            {val:myEntry.correct, lbl:"CORRECT", color:C.blue},
-            {val:userStats?.total?Math.round((myEntry.correct/userStats.total)*100)+"%":"—", lbl:"ACCURACY", color:C.mid},
-          ].map(s => (
-            <div key={s.lbl} style={{background:C.s1,border:`1px solid ${C.b2}`,borderRadius:10,padding:"10px 6px",textAlign:"center"}}>
-              <div style={{fontSize:22,fontWeight:900,color:s.color}}>{s.val}</div>
-              <div style={{fontSize:9,color:C.dim,marginTop:2,fontWeight:700,letterSpacing:"0.08em"}}>{s.lbl}</div>
-            </div>
-          ))}
-        </div>
-      )}
       <div style={{background:C.s1,border:`1px solid ${C.b2}`,borderRadius:12,padding:"12px 14px",marginBottom:14}}>
-        <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.08em",marginBottom:8}}>📨 INVITE FRIENDS</div>
+        {myEntry && (
+          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:14}}>
+            {[
+              {val:myEntry.pts, lbl:"POINTS", color:C.green},
+              {val:myEntry.exact, lbl:"EXACT", color:C.gold},
+              {val:myEntry.correct, lbl:"CORRECT", color:C.blue},
+              {val:userStats?.total?Math.round((myEntry.correct/userStats.total)*100)+"%":"—", lbl:"ACCURACY", color:C.mid},
+            ].map(s => (
+              <div key={s.lbl} style={{background:C.s1,border:`1px solid ${C.b2}`,borderRadius:10,padding:"10px 6px",textAlign:"center"}}>
+                <div style={{fontSize:22,fontWeight:900,color:s.color}}>{s.val}</div>
+                <div style={{fontSize:9,color:C.dim,marginTop:2,fontWeight:700,letterSpacing:"0.08em"}}>{s.lbl}</div>
+              </div>
+            ))}
+          </div>
+        )}
+        {myEntry && (
+          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:14}}>
+            {[
+              {val:myEntry.pts, lbl:"POINTS", color:C.green},
+              {val:myEntry.exact, lbl:"EXACT", color:C.gold},
+              {val:myEntry.correct, lbl:"CORRECT", color:C.blue},
+              {val:userStats?.total?Math.round((myEntry.correct/userStats.total)*100)+"%":"—", lbl:"ACCURACY", color:C.mid},
+            ].map(s => (
+              <div key={s.lbl} style={{background:C.s1,border:`1px solid ${C.b2}`,borderRadius:10,padding:"10px 6px",textAlign:"center"}}>
+                <div style={{fontSize:22,fontWeight:900,color:s.color}}>{s.val}</div>
+                <div style={{fontSize:9,color:C.dim,marginTop:2,fontWeight:700,letterSpacing:"0.08em"}}>{s.lbl}</div>
+              </div>
+            ))}
+          </div>
+        )}
+                                <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.08em",marginBottom:8}}>📨 INVITE FRIENDS</div>
         <div style={{display:"flex",gap:8}}>
           <div style={{flex:1,background:C.s2,border:`1px solid ${C.b2}`,borderRadius:8,padding:"8px 12px",display:"flex",alignItems:"center",gap:8}}>
             <span style={{fontSize:11,color:C.dim}}>Code:</span>
@@ -4220,13 +4235,16 @@ function LeaguesPanel({ pin, fantasyUserId, syncProfile, userStats }) {
         </div>
 
         {/* My stats */}
-        {myEntry && (
+
+        {/* Invite section */}
+        <div style={{background:C.s1,border:`1px solid ${C.b2}`,borderRadius:12,padding:"12px 14px",marginBottom:14}}>
+          {myEntry && (
           <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:14}}>
             {[
               {val:myEntry.pts, lbl:"POINTS", color:C.green},
               {val:myEntry.exact, lbl:"EXACT", color:C.gold},
               {val:myEntry.correct, lbl:"CORRECT", color:C.blue},
-              {val:myEntry.pts&&userStats?.total?Math.round((myEntry.correct/userStats.total)*100)+"%":"—", lbl:"ACCURACY", color:C.mid},
+              {val:userStats?.total?Math.round((myEntry.correct/userStats.total)*100)+"%":"—", lbl:"ACCURACY", color:C.mid},
             ].map(s => (
               <div key={s.lbl} style={{background:C.s1,border:`1px solid ${C.b2}`,borderRadius:10,padding:"10px 6px",textAlign:"center"}}>
                 <div style={{fontSize:22,fontWeight:900,color:s.color}}>{s.val}</div>
@@ -4235,10 +4253,22 @@ function LeaguesPanel({ pin, fantasyUserId, syncProfile, userStats }) {
             ))}
           </div>
         )}
-
-        {/* Invite section */}
-        <div style={{background:C.s1,border:`1px solid ${C.b2}`,borderRadius:12,padding:"12px 14px",marginBottom:14}}>
-          <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.08em",marginBottom:8}}>📨 INVITE FRIENDS</div>
+        {myEntry && (
+          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:14}}>
+            {[
+              {val:myEntry.pts, lbl:"POINTS", color:C.green},
+              {val:myEntry.exact, lbl:"EXACT", color:C.gold},
+              {val:myEntry.correct, lbl:"CORRECT", color:C.blue},
+              {val:userStats?.total?Math.round((myEntry.correct/userStats.total)*100)+"%":"—", lbl:"ACCURACY", color:C.mid},
+            ].map(s => (
+              <div key={s.lbl} style={{background:C.s1,border:`1px solid ${C.b2}`,borderRadius:10,padding:"10px 6px",textAlign:"center"}}>
+                <div style={{fontSize:22,fontWeight:900,color:s.color}}>{s.val}</div>
+                <div style={{fontSize:9,color:C.dim,marginTop:2,fontWeight:700,letterSpacing:"0.08em"}}>{s.lbl}</div>
+              </div>
+            ))}
+          </div>
+        )}
+                                <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.08em",marginBottom:8}}>📨 INVITE FRIENDS</div>
           <div style={{display:"flex",gap:8}}>
             <div style={{flex:1,background:C.s2,border:`1px solid ${C.b2}`,borderRadius:8,padding:"8px 12px",display:"flex",alignItems:"center",gap:8}}>
               <span style={{fontSize:11,color:C.dim}}>Code:</span>
@@ -4305,21 +4335,6 @@ function LeaguesPanel({ pin, fantasyUserId, syncProfile, userStats }) {
             <div style={{fontSize:16,fontWeight:900,color:C.gold}}>#{myRank}</div>
           </div>}
         </div>
-        {myEntry && (
-          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:14}}>
-            {[
-              {val:myEntry.pts, lbl:"POINTS", color:C.green},
-              {val:myEntry.exact, lbl:"EXACT", color:C.gold},
-              {val:myEntry.correct, lbl:"CORRECT", color:C.blue},
-              {val:userStats?.total?Math.round((myEntry.correct/userStats.total)*100)+"%":"—", lbl:"ACCURACY", color:C.mid},
-            ].map(s => (
-              <div key={s.lbl} style={{background:C.s1,border:`1px solid ${C.b2}`,borderRadius:10,padding:"10px 6px",textAlign:"center"}}>
-                <div style={{fontSize:22,fontWeight:900,color:s.color}}>{s.val}</div>
-                <div style={{fontSize:9,color:C.dim,marginTop:2,fontWeight:700,letterSpacing:"0.08em"}}>{s.lbl}</div>
-              </div>
-            ))}
-          </div>
-        )}
         {globalLoading ? (
           <div style={{textAlign:"center",padding:"32px 0"}}><div style={{width:24,height:24,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto"}}/></div>
         ) : globalBoard.map((entry, i) => {
@@ -4766,20 +4781,12 @@ return (
       />
     </div>
 
-    <Card style={{padding:12,marginBottom:12,background:`linear-gradient(135deg,${C.green}10,${C.s1})`,border:`1px solid ${C.green}33`}}>
-      <div style={{fontWeight:800,color:C.green,fontSize:12,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:6}}>Fantasy Picks are separate from official scores</div>
-      <div style={{fontSize:12,color:C.mid,lineHeight:1.55}}>
-        Your entered scores are picks for Fantasy only — used for points and leaderboard rankings.
-      </div>
-    </Card>
-
       {/* Fantasy filters */}
       <div style={{display:"flex",gap:6,marginBottom:14,overflowX:"auto",scrollbarWidth:"none"}}>
+        {(syncProfile?.pin || displayName) && <Pill active={filter==="leagues"} onClick={()=>setFilter("leagues")} color={C.blue}>🏆 Leagues</Pill>}
         <Pill active={filter==="upcoming"} onClick={()=>setFilter("upcoming")} color={C.green}>Pending Picks ({upcoming.length})</Pill>
         <Pill active={filter==="finished"} onClick={()=>setFilter("finished")} color={C.gold}>Scored ({finished.length})</Pill>
-        {favTeams?.length > 0 && <Pill active={filter==="fav"} onClick={()=>setFilter("fav")} color={C.gold}>⭐ My Teams</Pill>}
         <Pill active={filter==="board"} onClick={()=>setFilter("board")} color={C.rival}>🏅 Rankings</Pill>
-        {syncProfile?.pin && <Pill active={filter==="leagues"} onClick={()=>setFilter("leagues")} color={C.blue}>🏆 Leagues</Pill>}
       </div>
 
       {/* ── LEADERBOARD ── */}
@@ -4828,6 +4835,19 @@ return (
       {/* ── LEAGUES ── */}
       {filter==="leagues" && syncProfile?.pin && (
         <LeaguesPanel pin={syncProfile.pin} fantasyUserId={fantasyUserId} syncProfile={syncProfile} userStats={{total: finished.length}}/>
+      )}
+      {filter==="leagues" && !syncProfile?.pin && displayName && (
+        <div style={{textAlign:"center",padding:"32px 20px"}}>
+          <div style={{fontSize:36,marginBottom:12}}>🏆</div>
+          <div style={{fontWeight:700,fontSize:16,color:C.text,marginBottom:8}}>Join the League!</div>
+          <div style={{fontSize:13,color:C.mid,marginBottom:24,lineHeight:1.6}}>
+            You're already playing Fantasy Picks as <strong style={{color:C.gold}}>{displayName}</strong>.<br/>
+            Create a PIN to join <strong style={{color:C.green}}>Brazucas em Broward</strong> and compete with the group.
+          </div>
+          <button onClick={onShowSync} style={{width:"100%",maxWidth:300,padding:"13px",borderRadius:12,border:"none",background:`linear-gradient(135deg,${C.gold},#f59e0b)`,color:"#030a05",fontSize:15,fontWeight:800,cursor:"pointer"}}>
+            🔑 Create a PIN to join
+          </button>
+        </div>
       )}
 
       {/* ── MATCH LIST ── */}
@@ -7388,7 +7408,7 @@ export default function App() {
 
   // Auto-pull on startup — if already signed in, fetch latest profile from KV
   useEffect(() => {
-    if (!syncProfile?.uid) return;
+    if (!syncProfile?.uid || !syncProfile?.pin) return;
     const t = setTimeout(() => {
     fetch("/api/sync?action=pull", {
       method: "POST",
@@ -7405,7 +7425,6 @@ export default function App() {
         }
         if (p.displayName) persistDisplayName(p.displayName);
         if (p.saved?.length) setSaved(prev => {
-          // Use remote if it has more recent updatedAt, otherwise keep local
           return p.saved;
         });
         if (p.favTeams?.length) setFavTeams(p.favTeams);
@@ -7413,9 +7432,24 @@ export default function App() {
         if (p.dark !== undefined) setDark(p.dark);
       })
       .catch(() => {});
-    }, 800); // small delay ensures KV is settled
+
+    // Silently auto-join BRZBRD if not already in any league
+    fetch(`/api/league?pin=${syncProfile.pin}`)
+      .then(r => r.json())
+      .then(d => {
+        if (!d.leagues?.length) {
+          // Not in any league — silently join the default
+          fetch("/api/league?action=join", {
+            method: "POST",
+            headers: {"Content-Type":"application/json"},
+            body: JSON.stringify({ pin: syncProfile.pin, code: "BRZBRD" })
+          }).catch(() => {});
+        }
+      }).catch(() => {});
+
+    }, 800);
     return () => clearTimeout(t);
-  }, [syncProfile?.uid]); // re-pull if uid changes (e.g. after sign-in)
+  }, [syncProfile?.uid]);
 
   // Magic link redirect handler
   useEffect(() => {
