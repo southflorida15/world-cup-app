@@ -4394,9 +4394,8 @@ function LeaguesPanel({ pin, fantasyUserId, syncProfile, userStats }) {
       {loading ? (
         <div style={{textAlign:"center",padding:"32px 0"}}><div style={{width:24,height:24,border:`3px solid ${C.blue}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto"}}/></div>
       ) : leagues.length === 0 ? (
-        // No leagues — big centered CTA with Global card
+        // 0 leagues — Global card + Create/Join
         <div>
-          {/* Global league always shown */}
           <Card style={{marginBottom:16,cursor:"pointer"}} onClick={()=>{ fetchGlobalBoard(); setScreen("global"); }}>
             <div style={{padding:"12px 14px",display:"flex",alignItems:"center",gap:12}}>
               <div style={{fontSize:28}}>🌍</div>
@@ -4407,27 +4406,60 @@ function LeaguesPanel({ pin, fantasyUserId, syncProfile, userStats }) {
               <span style={{color:C.dim,fontSize:18}}>›</span>
             </div>
           </Card>
-          <div style={{textAlign:"center",padding:"24px 20px"}}>
+          <div style={{textAlign:"center",padding:"20px 0 0"}}>
             <div style={{fontSize:36,marginBottom:8}}>🏆</div>
             <div style={{fontSize:14,color:C.text,fontWeight:700,marginBottom:4}}>No private leagues yet</div>
-            <div style={{fontSize:12,color:C.dim,marginBottom:24}}>Create a league and invite friends, or join one with a code.</div>
+            <div style={{fontSize:12,color:C.dim,marginBottom:20}}>Create a league and invite friends, or join one with a code.</div>
             <div style={{display:"flex",gap:10}}>
               <button onClick={()=>{setScreen("create");setError("");}} style={{flex:1,padding:"12px",borderRadius:12,border:"none",background:`linear-gradient(135deg,${C.blue},#3b82f6)`,color:"white",fontSize:13,fontWeight:800,cursor:"pointer"}}>+ Create a League</button>
               <button onClick={()=>{setScreen("join");setError("");}} style={{flex:1,padding:"12px",borderRadius:12,border:`1px solid ${C.green}44`,background:`${C.green}12`,color:C.green,fontSize:13,fontWeight:700,cursor:"pointer"}}>🤝 Join a League</button>
             </div>
           </div>
         </div>
-      ) : (
+      ) : leagues.length === 1 ? (
+        // 1 league — show it directly, no Global (they're the same right now)
         <>
-          {/* Create/Join pills — always visible at top, visually separated */}
           <div style={{display:"flex",gap:8,marginBottom:20,paddingBottom:16,borderBottom:`1px solid ${C.b2}`}}>
             <button onClick={()=>{setScreen("create");setError("");}} style={{flex:1,padding:"10px",borderRadius:10,border:`1px solid ${C.blue}44`,background:`${C.blue}12`,color:C.blue,fontSize:13,fontWeight:700,cursor:"pointer"}}>+ Create League</button>
             <button onClick={()=>{setScreen("join");setError("");}} style={{flex:1,padding:"10px",borderRadius:10,border:`1px solid ${C.green}44`,background:`${C.green}12`,color:C.green,fontSize:13,fontWeight:700,cursor:"pointer"}}>🤝 Join League</button>
           </div>
-
-          {/* If only 1 league — auto-show it directly */}
-          {/* Global league card always at top */}
-          <Card style={{marginBottom:10,cursor:"pointer"}} onClick={()=>{ fetchGlobalBoard(); setScreen("global"); }}>
+          <SingleLeagueView
+            league={leagues[0]}
+            pin={pin}
+            fantasyUserId={fantasyUserId}
+            userStats={userStats}
+            leagueBoard={leagueBoard}
+            boardLoading={boardLoading}
+            activeLeague={activeLeague}
+            fetchLeagueBoard={fetchLeagueBoard}
+            copied={copied}
+            copyCode={copyCode}
+            inviteCopied={inviteCopied}
+            shareInviteLink={shareInviteLink}
+            handleLeave={handleLeave}
+          />
+        </>
+      ) : (
+        // 2+ leagues — user's leagues first, Global at bottom
+        <>
+          <div style={{display:"flex",gap:8,marginBottom:20,paddingBottom:16,borderBottom:`1px solid ${C.b2}`}}>
+            <button onClick={()=>{setScreen("create");setError("");}} style={{flex:1,padding:"10px",borderRadius:10,border:`1px solid ${C.blue}44`,background:`${C.blue}12`,color:C.blue,fontSize:13,fontWeight:700,cursor:"pointer"}}>+ Create League</button>
+            <button onClick={()=>{setScreen("join");setError("");}} style={{flex:1,padding:"10px",borderRadius:10,border:`1px solid ${C.green}44`,background:`${C.green}12`,color:C.green,fontSize:13,fontWeight:700,cursor:"pointer"}}>🤝 Join League</button>
+          </div>
+          {leagues.map(league => (
+            <Card key={league.code} style={{marginBottom:10,cursor:"pointer"}} onClick={()=>{ fetchLeagueBoard(league.code); setScreen("view"); }}>
+              <div style={{padding:"12px 14px",display:"flex",alignItems:"center",gap:12}}>
+                <div style={{fontSize:28}}>🏆</div>
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:700,fontSize:14,color:C.text}}>{league.name}</div>
+                  <div style={{fontSize:11,color:C.dim,marginTop:2}}>{league.members.length} member{league.members.length!==1?"s":""} · <span style={{color:C.blue,fontWeight:700,letterSpacing:"0.1em"}}>{league.code}</span></div>
+                  {league.ownerPin===String(pin) && <div style={{fontSize:10,color:C.gold,marginTop:2}}>👑 You created this</div>}
+                </div>
+                <span style={{color:C.dim,fontSize:18}}>›</span>
+              </div>
+            </Card>
+          ))}
+          <Card style={{marginBottom:10,cursor:"pointer",opacity:0.8}} onClick={()=>{ fetchGlobalBoard(); setScreen("global"); }}>
             <div style={{padding:"12px 14px",display:"flex",alignItems:"center",gap:12}}>
               <div style={{fontSize:28}}>🌍</div>
               <div style={{flex:1}}>
@@ -4437,47 +4469,13 @@ function LeaguesPanel({ pin, fantasyUserId, syncProfile, userStats }) {
               <span style={{color:C.dim,fontSize:18}}>›</span>
             </div>
           </Card>
-
-          {/* If only 1 league — auto-show it directly */}
-          {leagues.length === 1 && (
-            <SingleLeagueView
-              league={leagues[0]}
-              pin={pin}
-              fantasyUserId={fantasyUserId}
-              userStats={userStats}
-              leagueBoard={leagueBoard}
-              boardLoading={boardLoading}
-              activeLeague={activeLeague}
-              fetchLeagueBoard={fetchLeagueBoard}
-              copied={copied}
-              copyCode={copyCode}
-              inviteCopied={inviteCopied}
-              shareInviteLink={shareInviteLink}
-              handleLeave={handleLeave}
-            />
-          )}
-          {leagues.length > 1 && (
-            <>
-              {leagues.map(league => (
-                <Card key={league.code} style={{marginBottom:10,cursor:"pointer"}} onClick={()=>{ fetchLeagueBoard(league.code); setScreen("view"); }}>
-                  <div style={{padding:"12px 14px",display:"flex",alignItems:"center",gap:12}}>
-                    <div style={{fontSize:28}}>🏆</div>
-                    <div style={{flex:1}}>
-                      <div style={{fontWeight:700,fontSize:14,color:C.text}}>{league.name}</div>
-                      <div style={{fontSize:11,color:C.dim,marginTop:2}}>{league.members.length} member{league.members.length!==1?"s":""} · <span style={{color:C.blue,fontWeight:700,letterSpacing:"0.1em"}}>{league.code}</span></div>
-                      {league.ownerPin===String(pin) && <div style={{fontSize:10,color:C.gold,marginTop:2}}>👑 You created this</div>}
-                    </div>
-                    <span style={{color:C.dim,fontSize:18}}>›</span>
-                  </div>
-                </Card>
-              ))}
-            </>
-          )}
         </>
       )}
     </div>
   );
 }
+
+
 function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, userAvatar=null }) {
   const { getScore, isFinished } = useContext(LiveScoresCtx);
   const { favTeam, favTeams=[] } = useContext(FavCtx);
