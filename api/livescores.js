@@ -99,8 +99,9 @@ async function persistFinishedResults(fixtures) {
       if (!h || !a) return;
       if (!FINISHED_STATUSES.includes(status)) return;
       const key = `${h}|${a}`;
-      const hg = f?.goals?.home;
-      const ag = f?.goals?.away;
+      // Use extra time score if available (counts for fantasy), but NOT penalties
+      const hg = f?.score?.extratime?.home ?? f?.score?.fulltime?.home ?? f?.goals?.home;
+      const ag = f?.score?.extratime?.away ?? f?.score?.fulltime?.away ?? f?.goals?.away;
       if (hg === null || ag === null) return;
       // Only persist if we have actual scores and it's an improvement
       if (!existing[key] || existing[key].hg !== hg || existing[key].ag !== ag) {
@@ -246,45 +247,19 @@ function mapESPNEvent(event) {
 }
 
 async function fetchFromESPN() {
-  const pad = n => String(n).padStart(2, "0");
-  const dateStr = d => `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`;
-  const now = new Date();
-  const yesterday = dateStr(new Date(now.getTime() - 86400000));
-  const today     = dateStr(now);
-  const tomorrow  = dateStr(new Date(now.getTime() + 86400000));
-
-  const fetchDate = async (date) => {
-    const r = await fetch(`${ESPN_BASE}/scoreboard?dates=${date}&limit=20`, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-        "Accept": "application/json",
-        "Origin": "https://www.espn.com",
-        "Referer": "https://www.espn.com/",
-      },
-    });
-    if (!r.ok) throw new Error(`ESPN ${r.status}`);
-    const data = await r.json();
-    return data.events || [];
-  };
-
-  const [yd, td, tm] = await Promise.allSettled([
-    fetchDate(yesterday),
-    fetchDate(today),
-    fetchDate(tomorrow),
-  ]);
-
-  const allEvents = [
-    ...(yd.status === "fulfilled" ? yd.value : []),
-    ...(td.status === "fulfilled" ? td.value : []),
-    ...(tm.status === "fulfilled" ? tm.value : []),
-  ];
-
-  // Deduplicate by event id
-  const seen = new Set();
-  const unique = allEvents.filter(e => { if (seen.has(e.id)) return false; seen.add(e.id); return true; });
-
-  console.log(`[livescores] ESPN: ${unique.length} events (yd=${yd.status==="fulfilled"?yd.value.length:0} td=${td.status==="fulfilled"?td.value.length:0} tm=${tm.status==="fulfilled"?tm.value.length:0})`);
-  return unique.map(mapESPNEvent).filter(Boolean);
+  const r = await fetch(`${ESPN_BASE}/scoreboard`, {
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+      "Accept": "application/json",
+      "Origin": "https://www.espn.com",
+      "Referer": "https://www.espn.com/",
+    },
+  });
+  if (!r.ok) throw new Error(`ESPN ${r.status}`);
+  const data = await r.json();
+  const events = data.events || [];
+  console.log(`[livescores] ESPN: ${events.length} events`);
+  return events.map(mapESPNEvent).filter(Boolean);
 }
 
 // ── Highlightly mapper ─────────────────────────────────────────────────────

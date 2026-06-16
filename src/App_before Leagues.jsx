@@ -732,12 +732,21 @@ const BROADCAST = {
 function useCountry() {
   const [geoData, setGeoData] = useState({ country: "US", city: "", region: "" });
   useEffect(() => {
-    fetch("https://ipapi.co/json/")
+    // ip-api.com: 45 req/min free, no daily cap, returns city reliably
+    fetch("https://ip-api.com/json/?fields=countryCode,city,regionName")
       .then(r => r.json())
       .then(d => {
-        if (d?.country_code) setGeoData({ country: d.country_code, city: d.city || "", region: d.region || "" });
+        if (d?.countryCode) setGeoData({ country: d.countryCode, city: d.city || "", region: d.regionName || "" });
       })
-      .catch(() => {});
+      .catch(() => {
+        // Fallback to ipapi.co
+        fetch("https://ipapi.co/json/")
+          .then(r => r.json())
+          .then(d => {
+            if (d?.country_code) setGeoData({ country: d.country_code, city: d.city || "", region: d.region || "" });
+          })
+          .catch(() => {});
+      });
   }, []);
   return geoData;
 }
@@ -765,7 +774,7 @@ function getDeviceType() {
 const isEastern = USER_TZ==="America/New_York"||USER_TZ==="America/Detroit"||USER_TZ==="America/Indiana/Indianapolis"||USER_TZ==="America/Kentucky/Louisville";
 function fmtTime(isoStr,tz){return new Intl.DateTimeFormat("en-US",{hour:"numeric",minute:"2-digit",hour12:true,timeZone:tz}).format(new Date(isoStr));}
 function fmtDate(isoStr,tz){return new Intl.DateTimeFormat("en-US",{month:"short",day:"numeric",timeZone:tz}).format(new Date(isoStr));}
-function matchTimes(m){const iso=MATCH_UTC[m.id];if(!iso)return{localTime:m.time,venueTime:null,dateLabel:m.date};const venueTz=VENUE_TZ[m.venue]||"America/New_York";const isOriginalMidnight=m.time&&m.time.includes("11:59");const dateLabel=isEastern&&isOriginalMidnight?m.date:fmtDate(iso,USER_TZ);const localTime=fmtTime(iso,USER_TZ);const venueTime=(venueTz===USER_TZ)?null:fmtTime(iso,venueTz);return{localTime,venueTime,dateLabel};}
+function matchTimes(m){const iso=MATCH_UTC[m.id];if(!iso)return{localTime:m.time,venueTime:null,dateLabel:m.date};const venueTz=VENUE_TZ[m.venue]||"America/New_York";const isOriginalMidnight=m.time&&m.time.includes("12AM");const dateLabel=isEastern&&isOriginalMidnight?m.date:fmtDate(iso,USER_TZ);const rawLocalTime=fmtTime(iso,USER_TZ);const localTime=isOriginalMidnight?"12AM ET":rawLocalTime;const venueTime=(venueTz===USER_TZ)?null:fmtTime(iso,venueTz);return{localTime,venueTime,dateLabel};}
 const openMaps=(venue)=>{const coords=VENUE_COORDS[venue];const q=encodeURIComponent(venue);const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream;if(isIOS||/Macintosh/.test(navigator.userAgent))window.open(`maps://maps.apple.com/?q=${q}${coords?`&ll=${coords}`:""}`, "_blank");else window.open(`https://www.google.com/maps/search/?api=1&query=${q}${coords?`+${coords}`:""}`, "_blank");};
 
 // ── CRESTS ────────────────────────────────────────────────────────────────
@@ -1582,7 +1591,10 @@ function GrpTab({ onTeam, onMatchTap, tabTop=116 }) {
             {standings.map((row,i)=>(
               <div key={row.team} onClick={()=>onTeam(row.team)} style={{display:"grid",gridTemplateColumns:"22px 1fr 28px 28px 28px 28px 32px 32px",padding:"9px 10px",borderBottom:i<3?`1px solid ${C.b1}`:"none",cursor:"pointer",borderLeft:`3px solid ${qc(row.pos)}`,background:row.pos<=2?`${C.green}08`:row.pos===3?`${C.gold}08`:"transparent"}} onMouseEnter={e=>e.currentTarget.style.background=`${C.green}12`} onMouseLeave={e=>e.currentTarget.style.background=row.pos<=2?`${C.green}08`:row.pos===3?`${C.gold}08`:"transparent"}>
                 <div style={{fontSize:11,color:C.dim,display:"flex",alignItems:"center"}}>{row.pos}</div>
-                <div style={{display:"flex",alignItems:"center",gap:6}}><Crest team={row.team} size={30}/><span style={{fontSize:14,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{row.team}</span></div>
+                <div style={{display:"flex",alignItems:"center",gap:6}}>
+                  <Crest team={row.team} size={30}/>
+                  <span style={{fontSize:14,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{row.team}</span>
+                </div>
                 {[row.p,row.w,row.d,row.l].map((v,j)=><div key={j} style={{fontSize:14,color:C.mid,textAlign:"center",display:"flex",alignItems:"center",justifyContent:"center"}}>{v}</div>)}
                 <div style={{fontSize:14,color:row.gd>0?C.green:row.gd<0?C.red:C.mid,textAlign:"center",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:600}}>{row.gd>0?"+":""}{row.gd}</div>
                 <div style={{fontSize:17,fontWeight:800,color:C.text,textAlign:"center",display:"flex",alignItems:"center",justifyContent:"center"}}>{row.pts}</div>
@@ -1780,14 +1792,16 @@ function StatsTab({ initial="", tabTop=116 }) {
                 <div style={{flex:1}}>
                   <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:8}}>
                     <div style={{fontWeight:700,fontSize:20,color:C.text}}>{sel}</div>
-                    {(() => { const p=PREDS.find(x=>x.team===sel); return p ? (
-                      <a href="https://polymarket.com/event/world-cup-winner" target="_blank" rel="noopener noreferrer" style={{textDecoration:"none",flexShrink:0}}>
-                        <div style={{textAlign:"center",background:`${C.green}18`,border:`1px solid ${C.green}44`,borderRadius:10,padding:"5px 10px",cursor:"pointer"}}>
-                          <div style={{fontSize:16,fontWeight:900,color:C.green,lineHeight:1}}>{p.poly}%</div>
-                          <div style={{fontSize:9,color:C.dim,marginTop:2}}>to win</div>
-                        </div>
-                      </a>
-                    ) : null; })()}
+                    <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
+                      {(() => { const p=PREDS.find(x=>x.team===sel); return p ? (
+                        <a href="https://polymarket.com/event/world-cup-winner" target="_blank" rel="noopener noreferrer" style={{textDecoration:"none",flexShrink:0}}>
+                          <div style={{textAlign:"center",background:`${C.green}18`,border:`1px solid ${C.green}44`,borderRadius:10,padding:"5px 10px",cursor:"pointer"}}>
+                            <div style={{fontSize:16,fontWeight:900,color:C.green,lineHeight:1}}>{p.poly}%</div>
+                            <div style={{fontSize:9,color:C.dim,marginTop:2}}>to win</div>
+                          </div>
+                        </a>
+                      ) : null; })()}
+                    </div>
                   </div>
                   <div style={{fontSize:12,color:C.mid,marginTop:3}}>{d.conf} · Coach: {d.coach}</div>
                   <div style={{display:"flex",gap:6,marginTop:6,flexWrap:"wrap"}}>
@@ -3526,7 +3540,7 @@ function MyBracketTab({ tabTop=116 }) {
   );
 }
 // ── SAVED TAB ──────────────────────────────────────────────────────────────
-function SavedMatchCard({ item, onRemove, onMatchTap, notifiedIds=new Set(), onNotified=()=>{} }) {
+function SavedMatchCard({ item, onRemove, onMatchTap, notifiedIds=new Set(), onNotified=()=>{}, syncUid="" }) {
   const isPWA = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
   const [pushState, setPushState] = useState(() => {
     if (!("Notification" in window)) return "unsupported";
@@ -3546,7 +3560,7 @@ function SavedMatchCard({ item, onRemove, onMatchTap, notifiedIds=new Set(), onN
       const reg = await navigator.serviceWorker.ready;
       let sub = await reg.pushManager.getSubscription();
       if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array("BHlG2j1aEN_PheVmM_kw6eG5ho26LSMdtxSVEjiz9HnYqKTWWlOrdFdX-U3qUqR-VLxDrvOBik17FS7NJ1kJdr8") });
-      await fetch("/api/push?action=subscribe", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ subscription: sub.toJSON(), matches:[m], minsBefore:60 }) });
+      await fetch("/api/push?action=subscribe", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ subscription: sub.toJSON(), matches:[m], minsBefore:60, uid: syncUid, pin: syncPin || null }) });
     } catch(e) { console.warn("Push subscribe failed:", e); }
     try {
       const set = JSON.parse(localStorage.getItem("wc2026_push_set") || "[]");
@@ -3587,7 +3601,7 @@ function SavedMatchCard({ item, onRemove, onMatchTap, notifiedIds=new Set(), onN
   );
 }
 
-function SavedTab({ saved, onRemove, onMatchTap, tabTop=116 }) {
+function SavedTab({ saved, onRemove, onMatchTap, tabTop=116, syncUid="", syncPin="", onPushSubscribed=()=>{} }) {
   const _ref = useRef(null);
   const _h = useElemHeight(_ref);
   const savedStripRef = useRef(null);
@@ -3633,17 +3647,18 @@ function SavedTab({ saved, onRemove, onMatchTap, tabTop=116 }) {
 
   const handleMasterCalendar = () => downloadICS(saved);
   const handleMasterPush = async () => {
-    const isPWA = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
-    if (!isPWA) { alert("Install the app first to enable push notifications"); return; }
     let state = "Notification" in window ? Notification.permission : "unsupported";
+    if (state === "unsupported") { alert("Push notifications aren't supported in this browser."); return; }
     if (state !== "granted") { state = await requestPushPermission(); if (state !== "granted") return; }
+    setMasterPushDone(false); // reset so user sees it re-subscribing
     saved.forEach(it => scheduleNotification(it.match, 60));
     try {
       const reg = await navigator.serviceWorker.ready;
       let sub = await reg.pushManager.getSubscription();
       if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey:urlBase64ToUint8Array("BHlG2j1aEN_PheVmM_kw6eG5ho26LSMdtxSVEjiz9HnYqKTWWlOrdFdX-U3qUqR-VLxDrvOBik17FS7NJ1kJdr8") });
-      await fetch("/api/push?action=subscribe", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ subscription:sub.toJSON(), matches:saved.map(x=>x.match), minsBefore:60 }) });
+      await fetch("/api/push?action=subscribe", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ subscription:sub.toJSON(), matches:saved.map(x=>x.match), minsBefore:60, uid: syncUid, pin: syncPin || null }) });
       setMasterPushDone(true);
+      onPushSubscribed();
       try {
         const ids = saved.map(x=>x.match?.id).filter(Boolean);
         const existing = JSON.parse(localStorage.getItem("wc2026_push_set") || "[]");
@@ -3681,6 +3696,13 @@ function SavedTab({ saved, onRemove, onMatchTap, tabTop=116 }) {
           <button onClick={handleMasterCalendar} style={{flex:1,padding:"6px 4px",borderRadius:8,cursor:"pointer",border:`1px solid ${C.green}44`,background:`${C.green}15`,color:C.green,fontSize:11,fontWeight:600}}>📅 Export all</button>
           <button onClick={handleMasterPush} style={{flex:1,padding:"6px 4px",borderRadius:8,cursor:"pointer",border:`1px solid ${masterPushDone?C.green:C.gold}44`,background:masterPushDone?`${C.green}15`:`${C.gold}15`,color:masterPushDone?C.green:C.gold,fontSize:11,fontWeight:600}}>{masterPushDone?"🔔 All set!":"🔔 Notify all"}</button>
         </div>
+        {/* Notification prompt if not yet subscribed */}
+        {typeof Notification !== "undefined" && Notification.permission !== "granted" && (
+          <div style={{background:`${C.gold}12`,border:`1px solid ${C.gold}33`,borderRadius:8,padding:"8px 10px",marginBottom:4,display:"flex",alignItems:"center",gap:8}}>
+            <span style={{fontSize:14}}>🔔</span>
+            <div style={{flex:1,fontSize:11,color:C.mid}}>Tap <strong style={{color:C.gold}}>"Notify all"</strong> above to get 30-min kickoff alerts for all your saved matches</div>
+          </div>
+        )}
         {/* Filter pills */}
         <div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none"}}>
           <button style={ss(filterMode==="all")} onClick={()=>{setFilterMode("all");setFilterVal(new Set());}}>{"All"}</button>
@@ -3754,7 +3776,7 @@ function SavedTab({ saved, onRemove, onMatchTap, tabTop=116 }) {
       <div style={{height:0}}/>
       {filtered.length === 0
         ? <div style={{textAlign:"center",padding:"32px 0",color:C.dim,fontSize:13}}>No matches match this filter.</div>
-        : filtered.map(item=>(<SavedMatchCard key={item.id} item={item} onRemove={onRemove} onMatchTap={onMatchTap} notifiedIds={notifiedIds} onNotified={(id)=>setNotifiedIds(prev=>new Set([...prev,id]))}/>))
+        : filtered.map(item=>(<SavedMatchCard key={item.id} item={item} onRemove={onRemove} onMatchTap={onMatchTap} notifiedIds={notifiedIds} onNotified={(id)=>setNotifiedIds(prev=>new Set([...prev,id]))} syncUid={syncUid}/>))
       }
     </div>
   );
@@ -4335,7 +4357,7 @@ return (
             const hasPred = pred.hg!==undefined && pred.ag!==undefined && pred.hg!=="" && pred.ag!=="";
             const saving = predSaving[m.id];
             return (
-              <Card key={m.id} style={{marginBottom:8,border:`1px solid ${pts===3?C.green:pts===1?C.gold:pts===0?C.red:hasPred?`${C.green}44`:C.b1}`,opacity:done?0.45:locked?0.72:1}} >
+              <Card key={m.id} style={{marginBottom:8,border:`1px solid ${pts===3?C.green:pts===1?C.gold:pts===0?C.red:hasPred?`${C.green}44`:C.b2}`,opacity:done?0.45:locked?0.72:1,background:done?C.s2:undefined}} >
                 <div style={{padding:"10px 13px"}}>
                   <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
                     <Badge>Group {m.group} · {m.date}</Badge>
@@ -4354,12 +4376,12 @@ return (
                   </div>
                   <div style={{display:"flex",alignItems:"center",gap:8}}>
                     <Crest team={m.home} size={22}/>
-                    <span style={{fontWeight:700,color:C.text,flex:1,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.home}</span>
+                    <span style={{fontWeight:800,color:C.text,flex:1,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.home}</span>
                     <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
                       {done && sc && (
-                        <div style={{textAlign:"center",minWidth:48,background:C.s2,borderRadius:8,padding:"4px 8px",border:`1px solid ${C.b2}`}}>
-                          <div style={{fontSize:9,color:C.mid,marginBottom:1,fontWeight:700,letterSpacing:"0.05em"}}>RESULT</div>
-                          <div style={{fontWeight:800,fontSize:18,color:C.text,fontFamily:"monospace"}}>{sc.hg}–{sc.ag}</div>
+                        <div style={{textAlign:"center",minWidth:52,background:C.bg,borderRadius:8,padding:"5px 10px",border:`1px solid ${C.b2}`}}>
+                          <div style={{fontSize:9,color:C.text,marginBottom:1,fontWeight:700,letterSpacing:"0.05em"}}>RESULT</div>
+                          <div style={{fontWeight:900,fontSize:20,color:C.text,fontFamily:"monospace"}}>{sc.hg} – {sc.ag}</div>
                         </div>
                       )}
                       {!done && (
@@ -4372,13 +4394,13 @@ return (
                         </>
                       )}
                       {done && hasPred && (
-                        <div style={{textAlign:"center",minWidth:48,background:`${ptColor}12`,borderRadius:8,padding:"4px 8px",border:`1px solid ${ptColor}44`}}>
+                        <div style={{textAlign:"center",minWidth:52,background:C.bg,borderRadius:8,padding:"5px 10px",border:`1px solid ${ptColor}`}}>
                           <div style={{fontSize:9,color:ptColor,marginBottom:1,fontWeight:700,letterSpacing:"0.05em"}}>YOUR PICK</div>
-                          <div style={{fontWeight:800,fontSize:18,color:ptColor,fontFamily:"monospace"}}>{pred.hg}–{pred.ag}</div>
+                          <div style={{fontWeight:900,fontSize:20,color:ptColor,fontFamily:"monospace"}}>{pred.hg}–{pred.ag}</div>
                         </div>
                       )}
                     </div>
-                    <span style={{fontWeight:700,color:C.text,flex:1,fontSize:13,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.away}</span>
+                    <span style={{fontWeight:800,color:C.text,flex:1,fontSize:13,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.away}</span>
                     <Crest team={m.away} size={22}/>
                   </div>
                 </div>
@@ -4442,10 +4464,11 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
   const [matchStats, setMatchStats] = useState(null);
   const [lineups, setLineups] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [evOpen, setEvOpen] = useState(false);
+  const [evOpen, setEvOpen] = useState(true);
   const [lineupsOpen, setLineupsOpen] = useState(false);
   const [statsOpen, setStatsOpen] = useState(false);
   const [evFilter, setEvFilter] = useState(["Goal","Card","subst"]);
+  const modalRef = useRef(null);
   const { getScore } = useContext(LiveScoresCtx);
   const { favTeams=[] } = useContext(FavCtx);
   const country = useContext(CountryCtx);
@@ -4459,8 +4482,16 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
   const modalWx = useWeather(modalCity?.lat, modalCity?.lon, !!open && !!modalCity);
 
   useEffect(() => {
+    return () => {
+      document.body.style.overflow = "";
+      document.body.style.position = "";
+      document.body.style.width = "";
+    };
+  }, []);
+
+  useEffect(() => {
     if (!open || !match) return;
-    setEvents(null); setLoading(true); setEvOpen(false); setEvFilter(["Goal","Card","subst"]); setLineups(null); setLineupsOpen(false); setStatsOpen(false);
+    setEvents(null); setLoading(true); setEvOpen(true); setEvFilter(["Goal","Card","subst"]); setLineups(null); setLineupsOpen(false); setStatsOpen(false);
     fetchMatchEvents(`${match.home}|${match.away}`)
       .then(d => {
         setEvents(d?.events || []);
@@ -4628,11 +4659,12 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
   };
 
   return (
-    <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center"}}>
-      <div onClick={e=>e.stopPropagation()} style={{background:C.bg,border:`1px solid ${C.b2}`,borderRadius:"18px 18px 0 0",width:"100%",maxWidth:620,maxHeight:"92vh",overflowY:"auto",paddingBottom:20,position:"relative"}}>
-
-
-        <button onClick={onClose} style={{position:"absolute",top:12,right:12,zIndex:9999,background:"rgba(0,0,0,.4)",border:"none",color:"white",fontSize:24,width:36,height:36,borderRadius:18,cursor:"pointer"}}>×</button>
+    <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:"8px 3px"}}>
+      <div style={{position:"relative",width:"100%",maxWidth:620}}>
+        <button onClick={onClose} style={{position:"absolute",top:10,right:10,zIndex:9999,background:"rgba(0,0,0,.5)",border:`1px solid ${C.b2}`,color:"white",fontSize:22,width:34,height:34,borderRadius:17,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+      <div ref={modalRef} onClick={e=>e.stopPropagation()}
+        onTouchMove={e=>e.stopPropagation()}
+        style={{background:C.bg,border:`1px solid ${C.b2}`,borderRadius:"18px 18px 18px 18px",width:"100%",maxHeight:"calc(100dvh - 50px)",overflowY:"auto",overscrollBehavior:"contain",WebkitOverflowScrolling:"touch",paddingBottom:8,position:"relative"}}>
 
         {/* Save + Share icon buttons — top left */}
         <div style={{position:"absolute",top:12,left:12,zIndex:9999,display:"flex",gap:6}}>
@@ -4687,10 +4719,20 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
               </button>
             );
             return (
-              <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
-                {pill("Lineups",    lineupsOpen, ()=>setLineupsOpen(o=>!o), !hasLineups)}
-                {pill(timelineLabel, evOpen,     ()=>setEvOpen(o=>!o),      !hasTimeline)}
-                {pill("Match Stats", statsOpen,  ()=>setStatsOpen(o=>!o),   !hasStats)}
+              <div style={{display:"flex",gap:8,marginBottom:14}}>
+                {["Lineups", timelineLabel, "Match Stats"].map((label, i) => {
+                  const [active, toggle, disabled] = [
+                    [lineupsOpen, ()=>setLineupsOpen(o=>!o), !hasLineups],
+                    [evOpen,      ()=>setEvOpen(o=>!o),      !hasTimeline],
+                    [statsOpen,   ()=>setStatsOpen(o=>!o),   !hasStats],
+                  ][i];
+                  const flexes = [0.8, 2, 1];
+                  return (
+                    <button key={label} onClick={disabled ? undefined : toggle} style={{flex:flexes[i],padding:"6px 4px",borderRadius:999,border:`1.5px solid ${active?C.green:disabled?C.b1:C.b2}`,background:active?`${C.green}18`:C.s2,color:active?C.green:disabled?C.dim:C.mid,fontSize:12,fontWeight:700,cursor:disabled?"default":"pointer",opacity:disabled?0.4:1,transition:"all .15s",textAlign:"center",whiteSpace:"nowrap"}}>
+                      {label}
+                    </button>
+                  );
+                })}
               </div>
             );
           })()}
@@ -4814,6 +4856,7 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
           })()}
 
         </div>
+      </div>
       </div>
     </div>
   );
@@ -4950,6 +4993,59 @@ const FOOTBALL_ICONS = [
 ];
 
 // ── SYNC MODAL ─────────────────────────────────────────────────────────────
+// ── NOTIFY ENABLE BUTTON ──────────────────────────────────────────────────
+function NotifyEnableBtn({ syncUid, syncPin }) {
+  const [state, setState] = useState("idle"); // idle | loading | done | denied
+  useEffect(() => {
+    if (!navigator.serviceWorker) return;
+    navigator.serviceWorker.ready.then(reg => {
+      reg.pushManager.getSubscription().then(sub => {
+        if (sub) setState("done");
+      }).catch(() => {});
+    }).catch(() => {});
+  }, []);
+
+  const handleEnable = async () => {
+    if (state === "done") return;
+    setState("loading");
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") { setState("denied"); return; }
+      const reg = await navigator.serviceWorker.ready;
+      let sub = await reg.pushManager.getSubscription();
+      if (!sub) sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array("BHlG2j1aEN_PheVmM_kw6eG5ho26LSMdtxSVEjiz9HnYqKTWWlOrdFdX-U3qUqR-VLxDrvOBik17FS7NJ1kJdr8")
+      });
+      await fetch("/api/push?action=subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subscription: sub.toJSON(), matches: [], minsBefore: 60, uid: syncUid, pin: syncPin || null })
+      });
+      setState("done");
+    } catch(e) {
+      console.warn("NotifyEnableBtn:", e);
+      setState("idle");
+    }
+  };
+
+  if (state === "done") return (
+    <div style={{marginTop:10,padding:"8px 12px",background:`${C.green}12`,border:`1px solid ${C.green}33`,borderRadius:8,fontSize:12,color:C.green,textAlign:"center"}}>
+      🔔 Notifications enabled on this device
+    </div>
+  );
+  if (state === "denied") return (
+    <div style={{marginTop:10,padding:"8px 12px",background:`${C.red}12`,border:`1px solid ${C.red}33`,borderRadius:8,fontSize:12,color:C.red,textAlign:"center"}}>
+      ❌ Notifications blocked — enable in browser settings
+    </div>
+  );
+  return (
+    <button onClick={handleEnable} disabled={state==="loading"} style={{width:"100%",marginTop:10,padding:"9px",borderRadius:8,border:`1px solid ${C.gold}44`,background:`${C.gold}15`,color:C.gold,fontSize:12,fontWeight:700,cursor:"pointer",opacity:state==="loading"?0.6:1}}>
+      {state==="loading" ? "Enabling..." : "🔔 Enable notifications on this device"}
+    </button>
+  );
+}
+
 function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved, favTeams, setToast, setSaved, setFavTeams, dark, setDark, geoData, locationOverride, setLocationOverride, onShowSaved, userAvatar, persistAvatar, displayName, persistDisplayName, onSignOut=()=>{} }) {
   const [screen, setScreen] = useState("home");
   const [pin, setPin] = useState("");
@@ -5131,6 +5227,9 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
           {isSynced && <button onClick={()=>{persistProfile(null);onSignOut();setToast("Signed out.");onClose();}} style={{padding:"6px 12px",borderRadius:8,border:`1px solid ${C.b2}`,background:C.s2,color:C.mid,fontSize:11,fontWeight:600,cursor:"pointer",flexShrink:0}}>Sign out</button>}
           {syncProfile?.pin&&<button onClick={()=>{setPin("");setScreen("pin-change");setError("");}} style={{padding:"6px 12px",borderRadius:8,border:`1px solid ${C.b2}`,background:C.s2,color:C.mid,fontSize:11,fontWeight:600,cursor:"pointer",flexShrink:0}}>🔁 Change PIN</button>}
         </div>
+        {syncProfile?.pin && (
+          <NotifyEnableBtn syncUid={syncUid} syncPin={syncProfile.pin}/>
+        )}
         <div style={{textAlign:"center",marginTop:10}}>
           <span style={{fontSize:10,color:C.dim}}>v{APP_VERSION} · {APP_DATE}</span>
         </div>
@@ -5456,6 +5555,25 @@ function WCNewsTab({ tabTop=116 }) {
           </a>
         ))}
       </div>
+
+      {/* Fan Shop */}
+      <div style={{marginTop:24,borderTop:`1px solid ${C.b2}`,paddingTop:16}}>
+        <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:12}}>🛍️ Fan Shop</div>
+        <div style={{display:"flex",flexDirection:"column",gap:8}}>
+          {SHOP_CATEGORIES.map(cat => (
+            <a key={cat.id} href={AFFILIATE.amazon(cat.q)} target="_blank" rel="noopener noreferrer sponsored" style={{textDecoration:"none"}}>
+              <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:10,cursor:"pointer"}}>
+                <span style={{fontSize:20}}>{cat.icon}</span>
+                <span style={{fontSize:13,fontWeight:600,color:C.text,flex:1}}>{cat.label}</span>
+                <span style={{fontSize:11,color:C.gold}}>Shop →</span>
+              </div>
+            </a>
+          ))}
+        </div>
+        <div style={{fontSize:10,color:C.dim,marginTop:10,lineHeight:1.5}}>
+          Affiliate links — we earn a small commission at no cost to you.
+        </div>
+      </div>
     </div>
   );
 }
@@ -5524,25 +5642,40 @@ function PullToRefresh({ onRefresh, children }) {
   const pullingRef = useRef(false);
   const pullYRef = useRef(0);
   const refreshingRef = useRef(false);
+  const directionLocked = useRef(null);
+  const atTop = useRef(false); // snapshot at touchStart
   const THRESHOLD = 72;
 
   useEffect(() => {
+    const getScrollTop = () => {
+      const el = document.getElementById("scroll-area") || document.scrollingElement || document.documentElement;
+      return el ? el.scrollTop : 0;
+    };
+
     const onTouchStart = (e) => {
-      const scroller = document.getElementById("scroll-area");
-      if (scroller && scroller.scrollTop > 0) return;
+      atTop.current = getScrollTop() <= 0;
       startY.current = e.touches[0].clientY;
       startX.current = e.touches[0].clientX;
+      directionLocked.current = null;
+      pullingRef.current = false;
+      pullYRef.current = 0;
     };
 
     const onTouchMove = (e) => {
-      const scroller = document.getElementById("scroll-area");
-      if (scroller && scroller.scrollTop > 0) return;
+      if (!atTop.current) return; // not at top when gesture started
 
       const dy = e.touches[0].clientY - startY.current;
       const dx = Math.abs(e.touches[0].clientX - startX.current);
 
-      // Only intercept if clearly pulling DOWN and not swiping horizontally
-      if (dy > 8 && dx < 10) {
+      // Lock direction on first significant movement
+      if (!directionLocked.current) {
+        if (Math.abs(dy) < 6 && dx < 6) return;
+        directionLocked.current = (Math.abs(dy) > dx && dy > 0) ? "vertical" : "horizontal";
+      }
+
+      if (directionLocked.current !== "vertical") return;
+
+      if (dy > 0) {
         e.preventDefault();
         const clamped = Math.min(dy * 0.45, THRESHOLD + 20);
         pullingRef.current = true;
@@ -5564,11 +5697,11 @@ function PullToRefresh({ onRefresh, children }) {
       }
       pullingRef.current = false;
       pullYRef.current = 0;
+      directionLocked.current = null;
       setPulling(false);
       setPullY(0);
     };
 
-    // passive:false required to allow preventDefault on touchmove
     document.addEventListener("touchstart", onTouchStart, { passive: true });
     document.addEventListener("touchmove", onTouchMove, { passive: false });
     document.addEventListener("touchend", onTouchEnd, { passive: true });
@@ -5581,12 +5714,18 @@ function PullToRefresh({ onRefresh, children }) {
 
   return (
     <>
-      {children}
-      {/* Pull indicator — sticky at top of scroll area */}
+      <div style={{
+        transform: pulling || refreshing ? `translateY(${Math.min(pullY, THRESHOLD + 20)}px)` : "translateY(0)",
+        transition: pulling ? "none" : "transform .25s ease",
+        willChange: "transform",
+      }}>
+        {children}
+      </div>
+      {/* Pull indicator — follows the pull */}
       {(pulling || refreshing) && (
         <div style={{
-          position:"fixed", top:"50%", left:"50%",
-          transform:"translate(-50%,-50%)",
+          position:"fixed", top: Math.min(pullY - 36, THRESHOLD - 16), left:"50%",
+          transform:"translateX(-50%)",
           zIndex:500, pointerEvents:"none",
         }}>
           <div style={{
@@ -5594,11 +5733,11 @@ function PullToRefresh({ onRefresh, children }) {
             background:C.s1, border:`2px solid ${C.green}`,
             display:"flex", alignItems:"center", justifyContent:"center",
             boxShadow:DS.shadow.panel,
-            opacity: Math.min(pullY / 20, 1),
+            opacity: Math.min(pullY / 30, 1),
           }}>
             {refreshing
               ? <div style={{width:18,height:18,border:`2.5px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .7s linear infinite"}}/>
-              : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={pullY>=THRESHOLD?C.green:C.mid} strokeWidth="2.5" strokeLinecap="round" style={{transform:`rotate(${(pullY/THRESHOLD)*180}deg)`,transition:"transform .1s"}}><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+              : <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={pullY>=THRESHOLD?C.green:C.mid} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{transform:`rotate(${(pullY/THRESHOLD)*270}deg)`,transition:"transform .1s"}}><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
             }
           </div>
         </div>
@@ -5607,8 +5746,7 @@ function PullToRefresh({ onRefresh, children }) {
   );
 }
 
-
-// ── ONBOARDING ─────────────────────────────────────────────────────────────
+// ── ONBOARDING
 const ONBOARDING_SLIDES = [
   {
     icon: "⚽",
@@ -5946,6 +6084,17 @@ function AskWorldCupTab({ tabTop=116 }) {
       return { title:"Tournament progress", summary:`${finished.length} of ${MATCHES.length} matches played · ${remaining} remaining.`, rows:[] };
     }
 
+    if (text.includes("how many team") || text.includes("teams have played") || text.includes("teams played") || text.includes("teams already played")) {
+      const finished = MATCHES.filter(m => { const sc = scoresRef[`${m.home}|${m.away}`]; return sc && (sc.status==="FT"||sc.status==="AET"||sc.status==="finished"||sc.status==="ended"); });
+      const teams = new Set(finished.flatMap(m=>[m.home,m.away]));
+      const notPlayed = allTeams().filter(t => !teams.has(t));
+      return {
+        title:`${teams.size} of 48 teams have played`,
+        summary:`${finished.length} matches completed so far. ${notPlayed.length} teams yet to play.`,
+        rows: notPlayed.length <= 20 ? notPlayed.map(t => ({ title:`${getFlag(t)} ${t}`, meta:"Yet to play" })) : []
+      };
+    }
+
     // Championship odds
     if (text.includes("odd") || text.includes("favorite") || text.includes("favourite") || text.includes("champion") && text.includes("chance") || text.includes("polymarket")) {
       const top = PREDS.filter(p=>p.team!=="Others").sort((a,b)=>b.poly-a.poly).slice(0,8);
@@ -6092,12 +6241,152 @@ function StatsHubTab({ initial="", tabTop=116 }) {
   );
 }
 
+// ── AFFILIATE CONFIG ─────────────────────────────────────────────────────────
+const AFFILIATE = {
+  amazon: (q) => `https://www.amazon.com/s?k=${encodeURIComponent(q)}&tag=worldcupapp-20`,
+  fubo:   "PLACEHOLDER_FUBO_AFFILIATE_URL",
+  nordvpn:"PLACEHOLDER_NORDVPN_AFFILIATE_URL",
+  hrb:    "PLACEHOLDER_HARDROCK_AFFILIATE_URL",
+};
+
+const HRB_STATES = new Set(["AZ","CO","FL","IL","IN","MI","NJ","OH","TN","VA"]);
+
+const SHOP_CATEGORIES = [
+  { id:"jerseys",  icon:"👕", label:"Jerseys",          q:"World Cup 2026 national team jersey" },
+  { id:"balls",    icon:"⚽", label:"Soccer Balls",     q:"World Cup 2026 soccer ball official" },
+  { id:"decor",    icon:"🎉", label:"Watch Party Decor",q:"World Cup 2026 party decorations flags banner" },
+  { id:"devices",  icon:"📺", label:"Streaming Devices",q:"streaming device fire tv stick 4k" },
+  { id:"merch",    icon:"🧣", label:"WC Merchandise",   q:"FIFA World Cup 2026 merchandise scarf hat" },
+];
+
+function AmazonBtn({ q, label }) {
+  return (
+    <a href={AFFILIATE.amazon(q)} target="_blank" rel="noopener noreferrer sponsored" style={{textDecoration:"none"}}>
+      <div style={{display:"flex",alignItems:"center",gap:6,padding:"8px 14px",background:`${C.gold}18`,border:`1px solid ${C.gold}44`,borderRadius:10,cursor:"pointer"}}>
+        <span style={{fontSize:13}}>🛒</span>
+        <span style={{fontSize:12,fontWeight:700,color:C.gold}}>{label}</span>
+        <span style={{fontSize:10,color:C.dim,marginLeft:"auto"}}>Amazon ↗</span>
+      </div>
+    </a>
+  );
+}
+
+function ShopTab({ tabTop=116, geoData=null }) {
+  const userState = geoData?.region || "";
+  const showHRB = HRB_STATES.has(userState);
+  const [amazonOpen, setAmazonOpen] = useState(false);
+
+  return (
+    <div style={{padding:"0 0 32px"}}>
+
+      {/* Header */}
+      <div style={{padding:"16px 16px 8px"}}>
+        <div style={{fontWeight:800,fontSize:18,color:C.green,marginBottom:4}}>⚽ Fan Shop</div>
+        <div style={{fontSize:12,color:C.dim}}>Support the app — we earn a small commission at no cost to you.</div>
+      </div>
+
+      {/* Watch Live — Fubo */}
+      <div style={{padding:"0 16px",marginTop:8}}>
+        <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10}}>📡 Watch Live</div>
+        <a href={AFFILIATE.fubo} target="_blank" rel="noopener noreferrer sponsored" style={{textDecoration:"none"}}>
+          <div style={{display:"flex",alignItems:"center",gap:12,padding:"14px",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:12,cursor:"pointer"}}>
+            <span style={{fontSize:28,flexShrink:0}}>📺</span>
+            <div style={{flex:1}}>
+              <div style={{fontWeight:700,fontSize:14,color:C.text}}>Watch on Fubo</div>
+              <div style={{fontSize:11,color:C.mid,marginTop:2}}>Stream every World Cup match live</div>
+              <div style={{fontSize:10,color:C.dim,marginTop:2}}>FOX · FS1 · Telemundo · Peacock</div>
+            </div>
+            <div style={{background:`${C.green}22`,border:`1px solid ${C.green}44`,borderRadius:8,padding:"4px 10px"}}>
+              <div style={{fontSize:11,fontWeight:700,color:C.green}}>Try Free →</div>
+            </div>
+          </div>
+        </a>
+      </div>
+
+      {/* Watch Abroad — NordVPN */}
+      <div style={{padding:"0 16px",marginTop:12}}>
+        <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10}}>🌍 Watch Abroad</div>
+        <a href={AFFILIATE.nordvpn} target="_blank" rel="noopener noreferrer sponsored" style={{textDecoration:"none"}}>
+          <div style={{display:"flex",alignItems:"center",gap:12,padding:"14px",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:12,cursor:"pointer"}}>
+            <span style={{fontSize:28,flexShrink:0}}>🔒</span>
+            <div style={{flex:1}}>
+              <div style={{fontWeight:700,fontSize:14,color:C.text}}>NordVPN</div>
+              <div style={{fontSize:11,color:C.mid,marginTop:2}}>Watch WC from anywhere in the world</div>
+              <div style={{fontSize:10,color:C.dim,marginTop:2}}>Unblock regional streams · 30-day guarantee</div>
+            </div>
+            <div style={{background:`${C.blue}22`,border:`1px solid ${C.blue}44`,borderRadius:8,padding:"4px 10px"}}>
+              <div style={{fontSize:11,fontWeight:700,color:C.blue}}>Get Deal →</div>
+            </div>
+          </div>
+        </a>
+      </div>
+
+      {/* Hard Rock Bet — geo-gated */}
+      {showHRB && (
+        <div style={{padding:"0 16px",marginTop:12}}>
+          <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10}}>🎰 Bet on It</div>
+          <a href={AFFILIATE.hrb} target="_blank" rel="noopener noreferrer sponsored" style={{textDecoration:"none"}}>
+            <div style={{display:"flex",alignItems:"center",gap:12,padding:"14px",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:12,cursor:"pointer"}}>
+              <span style={{fontSize:28,flexShrink:0}}>🎯</span>
+              <div style={{flex:1}}>
+                <div style={{fontWeight:700,fontSize:14,color:C.text}}>Hard Rock Bet</div>
+                <div style={{fontSize:11,color:C.mid,marginTop:2}}>Bet on every World Cup match</div>
+                <div style={{fontSize:10,color:C.dim,marginTop:2}}>21+ · Gambling problem? Call 1-800-GAMBLER</div>
+              </div>
+              <div style={{background:`${C.red}22`,border:`1px solid ${C.red}44`,borderRadius:8,padding:"4px 10px"}}>
+                <div style={{fontSize:11,fontWeight:700,color:C.red}}>Bet Now →</div>
+              </div>
+            </div>
+          </a>
+        </div>
+      )}
+
+      {/* Amazon — collapsible */}
+      <div style={{padding:"0 16px",marginTop:16}}>
+        <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10}}>🛍️ Buy World Cup Merchandise</div>
+        <button onClick={()=>setAmazonOpen(v=>!v)} style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 14px",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:amazonOpen?"12px 12px 0 0":12,cursor:"pointer",color:C.text}}>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <span style={{fontSize:20}}>🛒</span>
+            <div style={{textAlign:"left"}}>
+              <div style={{fontWeight:700,fontSize:14,color:C.text}}>Shop on Amazon</div>
+              <div style={{fontSize:11,color:C.dim,marginTop:1}}>Jerseys, balls, decor & more</div>
+            </div>
+          </div>
+          <span style={{fontSize:16,color:C.gold,transform:amazonOpen?"rotate(90deg)":"none",transition:"transform .2s"}}>›</span>
+        </button>
+        {amazonOpen && (
+          <div style={{border:`1px solid ${C.b2}`,borderTop:"none",borderRadius:"0 0 12px 12px",overflow:"hidden"}}>
+            {SHOP_CATEGORIES.map((cat,i) => (
+              <a key={cat.id} href={AFFILIATE.amazon(cat.q)} target="_blank" rel="noopener noreferrer sponsored" style={{textDecoration:"none"}}>
+                <div style={{display:"flex",alignItems:"center",gap:12,padding:"11px 14px",background:C.s1,borderTop:i>0?`1px solid ${C.b1}`:"none",cursor:"pointer"}}>
+                  <span style={{fontSize:20,flexShrink:0}}>{cat.icon}</span>
+                  <span style={{fontSize:13,fontWeight:600,color:C.text,flex:1}}>{cat.label}</span>
+                  <span style={{fontSize:11,color:C.gold}}>Shop →</span>
+                </div>
+              </a>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Disclaimer */}
+      <div style={{padding:"16px",marginTop:8}}>
+        <div style={{fontSize:10,color:C.dim,lineHeight:1.6,borderTop:`1px solid ${C.b1}`,paddingTop:12}}>
+          This page contains affiliate links. We may earn a commission when you make a purchase or sign up through these links, at no extra cost to you. Amazon and the Amazon logo are trademarks of Amazon.com, Inc. Hard Rock Bet: Must be 21+ and physically located in an eligible state. Gambling problem? Call 1-800-GAMBLER.
+        </div>
+      </div>
+
+    </div>
+  );
+}
+
 const TABS = [
   {id:"live",      icon:"🔴", label:"Live"},
   {id:"schedule",  icon:"📋", label:"Schedule"},
   {id:"groups",    icon:"🗂️", label:"Groups"},
   {id:"bracket",   icon:"🏆", label:"My Bracket"},
   {id:"predictor", icon:"🎯", label:"Fantasy"},
+  {id:"shop",      icon:"🏪", label:"Shop"},
   {id:"ask",       icon:"🔎", label:"Ask"},
   {id:"stats",     icon:"📊", label:"Stats"},
   {id:"news",      icon:"📰", label:"WC News"},
@@ -6237,6 +6526,60 @@ export default function App() {
     return () => clearTimeout(t);
   }, []);
   const [tab, setTab] = useState("live");
+  const [masterPushSubscribed, setMasterPushSubscribed] = useState(false);
+  const [bannerDismissed, setBannerDismissed] = useState(() => {
+    try {
+      const dismissed = localStorage.getItem("wc2026_push_banner_dismissed");
+      if (!dismissed) return false;
+      // Re-show on Jun 18 if dismissed before that date
+      const reshowDate = new Date("2026-06-18T00:00:00");
+      const dismissedAt = parseInt(dismissed);
+      if (!isNaN(dismissedAt) && dismissedAt < reshowDate.getTime() && Date.now() >= reshowDate.getTime()) {
+        return false; // re-show it
+      }
+      return true;
+    } catch { return false; }
+  });
+  const [bannerReady, setBannerReady] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setBannerReady(true), 5000);
+    return () => clearTimeout(t);
+  }, []);
+  const dismissBanner = () => {
+    setBannerDismissed(true);
+    try { localStorage.setItem("wc2026_push_banner_dismissed", String(Date.now())); } catch {}
+  };
+
+  // Check if browser has active push subscription
+  useEffect(() => {
+    if (!navigator.serviceWorker) return;
+    navigator.serviceWorker.ready.then(reg => {
+      reg.pushManager.getSubscription().then(sub => {
+        setMasterPushSubscribed(!!sub);
+      }).catch(() => {});
+    }).catch(() => {});
+  }, []);
+  const [showInbox, setShowInbox] = useState(false);
+  const [inbox, setInbox] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("wc2026_inbox") || "[]"); } catch { return []; }
+  });
+  const unreadCount = inbox.filter(m => !m.read).length;
+
+  // Listen for push messages from service worker
+  useEffect(() => {
+    const handler = (event) => {
+      if (event.data?.type === "PUSH_RECEIVED") {
+        const msg = event.data.message;
+        setInbox(prev => {
+          const updated = [msg, ...prev].slice(0, 20); // keep last 20
+          try { localStorage.setItem("wc2026_inbox", JSON.stringify(updated)); } catch {}
+          return updated;
+        });
+      }
+    };
+    navigator.serviceWorker?.addEventListener("message", handler);
+    return () => navigator.serviceWorker?.removeEventListener("message", handler);
+  }, []);
   const geoData = useCountry();
   const [locationOverride, setLocationOverride] = useState(() => {
     try { return JSON.parse(localStorage.getItem("wc2026_location") || "null"); } catch { return null; }
@@ -6394,6 +6737,10 @@ export default function App() {
           persistAvatar(p.avatar);
         }
         if (p.displayName) persistDisplayName(p.displayName);
+        if (p.saved?.length) setSaved(prev => {
+          // Use remote if it has more recent updatedAt, otherwise keep local
+          return p.saved;
+        });
         if (p.favTeams?.length) setFavTeams(p.favTeams);
         if (p.myBracket) restoreSavedMyBracket(p.myBracket);
         if (p.dark !== undefined) setDark(p.dark);
@@ -6476,6 +6823,12 @@ export default function App() {
     const msSince = Date.now() - ko;
     return msSince > -60000 && msSince < 130 * 60 * 1000;
   });
+  const hasImminentKickoff = !hasLiveMatches && MATCHES.some(m => {
+    const iso = MATCH_UTC[m.id];
+    if (!iso) return false;
+    const msUntil = new Date(iso).getTime() - Date.now();
+    return msUntil >= 0 && msUntil <= 60000; // within 1 minute
+  });
   const savedIds = new Set(saved.map(x=>x.match?.id));
   const onAction=(m)=>{
     if(savedIds.has(m.id)){ setSaved(s=>s.filter(x=>x.match?.id!==m.id)); setToast("Removed from saved"); }
@@ -6532,6 +6885,11 @@ export default function App() {
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(5,50,20,0.8)" strokeWidth="2.5" strokeLinecap="round" style={{position:"absolute",left:7,top:7,opacity:dark?1:0,transition:"opacity .2s",pointerEvents:"none"}}><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.22" y1="19.78" x2="6.34" y2="17.66"/><line x1="17.66" y1="6.34" x2="19.78" y2="4.22"/></svg>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="rgba(255,255,255,0.9)" stroke="none" style={{position:"absolute",right:7,top:8,opacity:dark?0:1,transition:"opacity .2s",pointerEvents:"none"}}><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
               </button>
+              {/* Notification inbox bell */}
+              <button onClick={()=>setShowInbox(true)} title="Notifications" style={{position:"relative",width:36,height:36,borderRadius:"50%",border:`2px solid ${unreadCount>0?C.gold:dark?"#2a4f38":"#1a3828"}`,background:unreadCount>0?`${C.gold}18`:dark?"#0c1a12":"#1a3828",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,flexShrink:0,padding:0}}>
+                🔔
+                {unreadCount>0 && <span style={{position:"absolute",top:-2,right:-2,width:16,height:16,borderRadius:"50%",background:C.red,border:`2px solid ${C.bg}`,fontSize:9,fontWeight:900,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2}}>{unreadCount}</span>}
+              </button>
               {/* Profile / sync avatar */}
               <button onClick={()=>setShowSyncModal(true)} title={"My Account"} style={{position:"relative",width:36,height:36,borderRadius:"50%",border:`2px solid ${syncProfile?C.green:dark?"#2a4f38":"#1a3828"}`,background:syncProfile?`${C.green}18`:dark?"#0c1a12":"#1a3828",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,flexShrink:0,overflow:"hidden",padding:0}}>
                 {userAvatar?.startsWith("data:") ? <img src={userAvatar} style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:"50%"}} alt="avatar"/>
@@ -6548,7 +6906,7 @@ export default function App() {
             <div style={{display:"flex",overflowX:"auto",scrollbarWidth:"none",marginBottom:-1}}>
               {TABS.map(t=>(
                 <button key={t.id} onClick={()=>setTab(t.id)} style={{flex:"0 0 auto",padding:"8px 8px",background:"none",border:"none",borderBottom:`2px solid ${tab===t.id?C.green:"transparent"}`,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,color:tab===t.id?C.green:C.dim,position:"relative"}}>
-                  <span style={{fontSize:14,animation:t.id==="live"&&hasLiveMatches?"pulse 1.5s infinite":undefined}}>{t.icon}</span>
+                  <span style={{fontSize:14,animation:t.id==="live"&&(hasLiveMatches||hasImminentKickoff)?(hasImminentKickoff?"pulse 0.5s infinite":"pulse 1.5s infinite"):undefined}}>{t.icon}</span>
                   <span style={{fontSize:9,fontWeight:600,whiteSpace:"nowrap"}}>{t.label}</span>
                 </button>
               ))}
@@ -6565,11 +6923,12 @@ export default function App() {
           {tab==="stats"     && <StatsHubTab initial={statsTeam} tabTop={tabBarBottom}/>}
           {tab==="predict"   && <PredTab tabTop={tabBarBottom} geoData={geoData}/>}
           {tab==="predictor" && <PredictorTab syncProfile={syncProfile} displayName={displayName} onShowSync={()=>setShowSyncModal(true)} userAvatar={userAvatar}/>}
+          {tab==="shop"      && <ShopTab tabTop={tabBarBottom} geoData={geoData}/>}
           {tab==="sim"       && <SimTab tabTop={tabBarBottom}/>}
           {tab==="bracket"   && <MyBracketTab tabTop={tabBarBottom}/>}
           {tab==="ask"       && <AskWorldCupTab tabTop={tabBarBottom}/>}
           {tab==="news"       && <WCNewsTab tabTop={tabBarBottom}/>}
-          {tab==="saved"     && <div style={{paddingTop:14}}><SavedTab saved={saved} onRemove={onRemove} onMatchTap={onMatchTap}/></div>}
+          {tab==="saved"     && <div style={{paddingTop:14}}><SavedTab saved={saved} onRemove={onRemove} onMatchTap={onMatchTap} syncUid={syncUid} syncPin={syncProfile?.pin||""} onPushSubscribed={()=>setMasterPushSubscribed(true)}/></div>}
         </div>
         </PullToRefresh>
         {/* Saved view overlay */}
@@ -6588,7 +6947,7 @@ export default function App() {
             {/* Scrollable content */}
             <div style={{flex:1,overflowY:"auto",position:"relative"}} id="saved-scroll">
               <div style={{maxWidth:700,margin:"0 auto",padding:"0 13px 80px"}}>
-                <SavedTab saved={saved} onRemove={onRemove} onMatchTap={onMatchTap} tabTop={57}/>
+                <SavedTab saved={saved} onRemove={onRemove} onMatchTap={onMatchTap} tabTop={57} syncUid={syncUid} syncPin={syncProfile?.pin||""} onPushSubscribed={()=>setMasterPushSubscribed(true)}/>
               </div>
             </div>
           </div>
@@ -6613,6 +6972,87 @@ export default function App() {
         <MatchEventsModal match={eventsModal.match} open={eventsModal.open} onClose={()=>setEventsModal({open:false,match:null})} onAction={onAction} savedIds={savedIds} userPredHg={eventsModal.predHg} userPredAg={eventsModal.predAg}/>
         <Toast msg={toast} onDone={()=>setToast("")}/>
         <InstallBanner/>
+
+        {/* Notification prompt banner */}
+        {tab==="live" && !bannerDismissed && bannerReady && typeof Notification !== "undefined" && Notification.permission !== "granted" && (
+          <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 24px"}} onClick={dismissBanner}>
+            <div onClick={e=>e.stopPropagation()} style={{background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.gold}44`,borderRadius:20,padding:"28px 24px",width:"100%",maxWidth:360,boxShadow:"0 8px 40px rgba(0,0,0,0.6)",textAlign:"center",position:"relative"}}>
+              <button onClick={dismissBanner} style={{position:"absolute",top:12,right:14,background:"none",border:"none",color:C.dim,fontSize:20,cursor:"pointer"}}>✕</button>
+              <div style={{fontSize:48,marginBottom:12}}>🔔</div>
+              <div style={{fontSize:18,fontWeight:800,color:C.text,marginBottom:8}}>Get Kickoff Alerts</div>
+              <div style={{fontSize:13,color:C.mid,lineHeight:1.6,marginBottom:20}}>Save matches + tap <strong style={{color:C.gold}}>&ldquo;Notify all&rdquo;</strong> in My Matches to get 30-min alerts before every kickoff — automatically.</div>
+              <button onClick={()=>{dismissBanner();setTab("saved");}} style={{width:"100%",padding:"13px",background:`linear-gradient(135deg,${C.gold},#f59e0b)`,border:"none",borderRadius:12,color:"#030a05",fontSize:15,fontWeight:800,cursor:"pointer",marginBottom:8}}>Set up notifications →</button>
+              <button onClick={dismissBanner} style={{width:"100%",padding:"8px",background:"none",border:"none",color:C.dim,fontSize:12,cursor:"pointer"}}>Already set up on another device · dismiss</button>
+            </div>
+          </div>
+        )}
+        {tab==="live" && !bannerDismissed && bannerReady && typeof Notification !== "undefined" && Notification.permission === "granted" && !masterPushSubscribed && (
+          <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 24px"}} onClick={dismissBanner}>
+            <div onClick={e=>e.stopPropagation()} style={{background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.green}44`,borderRadius:20,padding:"28px 24px",width:"100%",maxWidth:360,boxShadow:"0 8px 40px rgba(0,0,0,0.6)",textAlign:"center",position:"relative"}}>
+              <button onClick={dismissBanner} style={{position:"absolute",top:12,right:14,background:"none",border:"none",color:C.dim,fontSize:20,cursor:"pointer"}}>✕</button>
+              <div style={{fontSize:48,marginBottom:12}}>🔔</div>
+              <div style={{fontSize:18,fontWeight:800,color:C.text,marginBottom:8}}>Almost There!</div>
+              <div style={{fontSize:13,color:C.mid,lineHeight:1.6,marginBottom:20}}>Notifications are enabled — tap <strong style={{color:C.green}}>&ldquo;Notify all&rdquo;</strong> in My Matches to complete setup and start receiving kickoff alerts.</div>
+              <button onClick={()=>{dismissBanner();setTab("saved");}} style={{width:"100%",padding:"13px",background:`linear-gradient(135deg,${C.green},#22c55e)`,border:"none",borderRadius:12,color:"#030a05",fontSize:15,fontWeight:800,cursor:"pointer",marginBottom:8}}>Finish setup →</button>
+              <button onClick={dismissBanner} style={{width:"100%",padding:"8px",background:"none",border:"none",color:C.dim,fontSize:12,cursor:"pointer"}}>Already set up on another device · dismiss</button>
+            </div>
+          </div>
+        )}
+
+        {/* Notification inbox modal */}
+        {showInbox && (
+          <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",zIndex:500,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 16px"}} onClick={()=>setShowInbox(false)}>
+            <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:480,background:C.bg,borderRadius:20,maxHeight:"70vh",overflow:"hidden",display:"flex",flexDirection:"column",boxShadow:"0 8px 40px rgba(0,0,0,0.6)"}}>
+              <div style={{padding:"16px 16px 12px",borderBottom:`1px solid ${C.b2}`,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                <div style={{fontWeight:800,fontSize:17,color:C.text}}>🔔 Notifications</div>
+                <div style={{display:"flex",gap:10,alignItems:"center"}}>
+                  {inbox.length>0 && <button onClick={()=>{
+                    const cleared=[];
+                    setInbox(cleared);
+                    try{localStorage.setItem("wc2026_inbox",JSON.stringify(cleared));}catch{}
+                  }} style={{fontSize:11,color:C.dim,background:"none",border:"none",cursor:"pointer"}}>Clear all</button>}
+                  <button onClick={()=>setShowInbox(false)} style={{fontSize:18,color:C.dim,background:"none",border:"none",cursor:"pointer"}}>✕</button>
+                </div>
+              </div>
+              <div style={{overflowY:"auto",flex:1,padding:"8px 0"}}>
+                {inbox.length===0 ? (
+                  <div style={{padding:"40px 20px",textAlign:"center",color:C.dim}}>
+                    <div style={{fontSize:32,marginBottom:8}}>{masterPushSubscribed && saved.length>0 ? "⏳" : "🔕"}</div>
+                    <div style={{fontSize:14,color:C.mid,fontWeight:600}}>No notifications yet</div>
+                    <div style={{fontSize:12,marginTop:6,lineHeight:1.6,color:C.dim}}>
+                      {masterPushSubscribed && saved.length>0
+                        ? "You're all set! Notifications will appear here when a saved match is about to kick off."
+                        : saved.length>0
+                        ? <>Tap <strong style={{color:C.gold}}>"Notify all"</strong> in My Matches to enable kickoff alerts.</>
+                        : "Save matches and enable notifications to get kickoff alerts."}
+                    </div>
+                  </div>
+                ) : inbox.map((msg,i) => {
+                  const isUnread = !msg.read;
+                  if (isUnread) {
+                    const updated = [...inbox];
+                    updated[i] = {...msg, read:true};
+                    setTimeout(()=>{
+                      setInbox(updated);
+                      try{localStorage.setItem("wc2026_inbox",JSON.stringify(updated));}catch{}
+                    }, 500);
+                  }
+                  return (
+                    <div key={msg.id} style={{padding:"12px 16px",borderBottom:`1px solid ${C.b1}`,background:isUnread?`${C.gold}08`:"transparent",display:"flex",gap:12,alignItems:"flex-start"}}>
+                      <span style={{fontSize:22,flexShrink:0}}>⚽</span>
+                      <div style={{flex:1}}>
+                        <div style={{fontWeight:700,fontSize:14,color:C.text}}>{msg.title}</div>
+                        <div style={{fontSize:12,color:C.mid,marginTop:3,lineHeight:1.5}}>{msg.body}</div>
+                        <div style={{fontSize:10,color:C.dim,marginTop:4}}>{new Date(msg.receivedAt).toLocaleString()}</div>
+                      </div>
+                      {isUnread && <span style={{width:8,height:8,borderRadius:"50%",background:C.gold,flexShrink:0,marginTop:4}}/>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
       </FavCtx.Provider>
       </ThemeCtx.Provider>

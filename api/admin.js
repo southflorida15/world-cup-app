@@ -410,6 +410,66 @@ export default async function handler(req, res) {
       if (req.body.adminAction === "send-push-user") {
         return res.status(200).json(await sendPushToUser(req.body, req));
       }
+
+      // League management
+      if (req.body.adminAction === "league-list") {
+        let cursor = 0; const keys = [];
+        do { const [next, batch] = await kv.scan(cursor, { match: "league:*", count: 100 }); cursor = parseInt(next)||0; keys.push(...batch); } while (cursor !== 0);
+        const leagues = (await Promise.all(keys.map(k => kv.get(k).catch(() => null)))).filter(Boolean);
+        return res.status(200).json({ ok: true, leagues });
+      }
+      if (req.body.adminAction === "league-migrate") {
+        const { code, leagueName } = req.body;
+        if (!code) return res.status(400).json({ error: "code required" });
+        let league = await kv.get(`league:${code}`).catch(() => null) || { code, name: leagueName||code, ownerPin:"000000", ownerUid:"system", members:[], createdAt:Date.now() };
+        // Scan pin: keys to get PIN→UID mapping
+        let cursor = 0; const pinKeys = [];
+        do { const [next, batch] = await kv.scan(cursor, { match: "pin:*", count: 100 }); cursor = parseInt(next)||0; pinKeys.push(...batch); } while (cursor !== 0);
+        let added = 0;
+        for (const key of pinKeys) {
+          const profile = await kv.get(key).catch(() => null);
+          if (!profile?.uid) continue;
+          const pin = key.replace("pin:", "");
+          if (isNaN(parseInt(pin))) continue; // skip non-numeric keys
+          const user = await kv.get(`user:${profile.uid}`).catch(() => null);
+          if (!user?.name) continue; // skip users without a display name
+          if (league.members.some(m => m.uid === profile.uid)) continue;
+          league.members.push({ uid: profile.uid, pin: String(pin), name: user.name, joinedAt: Date.now() });
+          const myLeagues = await kv.get(`pin-leagues:${pin}`).catch(() => []) || [];
+          if (!myLeagues.includes(code)) { myLeagues.push(code); await kv.set(`pin-leagues:${pin}`, myLeagues); }
+          added++;
+        }
+        await kv.set(`league:${code}`, league);
+        return res.status(200).json({ ok: true, code, added, total: league.members.length });
+      }
+      if (req.body.adminAction === "league-add") {
+        const { targetPin, code } = req.body;
+        if (!targetPin || !code) return res.status(400).json({ error: "targetPin and code required" });
+        const profile = await kv.get(`pin:${targetPin}`).catch(() => null);
+        if (!profile?.uid) return res.status(404).json({ error: "PIN not found" });
+        const user = await kv.get(`user:${profile.uid}`).catch(() => null);
+        const league = await kv.get(`league:${code}`).catch(() => null);
+        if (!league) return res.status(404).json({ error: "League not found" });
+        if (!league.members.some(m => m.uid === profile.uid)) {
+          league.members.push({ uid: profile.uid, pin: String(targetPin), name: user?.name||"Unknown", joinedAt: Date.now() });
+          await kv.set(`league:${code}`, league);
+        }
+        const myLeagues = await kv.get(`pin-leagues:${targetPin}`).catch(() => []) || [];
+        if (!myLeagues.includes(code)) { myLeagues.push(code); await kv.set(`pin-leagues:${targetPin}`, myLeagues); }
+        return res.status(200).json({ ok: true });
+      }
+      if (req.body.adminAction === "league-remove") {
+        const { targetPin, code } = req.body;
+        if (!targetPin || !code) return res.status(400).json({ error: "targetPin and code required" });
+        const profile = await kv.get(`pin:${targetPin}`).catch(() => null);
+        const league = await kv.get(`league:${code}`).catch(() => null);
+        if (!league) return res.status(404).json({ error: "League not found" });
+        if (profile?.uid) league.members = league.members.filter(m => m.uid !== profile.uid);
+        await kv.set(`league:${code}`, league);
+        const myLeagues = (await kv.get(`pin-leagues:${targetPin}`).catch(() => []) || []).filter(c => c !== code);
+        await kv.set(`pin-leagues:${targetPin}`, myLeagues);
+        return res.status(200).json({ ok: true });
+      }
       return res.status(400).json({ error: "unknown adminAction" });
     } catch (err) {
       console.error("[admin action] error:", err.message);

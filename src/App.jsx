@@ -3990,6 +3990,494 @@ function useDebounce(fn, ms) {
   }, [fn, ms]);
 }
 
+// ── SINGLE LEAGUE VIEW ────────────────────────────────────────────────────
+function SingleLeagueView({ league, pin, fantasyUserId, userStats, leagueBoard, boardLoading, activeLeague, fetchLeagueBoard, copied, copyCode, inviteCopied, shareInviteLink, handleLeave, onBack }) {
+  const isOwner = league.ownerPin === String(pin);
+  if (!activeLeague || activeLeague.code !== league.code) {
+    fetchLeagueBoard(league.code);
+    return <div style={{textAlign:"center",padding:"32px 0"}}><div style={{width:24,height:24,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto"}}/></div>;
+  }
+  const myEntry = leagueBoard.find(e => e.uid === fantasyUserId);
+  const myRank = myEntry ? leagueBoard.indexOf(myEntry) + 1 : null;
+  return (
+    <div>
+      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
+        {onBack && <button onClick={onBack} style={{background:"none",border:"none",color:C.mid,fontSize:22,cursor:"pointer",padding:0}}>‹</button>}
+        <div style={{flex:1}}>
+          <div style={{fontWeight:800,fontSize:16,color:C.text}}>{league.name}</div>
+          <div style={{fontSize:11,color:C.dim}}>{league.members.length} member{league.members.length!==1?"s":""}</div>
+        </div>
+        {myRank && <div style={{background:`${C.gold}18`,border:`1px solid ${C.gold}44`,borderRadius:10,padding:"5px 10px",textAlign:"center"}}>
+          <div style={{fontSize:10,color:C.dim}}>RANK</div>
+          <div style={{fontSize:16,fontWeight:900,color:C.gold}}>#{myRank}</div>
+        </div>}
+      </div>
+      {myEntry && (
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:14}}>
+          {[
+            {val:myEntry.pts, lbl:"POINTS", color:C.green},
+            {val:myEntry.exact, lbl:"EXACT", color:C.gold},
+            {val:myEntry.correct, lbl:"CORRECT", color:C.blue},
+            {val:userStats?.total?Math.round((myEntry.correct/userStats.total)*100)+"%":"—", lbl:"ACCURACY", color:C.mid},
+          ].map(s => (
+            <div key={s.lbl} style={{background:C.s1,border:`1px solid ${C.b2}`,borderRadius:10,padding:"10px 6px",textAlign:"center"}}>
+              <div style={{fontSize:22,fontWeight:900,color:s.color}}>{s.val}</div>
+              <div style={{fontSize:9,color:C.dim,marginTop:2,fontWeight:700,letterSpacing:"0.08em"}}>{s.lbl}</div>
+            </div>
+          ))}
+        </div>
+      )}
+      <div style={{background:C.s1,border:`1px solid ${C.b2}`,borderRadius:12,padding:"12px 14px",marginBottom:14}}>
+        <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.08em",marginBottom:8}}>📨 INVITE FRIENDS</div>
+        <div style={{display:"flex",gap:8}}>
+          <div style={{flex:1,background:C.s2,border:`1px solid ${C.b2}`,borderRadius:8,padding:"8px 12px",display:"flex",alignItems:"center",gap:8}}>
+            <span style={{fontSize:11,color:C.dim}}>Code:</span>
+            <span style={{fontSize:14,fontWeight:800,color:C.blue,letterSpacing:"0.15em"}}>{league.code}</span>
+          </div>
+          <button onClick={()=>copyCode(league.code)} style={{padding:"8px 12px",background:`${C.blue}18`,border:`1px solid ${C.blue}44`,borderRadius:8,color:C.blue,fontSize:11,fontWeight:700,cursor:"pointer"}}>{copied?"✓":"📋"}</button>
+          <button onClick={()=>shareInviteLink(league)} style={{padding:"8px 12px",background:`${C.green}18`,border:`1px solid ${C.green}44`,borderRadius:8,color:C.green,fontSize:11,fontWeight:700,cursor:"pointer"}}>{inviteCopied?"✓ Copied!":"🔗 Invite"}</button>
+        </div>
+      </div>
+      {boardLoading ? (
+        <div style={{textAlign:"center",padding:"32px 0"}}><div style={{width:24,height:24,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto"}}/></div>
+      ) : leagueBoard.map((entry, i) => {
+        const isMe = entry.uid === fantasyUserId;
+        const medal = i===0?"🥇":i===1?"🥈":i===2?"🥉":null;
+        return (
+          <Card key={entry.uid} style={{marginBottom:7,border:`1px solid ${isMe?C.gold:C.b1}`,background:isMe?`linear-gradient(135deg,${C.gold}0a,${C.s1})`:""}}>
+            <div style={{padding:"10px 13px",display:"flex",alignItems:"center",gap:10}}>
+              <div style={{fontSize:18,width:28,textAlign:"center"}}>{medal||<span style={{color:C.dim,fontSize:13}}>#{i+1}</span>}</div>
+              <div style={{flex:1}}>
+                <div style={{fontWeight:700,color:isMe?C.gold:C.text,fontSize:13}}>{entry.name}{isMe?" (you)":""}</div>
+                <div style={{fontSize:11,color:C.dim}}>{entry.correct} correct · {entry.exact} exact</div>
+              </div>
+              <div style={{textAlign:"right"}}>
+                <div style={{fontWeight:900,fontSize:18,color:isMe?C.gold:C.green}}>{entry.pts}</div>
+                <div style={{fontSize:10,color:C.dim}}>pts</div>
+              </div>
+            </div>
+          </Card>
+        );
+      })}
+      <div style={{display:"flex",gap:8,marginTop:12}}>
+        <button onClick={()=>fetchLeagueBoard(league.code)} style={{flex:1,padding:"9px",borderRadius:10,border:`1px solid ${C.b2}`,background:C.s2,color:C.mid,fontSize:12,fontWeight:700,cursor:"pointer"}}>↻ Refresh</button>
+        {!isOwner && <button onClick={()=>handleLeave(league.code)} style={{padding:"9px 14px",borderRadius:10,border:`1px solid ${C.red}44`,background:`${C.red}12`,color:C.red,fontSize:12,fontWeight:700,cursor:"pointer"}}>Leave</button>}
+      </div>
+    </div>
+  );
+}
+
+// ── LEAGUES PANEL ─────────────────────────────────────────────────────────
+function LeaguesPanel({ pin, fantasyUserId, syncProfile, userStats }) {
+  const [leagues, setLeagues] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [screen, setScreen] = useState("list");
+  const [activeLeague, setActiveLeague] = useState(null);
+  const [leagueBoard, setLeagueBoard] = useState([]);
+  const [boardLoading, setBoardLoading] = useState(false);
+  const [createName, setCreateName] = useState("");
+  const [joinCode, setJoinCode] = useState("");
+  const [error, setError] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [joining, setJoining] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [inviteCopied, setInviteCopied] = useState(false);
+
+  const [showGlobal, setShowGlobal] = useState(false);
+  const [globalBoard, setGlobalBoard] = useState([]);
+  const [globalLoading, setGlobalLoading] = useState(false);
+
+  const fetchGlobalBoard = async () => {
+    setGlobalLoading(true);
+    try {
+      const r = await fetch("/api/predictor?action=leaderboard");
+      const d = await r.json();
+      setGlobalBoard(Array.isArray(d) ? d : []);
+    } catch(e) {}
+    setGlobalLoading(false);
+  };
+
+  const fetchMyLeagues = async () => {
+    setLoading(true);
+    try {
+      const r = await fetch(`/api/league?pin=${pin}`);
+      const d = await r.json();
+      setLeagues(d.leagues || []);
+    } catch(e) {}
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchMyLeagues(); }, [pin]);
+
+  const fetchLeagueBoard = async (code) => {
+    setBoardLoading(true);
+    try {
+      const r = await fetch(`/api/league?code=${code}`);
+      const d = await r.json();
+      setActiveLeague(d.league);
+      setLeagueBoard(d.leaderboard || []);
+    } catch(e) {}
+    setBoardLoading(false);
+  };
+
+  const handleCreate = async () => {
+    if (!createName.trim()) { setError("Enter a league name"); return; }
+    setCreating(true); setError("");
+    try {
+      const r = await fetch("/api/league?action=create", {
+        method: "POST", headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ pin, name: createName.trim() })
+      });
+      const d = await r.json();
+      if (!d.ok) { setError(d.error || "Failed"); setCreating(false); return; }
+      await fetchMyLeagues();
+      // Show the new league immediately
+      setActiveLeague(d.league);
+      setLeagueBoard([]);
+      await fetchLeagueBoard(d.code);
+      setScreen("view");
+      setCreateName("");
+    } catch(e) { setError("Error creating league"); }
+    setCreating(false);
+  };
+
+  const handleJoin = async () => {
+    if (!joinCode.trim()) { setError("Enter a league code"); return; }
+    setJoining(true); setError("");
+    try {
+      const r = await fetch("/api/league?action=join", {
+        method: "POST", headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ pin, code: joinCode.trim().toUpperCase() })
+      });
+      const d = await r.json();
+      if (!d.ok) { setError(d.error || "League not found"); setJoining(false); return; }
+      await fetchMyLeagues();
+      await fetchLeagueBoard(d.code);
+      setScreen("view");
+      setJoinCode("");
+    } catch(e) { setError("Error joining league"); }
+    setJoining(false);
+  };
+
+  const handleLeave = async (code) => {
+    if (!confirm("Leave this league?")) return;
+    try {
+      await fetch("/api/league?action=leave", {
+        method: "POST", headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ pin, code })
+      });
+      await fetchMyLeagues();
+      setScreen("list");
+    } catch(e) {}
+  };
+
+  const copyCode = (code) => {
+    navigator.clipboard.writeText(code).catch(() => {});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const copyInviteLink = (code) => {
+    const url = `${window.location.origin}/?join=${code}`;
+    navigator.clipboard.writeText(url).catch(() => {});
+    setInviteCopied(true);
+    setTimeout(() => setInviteCopied(false), 2000);
+  };
+
+  const shareInviteLink = async (league) => {
+    const url = `${window.location.origin}/?join=${league.code}`;
+    const text = `Join my league "${league.name}" on the WC 2026 Fantasy Picks app! 🏆⚽`;
+    if (navigator.share) {
+      try { await navigator.share({ title: "Join my WC 2026 Fantasy League", text, url }); return; } catch(e) {}
+    }
+    copyInviteLink(league.code);
+  };
+
+  // ── VIEW: League leaderboard ──
+  if (screen === "view" && activeLeague) {
+    const isOwner = activeLeague.ownerPin === String(pin);
+    const myEntry = leagueBoard.find(e => e.uid === fantasyUserId);
+    const myRank = myEntry ? leagueBoard.indexOf(myEntry) + 1 : null;
+
+    return (
+      <div>
+        {/* Create/Join pills */}
+        <div style={{display:"flex",gap:8,marginBottom:16,paddingBottom:14,borderBottom:`1px solid ${C.b2}`}}>
+          <button onClick={()=>{setScreen("create");setError("");}} style={{flex:1,padding:"9px",borderRadius:10,border:`1px solid ${C.blue}44`,background:`${C.blue}12`,color:C.blue,fontSize:12,fontWeight:700,cursor:"pointer"}}>+ Create League</button>
+          <button onClick={()=>{setScreen("join");setError("");}} style={{flex:1,padding:"9px",borderRadius:10,border:`1px solid ${C.green}44`,background:`${C.green}12`,color:C.green,fontSize:12,fontWeight:700,cursor:"pointer"}}>🤝 Join League</button>
+          {leagues.length > 1 && <button onClick={()=>setScreen("list")} style={{flex:1,padding:"9px",borderRadius:10,border:`1px solid ${C.b2}`,background:C.s2,color:C.mid,fontSize:12,fontWeight:700,cursor:"pointer"}}>My Leagues</button>}
+        </div>
+        {/* Header */}
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
+          <div style={{flex:1}}>
+            <div style={{fontWeight:800,fontSize:16,color:C.text}}>{activeLeague.name}</div>
+            <div style={{fontSize:11,color:C.dim}}>{activeLeague.members.length} member{activeLeague.members.length!==1?"s":""}</div>
+          </div>
+          {myRank && <div style={{background:`${C.gold}18`,border:`1px solid ${C.gold}44`,borderRadius:10,padding:"5px 10px",textAlign:"center"}}>
+            <div style={{fontSize:10,color:C.dim}}>YOUR RANK</div>
+            <div style={{fontSize:16,fontWeight:900,color:C.gold}}>#{myRank}</div>
+          </div>}
+        </div>
+
+        {/* My stats */}
+        {myEntry && (
+          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:14}}>
+            {[
+              {val:myEntry.pts, lbl:"POINTS", color:C.green},
+              {val:myEntry.exact, lbl:"EXACT", color:C.gold},
+              {val:myEntry.correct, lbl:"CORRECT", color:C.blue},
+              {val:myEntry.pts&&userStats?.total?Math.round((myEntry.correct/userStats.total)*100)+"%":"—", lbl:"ACCURACY", color:C.mid},
+            ].map(s => (
+              <div key={s.lbl} style={{background:C.s1,border:`1px solid ${C.b2}`,borderRadius:10,padding:"10px 6px",textAlign:"center"}}>
+                <div style={{fontSize:22,fontWeight:900,color:s.color}}>{s.val}</div>
+                <div style={{fontSize:9,color:C.dim,marginTop:2,fontWeight:700,letterSpacing:"0.08em"}}>{s.lbl}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Invite section */}
+        <div style={{background:C.s1,border:`1px solid ${C.b2}`,borderRadius:12,padding:"12px 14px",marginBottom:14}}>
+          <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.08em",marginBottom:8}}>📨 INVITE FRIENDS</div>
+          <div style={{display:"flex",gap:8}}>
+            <div style={{flex:1,background:C.s2,border:`1px solid ${C.b2}`,borderRadius:8,padding:"8px 12px",display:"flex",alignItems:"center",gap:8}}>
+              <span style={{fontSize:11,color:C.dim}}>Code:</span>
+              <span style={{fontSize:14,fontWeight:800,color:C.blue,letterSpacing:"0.15em"}}>{activeLeague.code}</span>
+            </div>
+            <button onClick={()=>copyCode(activeLeague.code)} style={{padding:"8px 12px",background:`${C.blue}18`,border:`1px solid ${C.blue}44`,borderRadius:8,color:C.blue,fontSize:11,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>
+              {copied ? "✓" : "📋 Copy"}
+            </button>
+            <button onClick={()=>shareInviteLink(activeLeague)} style={{padding:"8px 12px",background:`${C.green}18`,border:`1px solid ${C.green}44`,borderRadius:8,color:C.green,fontSize:11,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>
+              {inviteCopied ? "✓ Copied!" : "🔗 Invite"}
+            </button>
+          </div>
+        </div>
+
+        {/* Leaderboard */}
+        {boardLoading ? (
+          <div style={{textAlign:"center",padding:"32px 0"}}><div style={{width:24,height:24,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto"}}/></div>
+        ) : leagueBoard.map((entry, i) => {
+          const isMe = entry.uid === fantasyUserId;
+          const medal = i===0?"🥇":i===1?"🥈":i===2?"🥉":null;
+          return (
+            <Card key={entry.uid} style={{marginBottom:7,border:`1px solid ${isMe?C.gold:C.b1}`,background:isMe?`linear-gradient(135deg,${C.gold}0a,${C.s1})`:""}}>
+              <div style={{padding:"10px 13px",display:"flex",alignItems:"center",gap:10}}>
+                <div style={{fontSize:18,width:28,textAlign:"center"}}>{medal||<span style={{color:C.dim,fontSize:13}}>#{i+1}</span>}</div>
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:700,color:isMe?C.gold:C.text,fontSize:13}}>{entry.name}{isMe?" (you)":""}</div>
+                  <div style={{fontSize:11,color:C.dim}}>{entry.correct} correct · {entry.exact} exact</div>
+                </div>
+                <div style={{textAlign:"right"}}>
+                  <div style={{fontWeight:900,fontSize:18,color:isMe?C.gold:C.green}}>{entry.pts}</div>
+                  <div style={{fontSize:10,color:C.dim}}>pts</div>
+                </div>
+              </div>
+            </Card>
+          );
+        })}
+
+        <div style={{display:"flex",gap:8,marginTop:12}}>
+          <button onClick={()=>fetchLeagueBoard(activeLeague.code)} style={{flex:1,padding:"9px",borderRadius:10,border:`1px solid ${C.b2}`,background:C.s2,color:C.mid,fontSize:12,fontWeight:700,cursor:"pointer"}}>↻ Refresh</button>
+          {!isOwner && <button onClick={()=>handleLeave(activeLeague.code)} style={{padding:"9px 14px",borderRadius:10,border:`1px solid ${C.red}44`,background:`${C.red}12`,color:C.red,fontSize:12,fontWeight:700,cursor:"pointer"}}>Leave</button>}
+        </div>
+      </div>
+    );
+  }
+
+  // ── VIEW: Global league ──
+  if (screen === "global") {
+    const myEntry = globalBoard.find(e => e.userId === fantasyUserId);
+    const myRank = myEntry ? globalBoard.indexOf(myEntry) + 1 : null;
+    return (
+      <div>
+        <div style={{display:"flex",gap:8,marginBottom:16,paddingBottom:14,borderBottom:`1px solid ${C.b2}`}}>
+          <button onClick={()=>{setScreen("create");setError("");}} style={{flex:1,padding:"9px",borderRadius:10,border:`1px solid ${C.blue}44`,background:`${C.blue}12`,color:C.blue,fontSize:12,fontWeight:700,cursor:"pointer"}}>+ Create League</button>
+          <button onClick={()=>{setScreen("join");setError("");}} style={{flex:1,padding:"9px",borderRadius:10,border:`1px solid ${C.green}44`,background:`${C.green}12`,color:C.green,fontSize:12,fontWeight:700,cursor:"pointer"}}>🤝 Join League</button>
+          {leagues.length > 0 && <button onClick={()=>setScreen("list")} style={{flex:1,padding:"9px",borderRadius:10,border:`1px solid ${C.b2}`,background:C.s2,color:C.mid,fontSize:12,fontWeight:700,cursor:"pointer"}}>My Leagues</button>}
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
+          <div style={{flex:1}}>
+            <div style={{fontWeight:800,fontSize:16,color:C.text}}>🌍 Global</div>
+            <div style={{fontSize:11,color:C.dim}}>{globalBoard.length} players</div>
+          </div>
+          {myRank && <div style={{background:`${C.gold}18`,border:`1px solid ${C.gold}44`,borderRadius:10,padding:"5px 10px",textAlign:"center"}}>
+            <div style={{fontSize:10,color:C.dim}}>YOUR RANK</div>
+            <div style={{fontSize:16,fontWeight:900,color:C.gold}}>#{myRank}</div>
+          </div>}
+        </div>
+        {myEntry && (
+          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:14}}>
+            {[
+              {val:myEntry.pts, lbl:"POINTS", color:C.green},
+              {val:myEntry.exact, lbl:"EXACT", color:C.gold},
+              {val:myEntry.correct, lbl:"CORRECT", color:C.blue},
+              {val:userStats?.total?Math.round((myEntry.correct/userStats.total)*100)+"%":"—", lbl:"ACCURACY", color:C.mid},
+            ].map(s => (
+              <div key={s.lbl} style={{background:C.s1,border:`1px solid ${C.b2}`,borderRadius:10,padding:"10px 6px",textAlign:"center"}}>
+                <div style={{fontSize:22,fontWeight:900,color:s.color}}>{s.val}</div>
+                <div style={{fontSize:9,color:C.dim,marginTop:2,fontWeight:700,letterSpacing:"0.08em"}}>{s.lbl}</div>
+              </div>
+            ))}
+          </div>
+        )}
+        {globalLoading ? (
+          <div style={{textAlign:"center",padding:"32px 0"}}><div style={{width:24,height:24,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto"}}/></div>
+        ) : globalBoard.map((entry, i) => {
+          const isMe = entry.userId === fantasyUserId;
+          const medal = i===0?"🥇":i===1?"🥈":i===2?"🥉":null;
+          return (
+            <Card key={entry.userId} style={{marginBottom:7,border:`1px solid ${isMe?C.gold:C.b1}`,background:isMe?`linear-gradient(135deg,${C.gold}0a,${C.s1})`:""}}>
+              <div style={{padding:"10px 13px",display:"flex",alignItems:"center",gap:10}}>
+                <div style={{fontSize:18,width:28,textAlign:"center"}}>{medal||<span style={{color:C.dim,fontSize:13}}>#{i+1}</span>}</div>
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:700,color:isMe?C.gold:C.text,fontSize:13}}>{entry.name}{isMe?" (you)":""}</div>
+                  <div style={{fontSize:11,color:C.dim}}>{entry.correct} correct · {entry.exact} exact</div>
+                </div>
+                <div style={{textAlign:"right"}}>
+                  <div style={{fontWeight:900,fontSize:18,color:isMe?C.gold:C.green}}>{entry.pts}</div>
+                  <div style={{fontSize:10,color:C.dim}}>pts</div>
+                </div>
+              </div>
+            </Card>
+          );
+        })}
+        <div style={{marginTop:12}}>
+          <button onClick={fetchGlobalBoard} style={{width:"100%",padding:"9px",borderRadius:10,border:`1px solid ${C.b2}`,background:C.s2,color:C.mid,fontSize:12,fontWeight:700,cursor:"pointer"}}>↻ Refresh</button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── VIEW: Create league ──
+  if (screen === "create") {
+    return (
+      <div>
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
+          <button onClick={()=>{setScreen("list");setError("");}} style={{background:"none",border:"none",color:C.mid,fontSize:22,cursor:"pointer",padding:0}}>‹</button>
+          <div style={{fontWeight:800,fontSize:16,color:C.text}}>Create a League</div>
+        </div>
+        <input value={createName} onChange={e=>setCreateName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&handleCreate()}
+          placeholder="League name (e.g. Office Picks, Family Cup)"
+          autoFocus
+          style={{width:"100%",padding:"12px 14px",background:C.s2,border:`1px solid ${C.b2}`,borderRadius:10,color:C.text,fontSize:14,outline:"none",marginBottom:10,boxSizing:"border-box"}}/>
+        {error && <div style={{color:C.red,fontSize:12,marginBottom:8}}>{error}</div>}
+        <button onClick={handleCreate} disabled={creating} style={{width:"100%",padding:"13px",background:`linear-gradient(135deg,${C.blue},#3b82f6)`,border:"none",borderRadius:10,color:"white",fontSize:15,fontWeight:800,cursor:"pointer",opacity:creating?0.6:1,marginBottom:10}}>
+          {creating ? "Creating..." : "🏆 Create League"}
+        </button>
+        <div style={{fontSize:11,color:C.dim,textAlign:"center"}}>A 6-character invite code will be generated. Share it with friends to join.</div>
+      </div>
+    );
+  }
+
+  // ── VIEW: Join league ──
+  if (screen === "join") {
+    return (
+      <div>
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
+          <button onClick={()=>{setScreen("list");setError("");}} style={{background:"none",border:"none",color:C.mid,fontSize:22,cursor:"pointer",padding:0}}>‹</button>
+          <div style={{fontWeight:800,fontSize:16,color:C.text}}>Join a League</div>
+        </div>
+        <input value={joinCode} onChange={e=>setJoinCode(e.target.value.toUpperCase())} placeholder="6-CHARACTER CODE"
+          maxLength={6} autoFocus
+          style={{width:"100%",padding:"12px 14px",background:C.s2,border:`1px solid ${C.b2}`,borderRadius:10,color:C.text,fontSize:22,fontWeight:800,letterSpacing:"0.25em",outline:"none",marginBottom:10,textAlign:"center",boxSizing:"border-box"}}/>
+        {error && <div style={{color:C.red,fontSize:12,marginBottom:8,textAlign:"center"}}>{error}</div>}
+        <button onClick={handleJoin} disabled={joining} style={{width:"100%",padding:"13px",background:`linear-gradient(135deg,${C.green},#22c55e)`,border:"none",borderRadius:10,color:"#030a05",fontSize:15,fontWeight:800,cursor:"pointer",opacity:joining?0.6:1}}>
+          {joining ? "Joining..." : "🤝 Join League"}
+        </button>
+      </div>
+    );
+  }
+
+  // ── VIEW: League list ──
+  return (
+    <div>
+      {loading ? (
+        <div style={{textAlign:"center",padding:"32px 0"}}><div style={{width:24,height:24,border:`3px solid ${C.blue}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto"}}/></div>
+      ) : leagues.length === 0 ? (
+        // No leagues — big centered CTA with Global card
+        <div>
+          {/* Global league always shown */}
+          <Card style={{marginBottom:16,cursor:"pointer"}} onClick={()=>{ fetchGlobalBoard(); setScreen("global"); }}>
+            <div style={{padding:"12px 14px",display:"flex",alignItems:"center",gap:12}}>
+              <div style={{fontSize:28}}>🌍</div>
+              <div style={{flex:1}}>
+                <div style={{fontWeight:700,fontSize:14,color:C.text}}>Global</div>
+                <div style={{fontSize:11,color:C.dim,marginTop:2}}>All players · open ranking</div>
+              </div>
+              <span style={{color:C.dim,fontSize:18}}>›</span>
+            </div>
+          </Card>
+          <div style={{textAlign:"center",padding:"24px 20px"}}>
+            <div style={{fontSize:36,marginBottom:8}}>🏆</div>
+            <div style={{fontSize:14,color:C.text,fontWeight:700,marginBottom:4}}>No private leagues yet</div>
+            <div style={{fontSize:12,color:C.dim,marginBottom:24}}>Create a league and invite friends, or join one with a code.</div>
+            <div style={{display:"flex",gap:10}}>
+              <button onClick={()=>{setScreen("create");setError("");}} style={{flex:1,padding:"12px",borderRadius:12,border:"none",background:`linear-gradient(135deg,${C.blue},#3b82f6)`,color:"white",fontSize:13,fontWeight:800,cursor:"pointer"}}>+ Create a League</button>
+              <button onClick={()=>{setScreen("join");setError("");}} style={{flex:1,padding:"12px",borderRadius:12,border:`1px solid ${C.green}44`,background:`${C.green}12`,color:C.green,fontSize:13,fontWeight:700,cursor:"pointer"}}>🤝 Join a League</button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Create/Join pills — always visible at top, visually separated */}
+          <div style={{display:"flex",gap:8,marginBottom:20,paddingBottom:16,borderBottom:`1px solid ${C.b2}`}}>
+            <button onClick={()=>{setScreen("create");setError("");}} style={{flex:1,padding:"10px",borderRadius:10,border:`1px solid ${C.blue}44`,background:`${C.blue}12`,color:C.blue,fontSize:13,fontWeight:700,cursor:"pointer"}}>+ Create League</button>
+            <button onClick={()=>{setScreen("join");setError("");}} style={{flex:1,padding:"10px",borderRadius:10,border:`1px solid ${C.green}44`,background:`${C.green}12`,color:C.green,fontSize:13,fontWeight:700,cursor:"pointer"}}>🤝 Join League</button>
+          </div>
+
+          {/* If only 1 league — auto-show it directly */}
+          {/* Global league card always at top */}
+          <Card style={{marginBottom:10,cursor:"pointer"}} onClick={()=>{ fetchGlobalBoard(); setScreen("global"); }}>
+            <div style={{padding:"12px 14px",display:"flex",alignItems:"center",gap:12}}>
+              <div style={{fontSize:28}}>🌍</div>
+              <div style={{flex:1}}>
+                <div style={{fontWeight:700,fontSize:14,color:C.text}}>Global</div>
+                <div style={{fontSize:11,color:C.dim,marginTop:2}}>All players · open ranking</div>
+              </div>
+              <span style={{color:C.dim,fontSize:18}}>›</span>
+            </div>
+          </Card>
+
+          {/* If only 1 league — auto-show it directly */}
+          {leagues.length === 1 && (
+            <SingleLeagueView
+              league={leagues[0]}
+              pin={pin}
+              fantasyUserId={fantasyUserId}
+              userStats={userStats}
+              leagueBoard={leagueBoard}
+              boardLoading={boardLoading}
+              activeLeague={activeLeague}
+              fetchLeagueBoard={fetchLeagueBoard}
+              copied={copied}
+              copyCode={copyCode}
+              inviteCopied={inviteCopied}
+              shareInviteLink={shareInviteLink}
+              handleLeave={handleLeave}
+            />
+          )}
+          {leagues.length > 1 && (
+            <>
+              {leagues.map(league => (
+                <Card key={league.code} style={{marginBottom:10,cursor:"pointer"}} onClick={()=>{ fetchLeagueBoard(league.code); setScreen("view"); }}>
+                  <div style={{padding:"12px 14px",display:"flex",alignItems:"center",gap:12}}>
+                    <div style={{fontSize:28}}>🏆</div>
+                    <div style={{flex:1}}>
+                      <div style={{fontWeight:700,fontSize:14,color:C.text}}>{league.name}</div>
+                      <div style={{fontSize:11,color:C.dim,marginTop:2}}>{league.members.length} member{league.members.length!==1?"s":""} · <span style={{color:C.blue,fontWeight:700,letterSpacing:"0.1em"}}>{league.code}</span></div>
+                      {league.ownerPin===String(pin) && <div style={{fontSize:10,color:C.gold,marginTop:2}}>👑 You created this</div>}
+                    </div>
+                    <span style={{color:C.dim,fontSize:18}}>›</span>
+                  </div>
+                </Card>
+              ))}
+            </>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
 function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, userAvatar=null }) {
   const { getScore, isFinished } = useContext(LiveScoresCtx);
   const { favTeam, favTeams=[] } = useContext(FavCtx);
@@ -4293,6 +4781,7 @@ return (
         <Pill active={filter==="finished"} onClick={()=>setFilter("finished")} color={C.gold}>Scored ({finished.length})</Pill>
         {favTeams?.length > 0 && <Pill active={filter==="fav"} onClick={()=>setFilter("fav")} color={C.gold}>⭐ My Teams</Pill>}
         <Pill active={filter==="board"} onClick={()=>setFilter("board")} color={C.rival}>🏅 Rankings</Pill>
+        {syncProfile?.pin && <Pill active={filter==="leagues"} onClick={()=>setFilter("leagues")} color={C.blue}>🏆 Leagues</Pill>}
       </div>
 
       {/* ── LEADERBOARD ── */}
@@ -4338,8 +4827,13 @@ return (
         </div>
       )}
 
+      {/* ── LEAGUES ── */}
+      {filter==="leagues" && syncProfile?.pin && (
+        <LeaguesPanel pin={syncProfile.pin} fantasyUserId={fantasyUserId} syncProfile={syncProfile} userStats={{total: finished.length}}/>
+      )}
+
       {/* ── MATCH LIST ── */}
-      {filter !== "board" && (
+      {filter !== "board" && filter !== "leagues" && (
         <>
           {shownMatches.length===0 && (
             <div style={{textAlign:"center",padding:"32px 20px",color:C.dim}}>
@@ -5746,6 +6240,159 @@ function PullToRefresh({ onRefresh, children }) {
   );
 }
 
+// ── LEAGUE INVITE ONBOARDING ──────────────────────────────────────────────
+function LeagueInviteOnboarding({ leagueCode, leagueName, onDone }) {
+  const [step, setStep] = useState(0); // 0=welcome 1=name 2=pin 3=favs 4=notifs 5=picks 6=done
+  const [displayName, setDisplayName] = useState("");
+  const [pin, setPin] = useState("");
+  const [pin2, setPin2] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [joined, setJoined] = useState(false);
+  const syncUid = useState(() => {
+    try { let id=localStorage.getItem("wc2026_uid"); if(!id){id=crypto.randomUUID();localStorage.setItem("wc2026_uid",id);} return id; } catch { return crypto.randomUUID(); }
+  })[0];
+
+  const steps = ["Welcome","Your Name","Create PIN","Notifications","Done"];
+
+  const handleName = async () => {
+    if (!displayName.trim()) { setError("Enter your name"); return; }
+    setError(""); setStep(2);
+  };
+
+  const handlePin = async () => {
+    if (pin.length < 4) { setError("PIN must be at least 4 digits"); return; }
+    if (pin !== pin2) { setError("PINs don't match"); return; }
+    setError(""); setLoading(true);
+    try {
+      // Register user
+      await fetch("/api/predictor?action=register", {
+        method: "POST", headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ userId: syncUid, name: displayName.trim() })
+      });
+      // Save PIN via sync
+      await fetch("/api/sync?action=save-pin", {
+        method: "POST", headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ uid: syncUid, pin, displayName: displayName.trim() })
+      });
+      // Auto-join the league
+      await fetch("/api/league?action=join", {
+        method: "POST", headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ pin, code: leagueCode })
+      });
+      setJoined(true);
+      setStep(3);
+    } catch(e) { setError("Something went wrong. Try again."); }
+    setLoading(false);
+  };
+
+  const handleNotifs = async () => {
+    try {
+      const perm = await Notification.requestPermission();
+      if (perm === "granted" && navigator.serviceWorker) {
+        const reg = await navigator.serviceWorker.ready;
+        let sub = await reg.pushManager.getSubscription();
+        if (!sub) sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array("BHlG2j1aEN_PheVmM_kw6eG5ho26LSMdtxSVEjiz9HnYqKTWWlOrdFdX-U3qUqR-VLxDrvOBik17FS7NJ1kJdr8")
+        });
+        await fetch("/api/push?action=subscribe", {
+          method: "POST", headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({ subscription: sub.toJSON(), matches: [], uid: syncUid, pin })
+        });
+      }
+    } catch(e) {}
+    setStep(4);
+  };
+
+  const C2 = { bg:"#060e0a", s1:"#0c1a12", s2:"#112618", b2:"#234833", green:"#4ade80", gold:"#fbbf24", blue:"#60a5fa", text:"#d4ead9", mid:"#7aaa8a", dim:"#3d6a4d" };
+
+  const screenStyle = {position:"fixed",inset:0,background:C2.bg,zIndex:9100,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"0 28px"};
+
+  if (step === 0) return (
+    <div style={screenStyle}>
+      <div style={{fontSize:64,marginBottom:20}}>🏆</div>
+      <div style={{fontSize:22,fontWeight:800,color:C2.text,textAlign:"center",marginBottom:10}}>You've been invited!</div>
+      <div style={{fontSize:15,color:C2.mid,textAlign:"center",lineHeight:1.6,marginBottom:8}}>
+        Join <strong style={{color:C2.gold}}>{leagueName || leagueCode}</strong> and compete with friends on the FIFA World Cup 2026 Fantasy Picks.
+      </div>
+      <div style={{fontSize:13,color:C2.dim,textAlign:"center",marginBottom:40}}>Takes less than a minute to set up.</div>
+      <button onClick={()=>setStep(1)} style={{width:"100%",maxWidth:340,padding:"14px",borderRadius:14,border:"none",background:`linear-gradient(135deg,${C2.gold},#f59e0b)`,color:"#030a05",fontWeight:800,fontSize:16,cursor:"pointer",marginBottom:12}}>
+        🤝 Accept Invite
+      </button>
+      <button onClick={onDone} style={{background:"none",border:"none",color:C2.dim,fontSize:13,cursor:"pointer",padding:"8px"}}>Maybe later</button>
+    </div>
+  );
+
+  if (step === 1) return (
+    <div style={screenStyle}>
+      <div style={{width:"100%",maxWidth:340}}>
+        <div style={{fontSize:13,color:C2.dim,marginBottom:4}}>Step 1 of 3</div>
+        <div style={{fontSize:20,fontWeight:800,color:C2.text,marginBottom:6}}>What's your name?</div>
+        <div style={{fontSize:13,color:C2.mid,marginBottom:24}}>This is how you'll appear on the league leaderboard.</div>
+        <input value={displayName} onChange={e=>setDisplayName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&handleName()}
+          placeholder="Your name" autoFocus
+          style={{width:"100%",padding:"13px 16px",background:C2.s2,border:`1px solid ${C2.b2}`,borderRadius:12,color:C2.text,fontSize:16,outline:"none",marginBottom:error?8:20,boxSizing:"border-box"}}/>
+        {error && <div style={{color:"#f87171",fontSize:12,marginBottom:12}}>{error}</div>}
+        <button onClick={handleName} style={{width:"100%",padding:"14px",borderRadius:14,border:"none",background:`linear-gradient(135deg,${C2.green},#22c55e)`,color:"#030a05",fontWeight:800,fontSize:16,cursor:"pointer"}}>
+          Continue →
+        </button>
+      </div>
+    </div>
+  );
+
+  if (step === 2) return (
+    <div style={screenStyle}>
+      <div style={{width:"100%",maxWidth:340}}>
+        <div style={{fontSize:13,color:C2.dim,marginBottom:4}}>Step 2 of 3</div>
+        <div style={{fontSize:20,fontWeight:800,color:C2.text,marginBottom:6}}>Create your PIN</div>
+        <div style={{fontSize:13,color:C2.mid,marginBottom:24}}>Your PIN syncs your picks and league membership across all your devices.</div>
+        <input value={pin} onChange={e=>setPin(e.target.value.replace(/\D/g,""))} placeholder="Choose a PIN (numbers only)"
+          type="tel" maxLength={8}
+          style={{width:"100%",padding:"13px 16px",background:C2.s2,border:`1px solid ${C2.b2}`,borderRadius:12,color:C2.text,fontSize:20,letterSpacing:"0.2em",outline:"none",marginBottom:10,textAlign:"center",boxSizing:"border-box"}}/>
+        <input value={pin2} onChange={e=>setPin2(e.target.value.replace(/\D/g,""))} placeholder="Confirm PIN"
+          type="tel" maxLength={8}
+          style={{width:"100%",padding:"13px 16px",background:C2.s2,border:`1px solid ${C2.b2}`,borderRadius:12,color:C2.text,fontSize:20,letterSpacing:"0.2em",outline:"none",marginBottom:error?8:20,textAlign:"center",boxSizing:"border-box"}}/>
+        {error && <div style={{color:"#f87171",fontSize:12,marginBottom:12}}>{error}</div>}
+        <button onClick={handlePin} disabled={loading} style={{width:"100%",padding:"14px",borderRadius:14,border:"none",background:`linear-gradient(135deg,${C2.gold},#f59e0b)`,color:"#030a05",fontWeight:800,fontSize:16,cursor:"pointer",opacity:loading?0.6:1}}>
+          {loading ? "Setting up..." : "Create PIN & Join League →"}
+        </button>
+      </div>
+    </div>
+  );
+
+  if (step === 3) return (
+    <div style={screenStyle}>
+      <div style={{width:"100%",maxWidth:340,textAlign:"center"}}>
+        <div style={{fontSize:13,color:C2.dim,marginBottom:4}}>Step 3 of 3</div>
+        <div style={{fontSize:20,fontWeight:800,color:C2.text,marginBottom:6}}>Enable notifications</div>
+        <div style={{fontSize:13,color:C2.mid,marginBottom:32,lineHeight:1.6}}>Get alerts 30 minutes before each match kicks off so you never miss a pick.</div>
+        <button onClick={handleNotifs} style={{width:"100%",padding:"14px",borderRadius:14,border:"none",background:`linear-gradient(135deg,${C2.green},#22c55e)`,color:"#030a05",fontWeight:800,fontSize:16,cursor:"pointer",marginBottom:12}}>
+          🔔 Enable Notifications
+        </button>
+        <button onClick={()=>setStep(4)} style={{background:"none",border:"none",color:C2.dim,fontSize:13,cursor:"pointer",padding:"8px"}}>Skip for now</button>
+      </div>
+    </div>
+  );
+
+  // Step 4 — Done
+  return (
+    <div style={screenStyle}>
+      <div style={{textAlign:"center",maxWidth:340}}>
+        <div style={{fontSize:64,marginBottom:16}}>🎉</div>
+        <div style={{fontSize:22,fontWeight:800,color:C2.text,marginBottom:10}}>You're in!</div>
+        <div style={{fontSize:15,color:C2.mid,lineHeight:1.6,marginBottom:8}}>
+          You've joined <strong style={{color:C2.gold}}>{leagueName || leagueCode}</strong>. Now make your fantasy picks before each match kicks off!
+        </div>
+        <div style={{fontSize:13,color:C2.dim,marginBottom:40}}>Your PIN is <strong style={{color:C2.gold}}>{pin}</strong> — save it to sync across devices.</div>
+        <button onClick={onDone} style={{width:"100%",padding:"14px",borderRadius:14,border:"none",background:`linear-gradient(135deg,${C2.green},#22c55e)`,color:"#030a05",fontWeight:800,fontSize:16,cursor:"pointer"}}>
+          ⚽ Start Making Picks
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── ONBOARDING
 const ONBOARDING_SLIDES = [
   {
@@ -6527,6 +7174,28 @@ export default function App() {
   }, []);
   const [tab, setTab] = useState("live");
   const [masterPushSubscribed, setMasterPushSubscribed] = useState(false);
+
+  // Detect league invite from URL ?join=CODE
+  const [leagueInvite, setLeagueInvite] = useState(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get("join");
+      return code ? code.toUpperCase() : null;
+    } catch { return null; }
+  });
+  const [leagueInviteName, setLeagueInviteName] = useState("");
+  const [showLeagueInvite, setShowLeagueInvite] = useState(false);
+
+  useEffect(() => {
+    if (!leagueInvite) return;
+    // Fetch league name
+    fetch(`/api/league?code=${leagueInvite}`)
+      .then(r=>r.json())
+      .then(d=>{ if(d.league?.name) setLeagueInviteName(d.league.name); setShowLeagueInvite(true); })
+      .catch(()=>setShowLeagueInvite(true));
+    // Clean URL
+    window.history.replaceState({}, "", window.location.pathname);
+  }, [leagueInvite]);
   const [bannerDismissed, setBannerDismissed] = useState(() => {
     try {
       const dismissed = localStorage.getItem("wc2026_push_banner_dismissed");
@@ -6972,6 +7641,13 @@ export default function App() {
         <MatchEventsModal match={eventsModal.match} open={eventsModal.open} onClose={()=>setEventsModal({open:false,match:null})} onAction={onAction} savedIds={savedIds} userPredHg={eventsModal.predHg} userPredAg={eventsModal.predAg}/>
         <Toast msg={toast} onDone={()=>setToast("")}/>
         <InstallBanner/>
+        {showLeagueInvite && leagueInvite && (
+          <LeagueInviteOnboarding
+            leagueCode={leagueInvite}
+            leagueName={leagueInviteName}
+            onDone={()=>{ setShowLeagueInvite(false); setTab("predictor"); }}
+          />
+        )}
 
         {/* Notification prompt banner */}
         {tab==="live" && !bannerDismissed && bannerReady && typeof Notification !== "undefined" && Notification.permission !== "granted" && (

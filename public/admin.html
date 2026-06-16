@@ -242,6 +242,47 @@
       </div>
     </div>
 
+    <!-- League Management -->
+    <div class="section">
+      <div class="section-title collapsible open" onclick="toggle(this)">🏆 League Management <span class="chevron">›</span></div>
+      <div class="collapsible-body" style="display:block">
+      <div class="card">
+
+        <!-- View all leagues -->
+        <div style="font-size:11px;font-weight:700;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">📋 Leagues</div>
+        <div class="tool-row">
+          <button class="admin-btn" data-tip="View all leagues and their members." onclick="doAction('league-list',{},'league-list-result')">View All Leagues</button>
+        </div>
+        <div class="result-box" id="league-list-result"></div>
+
+        <hr class="divider"/>
+
+        <!-- Migrate all users -->
+        <div style="font-size:11px;font-weight:700;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">🔄 Migrate All Fantasy Users</div>
+        <div class="admin-note" style="margin-bottom:8px">Adds all existing fantasy users to a league. Creates the league if it doesn't exist.</div>
+        <div class="input-row">
+          <input id="migrate-code" placeholder="League code (e.g. BRZBRD)" style="text-transform:uppercase"/>
+          <input id="migrate-name" placeholder="League name (e.g. Brazucas em Broward)"/>
+          <button class="admin-btn warn" data-tip="Migrates all fantasy users into this league." onclick="migrateAll()">⚡ Migrate All</button>
+        </div>
+        <div class="result-box" id="migrate-result"></div>
+
+        <hr class="divider"/>
+
+        <!-- Add/Remove user -->
+        <div style="font-size:11px;font-weight:700;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">👤 Add / Remove User</div>
+        <div class="input-row">
+          <input id="league-pin" placeholder="User PIN"/>
+          <input id="league-code" placeholder="League code" style="text-transform:uppercase;max-width:120px"/>
+          <button class="admin-btn" data-tip="Add user to league by PIN." onclick="leagueAdd()">+ Add</button>
+          <button class="admin-btn danger" data-tip="Remove user from league by PIN." onclick="leagueRemove()">− Remove</button>
+        </div>
+        <div class="result-box" id="league-member-result"></div>
+
+      </div>
+      </div>
+    </div>
+
     <!-- Push Notifications -->
     <div class="section">
       <div class="section-title collapsible open" onclick="toggle(this)">🔔 Push Notifications <span class="chevron">›</span></div>
@@ -321,6 +362,29 @@ async function sendPushToUser() {
   const target = pin ? `PIN ${pin}` : `UID ${uid}`;
   if (!confirm(`Send push to ${target}?\n\n"${title}"\n${body}`)) return;
   await doAction("send-push-user", { pin: pin||undefined, uid: uid||undefined, title, body, url }, "push-uid-result");
+}
+
+async function migrateAll() {
+  const code = document.getElementById("migrate-code").value.trim().toUpperCase();
+  const leagueName = document.getElementById("migrate-name").value.trim();
+  if (!code) return alert("Enter a league code");
+  if (!confirm(`Migrate ALL fantasy users to league "${leagueName || code}" (${code})?`)) return;
+  await doAction("league-migrate", { code, leagueName }, "migrate-result");
+}
+
+async function leagueAdd() {
+  const targetPin = document.getElementById("league-pin").value.trim();
+  const code = document.getElementById("league-code").value.trim().toUpperCase();
+  if (!targetPin || !code) return alert("PIN and league code required");
+  await doAction("league-add", { targetPin, code }, "league-member-result");
+}
+
+async function leagueRemove() {
+  const targetPin = document.getElementById("league-pin").value.trim();
+  const code = document.getElementById("league-code").value.trim().toUpperCase();
+  if (!targetPin || !code) return alert("PIN and league code required");
+  if (!confirm(`Remove PIN ${targetPin} from league ${code}?`)) return;
+  await doAction("league-remove", { targetPin, code }, "league-member-result");
 }
 
 function toggle(el) {
