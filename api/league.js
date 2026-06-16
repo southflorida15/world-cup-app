@@ -126,8 +126,13 @@ export default async function handler(req, res) {
     const league = await kv.get(`league:${code.toUpperCase()}`).catch(() => null);
     if (!league) return res.status(404).json({ error: "League not found. Check the code." });
 
-    // Already a member?
+    // Already a member? Still ensure pin-leagues is set
     if (league.members.some(m => m.uid === user.uid)) {
+      const myLeagues = await kv.get(`pin-leagues:${pin}`).catch(() => []) || [];
+      if (!myLeagues.includes(code.toUpperCase())) {
+        myLeagues.push(code.toUpperCase());
+        await kv.set(`pin-leagues:${pin}`, myLeagues);
+      }
       return res.status(200).json({ ok: true, code, league, alreadyMember: true });
     }
 
