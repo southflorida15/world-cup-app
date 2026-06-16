@@ -4482,21 +4482,12 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
   const modalWx = useWeather(modalCity?.lat, modalCity?.lon, !!open && !!modalCity);
 
   useEffect(() => {
-    if (open) {
-      document.body.style.overflow = "hidden";
-      document.body.style.position = "fixed";
-      document.body.style.width = "100%";
-    } else {
-      document.body.style.overflow = "";
-      document.body.style.position = "";
-      document.body.style.width = "";
-    }
     return () => {
       document.body.style.overflow = "";
       document.body.style.position = "";
       document.body.style.width = "";
     };
-  }, [open]);
+  }, []);
 
   useEffect(() => {
     if (!open || !match) return;
@@ -4670,6 +4661,7 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
   return (
     <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",zIndex:1000,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
       <div ref={modalRef} onClick={e=>e.stopPropagation()}
+        onTouchMove={e=>e.stopPropagation()}
         style={{background:C.bg,border:`1px solid ${C.b2}`,borderRadius:"18px 18px 0 0",width:"100%",maxWidth:620,maxHeight:"92vh",overflowY:"auto",overscrollBehavior:"contain",WebkitOverflowScrolling:"touch",paddingBottom:20,position:"relative"}}>
         <button onClick={onClose} style={{position:"absolute",top:12,right:12,zIndex:10,background:"rgba(0,0,0,.4)",border:"none",color:"white",fontSize:22,width:34,height:34,borderRadius:17,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
 
