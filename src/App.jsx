@@ -788,8 +788,9 @@ function Crest({ team, size=26 }) {
 
 // ── UI PRIMITIVES ─────────────────────────────────────────────────────────
 // Shared primitives: use these wherever possible so tabs feel like one product.
-const Card = ({children,style={}}) => (
+const Card = ({children,style={},onClick}) => (
   <div
+    onClick={onClick}
     style={{
       background:C.s1,
       border:DS.border.subtle,
