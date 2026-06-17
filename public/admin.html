@@ -124,7 +124,7 @@
       <div class="collapsible-body" style="display:block">
       <div class="card">
         <div class="tool-row">
-          <button class="admin-btn" onclick="markAdminDevice()">🧪 Mark this device as admin/test</button>
+          <button class="admin-btn" id="admin-device-btn" onclick="markAdminDevice()">🧪 Mark this device as admin/test</button>
           <button class="admin-btn danger" onclick="resetAnalytics()">🗑 Reset Analytics</button>
         </div>
         <div class="admin-note" id="admin-device-note">Mark your devices so your own visits don't count as new users.</div>
@@ -541,19 +541,34 @@ async function sendPush() {
 
 function markAdminDevice() {
   localStorage.setItem("wc2026_disable_analytics", "1");
-  document.getElementById("admin-device-note").textContent = "✅ This browser is now marked as admin/test.";
-  document.getElementById("admin-device-note").style.color = "var(--green)";
+  checkAdminDevice();
+}
+
+function unmarkAdminDevice() {
+  localStorage.removeItem("wc2026_disable_analytics");
+  checkAdminDevice();
 }
 
 function checkAdminDevice() {
   const isAdmin = localStorage.getItem("wc2026_disable_analytics") === "1";
   const note = document.getElementById("admin-device-note");
+  const btn = document.getElementById("admin-device-btn");
   if (isAdmin) {
     note.textContent = "✅ This browser is marked as admin/test — your visits are excluded from analytics.";
     note.style.color = "var(--green)";
+    btn.textContent = "✅ Marked as admin/test (click to unmark)";
+    btn.style.background = "var(--green)";
+    btn.style.color = "#030a05";
+    btn.style.borderColor = "var(--green)";
+    btn.onclick = unmarkAdminDevice;
   } else {
     note.textContent = "Mark your devices so your own visits don't count as new users.";
     note.style.color = "";
+    btn.textContent = "🧪 Mark this device as admin/test";
+    btn.style.background = "";
+    btn.style.color = "";
+    btn.style.borderColor = "";
+    btn.onclick = markAdminDevice;
   }
 }
 
