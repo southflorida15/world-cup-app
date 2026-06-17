@@ -5128,7 +5128,8 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
     }
     if (!hasScore && p1) { params.set("p1", p1.poly); params.set("homePoly", p1.poly); if (p1.odds) params.set("homeOdds", p1.odds); }
     if (!hasScore && p2) { params.set("p2", p2.poly); params.set("awayPoly", p2.poly); if (p2.odds) params.set("awayOdds", p2.odds); }
-    if (keyEvents.length > 0) params.set("events", encodeURIComponent(JSON.stringify(keyEvents)));
+    // Note: events intentionally NOT included — og.js doesn't render them,
+    // and including the JSON bloats the URL well past safe sharing length.
     // Include user's prediction if passed as prop
     if (userPredHg !== undefined && userPredHg !== "" && userPredAg !== undefined && userPredAg !== "") {
       params.set("predHg", userPredHg);
