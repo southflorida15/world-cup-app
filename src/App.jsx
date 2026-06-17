@@ -1108,8 +1108,8 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="",
     const ko = new Date(iso).getTime();
     const msSince = Date.now() - ko;
     if (msSince < -30 * 60 * 1000 || msSince > 15 * 60 * 1000) return false;
-    if (live) return false; // feed confirmed live, switch to live display
-    return true; // within window — show as kicking off regardless of feed
+    if (live) return false;
+    return true;
   })();
 
   // Compact card for matches finished on a previous day (at venue timezone)
@@ -7541,7 +7541,7 @@ export default function App() {
     const iso = MATCH_UTC[m.id];
     if (!iso) return false;
     const msUntil = new Date(iso).getTime() - Date.now();
-    return msUntil >= 0 && msUntil <= 60000; // within 1 minute
+    return msUntil >= 0 && msUntil <= 5 * 60 * 1000; // within 5 minutes
   });
   const savedIds = new Set(saved.map(x=>x.match?.id));
   const onAction=(m)=>{

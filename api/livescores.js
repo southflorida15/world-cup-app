@@ -247,7 +247,15 @@ function mapESPNEvent(event) {
 }
 
 async function fetchFromESPN() {
-  const r = await fetch(`${ESPN_BASE}/scoreboard`, {
+  // Fetch a 3-day window (yesterday, today, tomorrow in UTC) to catch matches
+  // near midnight UTC boundaries that ESPN's default "today" might miss
+  const now = new Date();
+  const fmt = (d) => `${d.getUTCFullYear()}${String(d.getUTCMonth()+1).padStart(2,"0")}${String(d.getUTCDate()).padStart(2,"0")}`;
+  const yesterday = new Date(now); yesterday.setUTCDate(now.getUTCDate() - 1);
+  const tomorrow = new Date(now); tomorrow.setUTCDate(now.getUTCDate() + 1);
+  const dates = `${fmt(yesterday)}-${fmt(tomorrow)}`;
+
+  const r = await fetch(`${ESPN_BASE}/scoreboard?dates=${dates}`, {
     headers: {
       "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
       "Accept": "application/json",
@@ -258,7 +266,7 @@ async function fetchFromESPN() {
   if (!r.ok) throw new Error(`ESPN ${r.status}`);
   const data = await r.json();
   const events = data.events || [];
-  console.log(`[livescores] ESPN: ${events.length} events`);
+  console.log(`[livescores] ESPN: ${events.length} events (dates=${dates})`);
   return events.map(mapESPNEvent).filter(Boolean);
 }
 
