@@ -5089,7 +5089,7 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
 
   if (!match) return null;
 
-  const shareMatch = () => {
+  const shareMatch = async () => {
     const base = window.location.origin;
     const keyEvents = events && events.length > 0
       ? events.filter(ev=>ev.type==="Goal"||ev.type==="Card").slice(0,5)
@@ -5139,22 +5139,20 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
     const title = hasScore
       ? match.home + " " + sc.hg + "-" + sc.ag + " " + match.away + " · World Cup 2026"
       : match.home + " vs " + match.away + " · World Cup 2026";
-    // Trim URL if too long (events JSON can bloat it) — Safari has ~2KB limit
-    const finalUrl = shareUrl.length > 1800
-      ? base + "/api/og?" + new URLSearchParams({
-          home: match.home, away: match.away,
-          ...(hasScore ? {hg: sc.hg, ag: sc.ag} : {}),
-          ...(match.group ? {group: match.group} : {stage: match.stage||"World Cup 2026"}),
-          ...(match.date ? {date: match.date} : {}),
-          ...(localTime ? {time: localTime} : {}),
-          ...(match.venue ? {venue: match.venue.split(",")[0], city: match.venue.split(",").slice(1).join(",").trim()} : {}),
-          ...(modalWx ? {tempF: modalWx.temp, tempC: modalWx.tempC, condition: modalWx.icon || "Match conditions", wind: `${modalWx.wind} mph wind`} : {}),
-          ...(match.tv ? {broadcast: isUS ? match.tv : `${bc.note} ${bc.primary}`} : {}),
-          ...(!finished && simOdds ? {homeSim: simOdds.win1, drawSim: simOdds.draw, awaySim: simOdds.win2} : {}),
-          ...(!hasScore && p1 ? {homePoly: p1.poly, p1: p1.poly, homeOdds: p1.odds || ""} : {}),
-          ...(!hasScore && p2 ? {awayPoly: p2.poly, p2: p2.poly, awayOdds: p2.odds || ""} : {}),
-        }).toString()
-      : shareUrl;
+
+    // Always shorten via the save endpoint so shared links stay small regardless
+    // of how many optional fields (weather, broadcast, odds) are attached.
+    let finalUrl = shareUrl;
+    try {
+      const saveRes = await fetch(base + "/api/og?save=1&" + params.toString());
+      if (saveRes.ok) {
+        const { id } = await saveRes.json();
+        if (id) finalUrl = base + "/api/og?id=" + id;
+      }
+    } catch (err) {
+      console.warn("Short link save failed, falling back to full URL:", err);
+      // finalUrl stays as the full shareUrl above
+    }
 
     const venueName = match.venue ? match.venue.split(",")[0] : "";
     const shareTime = localTime || matchTimes(match).localTime || "";

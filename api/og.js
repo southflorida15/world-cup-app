@@ -2,6 +2,23 @@
 // Shared match page/OG renderer. It expects App.jsx to pass the same data shown in
 // the in-app match modal: teams, flags, group/date/time, venue, weather, broadcast,
 // simulator odds, and Polymarket values.
+//
+// Short-link support: passing ?save=1 with the full param set stores them in KV
+// under a short id and returns {id}. Passing ?id=XXXX on a normal request expands
+// back to the full params before rendering, so shared URLs can stay short
+// (e.g. /api/og?id=ab12cd) instead of carrying every field in the query string.
+
+import { Redis } from "@upstash/redis";
+const kv = new Redis({
+  url: process.env.KV_REST_API_URL,
+  token: process.env.KV_REST_API_TOKEN,
+});
+
+const SHORTLINK_TTL_SECONDS = 60 * 60 * 24 * 45; // 45 days — covers the whole tournament window
+
+function shortId() {
+  return Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-4);
+}
 
 const FLAGS = {
   Brazil:'🇧🇷', Morocco:'🇲🇦', Scotland:'🏴', Haiti:'🇭🇹', Mexico:'🇲🇽', 'South Africa':'🇿🇦', 'South Korea':'🇰🇷', Czechia:'🇨🇿', Canada:'🇨🇦', Qatar:'🇶🇦', Switzerland:'🇨🇭', Spain:'🇪🇸', France:'🇫🇷', Germany:'🇩🇪', Argentina:'🇦🇷', Portugal:'🇵🇹', England:'🏴', Netherlands:'🇳🇱', Uruguay:'🇺🇾', Belgium:'🇧🇪', Japan:'🇯🇵', Australia:'🇦🇺', 'United States':'🇺🇸', Colombia:'🇨🇴', Senegal:'🇸🇳', Ghana:'🇬🇭', Iran:'🇮🇷', Tunisia:'🇹🇳', 'Saudi Arabia':'🇸🇦', Ecuador:'🇪🇨', Paraguay:'🇵🇾', Croatia:'🇭🇷', Sweden:'🇸🇪', Norway:'🇳🇴', Austria:'🇦🇹', Algeria:'🇩🇿', Egypt:'🇪🇬', Panama:'🇵🇦', 'New Zealand':'🇳🇿', Jordan:'🇯🇴', Iraq:'🇮🇶', Uzbekistan:'🇺🇿', Curacao:'🇨🇼', 'Cape Verde':'🇨🇻', 'DR Congo':'🇨🇩', 'Ivory Coast':'🇨🇮'
@@ -32,7 +49,14 @@ function data(req){
     hg:q(req,'hg',''), ag:q(req,'ag','')
   };
 }
-function imgUrl(req){ const u=new URLSearchParams(req.query); u.set('image','1'); if(!u.get('v')) u.set('v',Date.now().toString(36)); return `${base(req)}/api/og?${u}`; }
+function imgUrl(req){
+  // If this request came in via a short id, keep using that id for the image
+  // tag too (the crawler fetching og:image will hit this same expand path).
+  if (req._ogShortId) {
+    return `${base(req)}/api/og?id=${req._ogShortId}&image=1&v=${Date.now().toString(36)}`;
+  }
+  const u=new URLSearchParams(req.query); u.set('image','1'); if(!u.get('v')) u.set('v',Date.now().toString(36)); return `${base(req)}/api/og?${u}`;
+}
 function meta(d){ return [d.group,d.date,d.time].filter(Boolean).join(' • '); }
 function scoreOrVs(d){ return d.hg!==''&&d.ag!=='' ? `${d.hg}–${d.ag}` : 'VS'; }
 
@@ -92,4 +116,42 @@ if(d.broadcast){
   </style></head><body><main class="wrap"><div class="brand"><small>FIFA</small><div class="wc">WORLD CUP</div><div class="yr">2026</div></div><section class="hero"><div class="meta">${esc(meta(d)||'World Cup 2026')}</div><div class="teams"><div class="team"><div class="flag">${esc(d.homeFlag)}</div><div class="name">${esc(d.home)}</div></div><div><div class="vs">${esc(scoreOrVs(d))}</div><div class="status">${esc(String(d.status).toUpperCase())}</div></div><div class="team"><div class="flag">${esc(d.awayFlag)}</div><div class="name">${esc(d.away)}</div></div></div></section><div class="details">${rows.map(r=>{const inner=`<div class="ico">${r[0]}</div><div><div class="label">${esc(r[1])}</div><div class="value">${esc(r[2])}</div>${r[3]?`<div class="sub">${esc(r[3])}</div>`:''}</div><div>${r[4]?'›':''}</div>`;return r[4]?`<a class="row" href="${esc(r[4])}" target="_blank" rel="noopener">${inner}</a>`:`<div class="row">${inner}</div>`}).join('')}</div><div class="actions"><a class="btn primary" href="${esc(base(req))}">⚽ Open App</a><button class="btn" onclick="navigator.share?navigator.share({title:${JSON.stringify(title)},text:${JSON.stringify(desc)},url:location.href}):navigator.clipboard.writeText(location.href)">📤 Share</button></div><div class="install"><strong>Don’t have the app?</strong><br/>iPhone: Safari → Share ↑ → Add to Home Screen<br/>Android: Chrome → ⋯ → Add to Home Screen</div></main></body></html>`;
 }
 
-export default function handler(req,res){ const d=data(req); if(q(req,'image')==='1'){res.setHeader('Content-Type','image/svg+xml; charset=utf-8');res.setHeader('Cache-Control','public, max-age=300, s-maxage=300');return res.status(200).send(svg(d));} res.setHeader('Content-Type','text/html; charset=utf-8');res.setHeader('Cache-Control','public, max-age=60, s-maxage=60');return res.status(200).send(html(req,d)); }
+export default async function handler(req,res){
+  // Mode 1: save the current query params under a short id, return {id}.
+  // App.jsx calls this once when building a share link, then uses the
+  // short id in the actual URL it shares/copies.
+  if (q(req,'save')==='1') {
+    res.setHeader('Content-Type','application/json; charset=utf-8');
+    try {
+      const id = shortId();
+      const params = { ...req.query };
+      delete params.save;
+      await kv.set(`og:${id}`, JSON.stringify(params), { ex: SHORTLINK_TTL_SECONDS });
+      return res.status(200).json({ id });
+    } catch (e) {
+      console.error('[og] save error:', e.message);
+      return res.status(500).json({ error: 'save_failed' });
+    }
+  }
+
+  // Mode 2: expand a short id back into the full query before rendering.
+  const shortIdParam = q(req,'id','');
+  if (shortIdParam) {
+    try {
+      const stored = await kv.get(`og:${shortIdParam}`);
+      if (stored) {
+        const parsed = typeof stored === 'string' ? JSON.parse(stored) : stored;
+        req.query = { ...parsed, ...req.query };
+        delete req.query.id;
+        req._ogShortId = shortIdParam;
+      }
+    } catch (e) {
+      console.error('[og] expand error:', e.message);
+      // fall through and render with whatever query params were passed directly
+    }
+  }
+
+  const d=data(req);
+  if(q(req,'image')==='1'){res.setHeader('Content-Type','image/svg+xml; charset=utf-8');res.setHeader('Cache-Control','public, max-age=300, s-maxage=300');return res.status(200).send(svg(d));}
+  res.setHeader('Content-Type','text/html; charset=utf-8');res.setHeader('Cache-Control','public, max-age=60, s-maxage=60');return res.status(200).send(html(req,d));
+}
