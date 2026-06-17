@@ -1352,7 +1352,7 @@ function SchedTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=
     if (active) active.scrollIntoView({ behavior:"smooth", block:"nearest", inline:"center" });
   }, [selDate]);
 
-  const allTeams = [...new Set(MATCHES.flatMap(m=>[m.home,m.away]).filter(t => t && !/^(QF|SF|RO|W|L|M|Match|Winner|Loser)/.test(t) && t.length > 2))].sort();
+  const allTeams = ALL_TEAMS;
   const allVenues = [...new Set(MATCHES.map(m=>m.venue))].sort();
 
   const shown = MATCHES.filter(m => {
@@ -2248,7 +2248,8 @@ function SimTab({ tabTop=116 }) {
 }
 
 // ── HEAD TO HEAD TAB ──────────────────────────────────────────────────────
-const ALL_TEAMS = Object.values(GROUPS).flatMap(g => g.teams).sort();
+const GROUP_TEAMS = Object.values(GROUPS).flatMap(g => g.teams);
+const ALL_TEAMS = [...new Set(GROUP_TEAMS)].sort();
 
 // Convert app team name → Zafronix API name
 const toZName = t =>
@@ -5601,7 +5602,7 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
   const isSynced = !!syncProfile;
   const persistProfile = (p) => { setSyncProfile(p); try { localStorage.setItem("wc2026_syncprofile", JSON.stringify(p)); } catch {} };
 
-  const ALL_TEAMS_LIST = Object.values(GROUPS).flatMap(g=>g.teams).sort();
+  const ALL_TEAMS_LIST = ALL_TEAMS;
   const filteredTeams = avatarSearch ? ALL_TEAMS_LIST.filter(t=>t.toLowerCase().includes(avatarSearch.toLowerCase())) : ALL_TEAMS_LIST;
 
   const selectPresetAvatar = (id) => { persistAvatar(id); setShowAvatarPicker(false); setToast("Avatar updated!"); };
