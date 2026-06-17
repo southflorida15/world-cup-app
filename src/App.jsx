@@ -4688,31 +4688,28 @@ const rankColor =
 return (
   <div style={{paddingTop:12}}>
     <div style={{background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b2}`,borderRadius:12,padding:14,marginBottom:8}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10}}>
-        <div style={{minWidth:0}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10}}>
+        <div style={{minWidth:0,flex:1}}>
           <div style={{fontWeight:700,fontSize:15,color:C.green}}>{"🎯 FANTASY PICKS / BOLÃO"}</div>
           <div style={{fontSize:11,color:C.mid,marginTop:2}}>Playing as <strong style={{color:C.gold}}>{user.name}</strong></div>
         </div>
 
-        <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
+        <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6,flexShrink:0}}>
           {myRank > 0 && (
-            <div
-  style={{
-    padding:"6px 12px",
-    borderRadius:20,
-    background:`${rankColor}18`,
-    border:`1px solid ${rankColor}44`,
-    color:rankColor,
-    fontSize:13,
-    fontWeight:800,
-    whiteSpace:"nowrap",
-    lineHeight:1
-  }}
->
-  🏅 Rank #{myRank}
-</div>
+            <div style={{
+              padding:"6px 12px",
+              borderRadius:20,
+              background:`${rankColor}18`,
+              border:`1px solid ${rankColor}44`,
+              color:rankColor,
+              fontSize:13,
+              fontWeight:800,
+              whiteSpace:"nowrap",
+              lineHeight:1
+            }}>
+              🏅 Rank #{myRank}
+            </div>
           )}
-
           <button
             onClick={()=>setShowInfo(v=>!v)}
             style={{
