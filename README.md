@@ -15,52 +15,48 @@ A Progressive Web App (PWA) for the FIFA World Cup 2026™ — live scores, brac
 ### 🏆 Fantasy Leagues
 - Create private leagues with a custom name — get a 6-character invite code
 - Join leagues via code or shareable invite link (`/?join=CODE`)
-- Full onboarding flow for new users joining via invite link: name → PIN → notifications → done
+- Full onboarding flow for new users via invite link: name → PIN → notifications → done
 - League leaderboard with Points, Exact, Correct, Accuracy per member
 - Your rank displayed prominently in each league
 - Invite section: copy code or share link directly
 - **Global league** — always visible, shows all app users ranked
 - Smart UI: 0 leagues → Global + Create/Join; 1 league → straight to leaderboard; 2+ leagues → list with Global at bottom
 - PIN required to join/create leagues
-- Admin: migrate all existing fantasy users to a league, add/remove by PIN, view all leagues
-- Default league: "Brazucas em Broward" (code: `BRZBRD`)
+- Existing users without PIN prompted to create one to join
+- Auto-join `BRZBRD` on startup for PIN users not yet in any league
+- **Tap any user** in Rankings or league leaderboard to see their scored picks — same card layout as your own Scored tab, most recent first
+- Admin: migrate all users, add/remove by PIN, merge user picks, cross-reference members vs accounts
 
-### 🔔 Push Notification Improvements
-- Cron fixed from GET → POST (was silently failing)
+### 🔔 Push Notifications
+- Cron fixed from GET → POST (was silently failing for days)
 - PIN-based individual notifications working across all devices
 - `knownUids` registry links all devices under one PIN
-- Subscribe on desktop without PWA install required
-- Smart re-subscribe: "All set!" button always re-runs subscription flow
-- Notification inbox: bell icon in header, smart empty state (3 states based on subscription status)
-- Onboarding popup: 5s delay, dismissible, re-shows Jun 18 for users who dismissed before
-
-### 🎯 Fantasy Tab Polish
-- Leagues pill moved to first position in filter row
-- My Teams pill removed from Fantasy filters
-- Stats disclaimer banner removed
-- Per-league stats (Points, Exact, Correct, Accuracy) shown in each league view for multi-league users
-
-### ⚽ Scoring Fix
-- Knockout stage: extra time goals count toward fantasy score
-- Penalty shootout results do NOT count (only regular + extra time)
-- Uses `score.extratime ?? score.fulltime ?? goals` priority
+- Desktop notifications without PWA install
+- Smart re-subscribe: always runs full subscription flow
+- Notification inbox: bell icon in header, 3-state smart empty state
+- Onboarding popup: 5s delay, dismissible, re-shows Jun 18
 
 ### 🃏 Match Card Modal
-- Smooth scrolling fixed on iOS (overscrollBehavior: contain)
-- Dynamic height — shrinks to fit content, maxes at screen height
-- 3px side margins, rounded corners on all sides
-- Pills equally distributed: Timeline wider to fit events summary
+- Smooth scrolling on iOS (overscrollBehavior: contain)
+- Dynamic height — shrinks to fit content
+- 3px side margins, rounded corners all sides
+- Timeline pill wider to fit events summary
 - Single ✕ button, no double-tap needed
-- Score display: `2 – 2` with spaces around dash
+- Score display: `2 – 2` with spaces
+
+### ⚽ Fantasy Scoring
+- Knockout stage: extra time goals count
+- Penalty shootout does NOT count
+- Per-user scored picks now viewable by all players
 
 ### 📋 Schedule
-- 12AM ET matches display correctly (group under previous day)
-- Midnight UTC timestamps fixed (03:59 → correct display)
+- 12AM ET matches display correctly (grouped under previous day)
 
-### 🌍 Other
-- ip-api.com switched to HTTPS (was blocked as mixed content)
-- ESPN ID auto-seed covers 7-day lookahead
-- Admin dashboard: league management section, notification column in accounts table
+### 🔧 Admin
+- Accounts table shows: picks count, pts, notification status
+- Merge user picks (copy picks from one user to another for unscored matches)
+- Cross-reference league members vs accounts
+- League management: view all, migrate, add/remove, merge
 
 ---
 
@@ -69,7 +65,7 @@ A Progressive Web App (PWA) for the FIFA World Cup 2026™ — live scores, brac
 ### Live
 - Real-time scores via ESPN public API
 - Injury time `90+5'`, match status labels
-- Live cards: green border + glow, finished dimmed
+- Live cards: green border + glow
 - Pull-to-refresh with direction lock
 
 ### Schedule
@@ -80,7 +76,7 @@ A Progressive Web App (PWA) for the FIFA World Cup 2026™ — live scores, brac
 ### Match Modal
 - Venue, weather (°F/°C), broadcast info
 - Win probability, timeline, lineups, match stats
-- Dynamic height, smooth iOS scroll, swipe-aware
+- Dynamic height, smooth iOS scroll
 
 ### Groups & Standings
 - 12-group format (A–L), live points, GD, GF
@@ -91,8 +87,9 @@ A Progressive Web App (PWA) for the FIFA World Cup 2026™ — live scores, brac
 
 ### Fantasy Picks (Bolão)
 - Predict exact scores, picks lock at kickoff
-- 3pts exact, 1pt correct result, extra time counts, penalties don't
-- Color-coded Result vs Your Pick
+- 3pts exact, 1pt correct result
+- Extra time counts, penalties don't
+- Tap any player to see their scored picks
 
 ### 🏆 Fantasy Leagues
 - Private leagues with invite codes/links
@@ -107,14 +104,7 @@ A Progressive Web App (PWA) for the FIFA World Cup 2026™ — live scores, brac
 
 ### Shop (Affiliate)
 - Amazon Associates: `worldcupapp-20`
-- Fubo, NordVPN, Hard Rock Bet (geo-gated, pending approval)
-
-### Ask, Stats, WC News, Odds, Simulator
-- Natural language queries (20+ types)
-- Squad viewer, H2H, historical records
-- Multi-country news (10 locales)
-- Championship odds (Polymarket)
-- Poisson match + tournament simulator
+- Fubo, NordVPN, Hard Rock Bet (geo-gated, pending)
 
 ---
 
@@ -122,7 +112,7 @@ A Progressive Web App (PWA) for the FIFA World Cup 2026™ — live scores, brac
 
 ### Frontend
 - React 18 + Vite
-- Single `src/App.jsx` (~7,700 lines) + 4 component files
+- Single `src/App.jsx` (~7,800 lines) + 4 component files
 - PWA — installable on iOS, Android, desktop
 
 ### Backend (Vercel Serverless)
@@ -132,46 +122,26 @@ api/
 ├── matchevents.js     # Events, stats, lineups, ESPN ID seeding
 ├── predictor.js       # Fantasy picks + leaderboard
 ├── league.js          # Fantasy leagues: create, join, leave, leaderboard
-├── push.js            # Subscriptions, broadcast, individual PIN, cron notify
+├── push.js            # Subscriptions, broadcast, individual PIN, cron
 ├── bracket-share.js   # Bracket sharing
 ├── news.js            # Multi-country WC news
 ├── sync.js            # Cross-device sync (PIN + magic link)
 ├── zafronix.js        # Squad rosters
 ├── og.js              # Share card image
-└── admin.js           # Analytics, live ops, ESPN ID editor, push + league mgmt
+└── admin.js           # Analytics, live ops, league mgmt, push, merge
 ```
 
 ### Data Sources
 - **ESPN** — Live scores, match events, lineups
 - **Zafronix** — Official squad rosters
 - **Open-Meteo** — Venue weather
-- **ip-api.com** — City/region detection (HTTPS, 45/min)
+- **ip-api.com** — City/region detection (HTTPS)
 - **GNews** — World Cup news
 - **Polymarket** — Championship odds
-
-### Caching Strategy
-| Data | TTL |
-|------|-----|
-| Live scores (4+ live) | 3 min |
-| Live scores (1-3 live) | 60-120s |
-| Kickoff imminent (T-10 to T+20) | bypass |
-| No live matches | 1 hr |
-| Finished match events | Permanent |
-| Squad rosters | 6 hr |
-| ESPN ID map | Permanent |
-| Push subscriptions | 90 days |
-| League data | Permanent |
 
 ---
 
 ## Push Notification System
-
-### User flow
-1. Save matches in My Matches
-2. Tap "Notify all" → subscription saved with UID + PIN + knownUids
-3. External cron hits `/api/push?action=notify` every 15 min
-4. Matches 25-35 min from kickoff trigger notifications
-5. Tap notification → app opens, message in inbox bell
 
 ### Cron schedule
 ```
@@ -189,28 +159,26 @@ Auth: `Authorization: Bearer $CRON_SECRET`
 - `league:{CODE}` → `{ code, name, ownerPin, ownerUid, members[], createdAt }`
 - `pin-leagues:{PIN}` → `[code1, code2, ...]`
 
+### Default league
+- Name: **Brazucas em Broward** · Code: `BRZBRD`
+- Auto-joined on startup for all PIN users
+
+### Scoring
+- 3 pts — exact score
+- 1 pt — correct result
+- Extra time goals count · Penalties do NOT
+
 ### Invite link
 ```
 https://world-cup-app-iota.vercel.app/?join=BRZBRD
 ```
-
-### Default league
-- Name: **Brazucas em Broward**
-- Code: `BRZBRD`
-- Created via admin → League Management → Migrate All
-
-### Scoring (Fantasy)
-- 3 pts — exact score
-- 1 pt — correct result
-- Extra time goals count
-- Penalty shootout does NOT count
 
 ---
 
 ## Admin Dashboard (`/admin`)
 
 ### ⚙️ Analytics
-- Daily visitors, tab usage, accounts, predictor users
+- Daily visitors, tab usage, accounts with picks/pts/notification status
 
 ### 🔧 Live Ops
 - Flush cache, seed livescores, seed ESPN IDs
@@ -221,8 +189,10 @@ https://world-cup-app-iota.vercel.app/?join=BRZBRD
 
 ### 🏆 League Management
 - View all leagues
-- Migrate all fantasy users to a league by code
+- Cross-reference members vs accounts
+- Migrate all users to a league
 - Add/remove user by PIN
+- Merge picks from one user into another
 
 ---
 
@@ -232,7 +202,7 @@ https://world-cup-app-iota.vercel.app/?join=BRZBRD
 git add -A && git commit -m "updates" && npx vercel --prod
 ```
 
-Preview only (no prod impact):
+Preview (no prod impact):
 ```bash
 npx vercel
 ```
@@ -253,29 +223,27 @@ npx vercel
 ## Changelog
 
 ### v2.2.0 — June 16, 2026
-- Fantasy Leagues system (create, join, invite, leaderboard, Global)
+- Fantasy Leagues (create, join, invite, leaderboard, Global)
+- Tap any user to see their scored picks
 - New user onboarding via league invite link
-- Push notification cron fixed (GET → POST)
+- Push cron fixed (GET → POST)
 - PIN-based individual push across all devices
 - Notification inbox with 3-state smart empty state
-- Match card modal: iOS scroll fix, dynamic height, pill layout
+- Match card modal: iOS scroll fix, dynamic height
 - Extra time counts for fantasy, penalties don't
-- Leagues pill first in Fantasy filter row, My Teams removed
-- ip-api.com HTTPS fix
-- Admin: league management, notification status column
-- Version bump to v2.2.0
+- Admin: league mgmt, merge users, cross-reference, picks/pts in accounts table
+- Auto-join BRZBRD on startup for PIN users
 
 ### v2.1.0 — June 14–15, 2026
 - Full push notification system
 - Shop tab with Amazon affiliate
 - Live match cards: green border + glow
 - Kickoff-imminent cache bypass
-- ESPN ID livescores-first priority
 - Fantasy scored picks with Result/Your Pick boxes
 
 ### v2.0.0 — June 2026
 - Bracket tree redesign, lineups in match modal
-- 20+ Ask tab query types, extra time display
+- 20+ Ask tab query types
 
 ### v1.0 — June 2026
 - Live scores, schedule, groups, fantasy, bracket
