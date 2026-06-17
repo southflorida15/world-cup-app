@@ -4743,9 +4743,9 @@ return (
       {/* Fantasy filters */}
       <div style={{display:"flex",gap:6,marginBottom:14,overflowX:"auto",scrollbarWidth:"none"}}>
         {(syncProfile?.pin || displayName) && <Pill active={filter==="leagues"} onClick={()=>setFilter("leagues")} color={C.blue}>🏆 Leagues</Pill>}
+        <Pill active={filter==="board"} onClick={()=>setFilter("board")} color={C.rival}>🏅 Rankings</Pill>
         <Pill active={filter==="upcoming"} onClick={()=>setFilter("upcoming")} color={C.green}>Pending Picks ({upcoming.length})</Pill>
         <Pill active={filter==="finished"} onClick={()=>setFilter("finished")} color={C.gold}>Scored ({finished.length})</Pill>
-        <Pill active={filter==="board"} onClick={()=>setFilter("board")} color={C.rival}>🏅 Rankings</Pill>
       </div>
 
       {/* ── LEADERBOARD ── */}
