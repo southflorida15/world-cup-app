@@ -4588,7 +4588,7 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
 
   // ── Score totals ────────────────────────────────────────────────────────
   const upcoming  = MATCHES.filter(m => m.group && !isFinished(m.home, m.away));
-  const finished  = MATCHES.filter(m => m.group &&  isFinished(m.home, m.away));
+  const finished  = MATCHES.filter(m => m.group &&  isFinished(m.home, m.away)).sort((a,b) => b.id - a.id);
   let totalPts = 0, totalPossible = 0, exact = 0, correct = 0;
   finished.forEach(m => {
     const sc = getScore(m.home, m.away);
