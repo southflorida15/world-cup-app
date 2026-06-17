@@ -7462,20 +7462,6 @@ export default function App() {
       })
       .catch(() => {});
 
-    // Silently auto-join BRZBRD if not already in any league
-    fetch(`/api/league?pin=${syncProfile.pin}`)
-      .then(r => r.json())
-      .then(d => {
-        if (!d.leagues?.length) {
-          // Not in any league — silently join the default
-          fetch("/api/league?action=join", {
-            method: "POST",
-            headers: {"Content-Type":"application/json"},
-            body: JSON.stringify({ pin: syncProfile.pin, code: "BRZBRD" })
-          }).catch(() => {});
-        }
-      }).catch(() => {});
-
     }, 800);
     return () => clearTimeout(t);
   }, [syncProfile?.uid]);
