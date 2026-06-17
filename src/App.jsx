@@ -7272,6 +7272,7 @@ export default function App() {
     }).catch(() => {});
   }, []);
   const [showInbox, setShowInbox] = useState(false);
+  const [pushToast, setPushToast] = useState(null);
   const [inbox, setInbox] = useState(() => {
     try { return JSON.parse(localStorage.getItem("wc2026_inbox") || "[]"); } catch { return []; }
   });
@@ -7283,10 +7284,13 @@ export default function App() {
       if (event.data?.type === "PUSH_RECEIVED") {
         const msg = event.data.message;
         setInbox(prev => {
-          const updated = [msg, ...prev].slice(0, 20); // keep last 20
+          const updated = [msg, ...prev].slice(0, 20);
           try { localStorage.setItem("wc2026_inbox", JSON.stringify(updated)); } catch {}
           return updated;
         });
+        // Show centered popup toast
+        setPushToast(msg);
+        setTimeout(() => setPushToast(null), 8000);
       }
     };
     navigator.serviceWorker?.addEventListener("message", handler);
@@ -7728,6 +7732,22 @@ export default function App() {
               <div style={{fontSize:13,color:C.mid,lineHeight:1.6,marginBottom:20}}>Notifications are enabled — tap <strong style={{color:C.green}}>&ldquo;Notify all&rdquo;</strong> in My Matches to complete setup and start receiving kickoff alerts.</div>
               <button onClick={()=>{dismissBanner();setTab("saved");}} style={{width:"100%",padding:"13px",background:`linear-gradient(135deg,${C.green},#22c55e)`,border:"none",borderRadius:12,color:"#030a05",fontSize:15,fontWeight:800,cursor:"pointer",marginBottom:8}}>Finish setup →</button>
               <button onClick={dismissBanner} style={{width:"100%",padding:"8px",background:"none",border:"none",color:C.dim,fontSize:12,cursor:"pointer"}}>Already set up on another device · dismiss</button>
+            </div>
+          </div>
+        )}
+
+        {/* Push notification toast popup */}
+        {pushToast && (
+          <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",zIndex:600,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 24px"}} onClick={()=>setPushToast(null)}>
+            <div onClick={e=>e.stopPropagation()} style={{background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.gold}44`,borderRadius:20,padding:"28px 24px",width:"100%",maxWidth:360,boxShadow:"0 8px 40px rgba(0,0,0,0.6)",textAlign:"center",position:"relative"}}>
+              <button onClick={()=>setPushToast(null)} style={{position:"absolute",top:12,right:14,background:"none",border:"none",color:C.dim,fontSize:20,cursor:"pointer"}}>✕</button>
+              <div style={{fontSize:48,marginBottom:12}}>⚽</div>
+              <div style={{fontSize:17,fontWeight:800,color:C.text,marginBottom:8}}>{pushToast.title}</div>
+              <div style={{fontSize:13,color:C.mid,lineHeight:1.6,marginBottom:20}}>{pushToast.body}</div>
+              <button onClick={()=>{ setPushToast(null); setFilter&&setFilter("upcoming"); }} style={{width:"100%",padding:"12px",background:`linear-gradient(135deg,${C.green},#22c55e)`,border:"none",borderRadius:12,color:"#030a05",fontSize:14,fontWeight:800,cursor:"pointer"}}>
+                🎯 Make your pick
+              </button>
+              <button onClick={()=>setPushToast(null)} style={{width:"100%",padding:"8px",background:"none",border:"none",color:C.dim,fontSize:12,cursor:"pointer",marginTop:4}}>Dismiss</button>
             </div>
           </div>
         )}
