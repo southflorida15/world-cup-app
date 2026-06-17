@@ -25,14 +25,14 @@ const FINISHED_STATUSES = ["FT","AET","PEN","AWD","WO","FINISHED","AWARDED"];
 
 const KICKOFFS = [
   "2026-06-11T19:00:00Z","2026-06-12T02:00:00Z","2026-06-12T19:00:00Z","2026-06-13T01:00:00Z",
-  "2026-06-13T19:00:00Z","2026-06-13T22:00:00Z","2026-06-14T01:00:00Z","2026-06-14T03:59:00Z",
+  "2026-06-13T19:00:00Z","2026-06-13T22:00:00Z","2026-06-14T01:00:00Z","2026-06-14T04:00:00Z",
   "2026-06-14T17:00:00Z","2026-06-14T20:00:00Z","2026-06-14T23:00:00Z","2026-06-15T02:00:00Z",
   "2026-06-15T16:00:00Z","2026-06-15T19:00:00Z","2026-06-15T22:00:00Z","2026-06-16T01:00:00Z",
-  "2026-06-16T19:00:00Z","2026-06-16T22:00:00Z","2026-06-17T01:00:00Z","2026-06-17T03:59:00Z",
+  "2026-06-16T19:00:00Z","2026-06-16T22:00:00Z","2026-06-17T01:00:00Z","2026-06-17T04:00:00Z",
   "2026-06-17T17:00:00Z","2026-06-17T20:00:00Z","2026-06-17T23:00:00Z","2026-06-18T02:00:00Z",
   "2026-06-18T16:00:00Z","2026-06-18T19:00:00Z","2026-06-18T22:00:00Z","2026-06-19T01:00:00Z",
   "2026-06-19T19:00:00Z","2026-06-19T22:00:00Z","2026-06-20T00:30:00Z","2026-06-20T03:00:00Z",
-  "2026-06-20T17:00:00Z","2026-06-20T20:00:00Z","2026-06-21T01:00:00Z","2026-06-21T03:59:00Z",
+  "2026-06-20T17:00:00Z","2026-06-20T20:00:00Z","2026-06-21T01:00:00Z","2026-06-21T04:00:00Z",
   "2026-06-21T16:00:00Z","2026-06-21T19:00:00Z","2026-06-21T22:00:00Z","2026-06-22T01:00:00Z",
   "2026-06-22T17:00:00Z","2026-06-22T21:00:00Z","2026-06-23T00:00:00Z","2026-06-23T03:00:00Z",
   "2026-06-23T17:00:00Z","2026-06-23T20:00:00Z","2026-06-23T23:00:00Z","2026-06-24T02:00:00Z",
@@ -51,7 +51,33 @@ const KICKOFFS = [
   "2026-07-09T20:00:00Z","2026-07-10T19:00:00Z","2026-07-11T21:00:00Z","2026-07-12T01:00:00Z",
   "2026-07-14T19:00:00Z","2026-07-15T19:00:00Z","2026-07-18T21:00:00Z","2026-07-19T19:00:00Z"
 ];
+const ESPN_HEADERS_DEFAULT = {
+  "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+  "Accept": "application/json",
+  "Origin": "https://www.espn.com",
+  "Referer": "https://www.espn.com/",
+};
+
 const WINDOW_MS = 150 * 60 * 1000;
+
+// Server-side copy of MATCHES (home/away by match id) — used for reconciliation
+const MATCH_TEAMS = {1:{home:"Mexico",away:"South Africa"},2:{home:"South Korea",away:"Czechia"},3:{home:"Canada",away:"Bosnia & Herz."},4:{home:"United States",away:"Paraguay"},5:{home:"Qatar",away:"Switzerland"},6:{home:"Brazil",away:"Morocco"},7:{home:"Haiti",away:"Scotland"},8:{home:"Australia",away:"Turkiye"},9:{home:"Germany",away:"Curacao"},10:{home:"Netherlands",away:"Japan"},11:{home:"Ivory Coast",away:"Ecuador"},12:{home:"Sweden",away:"Tunisia"},13:{home:"Spain",away:"Cape Verde"},14:{home:"Belgium",away:"Egypt"},15:{home:"Saudi Arabia",away:"Uruguay"},16:{home:"Iran",away:"New Zealand"},17:{home:"France",away:"Senegal"},18:{home:"Iraq",away:"Norway"},19:{home:"Argentina",away:"Algeria"},20:{home:"Austria",away:"Jordan"},21:{home:"Portugal",away:"DR Congo"},22:{home:"England",away:"Croatia"},23:{home:"Ghana",away:"Panama"},24:{home:"Uzbekistan",away:"Colombia"}};
+
+// Hardcoded ESPN event IDs for group stage — used as fallback when scoreboard misses a match
+const FALLBACK_ESPN_IDS = {
+  "Mexico|South Africa":"760415","South Korea|Czechia":"760414",
+  "Canada|Bosnia & Herz.":"760416","United States|Paraguay":"760417",
+  "Qatar|Switzerland":"760418","Brazil|Morocco":"760419",
+  "Haiti|Scotland":"760420","Australia|Turkiye":"760421",
+  "Germany|Curacao":"760422","Netherlands|Japan":"760423",
+  "Ivory Coast|Ecuador":"760424","Sweden|Tunisia":"760425",
+  "Spain|Cape Verde":"760426","Belgium|Egypt":"760427",
+  "Saudi Arabia|Uruguay":"760428","Iran|New Zealand":"760429",
+  "France|Senegal":"760430","Iraq|Norway":"760431",
+  "Argentina|Algeria":"760432","Austria|Jordan":"760433",
+  "Portugal|DR Congo":"760434","England|Croatia":"760435",
+  "Ghana|Panama":"760436","Uzbekistan|Colombia":"760437",
+};
 
 function isMatchWindowActive() {
   const now = Date.now();
@@ -256,12 +282,7 @@ async function fetchFromESPN() {
   const dates = `${fmt(yesterday)}-${fmt(tomorrow)}`;
 
   const r = await fetch(`${ESPN_BASE}/scoreboard?dates=${dates}`, {
-    headers: {
-      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-      "Accept": "application/json",
-      "Origin": "https://www.espn.com",
-      "Referer": "https://www.espn.com/",
-    },
+    headers: ESPN_HEADERS_DEFAULT,
   });
   if (!r.ok) throw new Error(`ESPN ${r.status}`);
   const data = await r.json();
@@ -318,6 +339,77 @@ async function fetchFromHighlightly() {
   const raw = Array.isArray(data) ? data : (data.data || data.matches || data.response || []);
   console.log(`[livescores] Highlightly: ${raw.length} matches`);
   return raw.map(mapHLMatch);
+}
+
+// ── Reconciliation: catch matches missing from the bulk scoreboard fetch ──
+// For any match whose kickoff (by id, from KICKOFFS array — index+1 = id)
+// is within the "should have data" window but isn't present in the fetched
+// fixtures, fetch it directly by ESPN event ID. This removes the dependency
+// on ESPN's date-bucketing logic ever including every match we expect.
+async function reconcileMissingMatches(fixtures) {
+  const now = Date.now();
+  const present = new Set(fixtures.map(f => {
+    const h = f?.teams?.home?.name || "";
+    const a = f?.teams?.away?.name || "";
+    return `${h}|${a}`;
+  }));
+
+  const missing = [];
+  for (const [idStr, teams] of Object.entries(MATCH_TEAMS)) {
+    const id = parseInt(idStr);
+    const ko = KICKOFFS[id - 1];
+    if (!ko) continue;
+    const koTime = new Date(ko).getTime();
+    const msSince = now - koTime;
+    // "Should have data" window: from 5 min before kickoff to 4 hours after
+    const inWindow = msSince >= -5 * 60 * 1000 && msSince <= 4 * 60 * 60 * 1000;
+    if (!inWindow) continue;
+
+    const key = `${teams.home}|${teams.away}`;
+    if (!present.has(key)) missing.push({ id, ...teams, key });
+  }
+
+  if (missing.length === 0) return fixtures;
+
+  console.log(`[livescores] Reconciliation: ${missing.length} match(es) missing from scoreboard — fetching directly`, missing.map(m => m.key));
+
+  // Get the persisted ESPN ID map (filled in by matchevents.js seeding)
+  let idMap = {};
+  try { idMap = await kv.get("wc2026:espn_ids") || {}; } catch(e) {}
+
+  const recovered = [];
+  for (const m of missing) {
+    const espnId = idMap[m.key] || FALLBACK_ESPN_IDS[m.key];
+    if (!espnId) {
+      console.warn(`[livescores] No ESPN ID known for ${m.key} — cannot recover`);
+      continue;
+    }
+    try {
+      const r = await fetch(`${ESPN_BASE}/summary?event=${espnId}`, { headers: ESPN_HEADERS_DEFAULT });
+      if (!r.ok) { console.warn(`[livescores] direct fetch for ${m.key} (${espnId}) failed: ${r.status}`); continue; }
+      const data = await r.json();
+      const header = data.header;
+      const comp = header?.competitions?.[0];
+      if (!comp) continue;
+      const home = comp.competitors?.find(c => c.homeAway === "home");
+      const away = comp.competitors?.find(c => c.homeAway === "away");
+      if (!home || !away) continue;
+      const fakeEvent = {
+        id: espnId,
+        date: comp.date,
+        competitions: [comp],
+      };
+      const mapped = mapESPNEvent(fakeEvent);
+      if (mapped) {
+        recovered.push(mapped);
+        console.log(`[livescores] Recovered ${m.key} via direct ESPN ID lookup: ${mapped.fixture.status.short}`);
+      }
+    } catch(e) {
+      console.warn(`[livescores] direct fetch error for ${m.key}:`, e.message);
+    }
+  }
+
+  return [...fixtures, ...recovered];
 }
 
 export default async function handler(req, res) {
@@ -412,6 +504,13 @@ export default async function handler(req, res) {
   }
 
   if (fixtures.length > 0) {
+    // Reconciliation: catch any in-window match the bulk fetch missed
+    try {
+      fixtures = await reconcileMissingMatches(fixtures);
+    } catch(e) {
+      console.warn("[livescores] reconciliation error:", e.message);
+    }
+
     // Persist any newly finished results permanently
     await persistFinishedResults(fixtures);
 
