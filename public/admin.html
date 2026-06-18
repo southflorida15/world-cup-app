@@ -731,7 +731,10 @@ function renderDashboard(d, subs=[]) {
     const isActive = v.lastSeen && now - v.lastSeen < 30 * 60 * 1000;
     return `<div class="row" style="grid-template-columns:24px 1fr 80px 60px 100px 100px 50px">
       <div><input type="checkbox" class="visitor-check" value="${escA(v.uid)}"/></div>
-      <div style="display:flex;align-items:center;gap:6px">${isActive?`<span class="active-dot"></span>`:""}${esc(loc)}</div>
+      <div style="overflow:hidden">
+        <div style="display:flex;align-items:center;gap:6px">${isActive?`<span class="active-dot"></span>`:""}${esc(loc)}</div>
+        <div style="font-size:9px;color:var(--dim);font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(v.uid)}</div>
+      </div>
       <div><span class="badge badge-${dc}">${esc(v.device||"—")}</span></div>
       <div style="font-weight:600">${v.visits||1}</div>
       <div style="color:var(--dim);font-size:11px">${v.firstSeen?new Date(v.firstSeen).toLocaleDateString():"—"}</div>
