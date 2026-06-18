@@ -9,6 +9,7 @@
 // (e.g. /api/og?id=ab12cd) instead of carrying every field in the query string.
 
 import { Redis } from "@upstash/redis";
+import { ImageResponse } from "@vercel/og";
 const kv = new Redis({
   url: process.env.KV_REST_API_URL,
   token: process.env.KV_REST_API_TOKEN,
@@ -20,9 +21,13 @@ function shortId() {
   return Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-4);
 }
 
-const FLAGS = {
-  Brazil:'🇧🇷', Morocco:'🇲🇦', Scotland:'🏴', Haiti:'🇭🇹', Mexico:'🇲🇽', 'South Africa':'🇿🇦', 'South Korea':'🇰🇷', Czechia:'🇨🇿', Canada:'🇨🇦', Qatar:'🇶🇦', Switzerland:'🇨🇭', Spain:'🇪🇸', France:'🇫🇷', Germany:'🇩🇪', Argentina:'🇦🇷', Portugal:'🇵🇹', England:'🏴', Netherlands:'🇳🇱', Uruguay:'🇺🇾', Belgium:'🇧🇪', Japan:'🇯🇵', Australia:'🇦🇺', 'United States':'🇺🇸', Colombia:'🇨🇴', Senegal:'🇸🇳', Ghana:'🇬🇭', Iran:'🇮🇷', Tunisia:'🇹🇳', 'Saudi Arabia':'🇸🇦', Ecuador:'🇪🇨', Paraguay:'🇵🇾', Croatia:'🇭🇷', Sweden:'🇸🇪', Norway:'🇳🇴', Austria:'🇦🇹', Algeria:'🇩🇿', Egypt:'🇪🇬', Panama:'🇵🇦', 'New Zealand':'🇳🇿', Jordan:'🇯🇴', Iraq:'🇮🇶', Uzbekistan:'🇺🇿', Curacao:'🇨🇼', 'Cape Verde':'🇨🇻', 'DR Congo':'🇨🇩', 'Ivory Coast':'🇨🇮'
-};
+// Matches the FLAG_CODES map used elsewhere in the app (App.jsx) so flag
+// images are visually consistent across the live app and shared OG cards.
+const FLAG_CODES = {"Mexico":"mx","South Africa":"za","South Korea":"kr","Czechia":"cz","Canada":"ca","Bosnia & Herz.":"ba","Qatar":"qa","Switzerland":"ch","Brazil":"br","Morocco":"ma","Haiti":"ht","Scotland":"gb-sct","United States":"us","Paraguay":"py","Australia":"au","Turkiye":"tr","Germany":"de","Curacao":"cw","Ivory Coast":"ci","Ecuador":"ec","Netherlands":"nl","Japan":"jp","Sweden":"se","Tunisia":"tn","Belgium":"be","Egypt":"eg","Iran":"ir","New Zealand":"nz","Spain":"es","Cape Verde":"cv","Saudi Arabia":"sa","Uruguay":"uy","France":"fr","Senegal":"sn","Iraq":"iq","Norway":"no","Argentina":"ar","Algeria":"dz","Austria":"at","Jordan":"jo","Portugal":"pt","DR Congo":"cd","Uzbekistan":"uz","Colombia":"co","England":"gb-eng","Croatia":"hr","Ghana":"gh","Panama":"pa"};
+function flagUrl(team) {
+  const code = FLAG_CODES[team];
+  return code ? `https://flagcdn.com/w160/${code}.png` : null;
+}
 
 function esc(v='') { return String(v).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;'); }
 function q(req,k,d='') { const v=req.query?.[k]; return Array.isArray(v) ? (v[0]||d) : (v||d); }
@@ -39,7 +44,7 @@ function data(req){
   let f=q(req,'tempF',q(req,'fahrenheit','')); let c=q(req,'tempC',q(req,'celsius',''));
   if(!f && c) f=fFromC(c); if(!c && f) c=cFromF(f);
   return {
-    home, away, homeFlag:q(req,'homeFlag',FLAGS[home]||'🏳️'), awayFlag:q(req,'awayFlag',FLAGS[away]||'🏳️'),
+    home, away, homeFlagUrl:q(req,'homeFlagUrl','')||flagUrl(home), awayFlagUrl:q(req,'awayFlagUrl','')||flagUrl(away),
     group:groupName(q(req,'group',q(req,'stage',''))), date:q(req,'date',''), time:q(req,'time',q(req,'kickoff','')), status:q(req,'status','Upcoming'),
     venue:q(req,'venue',q(req,'stadium','')), city:q(req,'city',''),
     tempLine:(f||c)?`${f||'—'}°F / ${c||'—'}°C`:q(req,'weather',''), condition:q(req,'condition',''), rain:q(req,'rain',q(req,'precip','')), wind:q(req,'wind',''),
@@ -60,22 +65,71 @@ function imgUrl(req){
 function meta(d){ return [d.group,d.date,d.time].filter(Boolean).join(' • '); }
 function scoreOrVs(d){ return d.hg!==''&&d.ag!=='' ? `${d.hg}–${d.ag}` : 'VS'; }
 
-function svg(d){
+function pngCard(d){
   const wxSub=[d.condition,d.rain?`${d.rain} rain`:'',d.wind].filter(Boolean).join(' • ');
   const showMarket=d.homeSim||d.drawSim||d.awaySim||d.homePoly||d.awayPoly;
-  return `<?xml version="1.0" encoding="UTF-8"?><svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
-  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#06150d"/><stop offset="1" stop-color="#020805"/></linearGradient><linearGradient id="card" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#102d1b"/><stop offset="1" stop-color="#06150d"/></linearGradient></defs>
-  <rect width="1200" height="630" fill="url(#bg)"/><circle cx="1010" cy="105" r="290" fill="#0b3a20" opacity=".23"/>
-  <text x="64" y="64" font-family="Arial" font-size="19" font-weight="800" fill="#59d987" letter-spacing="8">FIFA</text><text x="64" y="108" font-family="Arial" font-size="42" font-weight="900" fill="#e8fff0">WORLD CUP</text><text x="64" y="152" font-family="Arial" font-size="44" font-weight="900" fill="#49ee83">2026</text>
-  <rect x="64" y="182" width="1072" height="178" rx="28" fill="url(#card)" stroke="#18a957" stroke-opacity=".45" stroke-width="2"/>
-  <text x="600" y="227" font-family="Arial" font-size="26" font-weight="900" fill="#77f0a0" text-anchor="middle">${esc(meta(d)||'World Cup 2026')}</text>
-  <text x="260" y="288" font-family="Apple Color Emoji,Segoe UI Emoji,Arial" font-size="48" text-anchor="middle">${esc(d.homeFlag)}</text><text x="260" y="328" font-family="Arial" font-size="28" font-weight="900" fill="#f1fff5" text-anchor="middle">${esc(d.home)}</text>
-  <text x="600" y="300" font-family="Arial" font-size="40" font-weight="1000" fill="#52e985" text-anchor="middle">${esc(scoreOrVs(d))}</text><text x="600" y="329" font-family="Arial" font-size="15" font-weight="900" fill="#89c99f" text-anchor="middle" letter-spacing="5">${esc(String(d.status).toUpperCase())}</text>
-  <text x="940" y="288" font-family="Apple Color Emoji,Segoe UI Emoji,Arial" font-size="48" text-anchor="middle">${esc(d.awayFlag)}</text><text x="940" y="328" font-family="Arial" font-size="28" font-weight="900" fill="#f1fff5" text-anchor="middle">${esc(d.away)}</text>
-  <rect x="64" y="386" width="336" height="96" rx="22" fill="#0a2114" stroke="#18a957" stroke-opacity=".30"/><text x="96" y="419" font-family="Arial" font-size="14" font-weight="900" fill="#82a98d" letter-spacing="4">VENUE</text><text x="96" y="450" font-family="Arial" font-size="22" font-weight="900" fill="#60a5fa">${esc(d.venue||'Venue TBA')}</text><text x="96" y="474" font-family="Arial" font-size="15" font-weight="700" fill="#a7cdb4">${esc(d.city)}</text>
-  <rect x="432" y="386" width="336" height="96" rx="22" fill="#0a2114" stroke="#18a957" stroke-opacity=".30"/><text x="464" y="419" font-family="Arial" font-size="14" font-weight="900" fill="#82a98d" letter-spacing="4">WEATHER</text><text x="464" y="450" font-family="Arial" font-size="22" font-weight="900" fill="#facc15">${esc(d.tempLine||'Forecast in app')}</text><text x="464" y="474" font-family="Arial" font-size="15" font-weight="700" fill="#a7cdb4">${esc(wxSub)}</text>
-  <rect x="800" y="386" width="336" height="96" rx="22" fill="#0a2114" stroke="#18a957" stroke-opacity=".30"/><text x="832" y="419" font-family="Arial" font-size="14" font-weight="900" fill="#82a98d" letter-spacing="4">${showMarket?'ODDS':'BROADCAST'}</text><text x="832" y="450" font-family="Arial" font-size="22" font-weight="900" fill="#49ee83">${esc(showMarket ? `${d.homeSim||d.homePoly||'—'} / ${d.drawSim||'—'} / ${d.awaySim||d.awayPoly||'—'}` : (d.broadcast||'Details in app'))}</text><text x="832" y="474" font-family="Arial" font-size="15" font-weight="700" fill="#a7cdb4">${esc(showMarket ? `Home / Draw / Away${d.broadcast?' · '+d.broadcast:''}` : d.streaming)}</text>
-  <text x="64" y="590" font-family="Arial" font-size="23" font-weight="850" fill="#49ee83">World Cup 2026 Predictor</text><text x="1136" y="590" font-family="Arial" font-size="20" font-weight="700" fill="#4c7f5e" text-anchor="end">world-cup-app-iota.vercel.app</text></svg>`;
+  const metaLine = meta(d) || 'World Cup 2026';
+  const score = scoreOrVs(d);
+
+  const infoBox = (label, value, sub, color) => ({
+    type: 'div',
+    props: {
+      style: { display:'flex', flexDirection:'column', width:336, height:96, borderRadius:22, background:'#0a2114', border:'2px solid rgba(24,169,87,0.3)', padding:'14px 16px', justifyContent:'center' },
+      children: [
+        { type:'div', props:{ style:{ fontSize:13, fontWeight:900, color:'#82a98d', letterSpacing:2 }, children: label } },
+        { type:'div', props:{ style:{ fontSize:21, fontWeight:900, color, marginTop:6 }, children: value } },
+        { type:'div', props:{ style:{ fontSize:14, fontWeight:700, color:'#a7cdb4', marginTop:4 }, children: sub } },
+      ]
+    }
+  });
+
+  const teamBlock = (flagUrl, name) => ({
+    type: 'div',
+    props: {
+      style: { display:'flex', flexDirection:'column', alignItems:'center', width:200 },
+      children: [
+        ...(flagUrl ? [{ type:'img', props:{ src:flagUrl, width:64, height:44, style:{ borderRadius:4, objectFit:'cover' } } }] : []),
+        { type:'div', props:{ style:{ fontSize:27, fontWeight:900, color:'#f1fff5', marginTop:8, textAlign:'center' }, children: name } },
+      ]
+    }
+  });
+
+  return {
+    type: 'div',
+    props: {
+      style: { width:'1200px', height:'630px', display:'flex', flexDirection:'column', background:'linear-gradient(135deg, #06150d 0%, #020805 100%)', padding:'50px 64px', fontFamily:'Arial' },
+      children: [
+        { type:'div', props:{ style:{ display:'flex', flexDirection:'column' }, children:[
+          { type:'div', props:{ style:{ fontSize:18, fontWeight:800, color:'#59d987', letterSpacing:6 }, children:'FIFA' } },
+          { type:'div', props:{ style:{ fontSize:40, fontWeight:900, color:'#e8fff0', marginTop:4 }, children:'WORLD CUP' } },
+          { type:'div', props:{ style:{ fontSize:42, fontWeight:900, color:'#49ee83' }, children:'2026' } },
+        ]}},
+        { type:'div', props:{ style:{ display:'flex', flexDirection:'column', marginTop:30, width:'100%', height:178, borderRadius:28, background:'linear-gradient(135deg, #102d1b, #06150d)', border:'2px solid rgba(24,169,87,0.45)', padding:'20px 40px', justifyContent:'center' }, children:[
+          { type:'div', props:{ style:{ display:'flex', justifyContent:'center', fontSize:25, fontWeight:900, color:'#77f0a0' }, children: metaLine } },
+          { type:'div', props:{ style:{ display:'flex', justifyContent:'space-between', alignItems:'center', marginTop:20 }, children:[
+            teamBlock(d.homeFlagUrl, d.home),
+            { type:'div', props:{ style:{ display:'flex', flexDirection:'column', alignItems:'center' }, children:[
+              { type:'div', props:{ style:{ fontSize:39, fontWeight:900, color:'#52e985' }, children: score } },
+              { type:'div', props:{ style:{ fontSize:14, fontWeight:900, color:'#89c99f', letterSpacing:4, marginTop:4 }, children: String(d.status).toUpperCase() } },
+            ]}},
+            teamBlock(d.awayFlagUrl, d.away),
+          ]}},
+        ]}},
+        { type:'div', props:{ style:{ display:'flex', justifyContent:'space-between', marginTop:24 }, children:[
+          infoBox('VENUE', d.venue||'Venue TBA', d.city||'', '#60a5fa'),
+          infoBox('WEATHER', d.tempLine||'Forecast in app', wxSub, '#facc15'),
+          infoBox(showMarket?'ODDS':'BROADCAST',
+            showMarket ? `${d.homeSim||d.homePoly||'—'} / ${d.drawSim||'—'} / ${d.awaySim||d.awayPoly||'—'}` : (d.broadcast||'Details in app'),
+            showMarket ? 'Home / Draw / Away' : (d.streaming||''),
+            '#49ee83'),
+        ]}},
+        { type:'div', props:{ style:{ display:'flex', justifyContent:'space-between', marginTop:32 }, children:[
+          { type:'div', props:{ style:{ fontSize:22, fontWeight:850, color:'#49ee83' }, children:'World Cup 2026 Predictor' } },
+          { type:'div', props:{ style:{ fontSize:19, fontWeight:700, color:'#4c7f5e' }, children:'world-cup-app-iota.vercel.app' } },
+        ]}},
+      ]
+    }
+  };
 }
 
 function html(req,d){
@@ -111,9 +165,9 @@ if(d.broadcast){
   ]);
 
 }
-  return `<!doctype html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/><title>${esc(title)}</title><meta name="description" content="${esc(desc)}"/><meta property="og:type" content="website"/><meta property="og:title" content="${esc(title)}"/><meta property="og:description" content="${esc(desc)}"/><meta property="og:image" content="${esc(imgUrl(req))}"/><meta property="og:image:secure_url" content="${esc(imgUrl(req))}"/><meta property="og:image:type" content="image/svg+xml"/><meta property="og:image:width" content="1200"/><meta property="og:image:height" content="630"/><meta name="twitter:card" content="summary_large_image"/><meta name="twitter:image" content="${esc(imgUrl(req))}"/><style>
-  :root{color-scheme:dark;--green:#4ade80;--text:#eafff0;--blue:#60a5fa}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 80% 0%,#0d2a18 0,#030905 42%,#010402 100%);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:var(--text)}.wrap{max-width:760px;margin:0 auto;padding:18px 18px calc(22px + env(safe-area-inset-bottom))}.brand{font-weight:1000;line-height:.98;margin:3px 0 14px}.brand small{display:block;letter-spacing:.32em;color:#72a981;font-size:12px;margin-bottom:3px}.brand .wc{font-size:25px}.brand .yr{font-size:30px;color:#4ade80}.hero{border:1px solid rgba(74,222,128,.28);background:linear-gradient(135deg,#0b2415,#06130b);border-radius:23px;padding:12px 14px 13px;box-shadow:0 10px 28px rgba(0,0,0,.28);overflow:hidden}.meta{text-align:center;color:#77f0a0;font-size:15px;font-weight:900;margin-bottom:7px}.teams{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;min-height:92px}.team{text-align:center}.flag{font-size:31px;line-height:1;margin-bottom:4px}.name{font-size:17px;font-weight:900}.vs{color:#45da78;font-size:24px;font-weight:1000;text-align:center}.status{text-align:center;color:#6fa780;font-size:10px;font-weight:900;letter-spacing:.18em;margin-top:2px}.details{margin-top:10px;display:grid;gap:8px}.row{display:grid;grid-template-columns:28px 1fr 16px;gap:9px;align-items:center;border:1px solid rgba(74,222,128,.24);background:rgba(9,31,18,.85);border-radius:17px;padding:10px 12px;text-decoration:none;color:inherit}.ico{font-size:20px}.label{font-size:10px;letter-spacing:.14em;font-weight:900;color:#80a98b;text-transform:uppercase;margin-bottom:3px}.value{font-size:17px;font-weight:900;color:var(--blue);line-height:1.15}.sub{font-size:13px;color:#9fc5aa;margin-top:2px;line-height:1.18}.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:13px}.btn{border-radius:18px;padding:12px 10px;border:1px solid rgba(74,222,128,.34);background:#0b2415;color:#58e887;text-decoration:none;text-align:center;font-size:17px;font-weight:1000}.btn.primary{background:linear-gradient(135deg,#4ade80,#22c55e);color:#031008;border:0}.install{text-align:center;color:#77a484;font-size:13px;line-height:1.32;margin-top:10px}@media(min-width:700px){.brand .wc{font-size:36px}.brand .yr{font-size:42px}.flag{font-size:46px}.name{font-size:24px}.vs{font-size:36px}.teams{min-height:128px}.meta{font-size:22px}.value{font-size:22px}.sub{font-size:16px}.hero{padding:17px}.row{padding:14px}}
-  </style></head><body><main class="wrap"><div class="brand"><small>FIFA</small><div class="wc">WORLD CUP</div><div class="yr">2026</div></div><section class="hero"><div class="meta">${esc(meta(d)||'World Cup 2026')}</div><div class="teams"><div class="team"><div class="flag">${esc(d.homeFlag)}</div><div class="name">${esc(d.home)}</div></div><div><div class="vs">${esc(scoreOrVs(d))}</div><div class="status">${esc(String(d.status).toUpperCase())}</div></div><div class="team"><div class="flag">${esc(d.awayFlag)}</div><div class="name">${esc(d.away)}</div></div></div></section><div class="details">${rows.map(r=>{const inner=`<div class="ico">${r[0]}</div><div><div class="label">${esc(r[1])}</div><div class="value">${esc(r[2])}</div>${r[3]?`<div class="sub">${esc(r[3])}</div>`:''}</div><div>${r[4]?'›':''}</div>`;return r[4]?`<a class="row" href="${esc(r[4])}" target="_blank" rel="noopener">${inner}</a>`:`<div class="row">${inner}</div>`}).join('')}</div><div class="actions"><a class="btn primary" href="${esc(base(req))}">⚽ Open App</a><button class="btn" onclick="navigator.share?navigator.share({title:${JSON.stringify(title)},text:${JSON.stringify(desc)},url:location.href}):navigator.clipboard.writeText(location.href)">📤 Share</button></div><div class="install"><strong>Don’t have the app?</strong><br/>iPhone: Safari → Share ↑ → Add to Home Screen<br/>Android: Chrome → ⋯ → Add to Home Screen</div></main></body></html>`;
+  return `<!doctype html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/><title>${esc(title)}</title><meta name="description" content="${esc(desc)}"/><meta property="og:type" content="website"/><meta property="og:title" content="${esc(title)}"/><meta property="og:description" content="${esc(desc)}"/><meta property="og:image" content="${esc(imgUrl(req))}"/><meta property="og:image:secure_url" content="${esc(imgUrl(req))}"/><meta property="og:image:type" content="image/png"/><meta property="og:image:width" content="1200"/><meta property="og:image:height" content="630"/><meta name="twitter:card" content="summary_large_image"/><meta name="twitter:image" content="${esc(imgUrl(req))}"/><style>
+  :root{color-scheme:dark;--green:#4ade80;--text:#eafff0;--blue:#60a5fa}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 80% 0%,#0d2a18 0,#030905 42%,#010402 100%);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:var(--text)}.wrap{max-width:760px;margin:0 auto;padding:18px 18px calc(22px + env(safe-area-inset-bottom))}.brand{font-weight:1000;line-height:.98;margin:3px 0 14px}.brand small{display:block;letter-spacing:.32em;color:#72a981;font-size:12px;margin-bottom:3px}.brand .wc{font-size:25px}.brand .yr{font-size:30px;color:#4ade80}.hero{border:1px solid rgba(74,222,128,.28);background:linear-gradient(135deg,#0b2415,#06130b);border-radius:23px;padding:12px 14px 13px;box-shadow:0 10px 28px rgba(0,0,0,.28);overflow:hidden}.meta{text-align:center;color:#77f0a0;font-size:15px;font-weight:900;margin-bottom:7px}.teams{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;min-height:92px}.team{text-align:center}.flag{font-size:31px;line-height:1;margin-bottom:4px}.flag-img{width:44px;height:30px;object-fit:cover;border-radius:3px;margin:0 auto 4px;display:block;box-shadow:0 1px 3px rgba(0,0,0,.4)}.name{font-size:17px;font-weight:900}.vs{color:#45da78;font-size:24px;font-weight:1000;text-align:center}.status{text-align:center;color:#6fa780;font-size:10px;font-weight:900;letter-spacing:.18em;margin-top:2px}.details{margin-top:10px;display:grid;gap:8px}.row{display:grid;grid-template-columns:28px 1fr 16px;gap:9px;align-items:center;border:1px solid rgba(74,222,128,.24);background:rgba(9,31,18,.85);border-radius:17px;padding:10px 12px;text-decoration:none;color:inherit}.ico{font-size:20px}.label{font-size:10px;letter-spacing:.14em;font-weight:900;color:#80a98b;text-transform:uppercase;margin-bottom:3px}.value{font-size:17px;font-weight:900;color:var(--blue);line-height:1.15}.sub{font-size:13px;color:#9fc5aa;margin-top:2px;line-height:1.18}.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:13px}.btn{border-radius:18px;padding:12px 10px;border:1px solid rgba(74,222,128,.34);background:#0b2415;color:#58e887;text-decoration:none;text-align:center;font-size:17px;font-weight:1000}.btn.primary{background:linear-gradient(135deg,#4ade80,#22c55e);color:#031008;border:0}.install{text-align:center;color:#77a484;font-size:13px;line-height:1.32;margin-top:10px}@media(min-width:700px){.brand .wc{font-size:36px}.brand .yr{font-size:42px}.flag{font-size:46px}.flag-img{width:64px;height:44px}.name{font-size:24px}.vs{font-size:36px}.teams{min-height:128px}.meta{font-size:22px}.value{font-size:22px}.sub{font-size:16px}.hero{padding:17px}.row{padding:14px}}
+  </style></head><body><main class="wrap"><div class="brand"><small>FIFA</small><div class="wc">WORLD CUP</div><div class="yr">2026</div></div><section class="hero"><div class="meta">${esc(meta(d)||'World Cup 2026')}</div><div class="teams"><div class="team">${d.homeFlagUrl?`<img class="flag-img" src="${esc(d.homeFlagUrl)}" alt=""/>`:`<div class="flag">🏳️</div>`}<div class="name">${esc(d.home)}</div></div><div><div class="vs">${esc(scoreOrVs(d))}</div><div class="status">${esc(String(d.status).toUpperCase())}</div></div><div class="team">${d.awayFlagUrl?`<img class="flag-img" src="${esc(d.awayFlagUrl)}" alt=""/>`:`<div class="flag">🏳️</div>`}<div class="name">${esc(d.away)}</div></div></div></section><div class="details">${rows.map(r=>{const inner=`<div class="ico">${r[0]}</div><div><div class="label">${esc(r[1])}</div><div class="value">${esc(r[2])}</div>${r[3]?`<div class="sub">${esc(r[3])}</div>`:''}</div><div>${r[4]?'›':''}</div>`;return r[4]?`<a class="row" href="${esc(r[4])}" target="_blank" rel="noopener">${inner}</a>`:`<div class="row">${inner}</div>`}).join('')}</div><div class="actions"><a class="btn primary" href="${esc(base(req))}">⚽ Open App</a><button class="btn" onclick="navigator.share?navigator.share({title:${JSON.stringify(title)},text:${JSON.stringify(desc)},url:location.href}):navigator.clipboard.writeText(location.href)">📤 Share</button></div><div class="install"><strong>Don’t have the app?</strong><br/>iPhone: Safari → Share ↑ → Add to Home Screen<br/>Android: Chrome → ⋯ → Add to Home Screen</div></main></body></html>`;
 }
 
 export default async function handler(req,res){
@@ -152,6 +206,17 @@ export default async function handler(req,res){
   }
 
   const d=data(req);
-  if(q(req,'image')==='1'){res.setHeader('Content-Type','image/svg+xml; charset=utf-8');res.setHeader('Cache-Control','public, max-age=300, s-maxage=300');return res.status(200).send(svg(d));}
+  if(q(req,'image')==='1'){
+    try {
+      const imageResponse = new ImageResponse(pngCard(d), { width: 1200, height: 630 });
+      const buffer = await imageResponse.arrayBuffer();
+      res.setHeader('Content-Type','image/png');
+      res.setHeader('Cache-Control','public, max-age=300, s-maxage=300');
+      return res.status(200).send(Buffer.from(buffer));
+    } catch (e) {
+      console.error('[og] PNG render error:', e.message);
+      return res.status(500).send('Image render failed');
+    }
+  }
   res.setHeader('Content-Type','text/html; charset=utf-8');res.setHeader('Cache-Control','public, max-age=60, s-maxage=60');return res.status(200).send(html(req,d));
 }
