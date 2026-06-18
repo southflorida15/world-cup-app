@@ -65,7 +65,7 @@ function imgUrl(req){
   const u=new URLSearchParams(req.query); u.set('image','1'); if(!u.get('v')) u.set('v',Date.now().toString(36)); return `${base(req)}/api/og?${u}`;
 }
 function meta(d){ return [d.group,d.date,d.time].filter(Boolean).join(' • '); }
-function scoreOrVs(d){ return d.hg!==''&&d.ag!=='' ? `${d.hg}–${d.ag}` : 'VS'; }
+function scoreOrVs(d){ return d.hg!==''&&d.ag!=='' ? `${d.hg} – ${d.ag}` : 'VS'; }
 
 function pngCard(d){
   const wxSub=[d.condition,d.rain?`${d.rain} rain`:'',d.wind].filter(Boolean).join(' • ');
@@ -76,11 +76,27 @@ function pngCard(d){
   const infoBox = (label, value, sub, color) => ({
     type: 'div',
     props: {
-      style: { display:'flex', flexDirection:'column', width:336, height:96, borderRadius:22, background:'#0a2114', border:'2px solid rgba(24,169,87,0.3)', padding:'14px 16px', justifyContent:'center' },
+      style: { display:'flex', flexDirection:'column', flex:1, height:78, borderRadius:16, background:'#0a2114', border:'1.5px solid rgba(24,169,87,0.3)', padding:'11px 14px', justifyContent:'center' },
       children: [
-        { type:'div', props:{ style:{ fontSize:13, fontWeight:900, color:'#82a98d', letterSpacing:2 }, children: label } },
-        { type:'div', props:{ style:{ fontSize:21, fontWeight:900, color, marginTop:6 }, children: value } },
-        { type:'div', props:{ style:{ fontSize:14, fontWeight:700, color:'#a7cdb4', marginTop:4 }, children: sub } },
+        { type:'div', props:{ style:{ fontSize:10, fontWeight:800, color:'#82a98d', letterSpacing:1.5 }, children: label } },
+        { type:'div', props:{ style:{ fontSize:14, fontWeight:800, color, marginTop:4, lineHeight:1.15 }, children: value } },
+        ...(sub ? [{ type:'div', props:{ style:{ fontSize:10.5, fontWeight:600, color:'#a7cdb4', marginTop:3 }, children: sub } }] : []),
+      ]
+    }
+  });
+
+  // Three equal-weight probability boxes — mirrors the in-app simulator card
+  // (flag+team / draw / flag+team), not a single squeezed "ODDS" line.
+  const probBox = (label, pct, color, flagUrl) => ({
+    type: 'div',
+    props: {
+      style: { display:'flex', flexDirection:'column', alignItems:'center', flex:1, height:78, borderRadius:16, background:`${color}14`, border:`1.5px solid ${color}55`, padding:'9px 8px', justifyContent:'center' },
+      children: [
+        { type:'div', props:{ style:{ display:'flex', alignItems:'center', gap:5 }, children: [
+          ...(flagUrl ? [{ type:'img', props:{ src:flagUrl, width:18, height:13, style:{ borderRadius:2, objectFit:'cover' } } }] : []),
+          { type:'div', props:{ style:{ fontSize:10.5, fontWeight:700, color:'#9fc5aa' }, children: label } },
+        ]}},
+        { type:'div', props:{ style:{ fontSize:22, fontWeight:900, color, marginTop:3 }, children: `${pct}%` } },
       ]
     }
   });
@@ -88,46 +104,60 @@ function pngCard(d){
   const teamBlock = (flagUrl, name) => ({
     type: 'div',
     props: {
-      style: { display:'flex', flexDirection:'column', alignItems:'center', width:200 },
+      style: { display:'flex', flexDirection:'column', alignItems:'center', width:170 },
       children: [
-        ...(flagUrl ? [{ type:'img', props:{ src:flagUrl, width:64, height:44, style:{ borderRadius:4, objectFit:'cover' } } }] : []),
-        { type:'div', props:{ style:{ fontSize:27, fontWeight:900, color:'#f1fff5', marginTop:8, textAlign:'center' }, children: name } },
+        ...(flagUrl ? [{ type:'img', props:{ src:flagUrl, width:46, height:32, style:{ borderRadius:3, objectFit:'cover' } } }] : []),
+        { type:'div', props:{ style:{ fontSize:18, fontWeight:900, color:'#f1fff5', marginTop:6, textAlign:'center' }, children: name } },
       ]
     }
   });
 
+  const homePct = d.homeSim || d.homePoly || '—';
+  const drawPct = d.drawSim || '—';
+  const awayPct = d.awaySim || d.awayPoly || '—';
+
   return {
     type: 'div',
     props: {
-      style: { width:'1200px', height:'630px', display:'flex', flexDirection:'column', background:'linear-gradient(135deg, #06150d 0%, #020805 100%)', padding:'50px 64px', fontFamily:'Arial' },
+      style: { width:'1200px', height:'460px', display:'flex', flexDirection:'column', background:'linear-gradient(135deg, #06150d 0%, #020805 100%)', padding:'36px 56px', fontFamily:'Arial' },
       children: [
         { type:'div', props:{ style:{ display:'flex', flexDirection:'column' }, children:[
-          { type:'div', props:{ style:{ fontSize:18, fontWeight:800, color:'#59d987', letterSpacing:6 }, children:'FIFA' } },
-          { type:'div', props:{ style:{ fontSize:40, fontWeight:900, color:'#e8fff0', marginTop:4 }, children:'WORLD CUP' } },
-          { type:'div', props:{ style:{ fontSize:42, fontWeight:900, color:'#49ee83' }, children:'2026' } },
+          { type:'div', props:{ style:{ fontSize:11, fontWeight:700, color:'#59d987', letterSpacing:3 }, children:'FIFA' } },
+          { type:'div', props:{ style:{ display:'flex', alignItems:'baseline', gap:6, marginTop:1 }, children:[
+            { type:'div', props:{ style:{ fontSize:19, fontWeight:800, color:'#e8fff0' }, children:'WORLD CUP' } },
+            { type:'div', props:{ style:{ fontSize:19, fontWeight:800, color:'#49ee83' }, children:'2026' } },
+          ]}},
         ]}},
-        { type:'div', props:{ style:{ display:'flex', flexDirection:'column', marginTop:30, width:'100%', height:178, borderRadius:28, background:'linear-gradient(135deg, #102d1b, #06150d)', border:'2px solid rgba(24,169,87,0.45)', padding:'20px 40px', justifyContent:'center' }, children:[
-          { type:'div', props:{ style:{ display:'flex', justifyContent:'center', fontSize:25, fontWeight:900, color:'#77f0a0' }, children: metaLine } },
-          { type:'div', props:{ style:{ display:'flex', justifyContent:'space-between', alignItems:'center', marginTop:20 }, children:[
+        { type:'div', props:{ style:{ display:'flex', flexDirection:'column', marginTop:20, width:'100%', height:148, borderRadius:22, background:'linear-gradient(135deg, #102d1b, #06150d)', border:'1.5px solid rgba(24,169,87,0.45)', padding:'16px 36px', justifyContent:'center' }, children:[
+          { type:'div', props:{ style:{ display:'flex', justifyContent:'center', fontSize:17, fontWeight:900, color:'#77f0a0' }, children: metaLine } },
+          { type:'div', props:{ style:{ display:'flex', justifyContent:'space-between', alignItems:'center', marginTop:14 }, children:[
             teamBlock(d.homeFlagUrl, d.home),
             { type:'div', props:{ style:{ display:'flex', flexDirection:'column', alignItems:'center' }, children:[
-              { type:'div', props:{ style:{ fontSize:39, fontWeight:900, color:'#52e985' }, children: score } },
-              { type:'div', props:{ style:{ fontSize:14, fontWeight:900, color:'#89c99f', letterSpacing:4, marginTop:4 }, children: String(d.status).toUpperCase() } },
+              { type:'div', props:{ style:{ fontSize:30, fontWeight:900, color:'#52e985' }, children: score } },
+              { type:'div', props:{ style:{ fontSize:11, fontWeight:900, color:'#89c99f', letterSpacing:3, marginTop:3 }, children: String(d.status).toUpperCase() } },
             ]}},
             teamBlock(d.awayFlagUrl, d.away),
           ]}},
         ]}},
-        { type:'div', props:{ style:{ display:'flex', justifyContent:'space-between', marginTop:24 }, children:[
-          infoBox('VENUE', d.venue||'Venue TBA', d.city||'', '#60a5fa'),
-          infoBox('WEATHER', d.tempLine||'Forecast in app', wxSub, '#facc15'),
-          infoBox(showMarket?'ODDS':'BROADCAST',
-            showMarket ? `${d.homeSim||d.homePoly||'—'} / ${d.drawSim||'—'} / ${d.awaySim||d.awayPoly||'—'}` : (d.broadcast||'Details in app'),
-            showMarket ? 'Home / Draw / Away' : (d.streaming||''),
-            '#49ee83'),
-        ]}},
-        { type:'div', props:{ style:{ display:'flex', justifyContent:'space-between', marginTop:32 }, children:[
-          { type:'div', props:{ style:{ fontSize:22, fontWeight:850, color:'#49ee83' }, children:'World Cup 2026 Predictor' } },
-          { type:'div', props:{ style:{ fontSize:19, fontWeight:700, color:'#4c7f5e' }, children:'world-cup-app-iota.vercel.app' } },
+        ...(showMarket ? [
+          { type:'div', props:{ style:{ display:'flex', justifyContent:'center', marginTop:16 }, children:[
+            { type:'div', props:{ style:{ fontSize:12, fontWeight:800, color:'#6f9c80', letterSpacing:2 }, children:'WIN PROBABILITY' } },
+          ]}},
+          { type:'div', props:{ style:{ display:'flex', gap:12, marginTop:8 }, children:[
+            probBox(d.home, homePct, '#4ade80', d.homeFlagUrl),
+            probBox('Draw', drawPct, '#facc15', null),
+            probBox(d.away, awayPct, '#f87171', d.awayFlagUrl),
+          ]}},
+        ] : [
+          { type:'div', props:{ style:{ display:'flex', gap:12, marginTop:18 }, children:[
+            infoBox('VENUE', d.venue||'Venue TBA', d.city||'', '#60a5fa'),
+            infoBox('WEATHER', d.tempLine||'Forecast in app', wxSub, '#facc15'),
+            infoBox('BROADCAST', d.broadcast||'Details in app', d.streaming||'', '#49ee83'),
+          ]}},
+        ]),
+        { type:'div', props:{ style:{ display:'flex', justifyContent:'space-between', marginTop:22 }, children:[
+          { type:'div', props:{ style:{ fontSize:16, fontWeight:800, color:'#49ee83' }, children:'World Cup 2026 Predictor' } },
+          { type:'div', props:{ style:{ fontSize:14, fontWeight:700, color:'#4c7f5e' }, children:'world-cup-app-iota.vercel.app' } },
         ]}},
       ]
     }
@@ -167,7 +197,7 @@ if(d.broadcast){
   ]);
 
 }
-  return `<!doctype html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/><title>${esc(title)}</title><meta name="description" content="${esc(desc)}"/><meta property="og:type" content="website"/><meta property="og:title" content="${esc(title)}"/><meta property="og:description" content="${esc(desc)}"/><meta property="og:image" content="${esc(imgUrl(req))}"/><meta property="og:image:secure_url" content="${esc(imgUrl(req))}"/><meta property="og:image:type" content="image/png"/><meta property="og:image:width" content="1200"/><meta property="og:image:height" content="630"/><meta name="twitter:card" content="summary_large_image"/><meta name="twitter:image" content="${esc(imgUrl(req))}"/><style>
+  return `<!doctype html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/><title>${esc(title)}</title><meta name="description" content="${esc(desc)}"/><meta property="og:type" content="website"/><meta property="og:title" content="${esc(title)}"/><meta property="og:description" content="${esc(desc)}"/><meta property="og:image" content="${esc(imgUrl(req))}"/><meta property="og:image:secure_url" content="${esc(imgUrl(req))}"/><meta property="og:image:type" content="image/png"/><meta property="og:image:width" content="1200"/><meta property="og:image:height" content="460"/><meta name="twitter:card" content="summary_large_image"/><meta name="twitter:image" content="${esc(imgUrl(req))}"/><style>
   :root{color-scheme:dark;--green:#4ade80;--text:#eafff0;--blue:#60a5fa}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 80% 0%,#0d2a18 0,#030905 42%,#010402 100%);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:var(--text)}.wrap{max-width:760px;margin:0 auto;padding:18px 18px calc(22px + env(safe-area-inset-bottom))}.brand{font-weight:1000;line-height:.98;margin:3px 0 14px}.brand small{display:block;letter-spacing:.32em;color:#72a981;font-size:12px;margin-bottom:3px}.brand .wc{font-size:25px}.brand .yr{font-size:30px;color:#4ade80}.hero{border:1px solid rgba(74,222,128,.28);background:linear-gradient(135deg,#0b2415,#06130b);border-radius:23px;padding:12px 14px 13px;box-shadow:0 10px 28px rgba(0,0,0,.28);overflow:hidden}.meta{text-align:center;color:#77f0a0;font-size:15px;font-weight:900;margin-bottom:7px}.teams{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;min-height:92px}.team{text-align:center}.flag{font-size:31px;line-height:1;margin-bottom:4px}.flag-img{width:44px;height:30px;object-fit:cover;border-radius:3px;margin:0 auto 4px;display:block;box-shadow:0 1px 3px rgba(0,0,0,.4)}.name{font-size:17px;font-weight:900}.vs{color:#45da78;font-size:24px;font-weight:1000;text-align:center}.status{text-align:center;color:#6fa780;font-size:10px;font-weight:900;letter-spacing:.18em;margin-top:2px}.details{margin-top:10px;display:grid;gap:8px}.row{display:grid;grid-template-columns:28px 1fr 16px;gap:9px;align-items:center;border:1px solid rgba(74,222,128,.24);background:rgba(9,31,18,.85);border-radius:17px;padding:10px 12px;text-decoration:none;color:inherit}.ico{font-size:20px}.label{font-size:10px;letter-spacing:.14em;font-weight:900;color:#80a98b;text-transform:uppercase;margin-bottom:3px}.value{font-size:17px;font-weight:900;color:var(--blue);line-height:1.15}.sub{font-size:13px;color:#9fc5aa;margin-top:2px;line-height:1.18}.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:13px}.btn{border-radius:18px;padding:12px 10px;border:1px solid rgba(74,222,128,.34);background:#0b2415;color:#58e887;text-decoration:none;text-align:center;font-size:17px;font-weight:1000}.btn.primary{background:linear-gradient(135deg,#4ade80,#22c55e);color:#031008;border:0}.install{text-align:center;color:#77a484;font-size:13px;line-height:1.32;margin-top:10px}@media(min-width:700px){.brand .wc{font-size:36px}.brand .yr{font-size:42px}.flag{font-size:46px}.flag-img{width:64px;height:44px}.name{font-size:24px}.vs{font-size:36px}.teams{min-height:128px}.meta{font-size:22px}.value{font-size:22px}.sub{font-size:16px}.hero{padding:17px}.row{padding:14px}}
   </style></head><body><main class="wrap"><div class="brand"><small>FIFA</small><div class="wc">WORLD CUP</div><div class="yr">2026</div></div><section class="hero"><div class="meta">${esc(meta(d)||'World Cup 2026')}</div><div class="teams"><div class="team">${d.homeFlagUrl?`<img class="flag-img" src="${esc(d.homeFlagUrl)}" alt=""/>`:`<div class="flag">🏳️</div>`}<div class="name">${esc(d.home)}</div></div><div><div class="vs">${esc(scoreOrVs(d))}</div><div class="status">${esc(String(d.status).toUpperCase())}</div></div><div class="team">${d.awayFlagUrl?`<img class="flag-img" src="${esc(d.awayFlagUrl)}" alt=""/>`:`<div class="flag">🏳️</div>`}<div class="name">${esc(d.away)}</div></div></div></section><div class="details">${rows.map(r=>{const inner=`<div class="ico">${r[0]}</div><div><div class="label">${esc(r[1])}</div><div class="value">${esc(r[2])}</div>${r[3]?`<div class="sub">${esc(r[3])}</div>`:''}</div><div>${r[4]?'›':''}</div>`;return r[4]?`<a class="row" href="${esc(r[4])}" target="_blank" rel="noopener">${inner}</a>`:`<div class="row">${inner}</div>`}).join('')}</div><div class="actions"><a class="btn primary" href="${esc(base(req))}">⚽ Open App</a><button class="btn" onclick="navigator.share?navigator.share({title:${JSON.stringify(title)},text:${JSON.stringify(desc)},url:location.href}):navigator.clipboard.writeText(location.href)">📤 Share</button></div><div class="install"><strong>Don’t have the app?</strong><br/>iPhone: Safari → Share ↑ → Add to Home Screen<br/>Android: Chrome → ⋯ → Add to Home Screen</div></main></body></html>`;
 }
@@ -211,7 +241,7 @@ export default async function handler(req,res){
   if(q(req,'image')==='1'){
     try {
       const { ImageResponse } = await import('@vercel/og');
-      const imageResponse = new ImageResponse(pngCard(d), { width: 1200, height: 630 });
+      const imageResponse = new ImageResponse(pngCard(d), { width: 1200, height: 460 });
       const buffer = await imageResponse.arrayBuffer();
       res.setHeader('Content-Type','image/png');
       res.setHeader('Cache-Control','public, max-age=300, s-maxage=300');
