@@ -102,14 +102,32 @@ self.addEventListener("push", event => {
 
 self.addEventListener("notificationclick", event => {
   event.notification.close();
-  const targetUrl = event.notification.data?.url || "/";
   const message = event.notification.data?.message;
+  const baseUrl = event.notification.data?.url || "/";
+
+  // Encode the message into the URL so a freshly-opened or freshly-navigated
+  // page can pick it up on load, regardless of postMessage timing races.
+  let targetUrl = baseUrl;
+  if (message) {
+    try {
+      const encoded = encodeURIComponent(JSON.stringify(message));
+      const sep = baseUrl.includes("?") ? "&" : "?";
+      targetUrl = `${baseUrl}${sep}pushMsg=${encoded}`;
+    } catch (e) {
+      // fall back to baseUrl without the param
+    }
+  }
+
   event.waitUntil(
     clients.matchAll({ type: "window", includeUncontrolled: true }).then(windowClients => {
       for (const client of windowClients) {
         if (client.url.includes(self.location.origin) && "focus" in client) {
           client.focus();
+          // Send via postMessage for the case where the page is already
+          // mounted and listening right now...
           if (message) client.postMessage({ type: "PUSH_RECEIVED", message });
+          // ...and also navigate with the message in the URL as a durable
+          // fallback in case the page reloads or the listener isn't ready yet.
           if ("navigate" in client) client.navigate(targetUrl);
           return;
         }

@@ -7275,24 +7275,48 @@ export default function App() {
   });
   const unreadCount = inbox.filter(m => !m.read).length;
 
-  // Listen for push messages from service worker
+  // Shared handler: save to inbox + show the centered popup toast.
+  // Used for both the live postMessage path (app already open and listening)
+  // and the URL-param path (app just opened/reloaded from a notification tap).
+  const handleIncomingPush = (msg) => {
+    if (!msg) return;
+    setInbox(prev => {
+      const updated = [msg, ...prev].slice(0, 20);
+      try { localStorage.setItem("wc2026_inbox", JSON.stringify(updated)); } catch {}
+      return updated;
+    });
+    setPushToast(msg);
+    setTimeout(() => setPushToast(null), 8000);
+  };
+
+  // Listen for push messages from service worker (app already open case)
   useEffect(() => {
     const handler = (event) => {
-      if (event.data?.type === "PUSH_RECEIVED") {
-        const msg = event.data.message;
-        setInbox(prev => {
-          const updated = [msg, ...prev].slice(0, 20);
-          try { localStorage.setItem("wc2026_inbox", JSON.stringify(updated)); } catch {}
-          return updated;
-        });
-        // Show centered popup toast
-        setPushToast(msg);
-        setTimeout(() => setPushToast(null), 8000);
-      }
+      if (event.data?.type === "PUSH_RECEIVED") handleIncomingPush(event.data.message);
     };
     navigator.serviceWorker?.addEventListener("message", handler);
     return () => navigator.serviceWorker?.removeEventListener("message", handler);
   }, []);
+
+  // Pick up a notification tap that opened/navigated the app fresh — the SW
+  // encodes the message into ?pushMsg=... since postMessage can race against
+  // this listener mounting. Runs once on load, then cleans the URL.
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const raw = params.get("pushMsg");
+      if (raw) {
+        const msg = JSON.parse(decodeURIComponent(raw));
+        handleIncomingPush(msg);
+        params.delete("pushMsg");
+        const cleanUrl = window.location.pathname + (params.toString() ? `?${params}` : "") + window.location.hash;
+        window.history.replaceState({}, "", cleanUrl);
+      }
+    } catch (e) {
+      // malformed param — ignore silently, nothing to recover
+    }
+  }, []);
+
   const geoData = useCountry();
   const [locationOverride, setLocationOverride] = useState(() => {
     try { return JSON.parse(localStorage.getItem("wc2026_location") || "null"); } catch { return null; }
