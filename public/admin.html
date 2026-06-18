@@ -165,7 +165,9 @@
         </div>
       </div>
       <div id="pill-visitors" style="display:none;margin-top:12px">
-        <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
+        <div id="my-uid-banner" style="margin-bottom:8px"></div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:8px">
+          <button class="admin-btn" style="padding:5px 10px;font-size:11px" onclick="highlightMyVisitor()">🙋 Select Mine (this browser)</button>
           <button class="admin-btn danger" style="padding:5px 10px;font-size:11px" onclick="deleteSelectedVisitors()">🗑️ Delete Selected</button>
         </div>
         <div class="table">
@@ -584,6 +586,35 @@ async function resetAnalytics() {
   } catch (e) { alert(e.message); }
 }
 
+function getMyUid() {
+  try { return localStorage.getItem("wc2026_uid") || null; } catch { return null; }
+}
+
+function highlightMyVisitor() {
+  const banner = document.getElementById("my-uid-banner");
+  const myUid = getMyUid();
+  if (!myUid) {
+    banner.innerHTML = `<div class="admin-note">No UID found in this browser — you may not have opened the main app (not just /admin.html) here before.</div>`;
+    return;
+  }
+  document.querySelectorAll(".visitor-check").forEach(cb => {
+    cb.checked = false;
+    cb.closest(".row").style.outline = "";
+    cb.closest(".row").style.background = "";
+  });
+  const matches = document.querySelectorAll(`.visitor-check[value="${myUid.replace(/"/g,'')}"]`);
+  if (matches.length) {
+    matches.forEach(cb => {
+      cb.checked = true;
+      cb.closest(".row").style.outline = "1.5px solid var(--gold)";
+      cb.closest(".row").style.background = "rgba(250,204,21,0.06)";
+    });
+    banner.innerHTML = `<div class="admin-note" style="color:var(--gold)">🙋 This browser's UID is <span style="font-family:monospace">${esc(myUid)}</span> — matching row(s) highlighted and checked below. Click "Delete Selected" to remove.</div>`;
+  } else {
+    banner.innerHTML = `<div class="admin-note">This browser's UID (<span style="font-family:monospace">${esc(myUid)}</span>) has no matching entry in the current visitor list — it may already be excluded from analytics, or hasn't synced a visit yet.</div>`;
+  }
+}
+
 async function deleteAccount(uid, label) {
   if (!uid) return;
   if (!confirm(`Delete account ${label || uid}? This cannot be undone.`)) return;
@@ -635,6 +666,7 @@ async function loadData() {
     document.getElementById("content").style.display = "block";
     renderDashboard(d, subs);
     checkAdminDevice();
+    highlightMyVisitor();
   } catch(e) {
     document.getElementById("loading").innerHTML = `<div style="color:var(--red)">Error: ${e.message}</div>`;
   }
