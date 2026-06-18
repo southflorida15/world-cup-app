@@ -165,9 +165,12 @@
         </div>
       </div>
       <div id="pill-visitors" style="display:none;margin-top:12px">
+        <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
+          <button class="admin-btn danger" style="padding:5px 10px;font-size:11px" onclick="deleteSelectedVisitors()">🗑️ Delete Selected</button>
+        </div>
         <div class="table">
-          <div class="row head" style="grid-template-columns:1fr 80px 60px 100px 100px">
-            <div>Location</div><div>Device</div><div>Visits</div><div>First seen</div><div>Last seen</div>
+          <div class="row head" style="grid-template-columns:24px 1fr 80px 60px 100px 100px 50px">
+            <div><input type="checkbox" id="visitors-select-all" onchange="toggleAllVisitors(this.checked)"/></div><div>Location</div><div>Device</div><div>Visits</div><div>First seen</div><div>Last seen</div><div></div>
           </div>
           <div id="visitors-list"></div>
         </div>
@@ -590,6 +593,29 @@ async function deleteAccount(uid, label) {
   } catch (e) { alert(e.message); }
 }
 
+async function deleteVisitor(uid, label) {
+  if (!uid) return;
+  if (!confirm(`Remove visitor record for ${label || uid}? This only removes the analytics entry, not any account.`)) return;
+  try {
+    await adminAction({ adminAction: "delete-visitor", uid });
+    await loadData();
+  } catch (e) { alert(e.message); }
+}
+
+function toggleAllVisitors(checked) {
+  document.querySelectorAll(".visitor-check").forEach(cb => cb.checked = checked);
+}
+
+async function deleteSelectedVisitors() {
+  const uids = Array.from(document.querySelectorAll(".visitor-check:checked")).map(cb => cb.value);
+  if (!uids.length) { alert("No visitors selected."); return; }
+  if (!confirm(`Remove ${uids.length} visitor record${uids.length>1?"s":""}? This only removes the analytics entries, not any accounts.`)) return;
+  try {
+    await adminAction({ adminAction: "delete-visitor", uids });
+    await loadData();
+  } catch (e) { alert(e.message); }
+}
+
 async function loadData() {
   try {
     const [r, subsR] = await Promise.all([
@@ -703,12 +729,14 @@ function renderDashboard(d, subs=[]) {
     const loc = [v.city, v.country].filter(Boolean).join(", ") || "—";
     const dc = (v.device||"").includes("iOS")?"ios":(v.device||"").includes("Android")?"android":(v.device||"").includes("Desktop")?"desktop":"unknown";
     const isActive = v.lastSeen && now - v.lastSeen < 30 * 60 * 1000;
-    return `<div class="row" style="grid-template-columns:1fr 80px 60px 100px 100px">
+    return `<div class="row" style="grid-template-columns:24px 1fr 80px 60px 100px 100px 50px">
+      <div><input type="checkbox" class="visitor-check" value="${escA(v.uid)}"/></div>
       <div style="display:flex;align-items:center;gap:6px">${isActive?`<span class="active-dot"></span>`:""}${esc(loc)}</div>
       <div><span class="badge badge-${dc}">${esc(v.device||"—")}</span></div>
       <div style="font-weight:600">${v.visits||1}</div>
       <div style="color:var(--dim);font-size:11px">${v.firstSeen?new Date(v.firstSeen).toLocaleDateString():"—"}</div>
       <div style="color:var(--dim);font-size:11px">${v.lastSeen?new Date(v.lastSeen).toLocaleString():"—"}</div>
+      <div><button class="admin-btn danger" style="padding:4px 7px;font-size:10px" onclick="deleteVisitor('${escA(v.uid)}','${escA(loc)}')">Del</button></div>
     </div>`;
   }).join("") : `<div style="padding:20px;text-align:center;color:var(--dim);font-size:13px">No visitor data yet</div>`;
 }

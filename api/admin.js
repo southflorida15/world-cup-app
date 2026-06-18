@@ -8,6 +8,8 @@
 //   GET  ?action=dashboard
 //   POST { adminAction:"reset-analytics" }
 //   POST { adminAction:"delete-account", uid:"..." }
+//   POST { adminAction:"delete-visitor", uid:"..." }            (single)
+//   POST { adminAction:"delete-visitor", uids:["...","..."] }   (bulk)
 
 import { Redis } from "@upstash/redis";
 
@@ -79,6 +81,21 @@ async function resetAnalytics() {
   const deleted = await delMany(keys);
   await kv.set("analytics:resetAt", new Date().toISOString());
   return { deleted, resetAt: new Date().toISOString() };
+}
+
+// Removes one or more specific visitor records (e.g. the admin's own test
+// devices) without touching anyone else's analytics — unlike resetAnalytics()
+// which wipes everything.
+async function deleteVisitorRecords(uidOrUids) {
+  const uids = [...new Set((Array.isArray(uidOrUids) ? uidOrUids : [uidOrUids]).filter(Boolean))];
+  if (!uids.length) throw new Error("uid required");
+  const dailyKeys = await scanKeys("daily:*");
+  for (const uid of uids) {
+    await kv.del(`visitor:${uid}`).catch(() => null);
+    await kv.srem("visitors:all", uid).catch(() => null);
+    await Promise.all(dailyKeys.map(k => kv.srem(k, uid).catch(() => null)));
+  }
+  return { deletedCount: uids.length, uids };
 }
 
 async function buildDashboard() {
@@ -366,6 +383,10 @@ export default async function handler(req, res) {
       }
       if (req.body.adminAction === "delete-account") {
         const result = await deleteAccount(req.body.uid);
+        return res.status(200).json({ ok: true, ...result });
+      }
+      if (req.body.adminAction === "delete-visitor") {
+        const result = await deleteVisitorRecords(req.body.uids || req.body.uid);
         return res.status(200).json({ ok: true, ...result });
       }
       // 1. Flush livescores cache
