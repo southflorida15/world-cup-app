@@ -9,7 +9,9 @@
 // (e.g. /api/og?id=ab12cd) instead of carrying every field in the query string.
 
 import { Redis } from "@upstash/redis";
-import { ImageResponse } from "@vercel/og";
+// @vercel/og's Node build is ESM-only; this project runs as CommonJS, so a
+// static `import` here fails at load time with ERR_REQUIRE_ESM. Loading it
+// dynamically inside the handler (see below) works in both module systems.
 const kv = new Redis({
   url: process.env.KV_REST_API_URL,
   token: process.env.KV_REST_API_TOKEN,
@@ -208,6 +210,7 @@ export default async function handler(req,res){
   const d=data(req);
   if(q(req,'image')==='1'){
     try {
+      const { ImageResponse } = await import('@vercel/og');
       const imageResponse = new ImageResponse(pngCard(d), { width: 1200, height: 630 });
       const buffer = await imageResponse.arrayBuffer();
       res.setHeader('Content-Type','image/png');
