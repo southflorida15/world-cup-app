@@ -1774,6 +1774,8 @@ function StatsTab({ initial="", tabTop=116 }) {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState(false);
   const [posFilter, setPosFilter] = useState("All");
+  const [wcHistory, setWcHistory] = useState(null);
+  const [wcHistoryLoading, setWcHistoryLoading] = useState(false);
   const d = sel ? TEAMS[sel] : null;
 
   useEffect(() => {
@@ -1788,6 +1790,8 @@ function StatsTab({ initial="", tabTop=116 }) {
         .sort((a,b)=>posSort(a.pos)-posSort(b.pos)||(a.jersey||99)-(b.jersey||99));
       setSquad(players);
     });
+    setWcHistory(null); setWcHistoryLoading(true);
+    zafronixGet("team",{name:zName}).then(data => { setWcHistoryLoading(false); setWcHistory(data); });
   }, [sel]);
 
   const posCounts = squad?{All:squad.length,GK:squad.filter(p=>posLabel(p.pos)==="GK").length,DEF:squad.filter(p=>posLabel(p.pos)==="DEF").length,MID:squad.filter(p=>posLabel(p.pos)==="MID").length,FWD:squad.filter(p=>posLabel(p.pos)==="FWD").length}:{};
@@ -1907,6 +1911,21 @@ function StatsTab({ initial="", tabTop=116 }) {
                 </div>
               </div>
             )}
+          </Card>
+
+          <Card style={{marginBottom:12}}>
+            <div style={{padding:"10px 14px",borderBottom:`1px solid ${C.b1}`}}>
+              <span style={{fontWeight:700,color:C.green,fontSize:13}}>🏆 WORLD CUP HISTORY</span>
+            </div>
+            <div style={{padding:13}}>
+              {wcHistoryLoading && (
+                <div style={{padding:"24px 0",textAlign:"center"}}>
+                  <div style={{width:24,height:24,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto 10px"}}/>
+                  <div style={{fontSize:12,color:C.mid}}>Fetching World Cup history…</div>
+                </div>
+              )}
+              {!wcHistoryLoading && <TeamHistoryCard team={sel} data={wcHistory} color={C.green}/>}
+            </div>
           </Card>
 
           {/* Dynamic recent form — auto-switches to live WC data after Jun 11 */}
