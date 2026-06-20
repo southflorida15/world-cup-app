@@ -24,6 +24,28 @@ function getAnnexCAssignment(qualifiedThirds) {
   return mapping;
 }
 
+// Hardcoded R32 template (mirrors fifa2026Bracket.js ROUND_OF_32_TEMPLATE).
+// Shared by the manual-pick simulator (runBracket) and the real-results
+// "Actual" bracket so the two can never drift apart.
+const R32_SLOT_TEMPLATE = [
+  {match:73, home:"2A", away:"2B"},
+  {match:74, home:"1E", away:"3?"},
+  {match:75, home:"1F", away:"2C"},
+  {match:76, home:"1C", away:"2F"},
+  {match:77, home:"1I", away:"3?"},
+  {match:78, home:"2E", away:"2I"},
+  {match:79, home:"1A", away:"3?"},
+  {match:80, home:"1L", away:"3?"},
+  {match:81, home:"1D", away:"3?"},
+  {match:82, home:"1G", away:"3?"},
+  {match:83, home:"2K", away:"2L"},
+  {match:84, home:"1H", away:"2J"},
+  {match:85, home:"1B", away:"3?"},
+  {match:86, home:"1J", away:"2H"},
+  {match:87, home:"1K", away:"3?"},
+  {match:88, home:"2D", away:"2G"},
+];
+
 
 
 
@@ -3106,6 +3128,8 @@ function clearSavedMyBracket() {
 function MyBracketTab({ tabTop=116 }) {
   const savedBracket = useMemo(() => readSavedMyBracket(), []);
   const isMobileBracket = typeof window !== "undefined" && window.innerWidth < 520;
+  const { allFixtures, getScore } = useContext(LiveScoresCtx);
+  const [bracketSource,setBracketSource]=useState("mine"); // "mine" | "actual"
   const [stage,setStage]=useState(()=>savedBracket.stage || (savedBracket.result ? "bracket" : "groups"));
   const [bracketMode,setBracketMode]=useState(()=>savedBracket.bracketMode || "simulation");
   const [playMode,setPlayMode]=useState(()=>savedBracket.playMode || "manual");
@@ -3242,24 +3266,7 @@ function MyBracketTab({ tabTop=116 }) {
         };
 
         // Hardcoded R32 template (mirrors fifa2026Bracket.js ROUND_OF_32_TEMPLATE)
-        const R32 = [
-          {match:73, home:"2A", away:"2B"},
-          {match:74, home:"1E", away:"3?"},
-          {match:75, home:"1F", away:"2C"},
-          {match:76, home:"1C", away:"2F"},
-          {match:77, home:"1I", away:"3?"},
-          {match:78, home:"2E", away:"2I"},
-          {match:79, home:"1A", away:"3?"},
-          {match:80, home:"1L", away:"3?"},
-          {match:81, home:"1D", away:"3?"},
-          {match:82, home:"1G", away:"3?"},
-          {match:83, home:"2K", away:"2L"},
-          {match:84, home:"1H", away:"2J"},
-          {match:85, home:"1B", away:"3?"},
-          {match:86, home:"1J", away:"2H"},
-          {match:87, home:"1K", away:"3?"},
-          {match:88, home:"2D", away:"2G"},
-        ];
+        const R32 = R32_SLOT_TEMPLATE;
 
         r32 = R32.map(m => ({
           match: m.match,
@@ -3338,6 +3345,102 @@ function MyBracketTab({ tabTop=116 }) {
     const runnerUp = champion ? [final?.[0]?.home, final?.[0]?.away].find(t=>t&&t!==champion) : null;
     return {...result, r32, r16, qf, sf, final, champion, runnerUp};
   }, [result, manualPicks, playMode]);
+
+  // ── ACTUAL bracket — built entirely from real group-stage results and
+  // real knockout results as they're played. No manual picks involved;
+  // anything not yet determined in reality shows as "TBD". ─────────────────
+  const actualBracket = useMemo(() => {
+    const buildGroupResults = (letter) => MATCHES.filter(m => m.group === letter).map(m => {
+      const s = getScore(m.home, m.away);
+      const finished = s && statusIsFinished(s.status);
+      return { id:m.id, home:m.home, away:m.away, hg: finished ? String(s.hg ?? "") : "", ag: finished ? String(s.ag ?? "") : "" };
+    });
+
+    const groupStandings = {};
+    const groupComplete = {};
+    Object.keys(GROUPS).forEach(g => {
+      const res = buildGroupResults(g);
+      groupComplete[g] = res.length > 0 && res.every(r => r.hg !== "" && r.ag !== "");
+      groupStandings[g] = calcStandings(g, res);
+    });
+    const allGroupsComplete = Object.values(groupComplete).every(Boolean);
+
+    const firstOf = (g) => groupComplete[g] ? groupStandings[g][0].team : null;
+    const secondOf = (g) => groupComplete[g] ? groupStandings[g][1].team : null;
+
+    // The official "best 8 thirds" ranking can only be determined once every
+    // group has finished — FIFA compares all 12 third-place teams against
+    // each other, which isn't meaningful until they've all played the same
+    // number of matches.
+    let thirdTeamByGroup = {};
+    let annexMapping = null;
+    if (allGroupsComplete) {
+      const qualifiedThirds = Object.keys(GROUPS)
+        .map(g => ({ group:g, ...groupStandings[g][2] }))
+        .sort((a,b) => b.pts-a.pts || b.gd-a.gd || b.gf-a.gf)
+        .slice(0,8);
+      thirdTeamByGroup = Object.fromEntries(qualifiedThirds.map(t => [t.group, t.team]));
+      try { annexMapping = getAnnexCAssignment(qualifiedThirds.map(t => ({group:t.group, team:t.team}))); }
+      catch { annexMapping = null; }
+    }
+
+    const resolveActualSlot = (slot, homeSlot) => {
+      if (!slot) return null;
+      if (slot === "3?") {
+        if (!annexMapping) return null;
+        const assigned = annexMapping[homeSlot];
+        const grp = assigned ? assigned.replace(/^3/,"") : null;
+        return (grp && thirdTeamByGroup[grp]) || null;
+      }
+      if (slot.startsWith("1")) return firstOf(slot[1]);
+      if (slot.startsWith("2")) return secondOf(slot[1]);
+      return null;
+    };
+
+    // Looks up a real finished result for two known teams, trying both
+    // home/away orderings since neutral-venue knockout fixtures don't
+    // always have the "home" slot match the broadcaster's designation.
+    // Draws (which shouldn't persist past penalties in a real knockout
+    // match) are left as TBD rather than guessed at.
+    const lookupReal = (home, away) => {
+      if (!home || !away || home === "TBD" || away === "TBD") return null;
+      let s = getScore(home, away), swapped = false;
+      if (!s) { s = getScore(away, home); swapped = true; }
+      if (!s || !statusIsFinished(s.status)) return null;
+      const hg = swapped ? s.ag : s.hg, ag = swapped ? s.hg : s.ag;
+      if (hg == null || ag == null || hg === ag) return null;
+      return { hg, ag, winner: hg > ag ? home : away };
+    };
+
+    const winnerMap = {};
+    const r32 = R32_SLOT_TEMPLATE.map(m => {
+      const home = resolveActualSlot(m.home, m.home) || "TBD";
+      const away = resolveActualSlot(m.away, m.home) || "TBD";
+      const played = lookupReal(home, away);
+      if (played) winnerMap[m.match] = played.winner;
+      return { match:m.match, homeSlot:m.home, awaySlot:m.away, home, away, hg:played?.hg ?? null, ag:played?.ag ?? null, winner: played?.winner || null };
+    });
+
+    const resolveRef = (ref) => {
+      if (typeof ref === "string" && ref.startsWith("W")) return winnerMap[Number(ref.slice(1))] || "TBD";
+      return ref || "TBD";
+    };
+    const buildActualRound = (template=[]) => (template||[]).map(t => {
+      const home = resolveRef(t.home), away = resolveRef(t.away);
+      const played = lookupReal(home, away);
+      if (played) winnerMap[t.match] = played.winner;
+      return { match:t.match, homeSlot:t.home, awaySlot:t.away, home, away, hg:played?.hg ?? null, ag:played?.ag ?? null, winner: played?.winner || null };
+    });
+
+    const r16 = buildActualRound(ROUND_OF_16_TEMPLATE);
+    const qf = buildActualRound(QUARTER_FINAL_TEMPLATE);
+    const sf = buildActualRound(SEMI_FINAL_TEMPLATE);
+    const final = buildActualRound(FINAL_TEMPLATE);
+    const champion = final?.[0]?.winner || null;
+    const runnerUp = champion ? [final?.[0]?.home, final?.[0]?.away].find(t => t && t !== champion && t !== "TBD") : null;
+
+    return { r32, r16, qf, sf, final, champion, runnerUp, allGroupsComplete };
+  }, [allFixtures]);
 
   const handleManualPick = (match, team) => {
     if (playMode !== "manual" || !match?.match || !team || team === "TBD") return;
@@ -3434,6 +3537,15 @@ function MyBracketTab({ tabTop=116 }) {
         borderRadius:"0 0 10px 10px"
       }}
     >
+      <div style={{display:"flex",gap:6,marginBottom:8}}>
+        <button onClick={()=>setBracketSource("mine")} style={{flex:1,padding:"7px 0",borderRadius:10,border:`1px solid ${bracketSource==="mine"?C.blue:C.b2}`,background:bracketSource==="mine"?`${C.blue}1c`:"transparent",color:bracketSource==="mine"?C.blue:C.mid,fontWeight:800,fontSize:12,cursor:"pointer"}}>
+          🎯 My Pick
+        </button>
+        <button onClick={()=>setBracketSource("actual")} style={{flex:1,padding:"7px 0",borderRadius:10,border:`1px solid ${bracketSource==="actual"?C.green:C.b2}`,background:bracketSource==="actual"?`${C.green}1c`:"transparent",color:bracketSource==="actual"?C.green:C.mid,fontWeight:800,fontSize:12,cursor:"pointer"}}>
+          🌍 Actual
+        </button>
+      </div>
+      {bracketSource==="mine" && (
       <div
         style={{
           display:"flex",
@@ -3449,8 +3561,9 @@ function MyBracketTab({ tabTop=116 }) {
         <Pill active={stage==="thirds"} onClick={()=>setStage("thirds")} color={C.gold}>✓ Best 3rds</Pill>
         <Pill active={stage==="bracket"} onClick={()=>setStage("bracket")} color={C.blue}>● Bracket</Pill>
       </div>
+      )}
     </div>
-      {stage==="groups" && (
+      {bracketSource==="mine" && stage==="groups" && (
         <div>
           <div style={{fontSize:12,color:C.mid,marginBottom:14,lineHeight:1.6}}>
             <strong style={{color:C.green}}>Build Your Bracket:</strong> Press and drag ⠿ to reorder teams. Top 2 qualify automatically. Generate the bracket, then pick winners match by match.
@@ -3483,7 +3596,7 @@ function MyBracketTab({ tabTop=116 }) {
           <button onClick={()=>setStage("thirds")} style={{width:"100%",padding:"12px 0",borderRadius:12,background:`linear-gradient(135deg,${C.gold},#f59e0b)`,border:"none",color:"#030a05",fontWeight:700,fontSize:15,cursor:"pointer",marginTop:4}}>Pick Best 3rd-Place Teams →</button>
         </div>
       )}
-      {stage==="thirds" && (
+      {bracketSource==="mine" && stage==="thirds" && (
         <div>
           <div style={{fontSize:12,color:C.mid,marginBottom:6,lineHeight:1.6}}>Select exactly <strong style={{color:C.gold}}>8 of 12</strong> third-place teams to advance.</div>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
@@ -3497,7 +3610,7 @@ function MyBracketTab({ tabTop=116 }) {
           </div>
         </div>
       )}
-    {stage==="bracket" && result && (
+    {bracketSource==="mine" && stage==="bracket" && result && (
   <div>
     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:8,flexWrap:"wrap"}}>
       <div style={{fontSize:15,color:C.green,fontWeight:900,lineHeight:1.1}}>
@@ -3550,6 +3663,38 @@ function MyBracketTab({ tabTop=116 }) {
       bracket={displayedResult}
       pickMode={playMode}
       onPick={handleManualPick}
+      view={bracketView}
+    />
+  </div>
+)}
+
+    {bracketSource==="actual" && (
+  <div>
+    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:8,flexWrap:"wrap"}}>
+      <div style={{fontSize:15,color:C.green,fontWeight:900,lineHeight:1.1}}>
+        🌍 Actual Tournament Bracket
+        <span style={{marginLeft:8,fontSize:10,color:C.dim,fontWeight:400,fontStyle:"italic"}}>real results — fills in as matches are played</span>
+      </div>
+      <div style={{display:"flex",gap:4,background:C.s1,border:`1px solid ${C.b1}`,borderRadius:999,padding:2}}>
+        <button onClick={()=>setBracketView("compact")} style={{border:"none",borderRadius:999,padding:"4px 8px",fontSize:10,fontWeight:800,cursor:"pointer",background:bracketView==="compact"?`${C.green}22`:"transparent",color:bracketView==="compact"?C.green:C.mid,lineHeight:1}}>
+          📱 Compact
+        </button>
+        <button onClick={()=>setBracketView("tree")} style={{border:"none",borderRadius:999,padding:"4px 8px",fontSize:10,fontWeight:800,cursor:"pointer",background:bracketView==="tree"?`${C.gold}22`:"transparent",color:bracketView==="tree"?C.gold:C.mid,lineHeight:1}}>
+          🌳 Tree
+        </button>
+      </div>
+    </div>
+
+    {!actualBracket.allGroupsComplete && (
+      <div style={{fontSize:11,color:C.dim,marginBottom:8,padding:"7px 10px",background:C.s1,border:`1px solid ${C.b1}`,borderRadius:9}}>
+        Group stage still in progress — the 8 third-place qualifiers (and any R32 matches depending on them) stay TBD until all 12 groups finish.
+      </div>
+    )}
+
+    <VisualBracketTree
+      bracket={actualBracket}
+      pickMode="auto"
+      onPick={()=>{}}
       view={bracketView}
     />
   </div>
