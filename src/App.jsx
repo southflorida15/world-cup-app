@@ -3365,24 +3365,26 @@ function MyBracketTab({ tabTop=116 }) {
     });
     const allGroupsComplete = Object.values(groupComplete).every(Boolean);
 
-    const firstOf = (g) => groupComplete[g] ? groupStandings[g][0].team : null;
-    const secondOf = (g) => groupComplete[g] ? groupStandings[g][1].team : null;
+    // Always resolve from the CURRENT table, not just once a group is
+    // mathematically finished — this is a live projection that updates as
+    // results come in, not a "wait until certain" view. It can still shift
+    // before a group's last match is played; that's expected and fine.
+    const firstOf = (g) => groupStandings[g]?.[0]?.team || null;
+    const secondOf = (g) => groupStandings[g]?.[1]?.team || null;
 
-    // The official "best 8 thirds" ranking can only be determined once every
-    // group has finished — FIFA compares all 12 third-place teams against
-    // each other, which isn't meaningful until they've all played the same
-    // number of matches.
-    let thirdTeamByGroup = {};
+    // Same idea for the "best 8 thirds" cross-group ranking — projected from
+    // the current table for every group's 3rd-place team. This is provisional
+    // until every group has actually finished (the relative ranking can change
+    // right up until the last group match), but there's always something to
+    // show rather than blanking the whole bracket out.
+    const qualifiedThirds = Object.keys(GROUPS)
+      .map(g => ({ group:g, ...groupStandings[g][2] }))
+      .sort((a,b) => b.pts-a.pts || b.gd-a.gd || b.gf-a.gf)
+      .slice(0,8);
+    const thirdTeamByGroup = Object.fromEntries(qualifiedThirds.map(t => [t.group, t.team]));
     let annexMapping = null;
-    if (allGroupsComplete) {
-      const qualifiedThirds = Object.keys(GROUPS)
-        .map(g => ({ group:g, ...groupStandings[g][2] }))
-        .sort((a,b) => b.pts-a.pts || b.gd-a.gd || b.gf-a.gf)
-        .slice(0,8);
-      thirdTeamByGroup = Object.fromEntries(qualifiedThirds.map(t => [t.group, t.team]));
-      try { annexMapping = getAnnexCAssignment(qualifiedThirds.map(t => ({group:t.group, team:t.team}))); }
-      catch { annexMapping = null; }
-    }
+    try { annexMapping = getAnnexCAssignment(qualifiedThirds.map(t => ({group:t.group, team:t.team}))); }
+    catch { annexMapping = null; }
 
     const resolveActualSlot = (slot, homeSlot) => {
       if (!slot) return null;
@@ -3687,7 +3689,7 @@ function MyBracketTab({ tabTop=116 }) {
 
     {!actualBracket.allGroupsComplete && (
       <div style={{fontSize:11,color:C.dim,marginBottom:8,padding:"7px 10px",background:C.s1,border:`1px solid ${C.b1}`,borderRadius:9}}>
-        Group stage still in progress — the 8 third-place qualifiers (and any R32 matches depending on them) stay TBD until all 12 groups finish.
+        Group stage still in progress — this is a live projection based on current standings. Slots will keep updating as more matches finish, and may still shift before each group's final match.
       </div>
     )}
 
