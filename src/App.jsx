@@ -6840,6 +6840,17 @@ function AskWorldCupTab({ tabTop=116 }) {
 
   const allTeams = () => Object.values(GROUPS).flatMap(g=>g.teams);
   const findTeamInText = (text) => allTeams().find(t => text.includes(norm(t)) || norm(t).includes(text));
+  // Finds every team name mentioned in the text, in the order they appear —
+  // used for "has X played Y" style two-team historical questions.
+  const findTeamsInText = (text) => {
+    const hits = [];
+    for (const t of allTeams()) {
+      const nt = norm(t);
+      const idx = text.indexOf(nt);
+      if (idx !== -1) hits.push({ team:t, idx });
+    }
+    return hits.sort((a,b)=>a.idx-b.idx).map(h=>h.team);
+  };
   const findCityInText = (text) => {
     const cityTerms = ["miami","dallas","houston","atlanta","seattle","philadelphia","boston","toronto","vancouver","mexico city","guadalajara","monterrey","los angeles","new york","new jersey","kansas city","san francisco"];
     return cityTerms.find(c => text.includes(c));
@@ -7105,9 +7116,44 @@ function AskWorldCupTab({ tabTop=116 }) {
       return { title:"Yellow-card leaders", summary:"This question will become available once match-event feeds return player card data. The app already has a match-events API path ready for this type of query.", rows:[] };
     }
 
-    // Historical placeholder.
-    if (text.includes("history") || text.includes("historical") || text.includes("past")) {
-      return { title:"Historical World Cup search", summary:"Historical match search is planned through the Zafronix data layer. Try schedule questions for 2026 now, like matches at 9PM ET, matches in Miami, or Brazil matches.", rows:[] };
+    // Historical head-to-head — "has X played Y", "X vs Y history", etc.
+    // Backed by WC_TEAM_HISTORY, which is hand-compiled and only covers a
+    // growing subset of teams/years (Brazil & USA 2022 to start). Search
+    // every compiled year for either team to find a meeting.
+    if (text.includes("history") || text.includes("historical") || text.includes("played") || (text.includes(" vs ") && !text.includes("predict"))) {
+      const teamsMentioned = findTeamsInText(text);
+      if (teamsMentioned.length >= 2) {
+        const [t1, t2] = teamsMentioned;
+        const meetings = [];
+        [[t1,t2],[t2,t1]].forEach(([a,b]) => {
+          const years = WC_TEAM_HISTORY[a];
+          if (!years) return;
+          Object.entries(years).forEach(([year, data]) => {
+            (data.matches||[]).forEach(m => {
+              if (norm(m.opponent) === norm(b)) {
+                meetings.push({ year:Number(year), stage:m.stage, team:a, opponent:b, score:m.score, result:m.result });
+              }
+            });
+          });
+        });
+        if (meetings.length) {
+          meetings.sort((x,y)=>x.year-y.year);
+          const rows = meetings.map(m => ({
+            title: `${getFlag(m.team)} ${m.team} ${m.score} ${getFlag(m.opponent)} ${m.opponent}`,
+            meta: `${m.year} World Cup · ${m.stage}`,
+          }));
+          return { title:`${t1} vs ${t2} — World Cup history`, summary:`Found ${meetings.length} meeting${meetings.length!==1?"s":""} in the years we have compiled (${[...new Set(meetings.map(m=>m.year))].join(", ")}).`, rows };
+        }
+        const coveredYears = [...new Set([...Object.keys(WC_TEAM_HISTORY[t1]||{}), ...Object.keys(WC_TEAM_HISTORY[t2]||{})])];
+        if (coveredYears.length) {
+          return { title:`${t1} vs ${t2} — World Cup history`, summary:`No meeting between ${t1} and ${t2} found in the World Cup years we have compiled so far (${coveredYears.join(", ")}). Our historical database doesn't cover every tournament yet — this may have happened in a year we haven't added.`, rows:[] };
+        }
+        return { title:`${t1} vs ${t2} — World Cup history`, summary:`We haven't compiled World Cup history for ${t1} or ${t2} yet — coverage currently includes Brazil and the United States (2022), with more teams and tournaments being added.`, rows:[] };
+      }
+      return { title:"Historical World Cup search", summary:"Ask about a specific matchup, like \"has Brazil played Switzerland in a World Cup\" — historical coverage currently includes Brazil and the United States (2022), with more being added.", rows:[] };
+    }
+    if (text.includes("past")) {
+      return { title:"Historical World Cup search", summary:"Historical match search currently covers Brazil and the United States (2022), with more teams and tournaments being added. Try schedule questions for 2026 now, like matches at 9PM ET, matches in Miami, or Brazil matches.", rows:[] };
     }
 
     return { title:"I can answer schedule questions now", summary:"Try asking about teams, groups, dates, kickoff times, cities, players, or venues. Historical/player-event queries are on the roadmap.", rows:[] };
