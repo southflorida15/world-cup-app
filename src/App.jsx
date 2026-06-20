@@ -3541,10 +3541,10 @@ function MyBracketTab({ tabTop=116 }) {
     >
       <div style={{display:"flex",gap:6,marginBottom:8}}>
         <button onClick={()=>setBracketSource("mine")} style={{flex:1,padding:"7px 0",borderRadius:10,border:`1px solid ${bracketSource==="mine"?C.blue:C.b2}`,background:bracketSource==="mine"?`${C.blue}1c`:"transparent",color:bracketSource==="mine"?C.blue:C.mid,fontWeight:800,fontSize:12,cursor:"pointer"}}>
-          🎯 My Pick
+          🎯 My Bracket
         </button>
         <button onClick={()=>setBracketSource("actual")} style={{flex:1,padding:"7px 0",borderRadius:10,border:`1px solid ${bracketSource==="actual"?C.green:C.b2}`,background:bracketSource==="actual"?`${C.green}1c`:"transparent",color:bracketSource==="actual"?C.green:C.mid,fontWeight:800,fontSize:12,cursor:"pointer"}}>
-          🌍 Actual
+          🌍 Actual Bracket
         </button>
       </div>
       {bracketSource==="mine" && (
@@ -7235,7 +7235,7 @@ const TABS = [
   {id:"live",      icon:"🔴", label:"Live"},
   {id:"schedule",  icon:"📋", label:"Schedule"},
   {id:"groups",    icon:"🗂️", label:"Groups"},
-  {id:"bracket",   icon:"🏆", label:"My Bracket"},
+  {id:"bracket",   icon:"🏆", label:"Bracket"},
   {id:"predictor", icon:"🎯", label:"Fantasy"},
   {id:"shop",      icon:"🏪", label:"Shop"},
   {id:"ask",       icon:"🔎", label:"Ask"},
