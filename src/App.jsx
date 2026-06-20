@@ -3122,6 +3122,23 @@ function MyBracketTab({ tabTop=116 }) {
   const toggleThird=(t)=>{setThirds(p=>p.includes(t)?p.filter(x=>x!==t):[...p,t].slice(0,8));};
   const _mbhRef = useRef(null); const _mbhH = useElemHeight(_mbhRef);
 
+  // Keep `thirds` (the explicit "qualified 3rd place" selection, tracked by
+  // team name) in sync with `groups`. Reordering a group can move a team
+  // that was previously in 3rd place up to 1st/2nd — if we don't drop it
+  // here, buildQualifiedThirdsFromSelectedTeams() silently filters it out
+  // later, leaving fewer than 8 valid teams. That breaks the Annex C
+  // assignment and can map the same team to two different R32 slots at
+  // once (an "impossible" matchup). Pruning here lets runBracket()'s
+  // existing "auto-select best 8" fallback kick back in correctly.
+  useEffect(() => {
+    setThirds(prev => {
+      if (!prev || !prev.length) return prev;
+      const validThirdNames = new Set(Object.values(groups).map(t => t?.[2]).filter(Boolean));
+      const next = prev.filter(t => validThirdNames.has(t));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [groups]);
+
   useEffect(()=>{
     const applySyncedBracket = (ev) => {
       const incoming = ev?.detail && Object.keys(ev.detail).length ? ev.detail : readSavedMyBracket();
