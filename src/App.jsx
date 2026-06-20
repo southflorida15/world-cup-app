@@ -5,6 +5,7 @@ import MatchHeader from "./components/MatchHeader";
 import MatchInfoSection from "./components/MatchInfoSection";
 import React, { useState, useEffect, useContext, createContext, useCallback, useMemo, useRef } from "react";
 import { buildQualifiedThirdsFromSelectedTeams, buildThirdGroupsKey, ROUND_OF_16_TEMPLATE, QUARTER_FINAL_TEMPLATE, SEMI_FINAL_TEMPLATE, FINAL_TEMPLATE } from "./engine/fifa2026Bracket";
+import { WC_TEAM_HISTORY } from "./data/wcTeamHistory";
 // ── ANNEX C — FIFA WC 2026 third-place assignment ─────────────────────────
 // Hardcoded deterministic assignment — no Wikipedia fetch needed.
 // FIFA assigns the 8 best thirds to fixed R32 slots in sorted group order.
@@ -2388,7 +2389,81 @@ function unwrapTeam(data) {
   return data;
 }
 
+function YearDetailModal({ team, year, data, color, onClose }) {
+  if (!data) return null;
+  const posGroup = (label, key) => {
+    const players = (data.squad || []).filter(p => p.pos === key);
+    if (!players.length) return null;
+    return (
+      <div style={{marginBottom:8}}>
+        <div style={{fontSize:9,color:C.dim,marginBottom:3}}>{label}</div>
+        {players.map(p => (
+          <div key={p.name} style={{display:"flex",justifyContent:"space-between",fontSize:12,padding:"2px 0"}}>
+            <span style={{color:C.text}}>{p.name}</span>
+            <span style={{color:C.dim}}>{p.club}</span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.7)",zIndex:3000,display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={onClose}>
+      <div onClick={e=>e.stopPropagation()} style={{background:C.s1,borderRadius:"16px 16px 0 0",maxWidth:480,width:"100%",maxHeight:"85vh",overflowY:"auto",padding:16,border:`1px solid ${C.b1}`}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:4}}>
+          <div>
+            <div style={{fontWeight:900,fontSize:16,color}}>{team} · {year}</div>
+            <div style={{fontSize:11,color:C.dim,marginTop:2}}>{data.host ? `${data.host} · ` : ""}{data.result}{data.coach ? ` · Coach: ${data.coach}` : ""}</div>
+          </div>
+          <button onClick={onClose} style={{background:"none",border:"none",color:C.dim,fontSize:20,cursor:"pointer",lineHeight:1,padding:4}}>✕</button>
+        </div>
+
+        {data.matches?.length > 0 && (
+          <div style={{marginTop:14,marginBottom:14}}>
+            <div style={{fontSize:9,color:C.dim,fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:6}}>Matches</div>
+            {data.matches.map((m,i) => (
+              <div key={i} style={{padding:"6px 0",borderBottom:`1px solid ${C.b1}`}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:12}}>
+                  <span style={{color:C.dim,minWidth:90}}>{m.stage}</span>
+                  <span style={{flex:1,color:C.text,paddingLeft:6}}>vs {m.opponent}</span>
+                  <span style={{fontWeight:800,color: m.result==="W"?C.green:m.result==="D"?C.gold:C.red}}>{m.score}</span>
+                </div>
+                {m.scorers?.length > 0 && (
+                  <div style={{fontSize:10,color:C.dim,marginTop:2,paddingLeft:96}}>⚽ {m.scorers.join(", ")}</div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {data.topScorers?.length > 0 && (
+          <div style={{marginBottom:14}}>
+            <div style={{fontSize:9,color:C.dim,fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:6}}>Top Scorers · {year}</div>
+            {data.topScorers.map((s,i) => (
+              <div key={s.name} style={{display:"flex",alignItems:"center",gap:6,padding:"4px 0"}}>
+                <span style={{fontSize:12,minWidth:18}}>{i===0?"🥇":i===1?"🥈":"🥉"}</span>
+                <span style={{fontSize:12,color:C.text,flex:1}}>{s.name}</span>
+                <span style={{fontSize:13,fontWeight:700,color}}>{s.goals}⚽</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {data.squad?.length > 0 && (
+          <div>
+            <div style={{fontSize:9,color:C.dim,fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:6}}>Squad</div>
+            {posGroup("Goalkeepers","GK")}
+            {posGroup("Defenders","DF")}
+            {posGroup("Midfielders","MF")}
+            {posGroup("Forwards","FW")}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function TeamHistoryCard({ team, data, color }) {
+  const [expandedYear,setExpandedYear]=useState(null);
   const d = unwrapTeam(data);
   if (!d) return (
     <div style={{padding:"20px 10px",textAlign:"center"}}>
@@ -2472,18 +2547,21 @@ function TeamHistoryCard({ team, data, color }) {
           const gf = gs ? (gs.gf ?? gs.goalsFor ?? 0) : 0;
           const ga = gs ? (gs.ga ?? gs.goalsAgainst ?? 0) : 0;
           const pc = posColor2(a.finalPosition);
+          const detail = WC_TEAM_HISTORY[team]?.[a.year];
           return (
-            <div key={a.year} style={{display:"flex",alignItems:"center",gap:6,padding:"5px 0",borderBottom:`1px solid ${C.b1}`}}>
+            <div key={a.year} onClick={()=>detail&&setExpandedYear(a.year)} style={{display:"flex",alignItems:"center",gap:6,padding:"5px 0",borderBottom:`1px solid ${C.b1}`,cursor:detail?"pointer":"default"}}>
               <span style={{fontSize:11,fontWeight:700,color:C.mid,minWidth:32}}>{a.year}</span>
               <div style={{flex:1}}>
                 <div style={{fontSize:11,fontWeight:700,color:pc}}>{posLabel2(a.finalPosition)}</div>
                 {gs && <div style={{fontSize:9,color:C.dim}}>Grp {gs.group||"?"} · {gw}W {gd}D {gl}L · {gf}–{ga}</div>}
               </div>
               <div style={{fontSize:11,fontWeight:600,color:C.dim}}>{a.goalsScored||0}⚽</div>
+              {detail && <span style={{fontSize:11,color,marginLeft:2}}>›</span>}
             </div>
           );
         })}
       </div>
+      {expandedYear && <YearDetailModal team={team} year={expandedYear} data={WC_TEAM_HISTORY[team]?.[expandedYear]} color={color} onClose={()=>setExpandedYear(null)}/>}
     </div>
   );
 }
