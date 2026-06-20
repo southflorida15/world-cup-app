@@ -2410,6 +2410,22 @@ function unwrapTeam(data) {
 
 function YearDetailModal({ team, year, data, color, onClose }) {
   if (!data) return null;
+  if (data.didNotQualify) {
+    return (
+      <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.7)",zIndex:3000,display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={onClose}>
+        <div onClick={e=>e.stopPropagation()} style={{background:C.s1,borderRadius:"16px 16px 0 0",maxWidth:480,width:"100%",padding:20,border:`1px solid ${C.b1}`}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
+            <div style={{fontWeight:900,fontSize:16,color}}>{team} · {year}</div>
+            <button onClick={onClose} style={{background:"none",border:"none",color:C.dim,fontSize:20,cursor:"pointer",lineHeight:1,padding:4}}>✕</button>
+          </div>
+          <div style={{textAlign:"center",padding:"16px 0"}}>
+            <div style={{fontSize:"1.6rem",marginBottom:6}}>🚫</div>
+            <div style={{fontSize:13,fontWeight:700,color:C.dim}}>Did not qualify for this World Cup</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
   const posGroup = (label, key) => {
     const players = (data.squad || []).filter(p => p.pos === key);
     if (!players.length) return null;
