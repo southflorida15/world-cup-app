@@ -5,25 +5,16 @@ import MatchHeader from "./components/MatchHeader";
 import MatchInfoSection from "./components/MatchInfoSection";
 import React, { useState, useEffect, useContext, createContext, useCallback, useMemo, useRef } from "react";
 import { buildQualifiedThirdsFromSelectedTeams, buildThirdGroupsKey, ROUND_OF_16_TEMPLATE, QUARTER_FINAL_TEMPLATE, SEMI_FINAL_TEMPLATE, FINAL_TEMPLATE } from "./engine/fifa2026Bracket";
+import { getAnnexCMapping } from "./engine/annexC";
 import { WC_TEAM_HISTORY } from "./data/wcTeamHistory";
 // ── ANNEX C — FIFA WC 2026 third-place assignment ─────────────────────────
-// Hardcoded deterministic assignment — no Wikipedia fetch needed.
-// FIFA assigns the 8 best thirds to fixed R32 slots in sorted group order.
-// Target slots: 1A(m79), 1B(m85), 1D(m81), 1E(m74), 1G(m82), 1I(m77), 1K(m87), 1L(m80)
-const ANNEX_C_TARGETS = ["1A","1B","1D","1E","1G","1I","1K","1L"];
-
-function getAnnexCAssignment(qualifiedThirds) {
-  // qualifiedThirds: array of { group, team }
-  const sorted = [...qualifiedThirds]
-    .map(x => x.group || x)
-    .map(g => String(g).replace(/^3/,"").toUpperCase())
-    .sort();
-  if (sorted.length !== 8) throw new Error(`Need 8 thirds, got ${sorted.length}`);
-  // Map sorted groups to sorted target slots
-  const mapping = {};
-  ANNEX_C_TARGETS.forEach((target, i) => { mapping[target] = `3${sorted[i]}`; });
-  return mapping;
-}
+// Now delegated entirely to engine/annexC.js's getAnnexCMapping (imported
+// above), which has the real, verified 495-row FIFA table baked in and
+// loads it eagerly at module import — no network dependency, no duplicate
+// local copy. History: this used to be a second, independent implementation
+// that drifted out of sync with the engine and reproduced the same-group
+// collision bug (Germany vs Ecuador, 2026-06-29) on its own. Removed in
+// favor of the single source of truth.
 
 // Hardcoded R32 template (mirrors fifa2026Bracket.js ROUND_OF_32_TEMPLATE).
 // Shared by the manual-pick simulator (runBracket) and the real-results
@@ -2492,7 +2483,7 @@ function YearDetailModal({ team, year, data, color, onClose }) {
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:4}}>
           <div>
             <div style={{fontWeight:900,fontSize:16,color}}>{team} · {year}</div>
-            <div style={{fontSize:11,color:C.dim,marginTop:2}}>{data.host ? `${data.host} · ` : ""}{data.result}{data.coach ? ` · Coach: ${data.coach}` : ""}</div>
+            <div style={{fontSize:11,color:C.dim,marginTop:2}}>{data.host ? `${data.host} · ` : ""}{data.result}{data.matches ? ` · ${data.matches.length} ${data.matches.length===1?"match":"matches"}` : ""}{data.coach ? ` · Coach: ${data.coach}` : ""}</div>
           </div>
           <button onClick={onClose} style={{background:"none",border:"none",color:C.dim,fontSize:20,cursor:"pointer",lineHeight:1,padding:4}}>✕</button>
         </div>
@@ -2633,7 +2624,7 @@ function TeamHistoryCard({ team, data, color }) {
               <span style={{fontSize:11,fontWeight:700,color:C.mid,minWidth:32}}>{a.year}</span>
               <div style={{flex:1}}>
                 <div style={{fontSize:11,fontWeight:700,color:pc}}>{posLabel2(a.finalPosition)}</div>
-                {gs && <div style={{fontSize:9,color:C.dim}}>Grp {gs.group||"?"} · {gw}W {gd}D {gl}L · {gf}–{ga}</div>}
+                {gs && <div style={{fontSize:9,color:C.dim}}>Grp {gs.group||"?"} · {gw}W {gd}D {gl}L · {gf}–{ga}{detail?.matches ? ` · ${detail.matches.length} matches played` : ""}</div>}
               </div>
               <div style={{fontSize:11,fontWeight:600,color:C.dim}}>{a.goalsScored||0}⚽</div>
               {detail && <span style={{fontSize:11,color,marginLeft:2}}>›</span>}
@@ -3397,12 +3388,13 @@ function MyBracketTab({ tabTop=116 }) {
         : "Official FIFA bracket rules are still loading.";
 
       try {
-        // ── Build R32 directly from template using local Annex C ──────────
-        // We NEVER call buildFifa2026Bracket because it calls getAnnexCMapping
-        // which requires annexCStore to be populated (it never is).
-        // Instead we resolve slots ourselves using getAnnexCAssignment.
+        // ── Build R32 from template, using the real engine's Annex C lookup ──
+        // (Previously avoided buildFifa2026Bracket/getAnnexCMapping because
+        // annexCStore was never populated — fixed: engine/annexC.js now
+        // bakes in the verified 495-row table and loads it eagerly at
+        // import time, so this call is reliable.)
 
-        const annexMapping = getAnnexCAssignment(qualifiedThirds);
+        const annexMapping = getAnnexCMapping(qualifiedThirds);
         // annexMapping: { "1A": "3C", "1E": "3D", ... } — target col → third group
 
         const thirdTeamByGroup = Object.fromEntries(
@@ -3541,7 +3533,7 @@ function MyBracketTab({ tabTop=116 }) {
       .slice(0,8);
     const thirdTeamByGroup = Object.fromEntries(qualifiedThirds.map(t => [t.group, t.team]));
     let annexMapping = null;
-    try { annexMapping = getAnnexCAssignment(qualifiedThirds.map(t => ({group:t.group, team:t.team}))); }
+    try { annexMapping = getAnnexCMapping(qualifiedThirds.map(t => ({group:t.group, team:t.team}))); }
     catch { annexMapping = null; }
 
     const resolveActualSlot = (slot, homeSlot) => {
