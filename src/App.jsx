@@ -607,13 +607,19 @@ const simKO = (t1, t2) => { const r=simMatch(t1||"TBD",t2||"TBD"); if(r.res==="d
 // Men's World Ranking. (Confirmed directly against the actual 2026
 // regulations text: several older explainers describe a final "drawing of
 // lots" — that was the pre-2026 rule. FIFA replaced it with the ranking step
-// for this tournament.) Fair play is computed from real card events when the
-// caller has them (see classifyMatchCardDeductions / the fair-play effect in
-// MyBracketTab); callers without that data simply pass nothing and every
-// team is treated as 0 deductions, falling straight through to whatever
-// comes next. This app has no FIFA World Ranking data source, so a tie that
-// survives even the fair-play step falls back to array order, same
-// (rare, near-impossible) endpoint as before.
+// for this tournament.)
+//
+// The fair-play step is NOT implemented here. It briefly was (computed from
+// real match-event card data), but that required fetching events for every
+// finished match across all 12 groups on every score update, which added
+// meaningful load on top of everything else already hitting the same
+// Upstash Redis instance — and that instance hit its request quota
+// (500k/500k used) during the tournament. Removed rather than throttled,
+// since fair play is the second-to-last tiebreak step and only matters when
+// points, head-to-head, AND overall GD/goals are all exactly equal — a rare
+// case not worth the added backend load. A tie that reaches that point falls
+// back to array order (this app also has no FIFA World Ranking data source
+// for the actual next step), same rare near-impossible endpoint as before.
 //
 // One known simplification: for a 3+-way points tie, FIFA's actual procedure
 // re-builds a fresh head-to-head mini-table for whichever teams are STILL
@@ -621,7 +627,7 @@ const simKO = (t1, t2) => { const r=simMatch(t1||"TBD",t2||"TBD"); if(r.res==="d
 // the full tied group instead. That matches FIFA's result for the common
 // cases (any 2-team tie, and most 3-team ties) but can in rare edge cases
 // differ from the fully recursive procedure for an unresolved 3+-way tie.
-const calcStandings = (letter, results, fairPlay = {}) => {
+const calcStandings = (letter, results) => {
   const teams = GROUPS[letter].teams;
   const tbl = Object.fromEntries(teams.map(t=>[t,{team:t,p:0,w:0,d:0,l:0,gf:0,ga:0,gd:0,pts:0}]));
   results.forEach(r => { if(r.hg===""||r.ag==="")return; const hg=parseInt(r.hg),ag=parseInt(r.ag); if(isNaN(hg)||isNaN(ag))return; tbl[r.home].p++;tbl[r.away].p++;tbl[r.home].gf+=hg;tbl[r.home].ga+=ag;tbl[r.home].gd+=hg-ag;tbl[r.away].gf+=ag;tbl[r.away].ga+=hg;tbl[r.away].gd+=ag-hg; if(hg>ag){tbl[r.home].w++;tbl[r.home].pts+=3;tbl[r.away].l++;}else if(hg===ag){tbl[r.home].d++;tbl[r.home].pts++;tbl[r.away].d++;tbl[r.away].pts++;}else{tbl[r.away].w++;tbl[r.away].pts+=3;tbl[r.home].l++;} });
@@ -657,8 +663,7 @@ const calcStandings = (letter, results, fairPlay = {}) => {
         mini[b].gd - mini[a].gd ||
         mini[b].gf - mini[a].gf ||
         tbl[b].gd - tbl[a].gd ||
-        tbl[b].gf - tbl[a].gf ||
-        (fairPlay[a]||0) - (fairPlay[b]||0) // lower deduction total ranks better
+        tbl[b].gf - tbl[a].gf
       ));
     }
     i = j;
@@ -3363,53 +3368,6 @@ function MyBracketTab({ tabTop=116 }) {
   const toggleThird=(t)=>{setThirds(p=>p.includes(t)?p.filter(x=>x!==t):[...p,t].slice(0,8));};
   const _mbhRef = useRef(null); const _mbhH = useElemHeight(_mbhRef);
 
-  // ── Fair-play (team conduct) deductions, per group ────────────────────
-  // Feeds the "team conduct score" tiebreak step (see calcStandings) with
-  // real card data once a match finishes. Accumulates across renders rather
-  // than refetching everything each time: each finished match's events are
-  // fetched exactly once (fetchMatchEvents has its own cache too, so this is
-  // belt-and-suspenders — cheap either way), and its contribution is folded
-  // into the running per-group totals. A failed fetch is NOT marked as done,
-  // so it retries next time this effect re-runs (whenever any match anywhere
-  // finishes) rather than silently freezing at 0 deductions forever.
-  const [fairPlay, setFairPlay] = useState({}); // { [group]: { [team]: deductionTotal } }
-  const fairPlayFetchedRef = useRef(new Set());
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const finishedByGroup = {};
-      Object.keys(GROUPS).forEach(g => {
-        finishedByGroup[g] = MATCHES.filter(m => m.group === g && isFinished(m.home, m.away));
-      });
-      const toFetch = Object.values(finishedByGroup).flat().filter(m => !fairPlayFetchedRef.current.has(m.id));
-      if (toFetch.length === 0) return;
-
-      const fetched = await Promise.all(
-        toFetch.map(m => fetchMatchEvents(m.id).then(r => ({ id: m.id, events: r?.events || null })))
-      );
-      if (cancelled) return;
-      fetched.forEach(r => { if (r.events) fairPlayFetchedRef.current.add(r.id); });
-
-      setFairPlay(prev => {
-        const next = { ...prev };
-        Object.keys(GROUPS).forEach(g => {
-          const totals = { ...(next[g] || {}) };
-          GROUPS[g].teams.forEach(t => { if (!(t in totals)) totals[t] = 0; });
-          finishedByGroup[g].forEach(m => {
-            const found = fetched.find(r => r.id === m.id && r.events);
-            if (!found) return; // either not part of this batch, or fetch failed — leave existing total alone
-            const ded = classifyMatchCardDeductions(found.events, [m.home, m.away]);
-            totals[m.home] = (totals[m.home] || 0) + (ded[m.home] || 0);
-            totals[m.away] = (totals[m.away] || 0) + (ded[m.away] || 0);
-          });
-          next[g] = totals;
-        });
-        return next;
-      });
-    })();
-    return () => { cancelled = true; };
-  }, [allFixtures, isFinished]);
-
   // Keep `thirds` (the explicit "qualified 3rd place" selection, tracked by
   // team name) in sync with `groups`. Reordering a group can move a team
   // that was previously in 3rd place up to 1st/2nd — if we don't drop it
@@ -3628,7 +3586,7 @@ function MyBracketTab({ tabTop=116 }) {
       const res = buildGroupResults(g);
       groupResultsByLetter[g] = res;
       groupComplete[g] = res.length > 0 && res.every(r => r.hg !== "" && r.ag !== "");
-      groupStandings[g] = calcStandings(g, res, fairPlay[g] || {});
+      groupStandings[g] = calcStandings(g, res);
     });
     const allGroupsComplete = Object.values(groupComplete).every(Boolean);
 
@@ -3763,7 +3721,7 @@ function MyBracketTab({ tabTop=116 }) {
     const runnerUp = champion ? [final?.[0]?.home, final?.[0]?.away].find(t => t && t !== champion && t !== "TBD") : null;
 
     return { r32, r16, qf, sf, final, champion, runnerUp, allGroupsComplete };
-  }, [allFixtures, fairPlay]);
+  }, [allFixtures]);
 
   const handleManualPick = (match, team) => {
     if (playMode !== "manual" || !match?.match || !team || team === "TBD") return;
@@ -4480,8 +4438,21 @@ function useDebounce(fn, ms) {
 // ── SINGLE LEAGUE VIEW ────────────────────────────────────────────────────
 function SingleLeagueView({ league, pin, fantasyUserId, userStats, leagueBoard, boardLoading, activeLeague, fetchLeagueBoard, copied, copyCode, inviteCopied, shareInviteLink, handleLeave, onBack }) {
   const isOwner = league.ownerPin === String(pin);
+  // Fetching here, instead of in a useEffect, used to call fetchLeagueBoard
+  // (which calls setState) directly during render — every render where
+  // activeLeague hadn't caught up yet triggered another fetch, which could
+  // spiral into a loop that never let state settle (looked exactly like
+  // "leagues aren't recognized", even though the backend data was fine).
+  // Keying the effect on league.code alone (not on activeLeague or the
+  // fetchLeagueBoard reference, which changes every parent render) means
+  // this only re-fires when the league actually changes.
+  useEffect(() => {
+    if (!activeLeague || activeLeague.code !== league.code) {
+      fetchLeagueBoard(league.code);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [league.code]);
   if (!activeLeague || activeLeague.code !== league.code) {
-    fetchLeagueBoard(league.code);
     return <div style={{textAlign:"center",padding:"32px 0"}}><div style={{width:24,height:24,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto"}}/></div>;
   }
   const myEntry = leagueBoard.find(e => e.uid === fantasyUserId);
@@ -5463,56 +5434,6 @@ async function fetchMatchEvents(fixtureId) {
     console.error("[matchevents]", e.message);
     return null;
   }
-}
-
-// ── FAIR PLAY (TEAM CONDUCT) TIEBREAK ─────────────────────────────────────
-// FIFA's group-stage tiebreak chain for 2026 (confirmed directly against the
-// official regulations text, quoted identically by multiple independent
-// sources as of June 2026): points -> head-to-head among tied teams -> overall
-// goal difference -> overall goals scored -> team conduct (fair play) score
-// -> FIFA/Coca-Cola Men's World Ranking. (Drawing of lots was the pre-2026
-// fallback and has been replaced by the ranking step for this tournament —
-// several older explainers still describe lots, but the regulations text
-// itself says ranking.)
-//
-// Official per-incident deductions: yellow card -1, indirect red via two
-// yellows -3, direct red -4, yellow card plus a separate direct red in the
-// same match -5. Card event "detail" strings vary by upstream data provider,
-// so this matches leniently on keywords rather than one exact wording.
-function classifyMatchCardDeductions(events, teamNames) {
-  const deductions = {};
-  teamNames.forEach(t => { deductions[t] = 0; });
-  if (!Array.isArray(events)) return deductions;
-
-  // Group by player first so a two-yellow dismissal — which upstream feeds
-  // often report as two separate card events for the same player — is
-  // scored once as the -3 "indirect red" outcome, not double-counted as a
-  // -1 yellow plus a -3 red.
-  const byPlayer = {};
-  events.filter(ev => ev.type === "Card").forEach(ev => {
-    const team = normTeam(ev.team?.name || "");
-    const player = ev.player?.name || `${team}-unknown`;
-    const detail = String(ev.detail || "").toLowerCase();
-    const key = `${team}::${player}`;
-    if (!byPlayer[key]) byPlayer[key] = { team, cards: [] };
-    byPlayer[key].cards.push(detail);
-  });
-
-  Object.values(byPlayer).forEach(({ team, cards }) => {
-    if (!(team in deductions)) return; // card's team name didn't match either side of this match
-    const isRed = (d) => d.includes("red");
-    const isSecondYellow = (d) => d.includes("second") || (d.includes("yellow") && d.includes("red"));
-    const secondYellowReds = cards.filter(isSecondYellow);
-    const reds = cards.filter(d => isRed(d) && !isSecondYellow(d));
-    const yellows = cards.filter(d => !isRed(d) && d.includes("yellow"));
-
-    if (secondYellowReds.length > 0) deductions[team] += 3;
-    else if (reds.length > 0 && yellows.length > 0) deductions[team] += 5;
-    else if (reds.length > 0) deductions[team] += 4;
-    else if (yellows.length > 0) deductions[team] += 1;
-  });
-
-  return deductions;
 }
 
 // ── MATCH EVENTS MODAL ────────────────────────────────────────────────────
