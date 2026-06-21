@@ -558,9 +558,14 @@ export default async function handler(req, res) {
           visits: (existing.visits || 0) + 1,
           tabs: existing.tabs || {},
         };
-        await kv.set(`visitor:${uid}`, record, { ex: 60 * 60 * 24 * 365 });
-        await kv.sadd(`daily:${today}`, uid);
-        await kv.sadd("visitors:all", uid);
+        // Pipelined into one round trip instead of 3 sequential awaited
+        // calls — same effect (visitor record + daily set + global set),
+        // fewer requests against the Upstash quota.
+        const pipeline = kv.pipeline();
+        pipeline.set(`visitor:${uid}`, record, { ex: 60 * 60 * 24 * 365 });
+        pipeline.sadd(`daily:${today}`, uid);
+        pipeline.sadd("visitors:all", uid);
+        await pipeline.exec();
         return res.status(200).json({ ok: true, isNew });
       }
 
@@ -569,8 +574,10 @@ export default async function handler(req, res) {
         const existing = await kv.get(`visitor:${uid}`) || {};
         const tabs = existing.tabs || {};
         tabs[tab] = (tabs[tab] || 0) + 1;
-        await kv.set(`visitor:${uid}`, { ...existing, tabs, lastSeen: now }, { ex: 60 * 60 * 24 * 365 });
-        await kv.incr(`tab_count:${tab}`);
+        const pipeline = kv.pipeline();
+        pipeline.set(`visitor:${uid}`, { ...existing, tabs, lastSeen: now }, { ex: 60 * 60 * 24 * 365 });
+        pipeline.incr(`tab_count:${tab}`);
+        await pipeline.exec();
         return res.status(200).json({ ok: true });
       }
 

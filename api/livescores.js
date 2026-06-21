@@ -462,7 +462,15 @@ export default async function handler(req, res) {
     let frozen = null;
     try { frozen = await kv.get(CACHE_KEY); } catch(e) {}
     const combined = mergePersistedResults(frozen || [], persisted);
-    res.setHeader("Cache-Control", "no-cache");
+    // Was "no-cache" — meant every single poll from every user, even when
+    // nothing is live, forced this function to run and hit Redis twice
+    // (loadPersistedResults + this kv.get). This is by far the most common
+    // path (most of the day, no match is live), so letting Vercel's edge
+    // absorb repeat requests within a short window cuts Redis load
+    // dramatically without changing any actual freshness guarantee — data
+    // here only changes when a match starts, which isKickoffImminent()
+    // already accounts for separately.
+    res.setHeader("Cache-Control", "public, max-age=60, s-maxage=120, stale-while-revalidate=300");
     return res.status(200).json({ response: combined, cached: true, windowActive: false });
   }
 
@@ -478,7 +486,10 @@ export default async function handler(req, res) {
       const ttlMs = getSmartTTL(cached) * 1000;
       if (Date.now() - cachedTs < ttlMs) {
         const combined = mergePersistedResults(cached, persisted);
-        res.setHeader("Cache-Control", "no-cache");
+        // Short public cache even during live play — multiple users polling
+        // within the same ~10-15s window get served by the edge instead of
+        // each one separately invoking this function and hitting Redis.
+        res.setHeader("Cache-Control", "public, max-age=10, s-maxage=15, stale-while-revalidate=30");
         return res.status(200).json({ response: combined, cached: true, age: Math.round((Date.now() - cachedTs) / 1000) });
       }
     }
@@ -528,13 +539,18 @@ export default async function handler(req, res) {
     let stale = null;
     try { stale = await kv.get(CACHE_KEY); } catch(e) {}
     const combined = mergePersistedResults(stale || [], persisted);
+    res.setHeader("Cache-Control", "public, max-age=5, s-maxage=10");
     return res.status(200).json({ response: combined, cached: !!stale, stale: true, errors });
   }
 
   // Merge persisted results for any matches not in today's feed
   const combined = mergePersistedResults(fixtures, persisted);
 
-  res.setHeader("Cache-Control", "no-cache");
+  // Same reasoning as the other two response paths above: a short public
+  // cache lets concurrent users who all hit a stale KV cache around the
+  // same moment get served by Vercel's edge instead of each one separately
+  // re-fetching from ESPN/Highlightly and re-hitting Redis.
+  res.setHeader("Cache-Control", "public, max-age=10, s-maxage=15, stale-while-revalidate=30");
   return res.status(200).json({
     response: combined,
     cached: false,

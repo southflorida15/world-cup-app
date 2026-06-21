@@ -7940,26 +7940,46 @@ export default function App() {
     });
   }, []);
 
-  // Analytics tracking — fire on mount
+  // Analytics tracking — fire on mount, exactly once.
+  // Previously fired on mount AND again whenever geoData.country changed
+  // (the dependency array), which — since geoData starts empty and resolves
+  // asynchronously — meant every single page load sent two "visit" events
+  // instead of one. This waits briefly for geoData to resolve so city/
+  // country are usually included, but fires after ~1.5s regardless rather
+  // than risk silently losing the visit if geolocation never resolves.
+  const visitFiredRef = useRef(false);
   useEffect(() => {
-    if (analyticsDisabled()) return;
-    const device = getDeviceType();
-    fetch("/api/admin", {
-      method: "POST",
-      headers: {"Content-Type":"application/json"},
-      body: JSON.stringify({
-        uid: syncUid,
-        event: "visit",
-        device,
-        city: geoData.city || "",
-        country: geoData.country || "",
-      })
-    }).catch(() => {});
-  }, [geoData.country]); // re-fire once geoData loads
+    if (analyticsDisabled() || visitFiredRef.current) return;
+    const timer = setTimeout(() => {
+      if (visitFiredRef.current) return;
+      visitFiredRef.current = true;
+      const device = getDeviceType();
+      fetch("/api/admin", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({
+          uid: syncUid,
+          event: "visit",
+          device,
+          city: geoData.city || "",
+          country: geoData.country || "",
+        })
+      }).catch(() => {});
+    }, geoData.country ? 0 : 1500);
+    return () => clearTimeout(timer);
+  }, [geoData.country]);
 
-  // Track tab changes
+  // Track tab changes — once per tab per session, not on every switch.
+  // Previously fired on every single tab click, so a user bouncing between
+  // a few tabs a dozen times in one sitting cost a dozen Redis round trips
+  // for analytics alone. This now counts "did this person visit this tab
+  // at least once this session" rather than every individual switch — less
+  // granular, but still tells you which tabs people actually use, at a
+  // small fraction of the cost.
+  const trackedTabsRef = useRef(new Set());
   useEffect(() => {
-    if (!tab || analyticsDisabled()) return;
+    if (!tab || analyticsDisabled() || trackedTabsRef.current.has(tab)) return;
+    trackedTabsRef.current.add(tab);
     fetch("/api/admin", {
       method: "POST",
       headers: {"Content-Type":"application/json"},
