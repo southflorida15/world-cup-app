@@ -597,11 +597,66 @@ const simMatch = (home, away, venue="") => {
   return { hg, ag, res: hg>ag?"home":hg<ag?"away":"draw" };
 };
 const simKO = (t1, t2) => { const r=simMatch(t1||"TBD",t2||"TBD"); if(r.res==="draw") return Math.random()<gs(t1||"TBD")/(gs(t1||"TBD")+gs(t2||"TBD"))?t1:t2; return r.res==="home"?t1:t2; };
+// FIFA changed the World Cup tiebreak order specifically for 2026 (Article 13
+// of the official regulations): when teams are level on points, head-to-head
+// results among the tied teams now come FIRST — before overall goal
+// difference, which is where it sat in every prior tournament (1970–2022).
+// The full chain for 2026 is: points -> head-to-head points (among the tied
+// teams only) -> head-to-head GD -> head-to-head goals scored -> overall GD
+// -> overall goals scored -> team conduct (fair play) score -> FIFA ranking.
+// This app has no fair-play-card or FIFA-ranking data source, so a tie that
+// survives all the way to those steps falls back to overall goals scored,
+// same endpoint as before.
+//
+// One known simplification: for a 3+-way points tie, FIFA's actual procedure
+// re-builds a fresh head-to-head mini-table for whichever teams are STILL
+// tied after each step (i.e. it can recurse). This does a single pass over
+// the full tied group instead. That matches FIFA's result for the common
+// cases (any 2-team tie, and most 3-team ties) but can in rare edge cases
+// differ from the fully recursive procedure for an unresolved 3+-way tie.
 const calcStandings = (letter, results) => {
   const teams = GROUPS[letter].teams;
   const tbl = Object.fromEntries(teams.map(t=>[t,{team:t,p:0,w:0,d:0,l:0,gf:0,ga:0,gd:0,pts:0}]));
   results.forEach(r => { if(r.hg===""||r.ag==="")return; const hg=parseInt(r.hg),ag=parseInt(r.ag); if(isNaN(hg)||isNaN(ag))return; tbl[r.home].p++;tbl[r.away].p++;tbl[r.home].gf+=hg;tbl[r.home].ga+=ag;tbl[r.home].gd+=hg-ag;tbl[r.away].gf+=ag;tbl[r.away].ga+=hg;tbl[r.away].gd+=ag-hg; if(hg>ag){tbl[r.home].w++;tbl[r.home].pts+=3;tbl[r.away].l++;}else if(hg===ag){tbl[r.home].d++;tbl[r.home].pts++;tbl[r.away].d++;tbl[r.away].pts++;}else{tbl[r.away].w++;tbl[r.away].pts+=3;tbl[r.home].l++;} });
-  return [...teams].sort((a,b)=>tbl[b].pts-tbl[a].pts||tbl[b].gd-tbl[a].gd||tbl[b].gf-tbl[a].gf).map((t,i)=>({...tbl[t],pos:i+1}));
+
+  const playedResults = results.filter(r => r.hg !== "" && r.ag !== "" && !isNaN(parseInt(r.hg)) && !isNaN(parseInt(r.ag)));
+  const miniTable = (subset) => {
+    const mini = Object.fromEntries(subset.map(t => [t, {pts:0, gd:0, gf:0}]));
+    playedResults.forEach(r => {
+      if (!subset.includes(r.home) || !subset.includes(r.away)) return; // only matches strictly among the tied subset
+      const hg = parseInt(r.hg), ag = parseInt(r.ag);
+      mini[r.home].gf += hg; mini[r.home].gd += hg-ag;
+      mini[r.away].gf += ag; mini[r.away].gd += ag-hg;
+      if (hg>ag) mini[r.home].pts += 3;
+      else if (hg===ag) { mini[r.home].pts++; mini[r.away].pts++; }
+      else mini[r.away].pts += 3;
+    });
+    return mini;
+  };
+
+  const byPoints = [...teams].sort((a,b) => tbl[b].pts - tbl[a].pts);
+  const ordered = [];
+  let i = 0;
+  while (i < byPoints.length) {
+    let j = i;
+    while (j < byPoints.length && tbl[byPoints[j]].pts === tbl[byPoints[i]].pts) j++;
+    const tiedGroup = byPoints.slice(i, j);
+    if (tiedGroup.length === 1) {
+      ordered.push(tiedGroup[0]);
+    } else {
+      const mini = miniTable(tiedGroup);
+      ordered.push(...[...tiedGroup].sort((a,b) =>
+        mini[b].pts - mini[a].pts ||
+        mini[b].gd - mini[a].gd ||
+        mini[b].gf - mini[a].gf ||
+        tbl[b].gd - tbl[a].gd ||
+        tbl[b].gf - tbl[a].gf
+      ));
+    }
+    i = j;
+  }
+
+  return ordered.map((t,i)=>({...tbl[t],pos:i+1}));
 };
 const runFullSim = () => {
   const gr={};
@@ -2919,22 +2974,27 @@ function DragList({ items, onReorder, renderItem }) {
 
 // ── MY BRACKET TAB ────────────────────────────────────────────────────────
 const defaultBracketGroups=()=>Object.fromEntries(Object.entries(GROUPS).map(([g,{teams}])=>[g,[...teams]]));
-function BracketMatchup({ match, t1, t2, winner, onPick, interactive=false, compact=false }) {
+function BracketMatchup({ match, t1, t2, winner, onPick, interactive=false, compact=false, t1Tag=null, t2Tag=null }) {
   const canPick = interactive && t1 && t2 && t1 !== "TBD" && t2 !== "TBD";
   const matchData = match ? MATCHES.find(m => m.id === match) : null;
-  const teamRow = (team, i) => {
+  const teamRow = (team, i, tag) => {
     const isW = winner && team === winner;
     const disabled = !canPick || !team || team === "TBD";
+    const isClinched = tag === "clinched";
+    const isProvisional = tag === "provisional";
+    const nameColor = isW ? C.green : isClinched ? C.gold : isProvisional ? C.dim : team ? C.text : C.dim;
     return (
       <button
         key={i}
         onClick={() => !disabled && onPick?.(team)}
         disabled={disabled}
-        title={canPick ? `Pick ${team}` : undefined}
-        style={{width:"100%",display:"flex",alignItems:"center",gap:8,padding:compact?"7px 8px":"10px 10px",background:isW?`${C.green}24`:"transparent",border:"none",borderBottom:i===0?`1px solid ${C.b1}`:"none",cursor:canPick?"pointer":"default",textAlign:"left",opacity:team?1:0.65}}
+        title={canPick ? `Pick ${team}` : isProvisional ? `${team} is currently leading their group — not yet mathematically confirmed for 1st place` : isClinched ? `${team} has clinched 1st place in their group` : undefined}
+        style={{width:"100%",display:"flex",alignItems:"center",gap:8,padding:compact?"7px 8px":"10px 10px",background:isW?`${C.green}24`:"transparent",border:"none",borderBottom:i===0?`1px solid ${C.b1}`:"none",cursor:canPick?"pointer":"default",textAlign:"left",opacity:team?(isProvisional?0.7:1):0.65}}
       >
         <Crest team={team||"TBD"} size={compact?16:22}/>
-        <span style={{fontSize:compact?12:14,color:isW?C.green:team?C.text:C.dim,fontWeight:isW?800:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",flex:1}}>{team||"TBD"}</span>
+        <span style={{fontSize:compact?12:14,color:nameColor,fontWeight:isW||isClinched?800:600,fontStyle:isProvisional?"italic":"normal",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",flex:1}}>{team||"TBD"}</span>
+        {isClinched && !isW && <span title="Clinched 1st place" style={{fontSize:11}}>🔒</span>}
+        {isProvisional && <span style={{fontSize:8,color:C.dim,fontWeight:700,letterSpacing:"0.04em",whiteSpace:"nowrap"}}>LEADING</span>}
         {isW && <span style={{fontSize:12,color:C.green,fontWeight:900}}>✓</span>}
       </button>
     );
@@ -2951,8 +3011,8 @@ function BracketMatchup({ match, t1, t2, winner, onPick, interactive=false, comp
           <div style={{fontSize:10,color:C.gold,fontWeight:900,letterSpacing:"0.08em"}}>M{match || "—"}</div>
         )}
       </div>
-      {teamRow(t1,0)}
-      {teamRow(t2,1)}
+      {teamRow(t1,0,t1Tag)}
+      {teamRow(t2,1,t2Tag)}
     </div>
   );
 }
@@ -3035,7 +3095,7 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
             const m = matchesById[id]||{match:id,home:null,away:null,winner:null};
             return (
               <div key={id} style={{position:"absolute",top:tops[n],left:0,width:CW,opacity:!(m.home&&m.away)?0.55:1}}>
-                <BracketMatchup match={m.match} t1={m.home} t2={m.away} winner={m.winner} interactive={pickMode==="manual"} onPick={t=>onPick(m,t)}/>
+                <BracketMatchup match={m.match} t1={m.home} t2={m.away} winner={m.winner} interactive={pickMode==="manual"} onPick={t=>onPick(m,t)} t1Tag={m.homeTag} t2Tag={m.awayTag}/>
               </div>
             );
           })}
@@ -3174,7 +3234,7 @@ function VisualBracketTree({ bracket, pickMode="auto", onPick=()=>{}, view="comp
                   const locked = !(m.home && m.away);
                   return (
                     <div key={m.match} style={{opacity:locked?0.55:1,position:"relative"}}>
-                      <BracketMatchup match={m.match} t1={m.home} t2={m.away} winner={m.winner} interactive={pickMode==="manual"} onPick={(team)=>onPick(m,team)}/>
+                      <BracketMatchup match={m.match} t1={m.home} t2={m.away} winner={m.winner} interactive={pickMode==="manual"} onPick={(team)=>onPick(m,team)} t1Tag={m.homeTag} t2Tag={m.awayTag}/>
                     </div>
                   );
                 })}
@@ -3507,13 +3567,57 @@ function MyBracketTab({ tabTop=116 }) {
     });
 
     const groupStandings = {};
+    const groupResultsByLetter = {};
     const groupComplete = {};
     Object.keys(GROUPS).forEach(g => {
       const res = buildGroupResults(g);
+      groupResultsByLetter[g] = res;
       groupComplete[g] = res.length > 0 && res.every(r => r.hg !== "" && r.ag !== "");
       groupStandings[g] = calcStandings(g, res);
     });
     const allGroupsComplete = Object.values(groupComplete).every(Boolean);
+
+    // Looks up the already-played head-to-head result between two teams in
+    // a group, using FIFA's actual first tiebreak criterion (head-to-head
+    // points). Returns the winning team's name, "draw", or null if they
+    // haven't played yet.
+    const headToHeadWinner = (g, teamA, teamB) => {
+      const m = (groupResultsByLetter[g] || []).find(r =>
+        (r.home === teamA && r.away === teamB) || (r.home === teamB && r.away === teamA)
+      );
+      if (!m || m.hg === "" || m.ag === "") return null;
+      const hg = parseInt(m.hg), ag = parseInt(m.ag);
+      if (isNaN(hg) || isNaN(ag)) return null;
+      if (hg === ag) return "draw";
+      const homeWon = hg > ag;
+      return (m.home === teamA) === homeWon ? teamA : teamB;
+    };
+
+    // Has this group's CURRENT leader mathematically clinched first place?
+    // FIFA changed the World Cup tiebreak order for 2026: head-to-head
+    // results among tied teams now come BEFORE overall goal difference (see
+    // calcStandings above for the full chain). So a leader can be clinched
+    // even when an exact points-tie is still reachable, as long as the
+    // leader has already beaten every team that could reach that tie
+    // head-to-head — beating everyone in a tied set guarantees winning that
+    // set's head-to-head mini-table regardless of how many teams end up
+    // level, so this is checked pairwise rather than needing to simulate
+    // every possible group of ties. If the head-to-head meeting hasn't been
+    // played yet, or was a draw, or the leader lost it, the tie genuinely
+    // isn't resolved yet and the leader stays "provisional". A team that
+    // could exceed the leader's points outright is obviously never safe.
+    // Each team plays exactly 3 group matches, so remaining = 3 - played.
+    const clinchedFirst = {};
+    Object.keys(GROUPS).forEach(g => {
+      const table = groupStandings[g] || [];
+      const leader = table[0];
+      clinchedFirst[g] = !!leader && table.slice(1).every(t => {
+        const maxPossible = t.pts + (3 - t.p) * 3;
+        if (maxPossible < leader.pts) return true;
+        if (maxPossible > leader.pts) return false;
+        return headToHeadWinner(g, leader.team, t.team) === leader.team;
+      });
+    });
 
     // Always resolve from the CURRENT table, not just once a group is
     // mathematically finished — this is a live projection that updates as
@@ -3521,6 +3625,18 @@ function MyBracketTab({ tabTop=116 }) {
     // before a group's last match is played; that's expected and fine.
     const firstOf = (g) => groupStandings[g]?.[0]?.team || null;
     const secondOf = (g) => groupStandings[g]?.[1]?.team || null;
+
+    // Tags a "1X" (group-winner) slot as "clinched" or "provisional" so the
+    // UI can show confirmed group winners in color and still-live
+    // projections dimmed. Only "1X" slots are tagged — 2nd-place and
+    // third-place projections aren't part of this request and keep their
+    // existing default styling.
+    const slotTag = (slot) => {
+      if (typeof slot === "string" && slot[0] === "1") {
+        return clinchedFirst[slot[1]] ? "clinched" : "provisional";
+      }
+      return null;
+    };
 
     // Same idea for the "best 8 thirds" cross-group ranking — projected from
     // the current table for every group's 3rd-place team. This is provisional
@@ -3570,7 +3686,7 @@ function MyBracketTab({ tabTop=116 }) {
       const away = resolveActualSlot(m.away, m.home) || "TBD";
       const played = lookupReal(home, away);
       if (played) winnerMap[m.match] = played.winner;
-      return { match:m.match, homeSlot:m.home, awaySlot:m.away, home, away, hg:played?.hg ?? null, ag:played?.ag ?? null, winner: played?.winner || null };
+      return { match:m.match, homeSlot:m.home, awaySlot:m.away, home, away, hg:played?.hg ?? null, ag:played?.ag ?? null, winner: played?.winner || null, homeTag: slotTag(m.home), awayTag: slotTag(m.away) };
     });
 
     const resolveRef = (ref) => {
