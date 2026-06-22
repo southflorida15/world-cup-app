@@ -104,12 +104,15 @@ async function buildDashboard() {
     ? (await kv.mget(...allUids.map(uid => `visitor:${uid}`))).filter(Boolean)
     : [];
 
-  const dailyStats = [];
-  for (let i = 13; i >= 0; i--) {
-    const d = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
-    const count = (await kv.scard(`daily:${d}`)) || 0;
-    dailyStats.push({ date: d, count });
-  }
+  // 14 sequential SCARD calls pipelined into one round trip instead of 14.
+  const dailyDates = Array.from({ length: 14 }, (_, idx) => {
+    const i = 13 - idx;
+    return new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
+  });
+  const dailyPipeline = kv.pipeline();
+  dailyDates.forEach(d => dailyPipeline.scard(`daily:${d}`));
+  const dailyCounts = await dailyPipeline.exec();
+  const dailyStats = dailyDates.map((d, i) => ({ date: d, count: dailyCounts[i] || 0 }));
 
   const userKeys = await scanKeys("user:*");
   const users = userKeys.length ? (await kv.mget(...userKeys)).filter(Boolean) : [];
@@ -122,23 +125,18 @@ async function buildDashboard() {
 
   const userByUid = Object.fromEntries(users.map(u => [u.userId, u]));
 
-  // Fetch predictor leaderboard to get predCount and pts per user
-  let leaderboardByUid = {};
-  try {
-    const lbKeys = await scanKeys("user:*");
-    const lbUsers = lbKeys.length ? (await kv.mget(...lbKeys)).filter(Boolean) : [];
-    await Promise.all(lbUsers.map(async u => {
-      if (!u?.userId) return;
-      const predIds = await kv.smembers(`predSet:${u.userId}`).catch(() => []) || [];
-      let pts = 0;
-      if (predIds.length) {
-        const scoreKeys = predIds.map(id => `score:${u.userId}:${id}`);
-        const scores = await kv.mget(...scoreKeys).catch(() => []);
-        for (const s of scores) { if (s?.pts) pts += s.pts; }
-      }
-      leaderboardByUid[u.userId] = { predCount: predIds.length, pts };
-    }));
-  } catch(e) {}
+  // Was a SECOND full scan of user:* (redundant duplicate of the one
+  // above) plus, for every user, a smembers + mget pair to recompute
+  // predCount/pts from scratch — the exact same O(users × matches)
+  // pattern already fixed in predictor.js's leaderboard and league.js's
+  // getLeaderboardForUsers. Those fields now live directly on the user
+  // record (maintained incrementally elsewhere), so this just reads them
+  // off the `users` array already fetched above — zero extra Redis calls.
+  const leaderboardByUid = {};
+  users.forEach(u => {
+    if (!u?.userId) return;
+    leaderboardByUid[u.userId] = { predCount: u.predCount || 0, pts: u.pts || 0 };
+  });
   const accountsMap = new Map();
   for (const p of syncProfiles) {
     if (!p?.uid) continue;
