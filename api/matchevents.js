@@ -519,6 +519,15 @@ export default async function handler(req, res) {
   if (memCached && debug !== "1" && memCached.events.length > 0) {
     const ttl = memCached.isDone ? TTL_DONE : TTL_LIVE;
     if (Date.now() - memCached.ts < ttl) {
+      // Was missing entirely — meant every concurrent viewer of the same
+      // match's timeline independently invoked this function (and, on a
+      // cold start with memCache wiped, independently hit Redis too) even
+      // though the data is identical for everyone. Finished matches never
+      // change again, so a long public cache is safe; live ones get a
+      // short one matching the in-memory TTL.
+      res.setHeader("Cache-Control", memCached.isDone
+        ? "public, max-age=3600, s-maxage=3600"
+        : "public, max-age=15, s-maxage=20, stale-while-revalidate=30");
       return res.status(200).json({ events: memCached.events, stats: memCached.stats });
     }
   }
@@ -529,6 +538,8 @@ export default async function handler(req, res) {
     if (persisted && persisted.events?.length > 0) {
       console.log(`[matchevents] Serving ${home} vs ${away} from KV (${persisted.events.length} events)`);
       memCache[cacheKey] = { ...persisted, isDone: true, ts: Date.now() };
+      // Finished match — data is permanent, cache aggressively.
+      res.setHeader("Cache-Control", "public, max-age=3600, s-maxage=3600");
       return res.status(200).json({ events: persisted.events, stats: persisted.stats, lineups: persisted.lineups || null });
     }
   }
@@ -593,6 +604,9 @@ export default async function handler(req, res) {
     // Cache lineups pre-match with short TTL (5min) so we pick them up when published
     const TTL_PREMATCH_LINEUPS = 5 * 60 * 1000;
     memCache[cacheKey] = { events, stats, lineups, isDone, isLive, ts: Date.now(), ttlOverride: isPrematch && lineups ? TTL_PREMATCH_LINEUPS : null };
+    res.setHeader("Cache-Control", isDone
+      ? "public, max-age=3600, s-maxage=3600"
+      : "public, max-age=15, s-maxage=20, stale-while-revalidate=30");
     return res.status(200).json({ events, stats, lineups });
 
   } catch(e) {

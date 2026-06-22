@@ -36,7 +36,44 @@ async function getUserFromPin(pin) {
   return { uid: profile.uid, name: user?.name || `User ${pin}`, pin };
 }
 
-// Get leaderboard for a list of UIDs
+// Computes a user's pts/exact/correct the old (expensive) way, for a
+// record that predates storing those fields directly on the user object.
+// Mirrors the same helper in predictor.js — duplicated rather than shared
+// across serverless functions to keep each file self-contained, but reads
+// and writes the exact same `user:{uid}` key, so whichever endpoint a user
+// hits first does the one-time migration and both benefit afterward.
+async function computeLegacyTotals(uid) {
+  let cursor = 0;
+  const scoreKeys = [];
+  do {
+    const [next, batch] = await kv.scan(cursor, { match: `score:${uid}:*`, count: 100 });
+    cursor = parseInt(next) || 0;
+    scoreKeys.push(...batch);
+  } while (cursor !== 0);
+
+  let pts = 0, exact = 0, correct = 0;
+  if (scoreKeys.length) {
+    const scores = await kv.mget(...scoreKeys);
+    for (const s of scores) {
+      if (s === null || s === undefined) continue;
+      const val = typeof s === "object" ? (s.pts ?? 0) : (typeof s === "number" ? s : parseInt(s));
+      if (isNaN(val)) continue;
+      pts += val;
+      if (val === 3) exact++;
+      if (val >= 1) correct++;
+    }
+  }
+  return { pts, exact, correct };
+}
+
+// Get leaderboard for a list of UIDs.
+// This used to redo a full SCAN over score:{uid}:* keys plus an mget for
+// EVERY member, on EVERY league view — O(members × finished matches),
+// completely independent of (and duplicating) the same expensive pattern
+// predictor.js's leaderboard action had. Now reads pts/exact/correct
+// directly off the user record those totals already live on (maintained
+// incrementally elsewhere), with the same one-time self-healing fallback
+// for any user record that predates this.
 async function getLeaderboardForUsers(uids) {
   if (!uids.length) return [];
   const users = await Promise.all(uids.map(uid => kv.get(`user:${uid}`).catch(() => null)));
@@ -46,30 +83,14 @@ async function getLeaderboardForUsers(uids) {
     if (!user) return null;
     const userName = user.name || user.displayName || uid.slice(0,8);
 
-    // Get all score keys for this user
-    let cursor = 0;
-    const scoreKeys = [];
-    do {
-      const [next, batch] = await kv.scan(cursor, { match: `score:${uid}:*`, count: 100 });
-      cursor = parseInt(next) || 0;
-      scoreKeys.push(...batch);
-    } while (cursor !== 0);
-
-    let pts = 0, exact = 0, correct = 0;
-    if (scoreKeys.length) {
-      const scores = await kv.mget(...scoreKeys);
-      for (const s of scores) {
-        if (s === null || s === undefined) continue;
-        // Score can be stored as number or as object { pts, hg, ag, predHg, predAg }
-        const val = typeof s === "object" ? (s.pts ?? 0) : (typeof s === "number" ? s : parseInt(s));
-        if (isNaN(val)) continue;
-        pts += val;
-        if (val === 3) exact++;
-        if (val >= 1) correct++;
-      }
+    let { pts, exact, correct } = user;
+    if (pts === undefined) {
+      const legacy = await computeLegacyTotals(uid);
+      pts = legacy.pts; exact = legacy.exact; correct = legacy.correct;
+      await kv.set(`user:${uid}`, { ...user, ...legacy }).catch(() => {});
     }
 
-    return { uid, name: userName, pts, exact, correct };
+    return { uid, name: userName, pts: pts || 0, exact: exact || 0, correct: correct || 0 };
   })).then(rows => rows.filter(Boolean).sort((a, b) => b.pts - a.pts || b.exact - a.exact));
 }
 
@@ -180,6 +201,7 @@ export default async function handler(req, res) {
     const uids = league.members.map(m => m.uid);
     const leaderboard = await getLeaderboardForUsers(uids);
 
+    res.setHeader("Cache-Control", "public, max-age=10, s-maxage=20, stale-while-revalidate=60");
     return res.status(200).json({ ok: true, league, leaderboard });
   }
 
