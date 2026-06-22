@@ -198,7 +198,7 @@ export default async function handler(req, res) {
     // Always try GNews cache first
     const cached = await kv.get(cacheKey);
     if (cached) {
-      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Cache-Control", "public, max-age=300, s-maxage=600");
       return res.status(200).json({ articles: cached, cached: true, lang, country });
     }
 
@@ -250,7 +250,7 @@ export default async function handler(req, res) {
       await kv.set(cacheKey, articles, { ex: CACHE_TTL });
     }
 
-    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Cache-Control", "public, max-age=300, s-maxage=600");
     return res.status(200).json({ articles, cached: false, lang, country });
 
   } catch (err) {

@@ -4987,26 +4987,33 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
   }, [getScore, isFinished]);
 
   // ── Load leaderboard when that tab is active ────────────────────────────
+  // This used to fetch on EVERY filter change anywhere in the Fantasy tab
+  // (Upcoming/Finished/Board/Leagues, etc.) — the `if (filter === "board")`
+  // check only gated the loading spinner, not the actual fetch. So clicking
+  // through unrelated filters silently re-pulled the entire global
+  // leaderboard every time. Now it only fetches when actually viewing the
+  // board, and still refreshes if fantasyUserId/name changes while already
+  // there (so a fresh registration shows up correctly).
   useEffect(() => {
-  let cancelled = false;
+    if (filter !== "board") return;
+    let cancelled = false;
+    setBL(true);
 
-  if (filter === "board") setBL(true);
+    apiPred("leaderboard")
+      .then(b => {
+        if (!cancelled) setBoard(Array.isArray(b) ? b : []);
+      })
+      .catch(() => {
+        if (!cancelled) setBoard([]);
+      })
+      .finally(() => {
+        if (!cancelled) setBL(false);
+      });
 
-  apiPred("leaderboard")
-    .then(b => {
-      if (!cancelled) setBoard(Array.isArray(b) ? b : []);
-    })
-    .catch(() => {
-      if (!cancelled) setBoard([]);
-    })
-    .finally(() => {
-      if (!cancelled && filter === "board") setBL(false);
-    });
-
-  return () => {
-    cancelled = true;
-  };
-}, [filter, fantasyUserId, user?.name]);
+    return () => {
+      cancelled = true;
+    };
+  }, [filter, fantasyUserId, user?.name]);
 
   // ── Register ────────────────────────────────────────────────────────────
   const handleRegister = async () => {
