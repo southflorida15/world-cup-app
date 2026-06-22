@@ -21,8 +21,11 @@ export default async function handler(req, res) {
       return res.status(200).json({ scorers: [], assisters: [] });
     }
 
-    // Fetch all match event records in parallel
-    const records = await Promise.all(keys.map(k => kv.get(k).catch(() => null)));
+    // Fetch all match event records in one batched call instead of N
+    // separate parallel kv.get requests (Promise.all of individual gets
+    // still costs N round trips even running concurrently — mget batches
+    // them into one).
+    const records = await kv.mget(...keys).catch(() => keys.map(() => null));
 
     const goals = {};   // name → { name, team, goals, assists }
     const cards = {};   // name → { name, team, yellow, red }
@@ -62,6 +65,7 @@ export default async function handler(req, res) {
       .sort((a, b) => (b.red * 2 + b.yellow) - (a.red * 2 + a.yellow))
       .slice(0, 20);
 
+    res.setHeader("Cache-Control", "public, max-age=30, s-maxage=60, stale-while-revalidate=120");
     return res.status(200).json({ scorers, cards: mostCards, matchCount: keys.length });
 
   } catch(e) {
