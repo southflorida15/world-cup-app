@@ -53,12 +53,54 @@ async function loadFromKV(home, away) {
   }
 }
 
+const SCORERS_AGGREGATE_KEY = "wc2026:scorers_aggregate";
+
 async function saveToKV(home, away, events, stats, lineups=null) {
   try {
     await kv.set(kvKey(home, away), { events, stats, lineups, savedAt: Date.now() });
     console.log(`[matchevents] Persisted ${events.length} events for ${home} vs ${away}`);
   } catch(e) {
     console.warn("[matchevents] KV save:", e.message);
+  }
+  // Fold this match's goals/cards into the running aggregate exactly once,
+  // right here, where a finished match's events are persisted for the
+  // first (and only) time. This is the one place that cost belongs — a
+  // finished match's contribution to the scorers leaderboard never changes
+  // again, so it should never be recomputed again either. Previously
+  // getScorers() re-scanned and re-fetched EVERY persisted match's full
+  // event list from scratch on every single request, redoing this same
+  // work for matches that finished days ago, every time anyone opened the
+  // Top Scorers tab.
+  try {
+    const matchKey = kvKey(home, away);
+    const aggregate = await kv.get(SCORERS_AGGREGATE_KEY) || { goals: {}, cards: {}, processedMatches: [] };
+    if (aggregate.processedMatches.includes(matchKey)) return; // already folded in, don't double-count
+    (events || []).forEach(ev => {
+      if (ev.type === "Goal" && ev.detail !== "Own Goal") {
+        const name = ev.player?.name;
+        const team = ev.team?.name;
+        if (!name) return;
+        if (!aggregate.goals[name]) aggregate.goals[name] = { name, team, goals: 0, assists: 0 };
+        aggregate.goals[name].goals++;
+        const assist = ev.assist?.name;
+        if (assist) {
+          if (!aggregate.goals[assist]) aggregate.goals[assist] = { name: assist, team, goals: 0, assists: 0 };
+          aggregate.goals[assist].assists++;
+        }
+      }
+      if (ev.type === "Card") {
+        const name = ev.player?.name;
+        const team = ev.team?.name;
+        if (!name) return;
+        if (!aggregate.cards[name]) aggregate.cards[name] = { name, team, yellow: 0, red: 0 };
+        if (ev.detail === "Yellow Card") aggregate.cards[name].yellow++;
+        if (ev.detail === "Red Card") aggregate.cards[name].red++;
+      }
+    });
+    aggregate.processedMatches.push(matchKey);
+    await kv.set(SCORERS_AGGREGATE_KEY, aggregate);
+  } catch(e) {
+    console.warn("[matchevents] scorers aggregate update:", e.message);
   }
 }
 
@@ -373,12 +415,10 @@ async function getScorers() {
     cursor = parseInt(next) || 0;
     allKeys.push(...batch);
   } while (cursor !== 0);
-  const keys = allKeys;
 
   // Auto-seed if no events persisted yet
-  if (!keys.length) {
+  if (!allKeys.length) {
     await autoSeedEvents();
-    // Re-scan after seeding
     let cursor2 = 0;
     do {
       const [next, batch] = await kv.scan(cursor2, { match: "wc2026:events:*", count: 200 });
@@ -389,40 +429,51 @@ async function getScorers() {
 
   if (!allKeys.length) return { scorers: [], cards: [] };
 
-  const records = await Promise.all(keys.map(k => kv.get(k).catch(() => null)));
-  const goals = {};
-  const cards = {};
+  // Read the pre-computed aggregate (maintained incrementally by saveToKV,
+  // once per match, exactly when it finishes) instead of re-fetching and
+  // re-aggregating every persisted match's full event list on every single
+  // call. Self-healing: any match whose events were persisted before this
+  // aggregate existed gets folded in once here, then never touched again.
+  let aggregate = await kv.get(SCORERS_AGGREGATE_KEY) || { goals: {}, cards: {}, processedMatches: [] };
+  const processed = new Set(aggregate.processedMatches || []);
+  const unprocessedKeys = allKeys.filter(k => !processed.has(k));
 
-  records.forEach(record => {
-    if (!record?.events?.length) return;
-    record.events.forEach(ev => {
-      if (ev.type === "Goal" && ev.detail !== "Own Goal") {
-        const name = ev.player?.name;
-        const team = ev.team?.name;
-        if (!name) return;
-        if (!goals[name]) goals[name] = { name, team, goals: 0, assists: 0 };
-        goals[name].goals++;
-        const assist = ev.assist?.name;
-        if (assist) {
-          if (!goals[assist]) goals[assist] = { name: assist, team, goals: 0, assists: 0 };
-          goals[assist].assists++;
-        }
+  if (unprocessedKeys.length) {
+    const records = await kv.mget(...unprocessedKeys).catch(() => unprocessedKeys.map(() => null));
+    records.forEach((record, i) => {
+      if (record?.events?.length) {
+        record.events.forEach(ev => {
+          if (ev.type === "Goal" && ev.detail !== "Own Goal") {
+            const name = ev.player?.name;
+            const team = ev.team?.name;
+            if (!name) return;
+            if (!aggregate.goals[name]) aggregate.goals[name] = { name, team, goals: 0, assists: 0 };
+            aggregate.goals[name].goals++;
+            const assist = ev.assist?.name;
+            if (assist) {
+              if (!aggregate.goals[assist]) aggregate.goals[assist] = { name: assist, team, goals: 0, assists: 0 };
+              aggregate.goals[assist].assists++;
+            }
+          }
+          if (ev.type === "Card") {
+            const name = ev.player?.name;
+            const team = ev.team?.name;
+            if (!name) return;
+            if (!aggregate.cards[name]) aggregate.cards[name] = { name, team, yellow: 0, red: 0 };
+            if (ev.detail === "Yellow Card") aggregate.cards[name].yellow++;
+            if (ev.detail === "Red Card") aggregate.cards[name].red++;
+          }
+        });
       }
-      if (ev.type === "Card") {
-        const name = ev.player?.name;
-        const team = ev.team?.name;
-        if (!name) return;
-        if (!cards[name]) cards[name] = { name, team, yellow: 0, red: 0 };
-        if (ev.detail === "Yellow Card") cards[name].yellow++;
-        if (ev.detail === "Red Card") cards[name].red++;
-      }
+      aggregate.processedMatches.push(unprocessedKeys[i]);
     });
-  });
+    await kv.set(SCORERS_AGGREGATE_KEY, aggregate).catch(() => {});
+  }
 
   return {
-    scorers: Object.values(goals).sort((a,b) => b.goals-a.goals || b.assists-a.assists).slice(0,30),
-    cards: Object.values(cards).sort((a,b) => (b.red*2+b.yellow)-(a.red*2+a.yellow)).slice(0,20),
-    matchCount: keys.length,
+    scorers: Object.values(aggregate.goals).sort((a,b) => b.goals-a.goals || b.assists-a.assists).slice(0,30),
+    cards: Object.values(aggregate.cards).sort((a,b) => (b.red*2+b.yellow)-(a.red*2+a.yellow)).slice(0,20),
+    matchCount: aggregate.processedMatches.length,
   };
 }
 
@@ -473,6 +524,7 @@ export default async function handler(req, res) {
   // Scorers aggregation
   if (req.query.action === "scorers") {
     try {
+      res.setHeader("Cache-Control", "public, max-age=60, s-maxage=120, stale-while-revalidate=300");
       return res.status(200).json(await getScorers());
     } catch(e) {
       return res.status(200).json({ scorers: [], cards: [], error: e.message });
