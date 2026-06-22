@@ -261,13 +261,25 @@ export default async function handler(req, res) {
       if (!matchId || hg === undefined || ag === undefined) {
         return res.status(400).json({ error: "Missing fields" });
       }
+
+      // Idempotency guard: if this exact result was already scored, skip
+      // the entire expensive per-user loop below. Without this, ANY
+      // redundant call — a retry, a second tab, a different user's browser
+      // independently re-submitting the same finished match — redid the
+      // full O(users) scan/read/write loop every single time for no
+      // reason. (The actual root cause of one such redundant trigger, in
+      // App.jsx's auto-score effect, is fixed separately — this is the
+      // backend half of defense-in-depth, since the frontend can't be the
+      // only thing preventing this.)
+      const existingResult = await kv.get(`result:${matchId}`);
+      if (existingResult && existingResult.hg === parseInt(hg) && existingResult.ag === parseInt(ag)) {
+        return res.status(200).json({ ok: true, matchId, scored: 0, alreadyScored: true });
+      }
+
       // Save the result
       await kv.set(`result:${matchId}`, { hg: parseInt(hg), ag: parseInt(ag), scoredAt: Date.now() });
-      // Find all users who predicted this match
-      const allUsers = await kv.smembers("names") || [];
-      // Get all userIds
+      // Get all userIds (small dataset — fine to iterate)
       const userIds = [];
-      // Scan for all user keys (small dataset — fine to iterate)
       let cursor = 0;
       do {
         const [nextCursor, keys] = await kv.scan(cursor, { match: "user:*", count: 100 });

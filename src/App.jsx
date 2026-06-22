@@ -776,9 +776,17 @@ function LiveScoresProvider({ children }) {
   }, []);
 
   useEffect(() => { fetchAll(); const t=setInterval(fetchAll,60000); return()=>clearInterval(t); }, [fetchAll]);
-  const getScore = (h,a) => scores[`${h}|${a}`]||null;
-  const isLive = (h,a) => { const s=getScore(h,a); return s?statusIsLive(s.status):false; };
-  const isFinished = (h,a) => { const s=getScore(h,a); return s?statusIsFinished(s.status):false; };
+  // useCallback here doesn't eliminate reference churn entirely — these
+  // genuinely need to change whenever `scores` updates (every ~60s poll),
+  // so any effect depending on them will still refire every poll. That's
+  // expected and fine *if* the effect itself only acts on genuinely new
+  // data (see the ref-guard pattern in the auto-score effect above for the
+  // bug this caused when an effect didn't do that). What this does prevent
+  // is an EXTRA new reference on renders where `scores` hasn't changed but
+  // the provider re-rendered for some unrelated reason.
+  const getScore = useCallback((h,a) => scores[`${h}|${a}`]||null, [scores]);
+  const isLive = useCallback((h,a) => { const s=getScore(h,a); return s?statusIsLive(s.status):false; }, [getScore]);
+  const isFinished = useCallback((h,a) => { const s=getScore(h,a); return s?statusIsFinished(s.status):false; }, [getScore]);
   return <LiveScoresCtx.Provider value={{scores,allFixtures,getScore,isLive,isFinished,lastFetch,refresh:fetchAll}}>{children}</LiveScoresCtx.Provider>;
 }
 
@@ -4969,6 +4977,23 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
   }, [fantasyUserId, displayName, userAvatar, syncProfile?.uid]);
 
   // ── Auto-score finished matches ─────────────────────────────────────────
+  // getScore/isFinished are plain functions recreated on every render of
+  // LiveScoresProvider (no useCallback), and `scores` updates on every ~60s
+  // live-score poll — so this effect's dependency array changed constantly,
+  // refiring roughly every poll, FOREVER, resubmitting every currently-
+  // finished match (40 right now, growing all tournament) for a full
+  // re-score every single time, in every open browser tab, regardless of
+  // whether anything had actually changed. Confirmed directly from an
+  // Upstash command-monitor capture: 1762 commands in an 8-second burst,
+  // exactly matching one full pass over all 40 finished matches.
+  //
+  // Fixed by tracking which (matchId, hg, ag) combination has already been
+  // submitted this session — only genuinely new or corrected results get
+  // sent. The matching backend fix (predictor.js's score action now skips
+  // its expensive per-user loop entirely if the stored result already
+  // matches) provides defense in depth against the same redundant trigger
+  // happening from other sources (other tabs, other users, retries).
+  const scoredSubmittedRef = useRef(new Map()); // matchId -> "hg-ag" already submitted
   useEffect(() => {
     const finishedWithScores = MATCHES
       .filter(m => m.group && isFinished(m.home, m.away))
@@ -4977,8 +5002,10 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
         if (!sc || sc.hg === null || sc.ag === null) return null;
         return { id: m.id, hg: sc.hg, ag: sc.ag };
       })
-      .filter(Boolean);
+      .filter(Boolean)
+      .filter(m => scoredSubmittedRef.current.get(m.id) !== `${m.hg}-${m.ag}`);
     if (!finishedWithScores.length) return;
+    finishedWithScores.forEach(m => scoredSubmittedRef.current.set(m.id, `${m.hg}-${m.ag}`));
     fetch("/api/admin?action=score-matches", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
