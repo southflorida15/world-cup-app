@@ -109,12 +109,18 @@ export default async function handler(req, res) {
 
       // Team roster by name
       case "roster": {
-        const { name } = req.query;
+        const { name, year = "2026" } = req.query;
         if (!name) return res.status(400).json({ error: "Missing name param" });
-        const cKey = `roster_${name}`;
+        // The real Zafronix API documents `year` as a REQUIRED query param on
+        // this endpoint (GET /v1/teams/:name/roster?year=YYYY). It was never
+        // being sent — every single roster call was returning 400 Bad
+        // Request as a result, with no team ever successfully loading a live
+        // squad. Confirmed directly from RapidAPI's analytics dashboard
+        // (100% error rate, all 400s) before fixing.
+        const cKey = `roster_${name}_${year}`;
         data = await getCached(cKey);
         if (!data) {
-          data = await zafronixFetch(`/teams/${encodeURIComponent(name)}/roster`);
+          data = await zafronixFetch(`/teams/${encodeURIComponent(name)}/roster?year=${encodeURIComponent(year)}`);
           await setCached(cKey, data, "teams");
         }
         break;
