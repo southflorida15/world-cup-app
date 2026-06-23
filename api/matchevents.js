@@ -321,7 +321,24 @@ function parseEvents(data, homeTeam) {
     }
   }
 
-  return events.sort((a, b) => (a.time?.elapsed || 0) - (b.time?.elapsed || 0));
+  // Dedup: ESPN's keyEvents feed can post the same goal twice — a
+  // provisional entry when it's first scored, then a second, re-confirmed
+  // entry after a brief review/update — with no shared ID to tell them
+  // apart from a plain "same player, same team, same minute" match. With
+  // no dedup, both copies became separate Goal events, inflating the
+  // events-derived goal count above the actual final score (confirmed
+  // directly: Ronaldo showed twice at completely different minutes here,
+  // which is a real double — but the SAME bug class also covers the more
+  // common case of an exact-duplicate repost at the identical minute).
+  const seen = new Set();
+  const deduped = events.filter(ev => {
+    const key = `${ev.type}|${ev.team?.name}|${ev.player?.name}|${ev.time?.elapsed}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  return deduped.sort((a, b) => (a.time?.elapsed || 0) - (b.time?.elapsed || 0));
 }
 
 // ── Scorers aggregator ────────────────────────────────────────────────────
