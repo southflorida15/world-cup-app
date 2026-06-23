@@ -1994,6 +1994,22 @@ function StatsTab({ initial="", tabTop=116 }) {
               </div>
             </div>
           </Card>
+
+          <Card style={{marginBottom:12}}>
+            <div style={{padding:"10px 14px",borderBottom:`1px solid ${C.b1}`}}>
+              <span style={{fontWeight:700,color:C.green,fontSize:13}}>🏆 WORLD CUP HISTORY</span>
+            </div>
+            <div style={{padding:13}}>
+              {wcHistoryLoading && (
+                <div style={{padding:"24px 0",textAlign:"center"}}>
+                  <div style={{width:24,height:24,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto 10px"}}/>
+                  <div style={{fontSize:12,color:C.mid}}>Fetching World Cup history…</div>
+                </div>
+              )}
+              {!wcHistoryLoading && <TeamHistoryCard team={sel} data={wcHistory} color={C.green}/>}
+            </div>
+          </Card>
+
           <Card style={{marginBottom:12}}>
             <div style={{padding:13}}>
               <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:7}}>2026 Analysis</div>
@@ -2058,21 +2074,6 @@ function StatsTab({ initial="", tabTop=116 }) {
                 </div>
               </div>
             )}
-          </Card>
-
-          <Card style={{marginBottom:12}}>
-            <div style={{padding:"10px 14px",borderBottom:`1px solid ${C.b1}`}}>
-              <span style={{fontWeight:700,color:C.green,fontSize:13}}>🏆 WORLD CUP HISTORY</span>
-            </div>
-            <div style={{padding:13}}>
-              {wcHistoryLoading && (
-                <div style={{padding:"24px 0",textAlign:"center"}}>
-                  <div style={{width:24,height:24,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto 10px"}}/>
-                  <div style={{fontSize:12,color:C.mid}}>Fetching World Cup history…</div>
-                </div>
-              )}
-              {!wcHistoryLoading && <TeamHistoryCard team={sel} data={wcHistory} color={C.green}/>}
-            </div>
           </Card>
 
           {/* Dynamic recent form — auto-switches to live WC data after Jun 11 */}
@@ -2659,8 +2660,66 @@ function YearDetailModal({ team, year, data, color, onClose }) {
 }
 
 function ScorerLogModal({ team, scorer, color, onClose }) {
-  const log = getPlayerScoringLog(team, scorer.name);
+  const { isFinished, getScore } = useContext(LiveScoresCtx);
+  const historicalLog = getPlayerScoringLog(team, scorer.name);
+  const [live2026Log, setLive2026Log] = useState([]);
+  const [loading2026, setLoading2026] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      // Every 2026 match this team has played and finished — fetch each
+      // one's events in parallel and pull out this player's goals. Same
+      // data source the live scorers aggregate uses, just queried directly
+      // per-match instead of pre-aggregated, since we need match context
+      // (opponent/stage/date) that the aggregate doesn't keep.
+      const teamMatches = MATCHES.filter(m =>
+        (m.home === team || m.away === team) && isFinished(m.home, m.away)
+      );
+      const results = await Promise.all(teamMatches.map(async m => {
+        try {
+          const r = await fetch(`/api/matchevents?home=${encodeURIComponent(m.home)}&away=${encodeURIComponent(m.away)}`);
+          if (!r.ok) return null;
+          const data = await r.json();
+          return { match: m, events: data?.events || [] };
+        } catch(e) { return null; }
+      }));
+      if (cancelled) return;
+
+      const entries = [];
+      results.forEach(r => {
+        if (!r) return;
+        const { match: m, events } = r;
+        const opponent = m.home === team ? m.away : m.home;
+        const sc = getScore(m.home, m.away);
+        const scoreStr = sc ? (m.home === team ? `${sc.hg}–${sc.ag}` : `${sc.ag}–${sc.hg}`) : "";
+        events.forEach(ev => {
+          if (ev.type !== "Goal" || ev.detail === "Own Goal") return;
+          if (normalizePlayerName(ev.team?.name) !== normalizePlayerName(team)) return;
+          const evName = normalizePlayerName(ev.player?.name);
+          const qName = normalizePlayerName(scorer.name);
+          if (!evName.includes(qName) && !qName.includes(evName)) return;
+          entries.push({
+            year: 2026,
+            host: "United States / Mexico / Canada",
+            stage: m.group ? `Group ${m.group}` : (m.stage || ""),
+            opponent,
+            score: scoreStr,
+            result: !sc ? null : (m.home === team ? (sc.hg > sc.ag ? "W" : sc.hg < sc.ag ? "L" : "D") : (sc.ag > sc.hg ? "W" : sc.ag < sc.hg ? "L" : "D")),
+            goals: 1, // each event is one goal; multiple events from the same match naturally appear as separate rows
+            isPK: /penalty/i.test(ev.detail || ""),
+          });
+        });
+      });
+      setLive2026Log(entries);
+      setLoading2026(false);
+    })();
+    return () => { cancelled = true; };
+  }, [team, scorer.name]);
+
+  const log = [...historicalLog, ...live2026Log];
   const totalLogged = log.reduce((sum, m) => sum + m.goals, 0);
+
   return (
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.7)",zIndex:3000,display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={onClose}>
       <div onClick={e=>e.stopPropagation()} style={{background:C.s1,borderRadius:"16px 16px 0 0",maxWidth:480,width:"100%",maxHeight:"80vh",overflowY:"auto",padding:20,border:`1px solid ${C.b1}`}}>
@@ -2675,29 +2734,35 @@ function ScorerLogModal({ team, scorer, color, onClose }) {
           <button onClick={onClose} style={{background:"none",border:"none",color:C.dim,fontSize:20,cursor:"pointer",lineHeight:1,padding:4}}>✕</button>
         </div>
 
-        {log.length === 0 ? (
+        {loading2026 && (
+          <div style={{textAlign:"center",padding:"16px 0"}}>
+            <div style={{width:18,height:18,border:`2px solid ${color}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto"}}/>
+          </div>
+        )}
+
+        {!loading2026 && log.length === 0 ? (
           <div style={{textAlign:"center",padding:"24px 0"}}>
             <div style={{fontSize:"1.6rem",marginBottom:6}}>📭</div>
             <div style={{fontSize:12,color:C.dim,lineHeight:1.6}}>
               No match-by-match data available for {scorer.name}. Our detailed match archive only covers 1982 onward — {scorer.name}'s World Cup career likely fell before that, or partially before it.
             </div>
           </div>
-        ) : (
+        ) : !loading2026 && (
           <div style={{marginTop:10}}>
             {totalLogged < scorer.goals && (
               <div style={{fontSize:10,color:C.dim,marginBottom:10,padding:"6px 8px",background:C.s2,borderRadius:8}}>
-                Showing {totalLogged} of {scorer.goals} career goals — the rest predate our detailed match archive (1982 onward) or are from the still-ongoing 2026 tournament.
+                Showing {totalLogged} of {scorer.goals} career goals — the rest predate our detailed match archive (1982 onward).
               </div>
             )}
             {log.map((m, i) => (
               <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 0",borderBottom:i<log.length-1?`1px solid ${C.b1}`:"none"}}>
-                <div style={{minWidth:38,fontSize:12,fontWeight:800,color:C.mid}}>{m.year}</div>
+                <div style={{minWidth:38,fontSize:12,fontWeight:800,color:m.year===2026?C.red:C.mid}}>{m.year}</div>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontSize:12,color:C.text,fontWeight:600}}>vs {m.opponent}</div>
                   <div style={{fontSize:10,color:C.dim,marginTop:1}}>{m.stage} · {m.host}</div>
                 </div>
                 <div style={{textAlign:"right"}}>
-                  <div style={{fontSize:12,fontWeight:800,color:m.result==="W"?C.green:m.result==="D"?C.gold:C.red}}>{m.score}</div>
+                  <div style={{fontSize:12,fontWeight:800,color:m.result==="W"?C.green:m.result==="D"?C.gold:m.result==="L"?C.red:C.dim}}>{m.score}</div>
                   <div style={{fontSize:10,color:C.dim,marginTop:1}}>{"⚽".repeat(Math.max(1, m.goals))}{m.isPK?" · PK":""}</div>
                 </div>
               </div>
