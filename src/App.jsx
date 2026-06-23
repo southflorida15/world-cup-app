@@ -617,9 +617,14 @@ const simKO = (t1, t2) => { const r=simMatch(t1||"TBD",t2||"TBD"); if(r.res==="d
 // (500k/500k used) during the tournament. Removed rather than throttled,
 // since fair play is the second-to-last tiebreak step and only matters when
 // points, head-to-head, AND overall GD/goals are all exactly equal — a rare
-// case not worth the added backend load. A tie that reaches that point falls
-// back to array order (this app also has no FIFA World Ranking data source
-// for the actual next step), same rare near-impossible endpoint as before.
+// case not worth the added backend load.
+//
+// The FIFA ranking step (the actual final tiebreak, after fair play) IS now
+// implemented, using TEAMS[team].rank — sourced from the official FIFA/
+// Coca-Cola Men's World Ranking (inside.fifa.com/fifa-world-ranking/men),
+// last official update 11 June 2026. A tie that survives even that (i.e.
+// the same rank, which can't actually happen since ranks are unique) falls
+// back to array order — a purely theoretical endpoint, not a real gap.
 //
 // One known simplification: for a 3+-way points tie, FIFA's actual procedure
 // re-builds a fresh head-to-head mini-table for whichever teams are STILL
@@ -663,7 +668,8 @@ const calcStandings = (letter, results) => {
         mini[b].gd - mini[a].gd ||
         mini[b].gf - mini[a].gf ||
         tbl[b].gd - tbl[a].gd ||
-        tbl[b].gf - tbl[a].gf
+        tbl[b].gf - tbl[a].gf ||
+        (TEAMS[a]?.rank ?? 999) - (TEAMS[b]?.rank ?? 999)
       ));
     }
     i = j;
