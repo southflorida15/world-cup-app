@@ -6136,7 +6136,10 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
                             {isHome && ev.type==="subst" && <div style={{fontSize:13}}><span style={{color:C.green,fontWeight:600}}>↑ {ev.player?.name||""}</span>{" "}<span style={{color:C.red,fontWeight:600}}>↓ {ev.assist?.name||""}</span></div>}
                           </div>
                           <div style={{display:"flex",flexDirection:"column",alignItems:"center",minWidth:52,flexShrink:0}}>
-                            <div style={{fontSize:11,fontWeight:700,color:C.gold}}>{ev.time?.elapsed}{ev.time?.extra?`+${ev.time.extra}`:""}'</div>
+                            <div style={{fontSize:11,fontWeight:700,color:C.gold}}>
+                              {ev.time?.elapsed}{ev.time?.extra?`+${ev.time.extra}`:""}'
+                              {ev.time?.elapsed > 45 && <span style={{color:C.dim,fontWeight:600}}> ({ev.time.elapsed-45}' H2)</span>}
+                            </div>
                             <div style={{fontSize:16}}>{icon}</div>
                           </div>
                           <div style={{flex:1}}>
