@@ -2536,6 +2536,20 @@ const WC_TOP_SCORERS = {
   "Scotland":     [{name:"Kenny Dalglish",goals:6},{name:"Denis Law",goals:4},{name:"Scott McTominay",goals:3}],
   "Canada":       [{name:"Alphonso Davies",goals:2},{name:"Jonathan David",goals:1},{name:"Cyle Larin",goals:1}],
   "Turkiye":      [{name:"Hakan Şükür",goals:6},{name:"Tuncay Şanlı",goals:3},{name:"Hakan Çalhanoğlu",goals:2}],
+  "South Africa": [{name:"Siphiwe Tshabalala",goals:1},{name:"Phil Masinga",goals:1}],
+  "Czechia":      [{name:"Oldřich Nejedlý",goals:7},{name:"Tomáš Skuhravý",goals:5},{name:"Tomáš Rosický",goals:2}],
+  "Bosnia & Herz.":[{name:"Vedad Ibišević",goals:1}],
+  "Qatar":        [{name:"Mohammed Muntari",goals:1}],
+  "Haiti":        [{name:"Emmanuel Sanon",goals:2}],
+  "Paraguay":     [{name:"Eulogio Martínez",goals:4},{name:"José Saturnino Cardozo",goals:2},{name:"Roque Santa Cruz",goals:2}],
+  "Sweden":       [{name:"Agne Simonsson",goals:4},{name:"Gunnar Nordahl",goals:4},{name:"Kennet Andersson",goals:3}],
+  "Tunisia":      [{name:"Wahbi Khazri",goals:2},{name:"Ali Kaabi",goals:1}],
+  "Egypt":        [{name:"Abdel Rahman Fawzi",goals:2},{name:"Mohamed Salah",goals:1},{name:"Magdi Abdelghani",goals:1}],
+  "New Zealand":  [{name:"Steve Sumner",goals:1}],
+  "Saudi Arabia": [{name:"Saeed Al-Owairan",goals:1},{name:"Fuad Anwar",goals:1}],
+  "Iraq":         [{name:"Ahmed Radhi",goals:1}],
+  "Panama":       [{name:"Felipe Baloy",goals:1}],
+  "Austria":      [{name:"Erich Probst",goals:6},{name:"Ernst Stojaspal",goals:3},{name:"Theodor Wagner",goals:3}],
 };
 
 // Single team WC history card
@@ -2719,14 +2733,29 @@ function TeamHistoryCard({ team, data, color }) {
   // finish), then re-sort — so if e.g. an active player's 2026 tally pushes
   // them past a retired great's all-time mark, the order updates correctly
   // without needing a manual edit every time someone scores.
-  const topScorers = (WC_TOP_SCORERS[team] || []).map(s => {
-    const live = liveScorers2026.find(ls =>
-      normalizePlayerName(ls.team) === normalizePlayerName(team) &&
-      (normalizePlayerName(ls.name).includes(normalizePlayerName(s.name)) || normalizePlayerName(s.name).includes(normalizePlayerName(ls.name)))
-    );
-    const liveGoals2026 = live?.goals || 0;
-    return { ...s, baselineGoals: s.goals, liveGoals2026, goals: s.goals + liveGoals2026 };
-  }).sort((a,b) => b.goals - a.goals);
+  const baselineScorers = WC_TOP_SCORERS[team];
+  let topScorers;
+  if (baselineScorers) {
+    topScorers = baselineScorers.map(s => {
+      const live = liveScorers2026.find(ls =>
+        normalizePlayerName(ls.team) === normalizePlayerName(team) &&
+        (normalizePlayerName(ls.name).includes(normalizePlayerName(s.name)) || normalizePlayerName(s.name).includes(normalizePlayerName(ls.name)))
+      );
+      const liveGoals2026 = live?.goals || 0;
+      return { ...s, baselineGoals: s.goals, liveGoals2026, goals: s.goals + liveGoals2026 };
+    }).sort((a,b) => b.goals - a.goals);
+  } else {
+    // No static baseline for this team — most likely a first-time 2026
+    // qualifier with zero prior World Cup history (Curaçao, Cape Verde,
+    // Jordan, Uzbekistan), or simply a team not yet added to the table.
+    // Either way, their live 2026 scorers ARE their entire World Cup
+    // scoring history so far — show that directly instead of nothing.
+    topScorers = liveScorers2026
+      .filter(ls => normalizePlayerName(ls.team) === normalizePlayerName(team))
+      .map(ls => ({ name: ls.name, baselineGoals: 0, liveGoals2026: ls.goals, goals: ls.goals }))
+      .sort((a,b) => b.goals - a.goals)
+      .slice(0, 5);
+  }
 
   return (
     <div>
