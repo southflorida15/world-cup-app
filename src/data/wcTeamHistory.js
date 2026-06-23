@@ -202,7 +202,7 @@ export const WC_TEAM_HISTORY = {
         { stage: "Group A", opponent: "Scotland",  score: "2–1", result: "W", scorers: ["César Sampaio", "Tom Boyd (OG)"] },
         { stage: "Group A", opponent: "Morocco",    score: "3–0", result: "W", scorers: ["Ronaldo", "Rivaldo", "Bebeto"] },
         { stage: "Group A", opponent: "Norway",      score: "1–2", result: "L", scorers: ["Bebeto"] },
-        { stage: "Round of 16", opponent: "Chile",  score: "4–1", result: "W", scorers: ["Ronaldo 2", "César Sampaio", "Rivaldo"] },
+        { stage: "Round of 16", opponent: "Chile",  score: "4–1", result: "W", scorers: ["Ronaldo 2", "César Sampaio 2"] },
         { stage: "Quarterfinals", opponent: "Denmark", score: "3–2", result: "W", scorers: ["Bebeto", "Rivaldo 2"] },
         { stage: "Semifinals", opponent: "Netherlands", score: "1–1 (4–2 pens)", result: "W", scorers: ["Ronaldo"] },
         { stage: "Final", opponent: "France",        score: "0–3", result: "L" },
@@ -888,7 +888,7 @@ export const WC_TEAM_HISTORY = {
       matches: [
         { stage: "Group A", opponent: "South Korea", score: "3–1", result: "W", scorers: ["Jorge Valdano", "Oscar Ruggeri", "Jorge Burruchaga"] },
         { stage: "Group A", opponent: "Italy",         score: "1–1", result: "D", scorers: ["Diego Maradona"] },
-        { stage: "Group A", opponent: "Bulgaria",       score: "2–0", result: "W", scorers: ["Jorge Valdano", "Diego Maradona (pen)"] },
+        { stage: "Group A", opponent: "Bulgaria",       score: "2–0", result: "W", scorers: ["Jorge Valdano 2"] },
         { stage: "Round of 16", opponent: "Uruguay",   score: "1–0", result: "W", scorers: ["Pedro Pasculli"] },
         { stage: "Quarterfinals", opponent: "England", score: "2–1", result: "W", scorers: ["Diego Maradona 2"] },
         { stage: "Semifinals", opponent: "Belgium",     score: "2–0", result: "W", scorers: ["Diego Maradona 2"] },
@@ -1413,8 +1413,8 @@ export const WC_TEAM_HISTORY = {
       coach: "Aimé Jacquet",
       matches: [
         { stage: "Group C", opponent: "South Africa", score: "3–0", result: "W", scorers: ["Christophe Dugarry", "Thierry Henry", "Bixente Lizarazu"] },
-        { stage: "Group C", opponent: "Saudi Arabia",  score: "4–0", result: "W", scorers: ["Thierry Henry 2", "David Trezeguet", "Youri Djorkaeff"] },
-        { stage: "Group C", opponent: "Denmark",        score: "2–1", result: "W", scorers: ["Thierry Henry", "Lilian Thuram"] },
+        { stage: "Group C", opponent: "Saudi Arabia",  score: "4–0", result: "W", scorers: ["Thierry Henry 2", "David Trezeguet", "Bixente Lizarazu"] },
+        { stage: "Group C", opponent: "Denmark",        score: "2–1", result: "W", scorers: ["Lilian Thuram", "Emmanuel Petit"] },
         { stage: "Round of 16", opponent: "Paraguay",   score: "1–0 (golden goal)", result: "W", scorers: ["Laurent Blanc"] },
         { stage: "Quarterfinals", opponent: "Italy",     score: "0–0 (4–3 pens)", result: "W" },
         { stage: "Semifinals", opponent: "Croatia",      score: "2–1", result: "W", scorers: ["Lilian Thuram 2"] },
@@ -2487,7 +2487,7 @@ export const WC_TEAM_HISTORY = {
       group: "D",
       coach: "Joachim Löw",
       matches: [
-        { stage: "Group D", opponent: "Australia",   score: "4–0", result: "W", scorers: ["Lukas Podolski", "Miroslav Klose 2", "Thomas Müller"] },
+        { stage: "Group D", opponent: "Australia",   score: "4–0", result: "W", scorers: ["Lukas Podolski", "Miroslav Klose", "Thomas Müller", "Cacau"] },
         { stage: "Group D", opponent: "Serbia",        score: "0–1", result: "L" },
         { stage: "Group D", opponent: "Ghana",         score: "1–0", result: "W", scorers: ["Mesut Özil"] },
         { stage: "Round of 16", opponent: "England",  score: "4–1", result: "W", scorers: ["Miroslav Klose", "Lukas Podolski", "Thomas Müller 2"] },
@@ -3492,7 +3492,7 @@ export const WC_TEAM_HISTORY = {
       matches: [
         { stage: "Group E", opponent: "South Korea", score: "3–1", result: "W", scorers: ["Luis Hernández 2", "Alberto García Aspe (pen)"] },
         { stage: "Group E", opponent: "Belgium",       score: "2–2", result: "D", scorers: ["Cuauhtémoc Blanco (pen)", "Ricardo Peláez"] },
-        { stage: "Group E", opponent: "Netherlands",   score: "2–2", result: "D", scorers: ["Luis Hernández 2"] },
+        { stage: "Group E", opponent: "Netherlands",   score: "2–2", result: "D", scorers: ["Ricardo Peláez", "Luis Hernández"] },
         { stage: "Round of 16", opponent: "Germany",  score: "1–2", result: "L", scorers: ["Luis Hernández"] },
       ],
       topScorers: [
