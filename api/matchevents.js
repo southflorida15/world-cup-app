@@ -551,7 +551,7 @@ async function autoSeedEvents() {
   for (const { home, away } of candidates) {
     if (seededThisCall >= MAX_SEED_PER_CALL) break;
     const existing = await loadFromKV(home, away);
-    if (existing?.events?.length) continue; // already persisted, nothing to do
+    if (existing?.events?.length) continue; // already permanently persisted, nothing to do
 
     const espnId = await getESPNEventId(home, away);
     if (!espnId) continue;
@@ -561,14 +561,30 @@ async function autoSeedEvents() {
       if (!r.ok) continue;
       const data = await r.json();
       const statusType = data.header?.competitions?.[0]?.status?.type?.name || "NS";
-      if (!DONE_STATUSES.includes(statusType)) continue; // still live or upcoming — don't persist yet
 
-      const events = parseEvents(data, home);
-      const stats = parseStats(data.boxscore, home);
-      if (events.length > 0) {
-        await saveToKV(home, away, events, stats);
-        seededThisCall++;
-        console.log(`[scorers] auto-seeded ${home} vs ${away}: ${events.length} events`);
+      if (DONE_STATUSES.includes(statusType)) {
+        const events = parseEvents(data, home);
+        const stats = parseStats(data.boxscore, home);
+        if (events.length > 0) {
+          await saveToKV(home, away, events, stats);
+          seededThisCall++;
+          console.log(`[scorers] auto-seeded ${home} vs ${away}: ${events.length} events`);
+        }
+      } else if (LIVE_STATUSES.includes(statusType)) {
+        // Was the actual gap: a goal scored mid-match only reached the
+        // aggregate if someone happened to open THAT SPECIFIC match's
+        // timeline modal while it was live — this sweep previously skipped
+        // every live match outright, so there was no automatic backstop
+        // the way finished matches already had. Now folds in new goals
+        // here too (aggregate only, not the permanent per-match cache —
+        // that still must wait for the match to actually finish).
+        const events = parseEvents(data, home);
+        if (events.length > 0) {
+          await updateScorersAggregate(home, away, events);
+          console.log(`[scorers] live-updated ${home} vs ${away}: ${events.length} events so far`);
+        }
+        // Doesn't count against the seed cap — this is a cheap aggregate-only
+        // update, not a full fetch-and-permanently-persist operation.
       }
     } catch(e) {
       console.warn(`[scorers] auto-seed failed for ${home} vs ${away}:`, e.message);

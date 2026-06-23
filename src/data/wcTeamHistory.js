@@ -3917,7 +3917,7 @@ export const WC_TEAM_HISTORY = {
       coach: "Carlos Queiroz",
       matches: [
         { stage: "Group G", opponent: "Ivory Coast", score: "0–0", result: "D" },
-        { stage: "Group G", opponent: "North Korea",   score: "7–0", result: "W", scorers: ["Tiago", "Liedson 2", "Raul Meireles", "Hugo Almeida 2", "Simão"] },
+        { stage: "Group G", opponent: "North Korea",   score: "7–0", result: "W", scorers: ["Tiago", "Liedson 2", "Raul Meireles", "Hugo Almeida 2", "Cristiano Ronaldo"] },
         { stage: "Group G", opponent: "Brazil",          score: "0–0", result: "D" },
         { stage: "Round of 16", opponent: "Spain",       score: "0–1", result: "L" },
       ],
@@ -3925,6 +3925,7 @@ export const WC_TEAM_HISTORY = {
         { name: "Liedson", goals: 2 },
         { name: "Hugo Almeida", goals: 2 },
         { name: "Tiago", goals: 1 },
+        { name: "Cristiano Ronaldo", goals: 1 },
       ],
       squad: [
         { name: "Eduardo", pos: "GK", club: "Benfica" },
