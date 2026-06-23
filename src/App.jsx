@@ -5811,6 +5811,39 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
     };
   }, [match?.home, match?.away]);
 
+  // The live score (sc, from LiveScoresCtx) and the match events (fetched
+  // separately via /api/matchevents) are cached independently and can
+  // legitimately drift apart — confirmed directly: a match showed 3 goal
+  // events in the timeline while the score header still read one goal
+  // behind. Since we already have the fresher events fetch in this exact
+  // view, derive a goal count from it and use whichever is higher per side
+  // (events vs the cached score) rather than showing two contradictory
+  // numbers in the same modal. Own goals are credited to the team that
+  // benefits, not the scorer's own team.
+  //
+  // This MUST run before the "if (!match) return null" below — hooks have
+  // to execute in the same order on every render. Previously this useMemo
+  // sat after that early return, so it was skipped entirely whenever the
+  // modal was closed (match === null) and then suddenly called once it
+  // opened — a different number of hooks on different renders, which is
+  // exactly the kind of bug that breaks a modal intermittently rather than
+  // consistently, including not opening at all.
+  const eventsScore = useMemo(() => {
+    if (!events || !match) return null;
+    let h = 0, a = 0;
+    events.forEach(ev => {
+      if (ev.type !== "Goal") return;
+      const scoringTeam = ev.team?.name;
+      const isOwnGoal = ev.detail === "Own Goal";
+      const benefitsHome = isOwnGoal ? scoringTeam !== match.home : scoringTeam === match.home;
+      if (benefitsHome) h++; else a++;
+    });
+    return { h, a };
+  }, [events, match]);
+  const correctedSc = sc && eventsScore
+    ? { ...sc, hg: Math.max(sc.hg ?? 0, eventsScore.h), ag: Math.max(sc.ag ?? 0, eventsScore.a) }
+    : sc;
+
   if (!match) return null;
 
   const shareMatch = async () => {
@@ -5915,31 +5948,6 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
       copyOrOpen();
     }
   };
-
-  // The live score (sc, from LiveScoresCtx) and the match events (fetched
-  // separately via /api/matchevents) are cached independently and can
-  // legitimately drift apart — confirmed directly: a match showed 3 goal
-  // events in the timeline while the score header still read one goal
-  // behind. Since we already have the fresher events fetch in this exact
-  // view, derive a goal count from it and use whichever is higher per side
-  // (events vs the cached score) rather than showing two contradictory
-  // numbers in the same modal. Own goals are credited to the team that
-  // benefits, not the scorer's own team.
-  const eventsScore = useMemo(() => {
-    if (!events || !match) return null;
-    let h = 0, a = 0;
-    events.forEach(ev => {
-      if (ev.type !== "Goal") return;
-      const scoringTeam = ev.team?.name;
-      const isOwnGoal = ev.detail === "Own Goal";
-      const benefitsHome = isOwnGoal ? scoringTeam !== match.home : scoringTeam === match.home;
-      if (benefitsHome) h++; else a++;
-    });
-    return { h, a };
-  }, [events, match]);
-  const correctedSc = sc && eventsScore
-    ? { ...sc, hg: Math.max(sc.hg ?? 0, eventsScore.h), ag: Math.max(sc.ag ?? 0, eventsScore.a) }
-    : sc;
 
   return (
     <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:"8px 3px"}}>
