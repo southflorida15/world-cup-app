@@ -1946,6 +1946,12 @@ function StatsTab({ initial="", tabTop=116 }) {
 
   const posCounts = squad?{All:squad.length,GK:squad.filter(p=>posLabel(p.pos)==="GK").length,DEF:squad.filter(p=>posLabel(p.pos)==="DEF").length,MID:squad.filter(p=>posLabel(p.pos)==="MID").length,FWD:squad.filter(p=>posLabel(p.pos)==="FWD").length}:{};
   const filtered = squad?(posFilter==="All"?squad:squad.filter(p=>posLabel(p.pos)===posFilter)):[];
+  // Average squad age — computed from the live roster's ageAtTournament
+  // field (already fetched, no extra request). Filters out anyone missing
+  // an age rather than treating them as 0, so a few unknown ages don't
+  // silently drag the average down.
+  const squadAges = squad ? squad.map(p=>p.age).filter(a=>typeof a==="number" && a>0) : [];
+  const avgAge = squadAges.length ? (squadAges.reduce((s,a)=>s+a,0)/squadAges.length) : null;
   const _shRef = useRef(null); const _shH = useElemHeight(_shRef);
 
   return (
@@ -2011,7 +2017,7 @@ function StatsTab({ initial="", tabTop=116 }) {
             <button onClick={()=>setSquadExpanded(e=>!e)} style={{width:"100%",padding:"10px 14px",borderBottom:squadExpanded?`1px solid ${C.b1}`:"none",display:"flex",justifyContent:"space-between",alignItems:"center",background:"none",border:"none",borderBottomWidth:squadExpanded?1:0,borderBottomStyle:"solid",borderBottomColor:C.b1,cursor:"pointer",textAlign:"left"}}>
               <span style={{fontWeight:700,color:C.green,fontSize:13}}>SQUAD</span>
               <div style={{display:"flex",alignItems:"center",gap:8}}>
-                {squad && <span style={{fontSize:11,color:C.dim}}>{squad.length} players</span>}
+                {squad && <span style={{fontSize:11,color:C.dim}}>{squad.length} players{avgAge!==null?` · avg age ${avgAge.toFixed(1)}`:""}</span>}
                 <span style={{fontSize:11,color:C.dim,transform:squadExpanded?"rotate(180deg)":"none",transition:"transform .15s"}}>▾</span>
               </div>
             </button>
