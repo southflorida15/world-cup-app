@@ -62,20 +62,37 @@ async function saveToKV(home, away, events, stats, lineups=null) {
   } catch(e) {
     console.warn("[matchevents] KV save:", e.message);
   }
-  // Fold this match's goals/cards into the running aggregate exactly once,
-  // right here, where a finished match's events are persisted for the
-  // first (and only) time. This is the one place that cost belongs — a
-  // finished match's contribution to the scorers leaderboard never changes
-  // again, so it should never be recomputed again either. Previously
-  // getScorers() re-scanned and re-fetched EVERY persisted match's full
-  // event list from scratch on every single request, redoing this same
-  // work for matches that finished days ago, every time anyone opened the
-  // Top Scorers tab.
+  await updateScorersAggregate(home, away, events);
+}
+
+// Folds NEW goals/cards into the running scorers aggregate — called for
+// both live and finished matches. Tracks how many of each match's events
+// have already been counted (processedCounts[matchKey], a count of events,
+// not just a yes/no "is this match done") so a still-live match's goal
+// shows up here within moments of being scored, not only once the match
+// is over. Each call only processes events beyond what was already
+// counted last time, so nothing gets double-counted as the same match
+// gets checked repeatedly while it's still in progress.
+async function updateScorersAggregate(home, away, events) {
   try {
     const matchKey = kvKey(home, away);
-    const aggregate = await kv.get(SCORERS_AGGREGATE_KEY) || { goals: {}, cards: {}, processedMatches: [] };
-    if (aggregate.processedMatches.includes(matchKey)) return; // already folded in, don't double-count
-    (events || []).forEach(ev => {
+    const aggregate = await kv.get(SCORERS_AGGREGATE_KEY) || { goals: {}, cards: {}, processedCounts: {} };
+    if (!aggregate.processedCounts) aggregate.processedCounts = {};
+    // Backward-compat: an older aggregate shape stored a plain array of
+    // fully-processed match keys instead of per-match counts. Treat any
+    // match already in that array as "everything in it so far is counted".
+    if (Array.isArray(aggregate.processedMatches)) {
+      aggregate.processedMatches.forEach(k => {
+        if (aggregate.processedCounts[k] === undefined) aggregate.processedCounts[k] = Infinity;
+      });
+      delete aggregate.processedMatches;
+    }
+
+    const alreadyProcessed = aggregate.processedCounts[matchKey] || 0;
+    if (!Array.isArray(events) || events.length <= alreadyProcessed) return; // nothing new since last check
+
+    const newEvents = events.slice(alreadyProcessed);
+    newEvents.forEach(ev => {
       if (ev.type === "Goal" && ev.detail !== "Own Goal") {
         const name = ev.player?.name;
         const team = ev.team?.name;
@@ -97,7 +114,7 @@ async function saveToKV(home, away, events, stats, lineups=null) {
         if (ev.detail === "Red Card") aggregate.cards[name].red++;
       }
     });
-    aggregate.processedMatches.push(matchKey);
+    aggregate.processedCounts[matchKey] = events.length;
     await kv.set(SCORERS_AGGREGATE_KEY, aggregate);
   } catch(e) {
     console.warn("[matchevents] scorers aggregate update:", e.message);
@@ -591,14 +608,23 @@ async function getScorers() {
 
   if (!allKeys.length) return { scorers: [], cards: [] };
 
-  // Read the pre-computed aggregate (maintained incrementally by saveToKV,
-  // once per match, exactly when it finishes) instead of re-fetching and
+  // Read the pre-computed aggregate (maintained incrementally by saveToKV
+  // and updateScorersAggregate, both for finished matches and — as of the
+  // live-update fix — in-progress ones too) instead of re-fetching and
   // re-aggregating every persisted match's full event list on every single
-  // call. Self-healing: any match whose events were persisted before this
-  // aggregate existed gets folded in once here, then never touched again.
-  let aggregate = await kv.get(SCORERS_AGGREGATE_KEY) || { goals: {}, cards: {}, processedMatches: [] };
-  const processed = new Set(aggregate.processedMatches || []);
-  const unprocessedKeys = allKeys.filter(k => !processed.has(k));
+  // call. Self-healing: any finished match whose events were persisted
+  // before this aggregate existed gets folded in once here, then never
+  // touched again (a finished match's permanent cache entry never grows,
+  // unlike a live one, so "processed once" is correct and final for these).
+  let aggregate = await kv.get(SCORERS_AGGREGATE_KEY) || { goals: {}, cards: {}, processedCounts: {} };
+  if (!aggregate.processedCounts) aggregate.processedCounts = {};
+  if (Array.isArray(aggregate.processedMatches)) {
+    aggregate.processedMatches.forEach(k => {
+      if (aggregate.processedCounts[k] === undefined) aggregate.processedCounts[k] = Infinity;
+    });
+    delete aggregate.processedMatches;
+  }
+  const unprocessedKeys = allKeys.filter(k => aggregate.processedCounts[k] === undefined);
 
   if (unprocessedKeys.length) {
     const records = await kv.mget(...unprocessedKeys).catch(() => unprocessedKeys.map(() => null));
@@ -627,7 +653,7 @@ async function getScorers() {
           }
         });
       }
-      aggregate.processedMatches.push(unprocessedKeys[i]);
+      aggregate.processedCounts[unprocessedKeys[i]] = record?.events?.length || 0;
     });
     await kv.set(SCORERS_AGGREGATE_KEY, aggregate).catch(() => {});
   }
@@ -635,7 +661,7 @@ async function getScorers() {
   return {
     scorers: Object.values(aggregate.goals).sort((a,b) => b.goals-a.goals || b.assists-a.assists).slice(0,30),
     cards: Object.values(aggregate.cards).sort((a,b) => (b.red*2+b.yellow)-(a.red*2+a.yellow)).slice(0,20),
-    matchCount: aggregate.processedMatches.length,
+    matchCount: Object.keys(aggregate.processedCounts).length,
   };
 }
 
@@ -810,9 +836,21 @@ export default async function handler(req, res) {
 
     console.log(`[matchevents] ${home} vs ${away}: ${events.length} events, stats=${!!stats}, lineups=${!!lineups}, status=${statusType}`);
 
-    // Persist to KV if match is finished and we have data
+    // Persist to KV permanently once the match is finished (unchanged
+    // behavior — other code treats "exists in this cache" as "this match
+    // is done forever" and serves it with a 1-hour TTL, so live data must
+    // never be written here).
     if (isDone && events.length > 0) {
       await saveToKV(home, away, events, stats, lineups);
+    } else if (isLive && events.length > 0) {
+      // Was: a goal scored mid-match never reached the Stats tab's live
+      // scorers total until the match fully ended — even though this
+      // exact events fetch already had it, since the match's own timeline
+      // modal fetches live data directly. Now updates the aggregate alone
+      // (not the permanent per-match cache) as soon as a new goal appears,
+      // so it shows up within moments of being scored instead of waiting
+      // for full-time.
+      await updateScorersAggregate(home, away, events);
     }
 
     // Cache lineups pre-match with short TTL (5min) so we pick them up when published
