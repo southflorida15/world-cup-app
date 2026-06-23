@@ -2666,7 +2666,7 @@ function YearDetailModal({ team, year, data, color, onClose }) {
 }
 
 function ScorerLogModal({ team, scorer, color, onClose }) {
-  const { isFinished, getScore } = useContext(LiveScoresCtx);
+  const { isFinished, isLive, getScore } = useContext(LiveScoresCtx);
   const historicalLog = getPlayerScoringLog(team, scorer.name);
   const [live2026Log, setLive2026Log] = useState([]);
   const [loading2026, setLoading2026] = useState(true);
@@ -2674,13 +2674,19 @@ function ScorerLogModal({ team, scorer, color, onClose }) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      // Every 2026 match this team has played and finished — fetch each
+      // Every 2026 match this team has played that's started — fetch each
       // one's events in parallel and pull out this player's goals. Same
       // data source the live scorers aggregate uses, just queried directly
       // per-match instead of pre-aggregated, since we need match context
       // (opponent/stage/date) that the aggregate doesn't keep.
+      //
+      // Was: filtered to isFinished only, so a goal from a still-in-
+      // progress match never showed up here even though the same goal was
+      // already reflected in the header's live total — the two used
+      // different data sources with different "is this ready yet"
+      // definitions. Now includes live matches too.
       const teamMatches = MATCHES.filter(m =>
-        (m.home === team || m.away === team) && isFinished(m.home, m.away)
+        (m.home === team || m.away === team) && (isFinished(m.home, m.away) || isLive(m.home, m.away))
       );
       const results = await Promise.all(teamMatches.map(async m => {
         try {
@@ -2699,22 +2705,31 @@ function ScorerLogModal({ team, scorer, color, onClose }) {
         const opponent = m.home === team ? m.away : m.home;
         const sc = getScore(m.home, m.away);
         const scoreStr = sc ? (m.home === team ? `${sc.hg}–${sc.ag}` : `${sc.ag}–${sc.hg}`) : "";
+        // Was: pushed one entry per goal event, so a hat-trick showed as
+        // three identical duplicate rows instead of one row with three
+        // balls (the way the historical 1982-2022 entries already display
+        // multi-goal matches). Aggregate by match first, push once.
+        let goalsInMatch = 0;
+        let isPKInMatch = false;
         events.forEach(ev => {
           if (ev.type !== "Goal" || ev.detail === "Own Goal") return;
           if (normalizePlayerName(ev.team?.name) !== normalizePlayerName(team)) return;
           const evName = normalizePlayerName(ev.player?.name);
           const qName = normalizePlayerName(scorer.name);
           if (!evName.includes(qName) && !qName.includes(evName)) return;
-          entries.push({
-            year: 2026,
-            host: "United States / Mexico / Canada",
-            stage: m.group ? `Group ${m.group}` : (m.stage || ""),
-            opponent,
-            score: scoreStr,
-            result: !sc ? null : (m.home === team ? (sc.hg > sc.ag ? "W" : sc.hg < sc.ag ? "L" : "D") : (sc.ag > sc.hg ? "W" : sc.ag < sc.hg ? "L" : "D")),
-            goals: 1, // each event is one goal; multiple events from the same match naturally appear as separate rows
-            isPK: /penalty/i.test(ev.detail || ""),
-          });
+          goalsInMatch++;
+          if (/penalty/i.test(ev.detail || "")) isPKInMatch = true;
+        });
+        if (goalsInMatch === 0) return;
+        entries.push({
+          year: 2026,
+          host: "United States / Mexico / Canada",
+          stage: m.group ? `Group ${m.group}` : (m.stage || ""),
+          opponent,
+          score: scoreStr,
+          result: !sc ? null : (m.home === team ? (sc.hg > sc.ag ? "W" : sc.hg < sc.ag ? "L" : "D") : (sc.ag > sc.hg ? "W" : sc.ag < sc.hg ? "L" : "D")),
+          goals: goalsInMatch,
+          isPK: isPKInMatch,
         });
       });
       setLive2026Log(entries);
@@ -2757,7 +2772,7 @@ function ScorerLogModal({ team, scorer, color, onClose }) {
           <div style={{marginTop:10}}>
             {totalLogged < scorer.goals && (
               <div style={{fontSize:10,color:C.dim,marginBottom:10,padding:"6px 8px",background:C.s2,borderRadius:8}}>
-                Showing {totalLogged} of {scorer.goals} career goals — the rest predate our detailed match archive (1982 onward).
+                Showing {totalLogged} of {scorer.goals} career goals — the rest predate our detailed match archive (1982 onward), or are from a 2026 match still in progress that hasn't been fetched yet.
               </div>
             )}
             {log.map((m, i) => (
