@@ -1897,16 +1897,9 @@ function StatsTab({ initial="", tabTop=116 }) {
     zafronixGet("roster",{name:zName}).then(data => {
       setLoading(false);
       if(!data){setErr(true);return;}
-      // The real API returns a bare array of players directly, not wrapped
-      // in an envelope object — data?.squad/.players/.roster were all
-      // undefined against the actual response shape, silently falling
-      // through to the empty-array default (every team showed "0 players").
-      // Confirmed directly against a real API response before fixing.
-      const rosterArray = Array.isArray(data) ? data : (data?.squad||data?.players||data?.roster||[]);
-      const players=rosterArray
-        .map(p=>({name:parseName(p.name),rawName:p.name,captain:p.captain??isCaptain(p.name),pos:p.position,jersey:p.jersey,age:p.ageAtTournament??p.age,born:p.born,club:p.club?.name??p.club,clubCountry:p.club?.country,photo:p.photo??null,flagUrl:data?.flag?.flagUrl??null}))
+      const players=(data?.squad||data?.players||data?.roster||[])
+        .map(p=>({name:parseName(p.name),rawName:p.name,captain:isCaptain(p.name),pos:p.position,jersey:p.jersey,age:p.ageAtTournament??p.age,born:p.born,club:p.club?.name??p.club,clubCountry:p.club?.country,photo:p.photo??null,flagUrl:data?.flag?.flagUrl??null}))
         .sort((a,b)=>posSort(a.pos)-posSort(b.pos)||(a.jersey||99)-(b.jersey||99));
-      if (!players.length) { setErr(true); return; }
       setSquad(players);
     });
     setWcHistory(null); setWcHistoryLoading(true);
@@ -1977,7 +1970,7 @@ function StatsTab({ initial="", tabTop=116 }) {
           </Card>
           <Card style={{marginBottom:12}}>
             <div style={{padding:"10px 14px",borderBottom:`1px solid ${C.b1}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-              <span style={{fontWeight:700,color:C.green,fontSize:13}}>SQUAD</span>
+              <span style={{fontWeight:700,color:C.green,fontSize:13}}>PREDICTED SQUAD</span>
               {squad && <span style={{fontSize:11,color:C.dim}}>{squad.length} players</span>}
             </div>
             {loading && (
