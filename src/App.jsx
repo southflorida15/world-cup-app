@@ -6,7 +6,7 @@ import MatchInfoSection from "./components/MatchInfoSection";
 import React, { useState, useEffect, useContext, createContext, useCallback, useMemo, useRef } from "react";
 import { buildQualifiedThirdsFromSelectedTeams, buildThirdGroupsKey, ROUND_OF_16_TEMPLATE, QUARTER_FINAL_TEMPLATE, SEMI_FINAL_TEMPLATE, FINAL_TEMPLATE } from "./engine/fifa2026Bracket";
 import { getAnnexCMapping } from "./engine/annexC";
-import { WC_TEAM_HISTORY } from "./data/wcTeamHistory";
+import { WC_TEAM_HISTORY, getPlayerScoringLog } from "./data/wcTeamHistory";
 // ── ANNEX C — FIFA WC 2026 third-place assignment ─────────────────────────
 // Now delegated entirely to engine/annexC.js's getAnnexCMapping (imported
 // above), which has the real, verified 495-row FIFA table baked in and
@@ -2483,19 +2483,19 @@ function H2HBar({ label, v1, v2, color1=C.green, color2=C.red }) {
 
 // All-time top 3 World Cup scorers per team (historical data)
 const WC_TOP_SCORERS = {
-  "Brazil":       [{name:"Ronaldo",goals:15},{name:"Pelé",goals:12},{name:"Vavá",goals:9}],
-  "Germany":      [{name:"Miroslav Klose",goals:16},{name:"Gerd Müller",goals:14},{name:"Helmut Rahn",goals:8}],
-  "France":       [{name:"Just Fontaine",goals:13},{name:"Kylian Mbappé",goals:12},{name:"Thierry Henry",goals:6}],
-  "Argentina":    [{name:"Lionel Messi",goals:13},{name:"Gabriel Batistuta",goals:10},{name:"Guillermo Stábile",goals:8}],
-  "Spain":        [{name:"David Villa",goals:9},{name:"Fernando Morientes",goals:7},{name:"Fernando Torres",goals:5}],
-  "England":      [{name:"Gary Lineker",goals:10},{name:"Harry Kane",goals:8},{name:"Geoff Hurst",goals:5}],
-  "Netherlands":  [{name:"Rob Rensenbrink",goals:6},{name:"Johan Neeskens",goals:5},{name:"Dennis Bergkamp",goals:4}],
+  "Brazil":       [{name:"Ronaldo",goals:15},{name:"Pelé",goals:12},{name:"Vavá",goals:9},{name:"Jairzinho",goals:9},{name:"Rivaldo",goals:8}],
+  "Germany":      [{name:"Miroslav Klose",goals:16},{name:"Gerd Müller",goals:14},{name:"Karl-Heinz Rummenigge",goals:9},{name:"Uwe Seeler",goals:9},{name:"Helmut Rahn",goals:8}],
+  "France":       [{name:"Just Fontaine",goals:13},{name:"Kylian Mbappé",goals:15},{name:"Thierry Henry",goals:6},{name:"Michel Platini",goals:6},{name:"Zinedine Zidane",goals:5}],
+  "Argentina":    [{name:"Lionel Messi",goals:18},{name:"Gabriel Batistuta",goals:10},{name:"Diego Maradona",goals:8},{name:"Mario Kempes",goals:6},{name:"Guillermo Stábile",goals:8}],
+  "Spain":        [{name:"David Villa",goals:9},{name:"Fernando Morientes",goals:7},{name:"Fernando Torres",goals:5},{name:"Emilio Butragueño",goals:5},{name:"Raúl",goals:4}],
+  "England":      [{name:"Gary Lineker",goals:10},{name:"Harry Kane",goals:9},{name:"Geoff Hurst",goals:5},{name:"Bobby Charlton",goals:4},{name:"Michael Owen",goals:4}],
+  "Netherlands":  [{name:"Rob Rensenbrink",goals:6},{name:"Dennis Bergkamp",goals:6},{name:"Johan Neeskens",goals:5},{name:"Robin van Persie",goals:4},{name:"Patrick Kluivert",goals:4}],
+  "Mexico":       [{name:"Javier Hernández",goals:10},{name:"Luis Hernández",goals:7},{name:"Jared Borgetti",goals:7},{name:"Hugo Sánchez",goals:1},{name:"Carlos Hermosillo",goals:1}],
+  "United States":[{name:"Clint Dempsey",goals:5},{name:"Brian McBride",goals:5},{name:"Landon Donovan",goals:5},{name:"Eric Wynalda",goals:3},{name:"Earnie Stewart",goals:3}],
   "Portugal":     [{name:"Eusébio",goals:9},{name:"Cristiano Ronaldo",goals:8},{name:"Pauleta",goals:6}],
   "Uruguay":      [{name:"Héctor Scarone",goals:8},{name:"Pedro Petrone",goals:7},{name:"Óscar Míguez",goals:8}],
   "Belgium":      [{name:"Romelu Lukaku",goals:6},{name:"Marc Wilmots",goals:6},{name:"Jan Ceulemans",goals:5}],
   "Croatia":      [{name:"Davor Šuker",goals:6},{name:"Ivan Perišić",goals:6},{name:"Andrej Kramarić",goals:5}],
-  "Mexico":       [{name:"Javier Hernández",goals:10},{name:"Luis Hernández",goals:7},{name:"Jared Borgetti",goals:7}],
-  "United States":[{name:"Clint Dempsey",goals:5},{name:"Brian McBride",goals:5},{name:"Landon Donovan",goals:5}],
   "Morocco":      [{name:"Youssef En-Nesyri",goals:4},{name:"Salaheddine Bassir",goals:2},{name:"Mbark Boussoufa",goals:1}],
   "Japan":        [{name:"Kunishige Kamamoto",goals:9},{name:"Keisuke Honda",goals:4},{name:"Shinji Okazaki",goals:3}],
   "South Korea":  [{name:"Son Heung-min",goals:4},{name:"Ahn Jung-hwan",goals:3},{name:"Park Ji-sung",goals:3}],
@@ -2616,8 +2616,57 @@ function YearDetailModal({ team, year, data, color, onClose }) {
   );
 }
 
+function ScorerLogModal({ team, scorer, color, onClose }) {
+  const log = getPlayerScoringLog(team, scorer.name);
+  const totalLogged = log.reduce((sum, m) => sum + m.goals, 0);
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.7)",zIndex:3000,display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={onClose}>
+      <div onClick={e=>e.stopPropagation()} style={{background:C.s1,borderRadius:"16px 16px 0 0",maxWidth:480,width:"100%",maxHeight:"80vh",overflowY:"auto",padding:20,border:`1px solid ${C.b1}`}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:4}}>
+          <div>
+            <div style={{fontWeight:900,fontSize:16,color}}>{scorer.name}</div>
+            <div style={{fontSize:11,color:C.dim,marginTop:2}}>{team} · {scorer.goals} career WC goals</div>
+          </div>
+          <button onClick={onClose} style={{background:"none",border:"none",color:C.dim,fontSize:20,cursor:"pointer",lineHeight:1,padding:4}}>✕</button>
+        </div>
+
+        {log.length === 0 ? (
+          <div style={{textAlign:"center",padding:"24px 0"}}>
+            <div style={{fontSize:"1.6rem",marginBottom:6}}>📭</div>
+            <div style={{fontSize:12,color:C.dim,lineHeight:1.6}}>
+              No match-by-match data available for {scorer.name}. Our detailed match archive only covers 1982 onward — {scorer.name}'s World Cup career likely fell before that, or partially before it.
+            </div>
+          </div>
+        ) : (
+          <div style={{marginTop:10}}>
+            {totalLogged < scorer.goals && (
+              <div style={{fontSize:10,color:C.dim,marginBottom:10,padding:"6px 8px",background:C.s2,borderRadius:8}}>
+                Showing {totalLogged} of {scorer.goals} career goals — the rest predate our detailed match archive (1982 onward) or are from the still-ongoing 2026 tournament.
+              </div>
+            )}
+            {log.map((m, i) => (
+              <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 0",borderBottom:i<log.length-1?`1px solid ${C.b1}`:"none"}}>
+                <div style={{minWidth:38,fontSize:12,fontWeight:800,color:C.mid}}>{m.year}</div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:12,color:C.text,fontWeight:600}}>vs {m.opponent}</div>
+                  <div style={{fontSize:10,color:C.dim,marginTop:1}}>{m.stage} · {m.host}</div>
+                </div>
+                <div style={{textAlign:"right"}}>
+                  <div style={{fontSize:12,fontWeight:800,color:m.result==="W"?C.green:m.result==="D"?C.gold:C.red}}>{m.score}</div>
+                  <div style={{fontSize:10,color:C.dim,marginTop:1}}>{m.goals>1?`${m.goals}⚽`:"⚽"}{m.isPK?" · PK":""}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function TeamHistoryCard({ team, data, color }) {
   const [expandedYear,setExpandedYear]=useState(null);
+  const [selectedScorer,setSelectedScorer]=useState(null);
   const d = unwrapTeam(data);
   if (!d) return (
     <div style={{padding:"20px 10px",textAlign:"center"}}>
@@ -2663,18 +2712,23 @@ function TeamHistoryCard({ team, data, color }) {
         ))}
       </div>
 
-      {/* Top 3 all-time scorers */}
+      {/* Top 5 all-time scorers — tap any name for their match-by-match log */}
       {topScorers.length > 0 && (
         <div style={{marginBottom:10}}>
           <div style={{fontSize:9,color:C.dim,fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:5}}>ALL-TIME TOP SCORERS</div>
           {topScorers.map((s,i) => (
-            <div key={s.name} style={{display:"flex",alignItems:"center",gap:6,padding:"4px 0",borderBottom:`1px solid ${C.b1}`}}>
-              <span style={{fontSize:12,minWidth:18}}>{i===0?"🥇":i===1?"🥈":"🥉"}</span>
+            <button key={s.name} onClick={()=>setSelectedScorer(s)} style={{width:"100%",display:"flex",alignItems:"center",gap:6,padding:"4px 0",borderBottom:`1px solid ${C.b1}`,background:"none",border:"none",borderBottomWidth:1,borderBottomStyle:"solid",borderBottomColor:C.b1,cursor:"pointer",textAlign:"left"}}>
+              <span style={{fontSize:12,minWidth:18,textAlign:"center",color:C.dim}}>{i===0?"🥇":i===1?"🥈":i===2?"🥉":`${i+1}.`}</span>
               <span style={{fontSize:12,color:C.text,flex:1}}>{s.name}</span>
               <span style={{fontSize:13,fontWeight:700,color}}>{s.goals}⚽</span>
-            </div>
+              <span style={{fontSize:11,color:C.dim}}>›</span>
+            </button>
           ))}
         </div>
+      )}
+
+      {selectedScorer && (
+        <ScorerLogModal team={team} scorer={selectedScorer} color={color} onClose={()=>setSelectedScorer(null)}/>
       )}
 
       {/* Group stage record */}

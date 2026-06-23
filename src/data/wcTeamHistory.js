@@ -3799,3 +3799,49 @@ export function findPlayerWCHistory(query) {
   });
   return hits.sort((a, b) => a.year - b.year);
 }
+
+function normalizeName(s) {
+  return (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+// Scans one team's match history for every goal a given player scored,
+// parsing the goal count and penalty flag out of scorer strings like
+// "Careca 2" or "Andreas Brehme (pen)". Only covers 1982-2022 (this file's
+// range) plus whatever's live for 2026 — a scorer whose World Cup career
+// fell entirely before 1982 (Pelé, Vavá, Just Fontaine, Geoff Hurst,
+// Guillermo Stábile, Mario Kempes) will correctly return an empty log
+// rather than a wrong one; that's a real data gap, not a bug.
+export function getPlayerScoringLog(team, playerQuery) {
+  const q = normalizeName(playerQuery);
+  if (!q) return [];
+  const teamYears = WC_TEAM_HISTORY[team];
+  if (!teamYears) return [];
+  const log = [];
+  Object.entries(teamYears).forEach(([year, data]) => {
+    if (data.didNotQualify || !data.matches) return;
+    data.matches.forEach(m => {
+      (m.scorers || []).forEach(rawScorer => {
+        let s = String(rawScorer).trim();
+        let isPK = false;
+        if (/\(pen\)/i.test(s)) { isPK = true; s = s.replace(/\(pen\)/i, "").trim(); }
+        let goals = 1;
+        const countMatch = s.match(/^(.*)\s+(\d+)$/);
+        if (countMatch) { s = countMatch[1].trim(); goals = parseInt(countMatch[2], 10); }
+        const normalized = normalizeName(s);
+        if (normalized.includes(q) || q.includes(normalized)) {
+          log.push({
+            year: Number(year),
+            host: data.host,
+            stage: m.stage,
+            opponent: m.opponent,
+            score: m.score,
+            result: m.result,
+            goals,
+            isPK,
+          });
+        }
+      });
+    });
+  });
+  return log.sort((a, b) => a.year - b.year);
+}
