@@ -5830,13 +5830,20 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
   // consistently, including not opening at all.
   const eventsScore = useMemo(() => {
     if (!events || !match) return null;
+    // Confirmed directly from a real bug: ev.team.name for an "Own Goal"
+    // event already represents the team that BENEFITS (gets the goal on
+    // the scoreboard), not the team of the player who put it into their
+    // own net. An earlier version of this flipped own goals to the
+    // opposite team, assuming the opposite convention — that was wrong,
+    // and it wrongly credited the opponent for a goal that should have
+    // stayed with the benefiting team. No special-casing needed: every
+    // goal, own goal or not, counts toward whichever team ev.team.name
+    // already names.
     let h = 0, a = 0;
     events.forEach(ev => {
       if (ev.type !== "Goal") return;
-      const scoringTeam = ev.team?.name;
-      const isOwnGoal = ev.detail === "Own Goal";
-      const benefitsHome = isOwnGoal ? scoringTeam !== match.home : scoringTeam === match.home;
-      if (benefitsHome) h++; else a++;
+      if (ev.team?.name === match.home) h++;
+      else if (ev.team?.name === match.away) a++;
     });
     return { h, a };
   }, [events, match]);
