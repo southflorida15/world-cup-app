@@ -695,7 +695,7 @@ const statusLabel = (s,e,ex) => {
   if(!s||s==="NS"||s==="notstarted") return null;
   if(s==="1H"||s==="first_half"||s==="inprogress"||s==="LIVE") return e?(ex?`${e}+${ex}'`:`${e}'`):"LIVE";
   if(s==="HT"||s==="halftime") return "HT";
-  if(s==="2H"||s==="second_half") return e?(ex?`${e}+${ex}'`:`${e}'`):"LIVE";
+  if(s==="2H"||s==="second_half") return e?(ex?`${e}+${ex}' (${e-45}' H2)`:`${e}' (${e-45}' H2)`):"LIVE";
   if(s==="ET"||s==="extra_time") return e?(ex?`ET ${e}+${ex}'`:`ET ${e}'`):"ET";
   if(s==="BT") return "BT";
   if(s==="P"||s==="penalties") return "Pens";
@@ -6138,7 +6138,12 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
                           <div style={{display:"flex",flexDirection:"column",alignItems:"center",minWidth:52,flexShrink:0}}>
                             <div style={{fontSize:11,fontWeight:700,color:C.gold}}>
                               {ev.time?.elapsed}{ev.time?.extra?`+${ev.time.extra}`:""}'
-                              {ev.time?.elapsed > 45 && <span style={{color:C.dim,fontWeight:600}}> ({ev.time.elapsed-45}' H2)</span>}
+                              {(() => {
+                                const mins = parseInt(ev.time?.elapsed, 10);
+                                return !isNaN(mins) && mins > 45 && (
+                                  <span style={{color:C.dim,fontWeight:600}}> ({mins-45}' H2)</span>
+                                );
+                              })()}
                             </div>
                             <div style={{fontSize:16}}>{icon}</div>
                           </div>
