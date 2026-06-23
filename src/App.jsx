@@ -1469,6 +1469,7 @@ const MATCH_DATES = (() => {
 
 function SchedTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=new Set() }) {
   const { favTeams=[] } = useContext(FavCtx);
+  const { getScore } = useContext(LiveScoresCtx);
   const [filterMode, setFilterMode] = useState("none");
   const [timeMode, setTimeMode] = useState("local");
   const [groupF, setGroupF] = useState("All");
@@ -1477,6 +1478,33 @@ function SchedTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=
   const [roundF, setRoundF] = useState("");
   const [selDate, setSelDate] = useState(null); // null = all dates
   const stripRef = useRef(null);
+
+  // Resolves a simple "1X"/"2X" Round of 32 placeholder ("1st in Group X" /
+  // "2nd in Group X") to the real team name once that group has finished
+  // all its matches. Deliberately does NOT attempt "3rd ABCDF"-style
+  // placeholders — resolving which third-placed teams qualify requires the
+  // full cross-group Annex C ranking, not just one group's standings, and
+  // that engine isn't part of this component. Those stay as placeholders
+  // until the bracket itself fills them in elsewhere in the app.
+  const resolveSlot = (label) => {
+    const mm = /^([12])([A-L])$/.exec(label || "");
+    if (!mm) return label;
+    const [, posStr, letter] = mm;
+    const pos = parseInt(posStr, 10);
+    const groupMatches = MATCHES.filter(gm => gm.group === letter);
+    if (!groupMatches.length) return label;
+    const allDone = groupMatches.every(gm => {
+      const sc = getScore(gm.home, gm.away);
+      return sc && sc.hg !== null && sc.ag !== null && statusIsFinished(sc.status);
+    });
+    if (!allDone) return label;
+    const results = groupMatches.map(gm => {
+      const sc = getScore(gm.home, gm.away);
+      return { home: gm.home, away: gm.away, hg: String(sc.hg), ag: String(sc.ag) };
+    });
+    const standings = calcStandings(letter, results);
+    return standings[pos-1]?.team || label;
+  };
 
   const today = new Date().toLocaleDateString("en-US", { month:"short", day:"numeric" });
   const todayHasMatch = MATCH_DATES.some(d => d.key === today);
@@ -1523,6 +1551,19 @@ function SchedTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=
     return true;
   });
   const byDate = shown.reduce((a,m)=>{ const {dateLabel}=matchTimes(m); const key=dateLabel||m.date; (a[key]=a[key]||[]).push(m); return a; },{});
+  // Was: matches within a day kept whatever order they appeared in the
+  // MATCHES array — fine for the group stage (where array order already
+  // happens to match kickoff order), but Round of 32 onward lists matches
+  // by bracket position, not by time, so a day could show 4:30pm, then
+  // 9pm, then 1pm in that literal order. Sort each day's matches by their
+  // actual UTC kickoff time instead.
+  Object.values(byDate).forEach(ms => {
+    ms.sort((a,b) => {
+      const ta = MATCH_UTC[a.id] ? new Date(MATCH_UTC[a.id]).getTime() : 0;
+      const tb = MATCH_UTC[b.id] ? new Date(MATCH_UTC[b.id]).getTime() : 0;
+      return ta - tb;
+    });
+  });
   const ss=(active,color=C.green)=>({padding:"5px 12px",borderRadius:20,border:`1px solid ${active?color:C.b1}`,background:active?`${color}18`:"transparent",color:active?color:C.mid,fontSize:12,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap"});
 
   const filterRef = useRef(null);
@@ -1619,7 +1660,7 @@ function SchedTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=
             <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>{date}</div>
 
           </div>
-          {ms.map(m=><MatchCard key={m.id} m={m} onAction={onAction} onMatchTap={onMatchTap} timeMode={timeMode} favTeam={favTeam} savedIds={savedIds}/>)}
+          {ms.map(m=><MatchCard key={m.id} m={{...m, home:resolveSlot(m.home), away:resolveSlot(m.away)}} onAction={onAction} onMatchTap={onMatchTap} timeMode={timeMode} favTeam={favTeam} savedIds={savedIds}/>)}
         </div>
       ))}
     </div>
