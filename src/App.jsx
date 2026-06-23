@@ -1910,13 +1910,14 @@ function StatsTab({ initial="", tabTop=116 }) {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState(false);
   const [posFilter, setPosFilter] = useState("All");
+  const [squadExpanded, setSquadExpanded] = useState(false);
   const [wcHistory, setWcHistory] = useState(null);
   const [wcHistoryLoading, setWcHistoryLoading] = useState(false);
   const d = sel ? TEAMS[sel] : null;
 
   useEffect(() => {
     if(!sel) return;
-    setSquad(null); setErr(false); setLoading(true); setPosFilter("All");
+    setSquad(null); setErr(false); setLoading(true); setPosFilter("All"); setSquadExpanded(false);
     const zName = sel==="Czechia"?"Czech Republic":sel==="Bosnia & Herz."?"Bosnia and Herzegovina":sel==="Ivory Coast"?"Côte d'Ivoire":sel==="DR Congo"?"DR Congo":sel==="South Korea"?"South Korea":sel==="Turkiye"?"Turkey":sel==="Curacao"?"Curaçao":sel;
     zafronixGet("roster",{name:zName}).then(data => {
       setLoading(false);
@@ -2000,17 +2001,20 @@ function StatsTab({ initial="", tabTop=116 }) {
             </div>
           </Card>
           <Card style={{marginBottom:12}}>
-            <div style={{padding:"10px 14px",borderBottom:`1px solid ${C.b1}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <button onClick={()=>setSquadExpanded(e=>!e)} style={{width:"100%",padding:"10px 14px",borderBottom:squadExpanded?`1px solid ${C.b1}`:"none",display:"flex",justifyContent:"space-between",alignItems:"center",background:"none",border:"none",borderBottomWidth:squadExpanded?1:0,borderBottomStyle:"solid",borderBottomColor:C.b1,cursor:"pointer",textAlign:"left"}}>
               <span style={{fontWeight:700,color:C.green,fontSize:13}}>SQUAD</span>
-              {squad && <span style={{fontSize:11,color:C.dim}}>{squad.length} players</span>}
-            </div>
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                {squad && <span style={{fontSize:11,color:C.dim}}>{squad.length} players</span>}
+                <span style={{fontSize:11,color:C.dim,transform:squadExpanded?"rotate(180deg)":"none",transition:"transform .15s"}}>▾</span>
+              </div>
+            </button>
             {loading && (
               <div style={{padding:"32px 0",textAlign:"center"}}>
                 <div style={{width:28,height:28,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto 10px"}}/>
                 <div style={{fontSize:12,color:C.mid}}>Fetching squad...</div>
               </div>
             )}
-            {err && (
+            {squadExpanded && err && (
               <div style={{padding:14}}>
                 <div style={{fontSize:12,color:C.dim,marginBottom:10}}>Predicted squad — showing key players</div>
                 {d.players.map((p,i)=>(
@@ -2023,7 +2027,7 @@ function StatsTab({ initial="", tabTop=116 }) {
                 ))}
               </div>
             )}
-            {squad && !loading && (
+            {squadExpanded && squad && !loading && (
               <div>
                 <div style={{display:"flex",gap:6,padding:"10px 12px",borderBottom:`1px solid ${C.b1}`,overflowX:"auto",scrollbarWidth:"none"}}>
                   {["All","GK","DEF","MID","FWD"].map(pos=>(
@@ -2694,7 +2698,7 @@ function ScorerLogModal({ team, scorer, color, onClose }) {
                 </div>
                 <div style={{textAlign:"right"}}>
                   <div style={{fontSize:12,fontWeight:800,color:m.result==="W"?C.green:m.result==="D"?C.gold:C.red}}>{m.score}</div>
-                  <div style={{fontSize:10,color:C.dim,marginTop:1}}>{m.goals>1?`${m.goals}⚽`:"⚽"}{m.isPK?" · PK":""}</div>
+                  <div style={{fontSize:10,color:C.dim,marginTop:1}}>{"⚽".repeat(Math.max(1, m.goals))}{m.isPK?" · PK":""}</div>
                 </div>
               </div>
             ))}
@@ -2759,6 +2763,28 @@ function TeamHistoryCard({ team, data, color }) {
 
   return (
     <div>
+      {/* Top 5 all-time scorers — combined with live 2026 goals, tap any name for their match-by-match log */}
+      {topScorers.length > 0 && (
+        <div style={{marginBottom:10}}>
+          <div style={{fontSize:9,color:C.dim,fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:5}}>ALL-TIME TOP SCORERS</div>
+          {topScorers.map((s,i) => (
+            <button key={s.name} onClick={()=>setSelectedScorer(s)} style={{width:"100%",display:"flex",alignItems:"center",gap:6,padding:"4px 0",borderBottom:`1px solid ${C.b1}`,background:"none",border:"none",borderBottomWidth:1,borderBottomStyle:"solid",borderBottomColor:C.b1,cursor:"pointer",textAlign:"left"}}>
+              <span style={{fontSize:12,minWidth:18,textAlign:"center",color:C.dim}}>{i===0?"🥇":i===1?"🥈":i===2?"🥉":`${i+1}.`}</span>
+              <span style={{fontSize:12,color:C.text,flex:1}}>{s.name}</span>
+              {s.liveGoals2026 > 0 && (
+                <span style={{fontSize:9,color:C.red,fontWeight:700,background:`${C.red}18`,padding:"1px 5px",borderRadius:6,whiteSpace:"nowrap"}}>+{s.liveGoals2026} in '26</span>
+              )}
+              <span style={{fontSize:13,fontWeight:700,color}}>{s.goals}⚽</span>
+              <span style={{fontSize:11,color:C.dim}}>›</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {selectedScorer && (
+        <ScorerLogModal team={team} scorer={selectedScorer} color={color} onClose={()=>setSelectedScorer(null)}/>
+      )}
+
       {/* Row 1: Appearances, Titles, Goals */}
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:5,marginBottom:5}}>
         {[
@@ -2785,28 +2811,6 @@ function TeamHistoryCard({ team, data, color }) {
           </div>
         ))}
       </div>
-
-      {/* Top 5 all-time scorers — combined with live 2026 goals, tap any name for their match-by-match log */}
-      {topScorers.length > 0 && (
-        <div style={{marginBottom:10}}>
-          <div style={{fontSize:9,color:C.dim,fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:5}}>ALL-TIME TOP SCORERS</div>
-          {topScorers.map((s,i) => (
-            <button key={s.name} onClick={()=>setSelectedScorer(s)} style={{width:"100%",display:"flex",alignItems:"center",gap:6,padding:"4px 0",borderBottom:`1px solid ${C.b1}`,background:"none",border:"none",borderBottomWidth:1,borderBottomStyle:"solid",borderBottomColor:C.b1,cursor:"pointer",textAlign:"left"}}>
-              <span style={{fontSize:12,minWidth:18,textAlign:"center",color:C.dim}}>{i===0?"🥇":i===1?"🥈":i===2?"🥉":`${i+1}.`}</span>
-              <span style={{fontSize:12,color:C.text,flex:1}}>{s.name}</span>
-              {s.liveGoals2026 > 0 && (
-                <span style={{fontSize:9,color:C.red,fontWeight:700,background:`${C.red}18`,padding:"1px 5px",borderRadius:6,whiteSpace:"nowrap"}}>+{s.liveGoals2026} in '26</span>
-              )}
-              <span style={{fontSize:13,fontWeight:700,color}}>{s.goals}⚽</span>
-              <span style={{fontSize:11,color:C.dim}}>›</span>
-            </button>
-          ))}
-        </div>
-      )}
-
-      {selectedScorer && (
-        <ScorerLogModal team={team} scorer={selectedScorer} color={color} onClose={()=>setSelectedScorer(null)}/>
-      )}
 
       {/* Group stage record */}
       <div style={{background:C.s2,borderRadius:8,padding:"7px 10px",marginBottom:10,border:`1px solid ${C.b1}`}}>

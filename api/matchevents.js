@@ -371,38 +371,59 @@ const KNOWN_FINISHED = [
 ];
 
 async function autoSeedEvents() {
-  for (const { home, away, espnId } of KNOWN_FINISHED) {
-    const existing = await loadFromKV(home, away);
-    if (existing?.events?.length) continue;
+  // Was: only checked the 2 matches hand-listed above, and only ran at all
+  // when the persisted event set was completely empty. That's why a
+  // player's goals from a match nobody had individually opened the
+  // timeline for — e.g. Mbappé's brace vs Senegal — never made it into the
+  // scorers aggregate, even days after the match finished and even though
+  // the result itself showed up everywhere else fine.
+  //
+  // Now checks every match in HARDCODED_ESPN_IDS (the comprehensive map
+  // covering the full schedule) plus the small manual list, resolving each
+  // one's real ESPN ID through the same robust 3-tier lookup the main
+  // per-match handler uses (live feed -> persisted map -> hardcoded), and
+  // only persists ones ESPN actually reports as finished.
+  const candidates = Object.keys(HARDCODED_ESPN_IDS).map(k => {
+    const [home, away] = k.split("|");
+    return { home, away };
+  });
+  KNOWN_FINISHED.forEach(m => {
+    if (!candidates.some(c => c.home === m.home && c.away === m.away)) candidates.push(m);
+  });
 
-    // Try ESPN first
-    let seeded = false;
+  // Cap how many we actually fetch-and-persist per call — right after this
+  // logic ships, potentially dozens of matches could be missing at once,
+  // and sequentially fetching all of them from ESPN in a single serverless
+  // invocation risks exceeding the function timeout. Processing a bounded
+  // batch per call means it catches up over a few calls instead of one
+  // long (and fragile) one.
+  const MAX_SEED_PER_CALL = 10;
+  let seededThisCall = 0;
+
+  for (const { home, away } of candidates) {
+    if (seededThisCall >= MAX_SEED_PER_CALL) break;
+    const existing = await loadFromKV(home, away);
+    if (existing?.events?.length) continue; // already persisted, nothing to do
+
+    const espnId = await getESPNEventId(home, away);
+    if (!espnId) continue;
+
     try {
       const r = await fetch(`${ESPN_BASE}/summary?event=${espnId}`, { headers: ESPN_HEADERS });
-      if (r.ok) {
-        const data = await r.json();
-        const events = parseEvents(data, home);
-        const stats = parseStats(data.boxscore, home);
-        if (events.length > 0) {
-          await saveToKV(home, away, events, stats);
-          await saveESPNId(home, away, espnId);
-          console.log(`[scorers] ESPN-seeded ${home} vs ${away}: ${events.length} events`);
-          seeded = true;
-        }
+      if (!r.ok) continue;
+      const data = await r.json();
+      const statusType = data.header?.competitions?.[0]?.status?.type?.name || "NS";
+      if (!DONE_STATUSES.includes(statusType)) continue; // still live or upcoming — don't persist yet
+
+      const events = parseEvents(data, home);
+      const stats = parseStats(data.boxscore, home);
+      if (events.length > 0) {
+        await saveToKV(home, away, events, stats);
+        seededThisCall++;
+        console.log(`[scorers] auto-seeded ${home} vs ${away}: ${events.length} events`);
       }
     } catch(e) {
-      console.warn(`[scorers] ESPN seed failed for ${home} vs ${away}:`, e.message);
-    }
-
-    // Fall back to hardcoded data
-    if (!seeded) {
-      const key = `${home}|${away}`;
-      const fallback = SEEDED_EVENTS[key];
-      if (fallback) {
-        await saveToKV(home, away, fallback.events, fallback.stats);
-        await saveESPNId(home, away, espnId);
-        console.log(`[scorers] hardcoded-seeded ${home} vs ${away}: ${fallback.events.length} events`);
-      }
+      console.warn(`[scorers] auto-seed failed for ${home} vs ${away}:`, e.message);
     }
   }
 }
@@ -416,9 +437,19 @@ async function getScorers() {
     allKeys.push(...batch);
   } while (cursor !== 0);
 
-  // Auto-seed if no events persisted yet
-  if (!allKeys.length) {
+  // Was: only ran autoSeedEvents() if the persisted set was completely
+  // empty — meaning it effectively only mattered once, at the very start.
+  // Any match that finished afterward and that nobody happened to open the
+  // timeline modal for (e.g. France vs Senegal, where Mbappé broke the
+  // national scoring record) silently never made it into the aggregate.
+  // Now sweeps periodically (throttled via a KV timestamp, not on every
+  // single call) so newly-finished matches get picked up automatically.
+  const lastSweep = await kv.get("wc2026:scorers_seed_sweep").catch(() => null);
+  const SWEEP_INTERVAL_MS = 5 * 60 * 1000;
+  if (!allKeys.length || !lastSweep || Date.now() - Number(lastSweep) > SWEEP_INTERVAL_MS) {
     await autoSeedEvents();
+    await kv.set("wc2026:scorers_seed_sweep", String(Date.now())).catch(() => {});
+    allKeys = [];
     let cursor2 = 0;
     do {
       const [next, batch] = await kv.scan(cursor2, { match: "wc2026:events:*", count: 200 });
