@@ -1996,21 +1996,6 @@ function StatsTab({ initial="", tabTop=116 }) {
           </Card>
 
           <Card style={{marginBottom:12}}>
-            <div style={{padding:"10px 14px",borderBottom:`1px solid ${C.b1}`}}>
-              <span style={{fontWeight:700,color:C.green,fontSize:13}}>🏆 WORLD CUP HISTORY</span>
-            </div>
-            <div style={{padding:13}}>
-              {wcHistoryLoading && (
-                <div style={{padding:"24px 0",textAlign:"center"}}>
-                  <div style={{width:24,height:24,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto 10px"}}/>
-                  <div style={{fontSize:12,color:C.mid}}>Fetching World Cup history…</div>
-                </div>
-              )}
-              {!wcHistoryLoading && <TeamHistoryCard team={sel} data={wcHistory} color={C.green}/>}
-            </div>
-          </Card>
-
-          <Card style={{marginBottom:12}}>
             <div style={{padding:13}}>
               <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:7}}>2026 Analysis</div>
               <p style={{fontSize:13,color:C.mid,lineHeight:1.7,margin:0}}>{d.note}</p>
@@ -2074,6 +2059,21 @@ function StatsTab({ initial="", tabTop=116 }) {
                 </div>
               </div>
             )}
+          </Card>
+
+          <Card style={{marginBottom:12}}>
+            <div style={{padding:"10px 14px",borderBottom:`1px solid ${C.b1}`}}>
+              <span style={{fontWeight:700,color:C.green,fontSize:13}}>🏆 WORLD CUP HISTORY</span>
+            </div>
+            <div style={{padding:13}}>
+              {wcHistoryLoading && (
+                <div style={{padding:"24px 0",textAlign:"center"}}>
+                  <div style={{width:24,height:24,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto 10px"}}/>
+                  <div style={{fontSize:12,color:C.mid}}>Fetching World Cup history…</div>
+                </div>
+              )}
+              {!wcHistoryLoading && <TeamHistoryCard team={sel} data={wcHistory} color={C.green}/>}
+            </div>
           </Card>
 
           {/* Dynamic recent form — auto-switches to live WC data after Jun 11 */}
@@ -2721,8 +2721,8 @@ function ScorerLogModal({ team, scorer, color, onClose }) {
   const totalLogged = log.reduce((sum, m) => sum + m.goals, 0);
 
   return (
-    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.7)",zIndex:3000,display:"flex",alignItems:"flex-end",justifyContent:"center"}} onClick={onClose}>
-      <div onClick={e=>e.stopPropagation()} style={{background:C.s1,borderRadius:"16px 16px 0 0",maxWidth:480,width:"100%",maxHeight:"80vh",overflowY:"auto",padding:20,border:`1px solid ${C.b1}`}}>
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.7)",zIndex:3000,display:"flex",alignItems:"center",justifyContent:"center",padding:16}} onClick={onClose}>
+      <div onClick={e=>e.stopPropagation()} style={{background:C.s1,borderRadius:16,maxWidth:480,width:"100%",maxHeight:"80vh",overflowY:"auto",padding:20,border:`1px solid ${C.b1}`}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:4}}>
           <div>
             <div style={{fontWeight:900,fontSize:16,color}}>{scorer.name}</div>

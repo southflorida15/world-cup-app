@@ -365,6 +365,123 @@ const SEEDED_EVENTS = {
   }
 };
 
+// The full 2026 schedule (all 104 matches' home/away pairs). Used as the
+// candidate list for autoSeedEvents below — replaces relying on
+// HARDCODED_ESPN_IDS for this purpose, which only covers a partial early
+// batch of matches and was the actual root cause of goals from later
+// matches (e.g. Mbappe's brace vs Iraq) never reaching the live scorers
+// aggregate, no matter how many times the sweep ran. getESPNEventId()'s
+// existing 3-tier lookup (live feed -> persisted map -> hardcoded) still
+// resolves the actual ESPN ID for each — this just makes sure EVERY match
+// gets checked, not only the ones someone thought to hardcode an ID for.
+const FULL_SCHEDULE = [
+  { home: "Mexico", away: "South Africa" },
+  { home: "South Korea", away: "Czechia" },
+  { home: "Canada", away: "Bosnia & Herz." },
+  { home: "United States", away: "Paraguay" },
+  { home: "Qatar", away: "Switzerland" },
+  { home: "Brazil", away: "Morocco" },
+  { home: "Haiti", away: "Scotland" },
+  { home: "Australia", away: "Turkiye" },
+  { home: "Germany", away: "Curacao" },
+  { home: "Netherlands", away: "Japan" },
+  { home: "Ivory Coast", away: "Ecuador" },
+  { home: "Sweden", away: "Tunisia" },
+  { home: "Spain", away: "Cape Verde" },
+  { home: "Belgium", away: "Egypt" },
+  { home: "Saudi Arabia", away: "Uruguay" },
+  { home: "Iran", away: "New Zealand" },
+  { home: "France", away: "Senegal" },
+  { home: "Iraq", away: "Norway" },
+  { home: "Argentina", away: "Algeria" },
+  { home: "Austria", away: "Jordan" },
+  { home: "Portugal", away: "DR Congo" },
+  { home: "England", away: "Croatia" },
+  { home: "Ghana", away: "Panama" },
+  { home: "Uzbekistan", away: "Colombia" },
+  { home: "Czechia", away: "South Africa" },
+  { home: "Switzerland", away: "Bosnia & Herz." },
+  { home: "Canada", away: "Qatar" },
+  { home: "Mexico", away: "South Korea" },
+  { home: "United States", away: "Australia" },
+  { home: "Scotland", away: "Morocco" },
+  { home: "Brazil", away: "Haiti" },
+  { home: "Turkiye", away: "Paraguay" },
+  { home: "Netherlands", away: "Sweden" },
+  { home: "Germany", away: "Ivory Coast" },
+  { home: "Ecuador", away: "Curacao" },
+  { home: "Tunisia", away: "Japan" },
+  { home: "Spain", away: "Saudi Arabia" },
+  { home: "Belgium", away: "Iran" },
+  { home: "Uruguay", away: "Cape Verde" },
+  { home: "New Zealand", away: "Egypt" },
+  { home: "Argentina", away: "Austria" },
+  { home: "France", away: "Iraq" },
+  { home: "Norway", away: "Senegal" },
+  { home: "Jordan", away: "Algeria" },
+  { home: "Portugal", away: "Uzbekistan" },
+  { home: "England", away: "Ghana" },
+  { home: "Panama", away: "Croatia" },
+  { home: "Colombia", away: "DR Congo" },
+  { home: "Switzerland", away: "Canada" },
+  { home: "Bosnia & Herz.", away: "Qatar" },
+  { home: "Scotland", away: "Brazil" },
+  { home: "Morocco", away: "Haiti" },
+  { home: "Czechia", away: "Mexico" },
+  { home: "South Africa", away: "South Korea" },
+  { home: "Curacao", away: "Ivory Coast" },
+  { home: "Ecuador", away: "Germany" },
+  { home: "Japan", away: "Sweden" },
+  { home: "Tunisia", away: "Netherlands" },
+  { home: "Turkiye", away: "United States" },
+  { home: "Paraguay", away: "Australia" },
+  { home: "Norway", away: "France" },
+  { home: "Senegal", away: "Iraq" },
+  { home: "Cape Verde", away: "Saudi Arabia" },
+  { home: "Uruguay", away: "Spain" },
+  { home: "Egypt", away: "Iran" },
+  { home: "New Zealand", away: "Belgium" },
+  { home: "Panama", away: "England" },
+  { home: "Croatia", away: "Ghana" },
+  { home: "Colombia", away: "Portugal" },
+  { home: "DR Congo", away: "Uzbekistan" },
+  { home: "Algeria", away: "Austria" },
+  { home: "Jordan", away: "Argentina" },
+  { home: "2A", away: "2B" },
+  { home: "1E", away: "3rd ABCDF" },
+  { home: "1F", away: "2C" },
+  { home: "1C", away: "2F" },
+  { home: "1I", away: "3rd CDFGH" },
+  { home: "2E", away: "2I" },
+  { home: "1A", away: "3rd CEFHI" },
+  { home: "1L", away: "3rd EHIJK" },
+  { home: "1D", away: "3rd BEFIJ" },
+  { home: "1G", away: "3rd AEHIJ" },
+  { home: "2K", away: "2L" },
+  { home: "1H", away: "2J" },
+  { home: "1B", away: "3rd EFGIJ" },
+  { home: "1J", away: "2H" },
+  { home: "1K", away: "3rd DEIJL" },
+  { home: "2D", away: "2G" },
+  { home: "R16 M1", away: "TBD" },
+  { home: "R16 M2", away: "TBD" },
+  { home: "R16 M3", away: "TBD" },
+  { home: "R16 M4", away: "TBD" },
+  { home: "R16 M5", away: "TBD" },
+  { home: "R16 M6", away: "TBD" },
+  { home: "R16 M7", away: "TBD" },
+  { home: "R16 M8", away: "TBD" },
+  { home: "QF M1", away: "TBD" },
+  { home: "QF M2", away: "TBD" },
+  { home: "QF M3", away: "TBD" },
+  { home: "QF M4", away: "TBD" },
+  { home: "SF M1", away: "TBD" },
+  { home: "SF M2", away: "TBD" },
+  { home: "3rd Place", away: "TBD" },
+  { home: "🏆 Final", away: "TBD" },
+
+];
+
 const KNOWN_FINISHED = [
   { home: "Mexico",      away: "South Africa", espnId: "760415" },
   { home: "South Korea", away: "Czechia",      espnId: "760414" },
@@ -383,10 +500,7 @@ async function autoSeedEvents() {
   // one's real ESPN ID through the same robust 3-tier lookup the main
   // per-match handler uses (live feed -> persisted map -> hardcoded), and
   // only persists ones ESPN actually reports as finished.
-  const candidates = Object.keys(HARDCODED_ESPN_IDS).map(k => {
-    const [home, away] = k.split("|");
-    return { home, away };
-  });
+  const candidates = [...FULL_SCHEDULE];
   KNOWN_FINISHED.forEach(m => {
     if (!candidates.some(c => c.home === m.home && c.away === m.away)) candidates.push(m);
   });
