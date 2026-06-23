@@ -1799,6 +1799,30 @@ async function zafronixGet(endpoint, params = {}) {
     return null;
   }
 }
+// Live 2026 scorers aggregate — short in-memory cache so multiple
+// TeamHistoryCard instances (e.g. switching between teams in Stats) don't
+// each independently re-hit the endpoint. The endpoint itself is already
+// cheap (reads a pre-computed aggregate, see matchevents.js), this is just
+// extra politeness.
+let liveScorersCache = null;
+let liveScorersFetchedAt = 0;
+async function getLiveScorers2026() {
+  if (liveScorersCache && Date.now() - liveScorersFetchedAt < 30000) return liveScorersCache;
+  try {
+    const res = await fetch("/api/matchevents?action=scorers");
+    if (!res.ok) throw new Error(`scorers → ${res.status}`);
+    const data = await res.json();
+    liveScorersCache = data?.scorers || [];
+    liveScorersFetchedAt = Date.now();
+    return liveScorersCache;
+  } catch(e) {
+    console.error("[live2026scorers]", e.message);
+    return liveScorersCache || [];
+  }
+}
+function normalizePlayerName(s) {
+  return (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+}
 const Z_NAME_MAP = {"Czech Republic":"Czechia","Bosnia and Herzegovina":"Bosnia & Herz.","Côte d'Ivoire":"Ivory Coast","Cote d'Ivoire":"Ivory Coast","DR Congo":"DR Congo","Democratic Republic of Congo":"DR Congo","Korea Republic":"South Korea","Republic of Korea":"South Korea","IR Iran":"Iran","Curaçao":"Curacao","Cabo Verde":"Cape Verde","Turkey":"Turkiye","United States of America":"United States"};
 const zNorm = n => Z_NAME_MAP[n] || n;
 function parseName(raw){return raw?.replace(/\s*\(captain\)\s*/i,"").trim()||raw;}
@@ -2485,10 +2509,10 @@ function H2HBar({ label, v1, v2, color1=C.green, color2=C.red }) {
 const WC_TOP_SCORERS = {
   "Brazil":       [{name:"Ronaldo",goals:15},{name:"Pelé",goals:12},{name:"Vavá",goals:9},{name:"Jairzinho",goals:9},{name:"Rivaldo",goals:8}],
   "Germany":      [{name:"Miroslav Klose",goals:16},{name:"Gerd Müller",goals:14},{name:"Karl-Heinz Rummenigge",goals:9},{name:"Uwe Seeler",goals:9},{name:"Helmut Rahn",goals:8}],
-  "France":       [{name:"Just Fontaine",goals:13},{name:"Kylian Mbappé",goals:15},{name:"Thierry Henry",goals:6},{name:"Michel Platini",goals:6},{name:"Zinedine Zidane",goals:5}],
-  "Argentina":    [{name:"Lionel Messi",goals:18},{name:"Gabriel Batistuta",goals:10},{name:"Diego Maradona",goals:8},{name:"Mario Kempes",goals:6},{name:"Guillermo Stábile",goals:8}],
+  "France":       [{name:"Just Fontaine",goals:13},{name:"Kylian Mbappé",goals:12},{name:"Thierry Henry",goals:6},{name:"Michel Platini",goals:6},{name:"Zinedine Zidane",goals:5}],
+  "Argentina":    [{name:"Lionel Messi",goals:13},{name:"Gabriel Batistuta",goals:10},{name:"Diego Maradona",goals:8},{name:"Mario Kempes",goals:6},{name:"Guillermo Stábile",goals:8}],
   "Spain":        [{name:"David Villa",goals:9},{name:"Fernando Morientes",goals:7},{name:"Fernando Torres",goals:5},{name:"Emilio Butragueño",goals:5},{name:"Raúl",goals:4}],
-  "England":      [{name:"Gary Lineker",goals:10},{name:"Harry Kane",goals:9},{name:"Geoff Hurst",goals:5},{name:"Bobby Charlton",goals:4},{name:"Michael Owen",goals:4}],
+  "England":      [{name:"Gary Lineker",goals:10},{name:"Harry Kane",goals:8},{name:"Geoff Hurst",goals:5},{name:"Bobby Charlton",goals:4},{name:"Michael Owen",goals:4}],
   "Netherlands":  [{name:"Rob Rensenbrink",goals:6},{name:"Dennis Bergkamp",goals:6},{name:"Johan Neeskens",goals:5},{name:"Robin van Persie",goals:4},{name:"Patrick Kluivert",goals:4}],
   "Mexico":       [{name:"Javier Hernández",goals:10},{name:"Luis Hernández",goals:7},{name:"Jared Borgetti",goals:7},{name:"Hugo Sánchez",goals:1},{name:"Carlos Hermosillo",goals:1}],
   "United States":[{name:"Clint Dempsey",goals:5},{name:"Brian McBride",goals:5},{name:"Landon Donovan",goals:5},{name:"Eric Wynalda",goals:3},{name:"Earnie Stewart",goals:3}],
@@ -2625,7 +2649,10 @@ function ScorerLogModal({ team, scorer, color, onClose }) {
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:4}}>
           <div>
             <div style={{fontWeight:900,fontSize:16,color}}>{scorer.name}</div>
-            <div style={{fontSize:11,color:C.dim,marginTop:2}}>{team} · {scorer.goals} career WC goals</div>
+            <div style={{fontSize:11,color:C.dim,marginTop:2}}>
+              {team} · {scorer.goals} career WC goals
+              {scorer.liveGoals2026 > 0 && <span style={{color:C.red,fontWeight:700}}> ({scorer.liveGoals2026} live in 2026)</span>}
+            </div>
           </div>
           <button onClick={onClose} style={{background:"none",border:"none",color:C.dim,fontSize:20,cursor:"pointer",lineHeight:1,padding:4}}>✕</button>
         </div>
@@ -2667,6 +2694,12 @@ function ScorerLogModal({ team, scorer, color, onClose }) {
 function TeamHistoryCard({ team, data, color }) {
   const [expandedYear,setExpandedYear]=useState(null);
   const [selectedScorer,setSelectedScorer]=useState(null);
+  const [liveScorers2026,setLiveScorers2026]=useState([]);
+  useEffect(() => {
+    let cancelled = false;
+    getLiveScorers2026().then(s => { if (!cancelled) setLiveScorers2026(s); });
+    return () => { cancelled = true; };
+  }, []);
   const d = unwrapTeam(data);
   if (!d) return (
     <div style={{padding:"20px 10px",textAlign:"center"}}>
@@ -2681,7 +2714,19 @@ function TeamHistoryCard({ team, data, color }) {
   );
   const past = [...apps].filter(a=>a.year<2026).reverse();
   const st = wcStats(apps);
-  const topScorers = WC_TOP_SCORERS[team] || [];
+  // Combine each scorer's frozen pre-2026 baseline with their LIVE 2026
+  // goal count (from the aggregate matchevents.js maintains as matches
+  // finish), then re-sort — so if e.g. an active player's 2026 tally pushes
+  // them past a retired great's all-time mark, the order updates correctly
+  // without needing a manual edit every time someone scores.
+  const topScorers = (WC_TOP_SCORERS[team] || []).map(s => {
+    const live = liveScorers2026.find(ls =>
+      normalizePlayerName(ls.team) === normalizePlayerName(team) &&
+      (normalizePlayerName(ls.name).includes(normalizePlayerName(s.name)) || normalizePlayerName(s.name).includes(normalizePlayerName(ls.name)))
+    );
+    const liveGoals2026 = live?.goals || 0;
+    return { ...s, baselineGoals: s.goals, liveGoals2026, goals: s.goals + liveGoals2026 };
+  }).sort((a,b) => b.goals - a.goals);
 
   return (
     <div>
@@ -2712,7 +2757,7 @@ function TeamHistoryCard({ team, data, color }) {
         ))}
       </div>
 
-      {/* Top 5 all-time scorers — tap any name for their match-by-match log */}
+      {/* Top 5 all-time scorers — combined with live 2026 goals, tap any name for their match-by-match log */}
       {topScorers.length > 0 && (
         <div style={{marginBottom:10}}>
           <div style={{fontSize:9,color:C.dim,fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:5}}>ALL-TIME TOP SCORERS</div>
@@ -2720,6 +2765,9 @@ function TeamHistoryCard({ team, data, color }) {
             <button key={s.name} onClick={()=>setSelectedScorer(s)} style={{width:"100%",display:"flex",alignItems:"center",gap:6,padding:"4px 0",borderBottom:`1px solid ${C.b1}`,background:"none",border:"none",borderBottomWidth:1,borderBottomStyle:"solid",borderBottomColor:C.b1,cursor:"pointer",textAlign:"left"}}>
               <span style={{fontSize:12,minWidth:18,textAlign:"center",color:C.dim}}>{i===0?"🥇":i===1?"🥈":i===2?"🥉":`${i+1}.`}</span>
               <span style={{fontSize:12,color:C.text,flex:1}}>{s.name}</span>
+              {s.liveGoals2026 > 0 && (
+                <span style={{fontSize:9,color:C.red,fontWeight:700,background:`${C.red}18`,padding:"1px 5px",borderRadius:6,whiteSpace:"nowrap"}}>+{s.liveGoals2026} in '26</span>
+              )}
               <span style={{fontSize:13,fontWeight:700,color}}>{s.goals}⚽</span>
               <span style={{fontSize:11,color:C.dim}}>›</span>
             </button>
