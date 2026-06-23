@@ -1480,12 +1480,20 @@ function SchedTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=
   const stripRef = useRef(null);
 
   // Resolves a simple "1X"/"2X" Round of 32 placeholder ("1st in Group X" /
-  // "2nd in Group X") to the real team name once that group has finished
-  // all its matches. Deliberately does NOT attempt "3rd ABCDF"-style
-  // placeholders — resolving which third-placed teams qualify requires the
-  // full cross-group Annex C ranking, not just one group's standings, and
-  // that engine isn't part of this component. Those stay as placeholders
-  // until the bracket itself fills them in elsewhere in the app.
+  // "2nd in Group X") to the real team name — mirrors exactly how the
+  // Actual Bracket view already does this (see R32_SLOT_TEMPLATE's
+  // resolveSlot): always shows the CURRENT leader/runner-up as a live
+  // projection from whatever group results exist so far, with no
+  // clinch-gating on whether a name appears at all. An earlier version of
+  // this gated the 1st-place name on mathematical clinching, which was the
+  // actual inconsistency — the bracket shows "Germany" the moment they're
+  // leading and only uses clinch status for a separate visual badge
+  // (gold/locked vs dimmed), it never withholds the name itself.
+  // Deliberately does NOT attempt "3rd ABCDF"-style placeholders —
+  // resolving which third-placed teams qualify requires the full
+  // cross-group Annex C ranking, not just one group's standings, and that
+  // engine isn't part of this component. Those stay as placeholders until
+  // the bracket itself fills them in elsewhere in the app.
   const resolveSlot = (label) => {
     const mm = /^([12])([A-L])$/.exec(label || "");
     if (!mm) return label;
@@ -1493,17 +1501,12 @@ function SchedTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=
     const pos = parseInt(posStr, 10);
     const groupMatches = MATCHES.filter(gm => gm.group === letter);
     if (!groupMatches.length) return label;
-    const allDone = groupMatches.every(gm => {
-      const sc = getScore(gm.home, gm.away);
-      return sc && sc.hg !== null && sc.ag !== null && statusIsFinished(sc.status);
-    });
-    if (!allDone) return label;
     const results = groupMatches.map(gm => {
       const sc = getScore(gm.home, gm.away);
-      return { home: gm.home, away: gm.away, hg: String(sc.hg), ag: String(sc.ag) };
+      const finished = sc && statusIsFinished(sc.status);
+      return { home: gm.home, away: gm.away, hg: finished ? String(sc.hg ?? "") : "", ag: finished ? String(sc.ag ?? "") : "" };
     });
-    const standings = calcStandings(letter, results);
-    return standings[pos-1]?.team || label;
+    return calcStandings(letter, results)[pos-1]?.team || label;
   };
 
   const today = new Date().toLocaleDateString("en-US", { month:"short", day:"numeric" });
