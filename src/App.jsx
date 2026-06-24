@@ -1285,13 +1285,19 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="",
         </div>
         {/* Teams + score */}
         <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 13px"}}>
-          <Crest team={m.home} size={32}/>
-          <span style={{fontWeight:winner===m.home?800:700,color:homeProvisional?C.dim:(winner===m.home?C.text:C.dim),flex:1,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.home}</span>
+          <div style={{opacity:homeProvisional?0.45:1}}><Crest team={m.home} size={32}/></div>
+          <span style={{flex:1,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+            <span style={{fontWeight:winner===m.home?800:700,color:homeProvisional?C.dim:(winner===m.home?C.text:C.dim)}}>{m.home}</span>
+            {homeProvisional && <span style={{fontStyle:"italic",fontSize:10,color:C.dim,marginLeft:4}}>provisional</span>}
+          </span>
           <div style={{textAlign:"center",minWidth:60,flexShrink:0}}>
             <div style={{fontWeight:900,fontSize:22,color:C.mid,fontFamily:"monospace",lineHeight:1}}>{sc.hg} – {sc.ag}</div>
           </div>
-          <span style={{fontWeight:winner===m.away?800:700,color:awayProvisional?C.dim:(winner===m.away?C.text:C.dim),flex:1,fontSize:14,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.away}</span>
-          <Crest team={m.away} size={32}/>
+          <span style={{flex:1,fontSize:14,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+            {awayProvisional && <span style={{fontStyle:"italic",fontSize:10,color:C.dim,marginRight:4}}>provisional</span>}
+            <span style={{fontWeight:winner===m.away?800:700,color:awayProvisional?C.dim:(winner===m.away?C.text:C.dim)}}>{m.away}</span>
+          </span>
+          <div style={{opacity:awayProvisional?0.45:1}}><Crest team={m.away} size={32}/></div>
         </div>
       </div>
     );
@@ -1321,8 +1327,11 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="",
 
       {/* Teams row */}
       <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 13px"}}>
-        <Crest team={m.home} size={32}/>
-        <span style={{fontWeight:winner===m.home?800:700,color:homeProvisional?C.dim:(finished?(winner===m.home?C.text:C.dim):favTeams?.includes(m.home)?C.gold:C.text),flex:1,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.home}</span>
+        <div style={{opacity:homeProvisional?0.45:1}}><Crest team={m.home} size={32}/></div>
+        <span style={{flex:1,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+          <span style={{fontWeight:winner===m.home?800:700,color:homeProvisional?C.dim:(finished?(winner===m.home?C.text:C.dim):favTeams?.includes(m.home)?C.gold:C.text)}}>{m.home}</span>
+          {homeProvisional && <span style={{fontStyle:"italic",fontSize:10,color:C.dim,marginLeft:4}}>provisional</span>}
+        </span>
         {isKickingOff ? (
           <div style={{textAlign:"center",minWidth:60,flexShrink:0}}>
             {countdown
@@ -1339,8 +1348,11 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="",
             <span style={{fontSize:11,color:C.dim,fontWeight:700}}>VS</span>
           </div>
         )}
-        <span style={{fontWeight:winner===m.away?800:700,color:awayProvisional?C.dim:(finished?(winner===m.away?C.text:C.dim):favTeams?.includes(m.away)?C.gold:C.text),flex:1,fontSize:14,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.away}</span>
-        <Crest team={m.away} size={32}/>
+        <span style={{flex:1,fontSize:14,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+          {awayProvisional && <span style={{fontStyle:"italic",fontSize:10,color:C.dim,marginRight:4}}>provisional</span>}
+          <span style={{fontWeight:winner===m.away?800:700,color:awayProvisional?C.dim:(finished?(winner===m.away?C.text:C.dim):favTeams?.includes(m.away)?C.gold:C.text)}}>{m.away}</span>
+        </span>
+        <div style={{opacity:awayProvisional?0.45:1}}><Crest team={m.away} size={32}/></div>
       </div>
 
       {/* Footer: TV + actions */}
