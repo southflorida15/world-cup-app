@@ -1480,15 +1480,17 @@ function SchedTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=
   const stripRef = useRef(null);
 
   // Resolves a simple "1X"/"2X" Round of 32 placeholder ("1st in Group X" /
-  // "2nd in Group X") to the real team name — mirrors exactly how the
-  // Actual Bracket view already does this (see R32_SLOT_TEMPLATE's
-  // resolveSlot): always shows the CURRENT leader/runner-up as a live
-  // projection from whatever group results exist so far, with no
-  // clinch-gating on whether a name appears at all. An earlier version of
-  // this gated the 1st-place name on mathematical clinching, which was the
-  // actual inconsistency — the bracket shows "Germany" the moment they're
-  // leading and only uses clinch status for a separate visual badge
-  // (gold/locked vs dimmed), it never withholds the name itself.
+  // "2nd in Group X") to the real team name. Unlike the Actual Bracket
+  // (which always shows the current live-projected leader, with a
+  // separate gold/locked badge for confirmed vs provisional), the Schedule
+  // only shows a real name once that placement is mathematically
+  // guaranteed — showing a name here implies the slot is settled, so a
+  // merely-currently-leading team (which could still be overtaken) stays
+  // as the raw placeholder instead. For 1st place, resolves the moment
+  // that's clinched — not waiting for every group match to literally
+  // finish, since a team can secure 1st with a match still to play. For
+  // 2nd place, still waits for the whole group to finish — clinching 2nd
+  // is a messier multi-team computation not attempted here.
   // Deliberately does NOT attempt "3rd ABCDF"-style placeholders —
   // resolving which third-placed teams qualify requires the full
   // cross-group Annex C ranking, not just one group's standings, and that
@@ -1501,12 +1503,42 @@ function SchedTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=
     const pos = parseInt(posStr, 10);
     const groupMatches = MATCHES.filter(gm => gm.group === letter);
     if (!groupMatches.length) return label;
+
     const results = groupMatches.map(gm => {
       const sc = getScore(gm.home, gm.away);
       const finished = sc && statusIsFinished(sc.status);
       return { home: gm.home, away: gm.away, hg: finished ? String(sc.hg ?? "") : "", ag: finished ? String(sc.ag ?? "") : "" };
     });
-    return calcStandings(letter, results)[pos-1]?.team || label;
+    const table = calcStandings(letter, results);
+
+    if (pos === 1) {
+      const leader = table[0];
+      if (!leader) return label;
+      const headToHeadWinner = (teamA, teamB) => {
+        const m = results.find(r => (r.home === teamA && r.away === teamB) || (r.home === teamB && r.away === teamA));
+        if (!m || m.hg === "" || m.ag === "") return null;
+        const hg = parseInt(m.hg), ag = parseInt(m.ag);
+        if (isNaN(hg) || isNaN(ag)) return null;
+        if (hg === ag) return "draw";
+        const homeWon = hg > ag;
+        return (m.home === teamA) === homeWon ? teamA : teamB;
+      };
+      const clinched = table.slice(1).every(t => {
+        const maxPossible = t.pts + (3 - t.p) * 3;
+        if (maxPossible < leader.pts) return true;
+        if (maxPossible > leader.pts) return false;
+        return headToHeadWinner(leader.team, t.team) === leader.team;
+      });
+      return clinched ? leader.team : label;
+    }
+
+    // pos === 2 — only resolve once the whole group has actually finished
+    const allDone = groupMatches.every(gm => {
+      const sc = getScore(gm.home, gm.away);
+      return sc && sc.hg !== null && sc.ag !== null && statusIsFinished(sc.status);
+    });
+    if (!allDone) return label;
+    return table[1]?.team || label;
   };
 
   const today = new Date().toLocaleDateString("en-US", { month:"short", day:"numeric" });
