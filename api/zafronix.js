@@ -25,7 +25,22 @@ const HEADERS_DIRECT = {
 // Zafronix stores West Germany separately from modern Germany, but the app's
 // user-facing Germany profile should include the full German World Cup record.
 const TEAM_HISTORY_ALIASES = {
+  // Germany's pre-1994 World Cup record is stored separately as West Germany.
   Germany: ["Germany", "West Germany"],
+
+  // Czechia currently returns as Czech Republic from Zafronix; older records are
+  // stored separately under Czechoslovakia.
+  Czechia: ["Czechia", "Czechoslovakia"],
+  "Czech Republic": ["Czech Republic", "Czechoslovakia"],
+
+  // Historical predecessor records stored separately by Zafronix. These are
+  // useful if the app exposes broader World Cup history/search beyond the
+  // current 48-team field.
+  Serbia: ["Serbia", "Yugoslavia", "Serbia and Montenegro"],
+  Russia: ["Russia", "Soviet Union"],
+
+  // DR Congo's 1974 appearance is stored under Zaire.
+  "DR Congo": ["DR Congo", "Zaire"],
 };
 
 // KV cache TTLs in seconds
@@ -169,7 +184,7 @@ export default async function handler(req, res) {
 
         // v2 cache key intentionally bypasses old cached Germany-only history.
         const aliases = TEAM_HISTORY_ALIASES[name];
-        const cKey = aliases ? `team_${name}_historyAliases_v2` : `team_${name}`;
+        const cKey = aliases ? `team_${name}_historyAliases_v3` : `team_${name}`;
 
         data = await getCached(cKey);
         if (!data) {
