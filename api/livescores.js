@@ -93,10 +93,17 @@ function isKickoffImminent() {
 }
 
 function getSmartTTL(fixtures) {
+  // Was 60s/120s/180s for 1/2+/4+ simultaneous live matches — set
+  // aggressively during the Redis quota crisis earlier in the tournament
+  // to cut request volume. That crisis is resolved (confirmed healthy
+  // spend since), and a 2-minute-stale live score is a real, noticeable
+  // problem now that cost isn't the dominant concern. Tightened back up;
+  // still scales down with concurrency so a chaotic multi-match window
+  // doesn't spike costs, just not as harshly.
   const liveCount = fixtures.filter(f => LIVE_STATUSES.includes(f?.fixture?.status?.short)).length;
-  if (liveCount >= 4) return 3 * 60;
-  if (liveCount >= 2) return 2 * 60;
-  if (liveCount >= 1) return 60;
+  if (liveCount >= 4) return 45;
+  if (liveCount >= 2) return 30;
+  if (liveCount >= 1) return 15;
   if (isKickoffImminent()) return 30;
   return 60 * 60;
 }

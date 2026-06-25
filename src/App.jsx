@@ -1526,6 +1526,21 @@ function SchedTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=
     const projected = table[pos-1];
     if (!projected) return { team: label, provisional: false };
 
+    const allDone = groupMatches.every(gm => {
+      const sc = getScore(gm.home, gm.away);
+      return sc && sc.hg !== null && sc.ag !== null && statusIsFinished(sc.status);
+    });
+
+    // Once every group match has actually been played, the table IS final
+    // — trust calcStandings' own tiebreak resolution directly rather than
+    // re-running the clinch projection below. That projection only checks
+    // pairwise head-to-head, which can wrongly read as "inconclusive" (a
+    // draw) for a tie that calcStandings already correctly settled via
+    // goal difference or goals-for instead — exactly the bug that left a
+    // fully-finished group's 1st place still marked provisional even
+    // though there was nothing left to determine.
+    if (allDone) return { team: projected.team, provisional: false };
+
     if (pos === 1) {
       const leader = table[0];
       const headToHeadWinner = (teamA, teamB) => {
@@ -1546,12 +1561,8 @@ function SchedTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=
       return { team: leader.team, provisional: !clinched };
     }
 
-    // pos === 2 — confirmed only once the whole group has finished
-    const allDone = groupMatches.every(gm => {
-      const sc = getScore(gm.home, gm.away);
-      return sc && sc.hg !== null && sc.ag !== null && statusIsFinished(sc.status);
-    });
-    return { team: projected.team, provisional: !allDone };
+    // pos === 2, group not yet fully done — still provisional
+    return { team: projected.team, provisional: true };
   };
 
   const today = new Date().toLocaleDateString("en-US", { month:"short", day:"numeric" });
