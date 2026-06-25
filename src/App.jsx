@@ -4013,15 +4013,17 @@ function MyBracketTab({ tabTop=116 }) {
     const firstOf = (g) => groupStandings[g]?.[0]?.team || null;
     const secondOf = (g) => groupStandings[g]?.[1]?.team || null;
 
-    // Tags a "1X" (group-winner) slot as "clinched" or "provisional" so the
-    // UI can show confirmed group winners in color and still-live
-    // projections dimmed. Only "1X" slots are tagged — 2nd-place and
-    // third-place projections aren't part of this request and keep their
-    // existing default styling.
+    // Tags a "1X" or "2X" slot as "clinched" or "provisional" so the UI can
+    // show confirmed teams in color/locked and still-live projections
+    // dimmed. 1st place uses the mathematical clinch check above (can
+    // resolve before the group's last match is even played). 2nd place
+    // doesn't attempt that messier multi-team computation — it's tagged
+    // "clinched" only once the whole group has actually finished, and
+    // "provisional" the entire time before that.
     const slotTag = (slot) => {
-      if (typeof slot === "string" && slot[0] === "1") {
-        return clinchedFirst[slot[1]] ? "clinched" : "provisional";
-      }
+      if (typeof slot !== "string") return null;
+      if (slot[0] === "1") return clinchedFirst[slot[1]] ? "clinched" : "provisional";
+      if (slot[0] === "2") return groupComplete[slot[1]] ? "clinched" : "provisional";
       return null;
     };
 
