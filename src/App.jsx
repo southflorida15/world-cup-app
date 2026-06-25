@@ -3987,6 +3987,17 @@ function MyBracketTab({ tabTop=116 }) {
     Object.keys(GROUPS).forEach(g => {
       const table = groupStandings[g] || [];
       const leader = table[0];
+      // Once the group has actually finished, the table is final — trust
+      // it directly. The pairwise head-to-head check below is only a
+      // PROJECTION tool for a still-incomplete group; running it on a
+      // finished one can wrongly read a tie as "unresolved" if it was
+      // actually settled by goal difference/goals-for instead of a head-
+      // to-head meeting. This was the actual bug behind Brazil still
+      // showing as "Leading" after Group C had already finished.
+      if (groupComplete[g]) {
+        clinchedFirst[g] = !!leader;
+        return;
+      }
       clinchedFirst[g] = !!leader && table.slice(1).every(t => {
         const maxPossible = t.pts + (3 - t.p) * 3;
         if (maxPossible < leader.pts) return true;
