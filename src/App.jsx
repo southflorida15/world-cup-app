@@ -4791,25 +4791,28 @@ function fantasyLockLabel(match) {
   return `Locks at ${fmtTime(iso, USER_TZ)}`;
 }
 
-function fantasyStageLabel(m) {
-  if (!m) return "Match";
-  return m.group ? `Group ${m.group}` : (m.stage || "Knockout");
+function fantasyStageLabel(match) {
+  if (match?.group) return `Group ${match.group}`;
+  return match?.stage || "Knockout";
 }
 
-function fantasyStageSortKey(m) {
-  if (!m) return 999;
-  if (m.group) return 1;
-  if (m.stage === "Round of 32") return 2;
-  if (m.stage === "Round of 16") return 3;
-  if (m.stage === "Quarter-final") return 4;
-  if (m.stage === "Semi-final") return 5;
-  if (m.stage === "3rd Place") return 6;
-  if (m.stage === "Final") return 7;
-  return 8;
+function fantasyConcreteTeam(team) {
+  if (!team) return false;
+  const t = String(team);
+  if (t === "TBD") return false;
+  if (/^(1|2)[A-L]$/.test(t)) return false;
+  if (/^3(rd)?/i.test(t)) return false;
+  if (/^(R16|QF|SF)\s*M/i.test(t)) return false;
+  if (t.includes("Final") || t.includes("🏆")) return false;
+  return true;
 }
 
-function fantasyMatchAvailable(m) {
-  return Boolean(m?.id && m?.home && m?.away);
+function fantasyTeamsKnown(match) {
+  return fantasyConcreteTeam(match?.home) && fantasyConcreteTeam(match?.away);
+}
+
+function fantasyVisibleMatch(match) {
+  return !!match?.group || fantasyConcreteTeam(match?.home) || fantasyConcreteTeam(match?.away);
 }
 
 
@@ -5287,7 +5290,7 @@ function LeaguesPanel({ pin, fantasyUserId, syncProfile, userStats }) {
 
 
 function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, userAvatar=null }) {
-  const { getScore, isFinished } = useContext(LiveScoresCtx);
+  const { getScore, isFinished, allFixtures=[] } = useContext(LiveScoresCtx);
   const { favTeam, favTeams=[] } = useContext(FavCtx);
   const deviceUserId = useMemo(getUserId, []);
   const fantasyUserId = syncProfile?.uid || deviceUserId;
@@ -5329,6 +5332,123 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
     setViewingUser(null);
     document.body.style.overflow = "";
   };
+
+  // ── Fantasy match source ────────────────────────────────────────────────
+  // Group-stage fantasy uses the static schedule. Knockout fantasy now pulls
+  // actual teams from the same live/actual bracket model used by My Bracket,
+  // so Round-of-32 and later matches replace placeholders like "1E" or
+  // "3rd ABCDF" as teams clinch or winners advance.
+  const fantasyMatches = useMemo(() => {
+    const byId = Object.fromEntries(MATCHES.map(m => [Number(m.id), m]));
+
+    const groupResults = (letter) => MATCHES
+      .filter(m => m.group === letter)
+      .map(m => {
+        const s = getScore(m.home, m.away);
+        const finished = s && statusIsFinished(s.status);
+        return {
+          id: m.id,
+          home: m.home,
+          away: m.away,
+          hg: finished ? String(s.hg ?? "") : "",
+          ag: finished ? String(s.ag ?? "") : "",
+        };
+      });
+
+    const groupStandings = {};
+    Object.keys(GROUPS).forEach(g => {
+      groupStandings[g] = calcStandings(g, groupResults(g));
+    });
+
+    const firstOf = (g) => groupStandings[g]?.[0]?.team || null;
+    const secondOf = (g) => groupStandings[g]?.[1]?.team || null;
+
+    const qualifiedThirds = Object.keys(GROUPS)
+      .map(g => ({ group: g, ...(groupStandings[g]?.[2] || {}) }))
+      .filter(t => t.team)
+      .sort((a,b) => b.pts-a.pts || b.gd-a.gd || b.gf-a.gf)
+      .slice(0,8);
+
+    const thirdTeamByGroup = Object.fromEntries(qualifiedThirds.map(t => [t.group, t.team]));
+    let annexMapping = null;
+    try {
+      annexMapping = getAnnexCMapping(qualifiedThirds.map(t => ({ group:t.group, team:t.team })));
+    } catch {
+      annexMapping = null;
+    }
+
+    const resolveSlot = (slot, homeSlot) => {
+      if (!slot) return null;
+      if (slot === "3?") {
+        const assigned = annexMapping?.[homeSlot];
+        const grp = assigned ? assigned.replace(/^3/, "") : null;
+        return (grp && thirdTeamByGroup[grp]) || null;
+      }
+      if (slot.startsWith?.("1")) return firstOf(slot[1]);
+      if (slot.startsWith?.("2")) return secondOf(slot[1]);
+      return null;
+    };
+
+    const lookupRealWinner = (home, away) => {
+      if (!fantasyConcreteTeam(home) || !fantasyConcreteTeam(away)) return null;
+      let s = getScore(home, away), swapped = false;
+      if (!s) { s = getScore(away, home); swapped = true; }
+      if (!s || !statusIsFinished(s.status)) return null;
+      const hg = swapped ? s.ag : s.hg;
+      const ag = swapped ? s.hg : s.ag;
+      if (hg == null || ag == null || hg === ag) return null;
+      return hg > ag ? home : away;
+    };
+
+    const decorate = (matchId, home, away, extra={}) => {
+      const base = byId[Number(matchId)] || {};
+      const resolvedHome = fantasyConcreteTeam(home) ? home : (home || base.home || "TBD");
+      const resolvedAway = fantasyConcreteTeam(away) ? away : (away || base.away || "TBD");
+      return {
+        ...base,
+        ...extra,
+        id: Number(matchId),
+        home: resolvedHome,
+        away: resolvedAway,
+        originalHome: base.home,
+        originalAway: base.away,
+        fantasyResolved: fantasyConcreteTeam(resolvedHome) || fantasyConcreteTeam(resolvedAway),
+      };
+    };
+
+    const winnerMap = {};
+    const dynamicById = {};
+
+    R32_SLOT_TEMPLATE.forEach(t => {
+      const home = resolveSlot(t.home, t.home) || "TBD";
+      const away = resolveSlot(t.away, t.home) || "TBD";
+      const winner = lookupRealWinner(home, away);
+      if (winner) winnerMap[t.match] = winner;
+      dynamicById[t.match] = decorate(t.match, home, away, { homeSlot:t.home, awaySlot:t.away });
+    });
+
+    const resolveRef = (ref) => {
+      if (typeof ref === "string" && ref.startsWith("W")) return winnerMap[Number(ref.slice(1))] || "TBD";
+      return ref || "TBD";
+    };
+
+    const buildRound = (template=[]) => {
+      template.forEach(t => {
+        const home = resolveRef(t.home);
+        const away = resolveRef(t.away);
+        const winner = lookupRealWinner(home, away);
+        if (winner) winnerMap[t.match] = winner;
+        dynamicById[t.match] = decorate(t.match, home, away, { homeSlot:t.home, awaySlot:t.away });
+      });
+    };
+
+    buildRound(ROUND_OF_16_TEMPLATE);
+    buildRound(QUARTER_FINAL_TEMPLATE);
+    buildRound(SEMI_FINAL_TEMPLATE);
+    buildRound(FINAL_TEMPLATE);
+
+    return MATCHES.map(m => dynamicById[m.id] || m);
+  }, [getScore, allFixtures]);
 
   // ── Load user + their predictions on mount ──────────────────────────────
   useEffect(() => {
@@ -5384,8 +5504,8 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
   // happening from other sources (other tabs, other users, retries).
   const scoredSubmittedRef = useRef(new Map()); // matchId -> "hg-ag" already submitted
   useEffect(() => {
-    const finishedWithScores = MATCHES
-      .filter(m => fantasyMatchAvailable(m) && isFinished(m.home, m.away))
+    const finishedWithScores = fantasyMatches
+      .filter(m => fantasyTeamsKnown(m) && isFinished(m.home, m.away))
       .map(m => {
         const sc = getScore(m.home, m.away);
         if (!sc || sc.hg === null || sc.ag === null) return null;
@@ -5400,7 +5520,7 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ matches: finishedWithScores }),
     }).catch(e => console.warn("[score-matches]", e.message));
-  }, [getScore, isFinished]);
+  }, [getScore, isFinished, fantasyMatches]);
 
   // ── Load leaderboard when that tab is active ────────────────────────────
   // This used to fetch on EVERY filter change anywhere in the Fantasy tab
@@ -5467,18 +5587,9 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
   };
 
   // ── Score totals ────────────────────────────────────────────────────────
-  // Fantasy now covers the full tournament: group stage + Round of 32 through Final.
-  // Earlier versions filtered by `m.group`, which silently stopped Fantasy after match 72.
-  const fantasyMatches = MATCHES
-    .filter(fantasyMatchAvailable)
-    .sort((a,b) => {
-      const ak = MATCH_UTC?.[a.id] ? new Date(MATCH_UTC[a.id]).getTime() : fantasyStageSortKey(a) * 100000 + a.id;
-      const bk = MATCH_UTC?.[b.id] ? new Date(MATCH_UTC[b.id]).getTime() : fantasyStageSortKey(b) * 100000 + b.id;
-      return ak - bk;
-    });
-
-  const upcoming  = fantasyMatches.filter(m => !isFinished(m.home, m.away));
-  const finished  = fantasyMatches.filter(m =>  isFinished(m.home, m.away)).sort((a,b) => b.id - a.id);
+  const fantasyVisibleMatches = fantasyMatches.filter(fantasyVisibleMatch);
+  const upcoming  = fantasyVisibleMatches.filter(m => !isFinished(m.home, m.away));
+  const finished  = fantasyVisibleMatches.filter(m => fantasyTeamsKnown(m) && isFinished(m.home, m.away)).sort((a,b) => b.id - a.id);
   let totalPts = 0, totalPossible = 0, exact = 0, correct = 0;
   finished.forEach(m => {
     const sc = getScore(m.home, m.away);
@@ -5488,7 +5599,7 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
   });
 
   const shownMatches = filter==="fav"
-    ? fantasyMatches.filter(m => favTeams?.includes(m.home) || favTeams?.includes(m.away))
+    ? fantasyVisibleMatches.filter(m => favTeams?.includes(m.home) || favTeams?.includes(m.away))
     : filter==="finished" ? finished : upcoming;
 
   // ── Registration gate ───────────────────────────────────────────────────
@@ -5708,9 +5819,10 @@ return (
             </div>
           )}
           {shownMatches.map(m => {
-            const sc = getScore(m.home, m.away);
-            const done = isFinished(m.home, m.away);
-            const locked = done || fantasyMatchLocked(m);
+            const teamsKnown = fantasyTeamsKnown(m);
+            const sc = teamsKnown ? getScore(m.home, m.away) : null;
+            const done = teamsKnown && isFinished(m.home, m.away);
+            const locked = done || fantasyMatchLocked(m) || !teamsKnown;
             const pred = preds[m.id] || {};
             const pts = done && sc ? scoreOnePred(pred, sc) : null;
             const ptColor = pts===3?C.green:pts===1?C.gold:pts===0?C.red:C.dim;
@@ -5726,7 +5838,7 @@ return (
                       {!saving && hasPred && !done && !locked && <span style={{fontSize:10,color:C.green}}>✓ saved</span>}
                       {!done && (
   locked ? (
-    <span style={{fontSize:10,color:C.gold}}>🔒 locked</span>
+    <span style={{fontSize:10,color:C.gold}}>{!teamsKnown ? "⏳ teams TBD" : "🔒 locked"}</span>
   ) : (
     <span style={{fontSize:10,color:C.dim}}>{fantasyLockLabel(m)}</span>
   )
@@ -5788,7 +5900,8 @@ return (
               {viewingLoading && <div style={{textAlign:"center",padding:"32px 0"}}><div style={{width:24,height:24,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto"}}/></div>}
 
               {!viewingLoading && viewingPreds && (() => {
-                const scoredMatches = MATCHES.filter(m => {
+                const scoredMatches = fantasyMatches.filter(m => {
+                  if (!fantasyTeamsKnown(m)) return false;
                   const sc = getScore(m.home, m.away);
                   return sc && statusIsFinished(sc.status) && viewingPreds[m.id];
                 }).sort((a,b) => b.id - a.id);
