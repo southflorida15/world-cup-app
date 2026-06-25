@@ -7060,11 +7060,13 @@ function timeAgo(isoStr) {
 
 function QuickFacts({ tabTop }) {
   const { getScore, isFinished } = useContext(LiveScoresCtx);
+  const TOTAL_TOURNAMENT_MATCHES = 104;
 
   const finishedMatches = MATCHES.filter(m => isFinished(m.home, m.away));
   const scores = finishedMatches.map(m => {
     const sc = getScore(m.home, m.away);
-    return sc ? { ...m, hg: sc.hg ?? 0, ag: sc.ag ?? 0 } : null;
+    if (!sc || sc.hg === null || sc.hg === undefined || sc.ag === null || sc.ag === undefined) return null;
+    return { ...m, hg: Number(sc.hg), ag: Number(sc.ag), status: sc.status };
   }).filter(Boolean);
 
   if (scores.length === 0) return (
@@ -7074,46 +7076,58 @@ function QuickFacts({ tabTop }) {
     </div>
   );
 
-  // Compute facts from live data
-  const goalScorers = {};
-  const matchGoals = scores.map(m => ({ m, total: m.hg + m.ag }));
-  const highestScoring = matchGoals.sort((a,b)=>b.total-a.total)[0];
-  const totalGoals = scores.reduce((s,m)=>s+m.hg+m.ag, 0);
-  const avgGoals = (totalGoals / scores.length).toFixed(1);
+  const totalGoals = scores.reduce((sum,m)=>sum+m.hg+m.ag, 0);
+  const avgGoals = scores.length ? (totalGoals / scores.length).toFixed(2) : "0.00";
 
-  // Biggest upset: finished match where group underdog won
-  // Use home/away position as proxy — away win = mild upset
-  const awayWins = scores.filter(m => m.ag > m.hg);
-  const biggestUpset = awayWins.length > 0 ? awayWins[awayWins.length - 1] : null;
+  const matchGoals = scores.map(m => ({ m, total: m.hg + m.ag, margin: Math.abs(m.hg - m.ag) }));
+  const highestScoring = [...matchGoals].sort((a,b)=>b.total-a.total || b.margin-a.margin)[0];
+  const mostOneSided = [...matchGoals].sort((a,b)=>b.margin-a.margin || b.total-a.total)[0];
 
-  // Most one-sided match
-  const mostOneSided = [...scores].sort((a,b)=>(Math.abs(b.hg-b.ag))-(Math.abs(a.hg-a.ag)))[0];
-  const biggestMargin = mostOneSided ? Math.abs(mostOneSided.hg - mostOneSided.ag) : 0;
+  const teamGoals = {};
+  const teamCleanSheets = {};
+  scores.forEach(m => {
+    teamGoals[m.home] = (teamGoals[m.home] || 0) + m.hg;
+    teamGoals[m.away] = (teamGoals[m.away] || 0) + m.ag;
+    if (m.ag === 0) teamCleanSheets[m.home] = (teamCleanSheets[m.home] || 0) + 1;
+    if (m.hg === 0) teamCleanSheets[m.away] = (teamCleanSheets[m.away] || 0) + 1;
+  });
 
-  // Clean sheets
-  const cleanSheets = scores.filter(m => m.hg === 0 || m.ag === 0).length;
+  const topScoringTeam = Object.entries(teamGoals)
+    .sort((a,b)=>b[1]-a[1] || String(a[0]).localeCompare(String(b[0])))[0];
+  const cleanSheetLeader = Object.entries(teamCleanSheets)
+    .sort((a,b)=>b[1]-a[1] || String(a[0]).localeCompare(String(b[0])))[0];
+  const cleanSheetTotal = Object.values(teamCleanSheets).reduce((s,n)=>s+n, 0);
 
   const facts = [
-    { icon:"⚽", label:"Goals scored", value:`${totalGoals} (avg ${avgGoals}/match)` },
-    { icon:"🏟️", label:"Matches played", value:`${scores.length} of 72` },
-    { icon:"🎯", label:"Clean sheets", value:`${cleanSheets}` },
-    highestScoring && { icon:"🔥", label:"Highest-scoring match", value:`${highestScoring.m.home} ${highestScoring.m.hg}–${highestScoring.m.ag} ${highestScoring.m.away} (${highestScoring.total} goals)` },
-    biggestMargin > 2 && mostOneSided && { icon:"💥", label:"Biggest win", value:`${mostOneSided.hg > mostOneSided.ag ? mostOneSided.home : mostOneSided.away} won ${Math.max(mostOneSided.hg,mostOneSided.ag)}–${Math.min(mostOneSided.hg,mostOneSided.ag)}` },
-    biggestUpset && { icon:"😱", label:"Away win", value:`${biggestUpset.away} ${biggestUpset.ag}–${biggestUpset.hg} ${biggestUpset.home}` },
+    { icon:"🏟️", label:"Matches played", value:`${scores.length} of ${TOTAL_TOURNAMENT_MATCHES}` },
+    { icon:"⚽", label:"Total goals", value:`${totalGoals}` },
+    { icon:"📈", label:"Goals per match", value:avgGoals },
+    { icon:"🎯", label:"Clean sheets", value:`${cleanSheetTotal} team clean sheet${cleanSheetTotal===1?"":"s"}` },
+    topScoringTeam && { icon:"🚀", label:"Most goals by team", value:`${getFlag(topScoringTeam[0])} ${topScoringTeam[0]} · ${topScoringTeam[1]}` },
+    cleanSheetLeader && { icon:"🧤", label:"Clean sheet leader", value:`${getFlag(cleanSheetLeader[0])} ${cleanSheetLeader[0]} · ${cleanSheetLeader[1]}` },
+    highestScoring && { icon:"🔥", label:"Highest-scoring match", value:`${getFlag(highestScoring.m.home)} ${highestScoring.m.home} ${highestScoring.m.hg}–${highestScoring.m.ag} ${getFlag(highestScoring.m.away)} ${highestScoring.m.away} · ${highestScoring.total} goals` },
+    mostOneSided && mostOneSided.margin > 0 && { icon:"💥", label:"Biggest win", value:`${getFlag(mostOneSided.m.hg > mostOneSided.m.ag ? mostOneSided.m.home : mostOneSided.m.away)} ${mostOneSided.m.hg > mostOneSided.m.ag ? mostOneSided.m.home : mostOneSided.m.away} by ${mostOneSided.margin} · ${mostOneSided.m.hg}–${mostOneSided.m.ag}` },
   ].filter(Boolean);
 
   return (
     <div style={{background:C.s2,borderRadius:12,padding:16,marginBottom:16,border:`1px solid ${C.b1}`}}>
-      <div style={{fontSize:12,fontWeight:700,color:C.mid,letterSpacing:"0.08em",marginBottom:12}}>⚡ TOURNAMENT FACTS SO FAR</div>
-      {facts.map((f,i) => (
-        <div key={i} style={{display:"flex",alignItems:"flex-start",gap:10,marginBottom:i<facts.length-1?10:0}}>
-          <span style={{fontSize:18,flexShrink:0}}>{f.icon}</span>
-          <div>
-            <div style={{fontSize:11,color:C.dim,fontWeight:600}}>{f.label}</div>
-            <div style={{fontSize:13,color:C.text,fontWeight:600,marginTop:1}}>{f.value}</div>
-          </div>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:12}}>
+        <div style={{fontSize:12,fontWeight:700,color:C.mid,letterSpacing:"0.08em"}}>⚡ TOURNAMENT FACTS SO FAR</div>
+        <div style={{fontSize:10,color:C.dim,background:C.s1,border:`1px solid ${C.b1}`,borderRadius:999,padding:"3px 8px",whiteSpace:"nowrap"}}>
+          {scores.length}/{TOTAL_TOURNAMENT_MATCHES}
         </div>
-      ))}
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(145px,1fr))",gap:8}}>
+        {facts.map((f,i) => (
+          <div key={i} style={{background:C.s1,border:`1px solid ${C.b1}`,borderRadius:12,padding:"10px 10px",minHeight:72}}>
+            <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:5}}>
+              <span style={{fontSize:17,flexShrink:0}}>{f.icon}</span>
+              <div style={{fontSize:10,color:C.dim,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.05em",lineHeight:1.2}}>{f.label}</div>
+            </div>
+            <div style={{fontSize:13,color:C.text,fontWeight:700,lineHeight:1.35}}>{f.value}</div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
