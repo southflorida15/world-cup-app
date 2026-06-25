@@ -4791,27 +4791,6 @@ function fantasyLockLabel(match) {
   return `Locks at ${fmtTime(iso, USER_TZ)}`;
 }
 
-function fantasyStageLabel(m) {
-  if (!m) return "Match";
-  return m.group ? `Group ${m.group}` : (m.stage || "Knockout");
-}
-
-function fantasyStageSortKey(m) {
-  if (!m) return 999;
-  if (m.group) return 1;
-  if (m.stage === "Round of 32") return 2;
-  if (m.stage === "Round of 16") return 3;
-  if (m.stage === "Quarter-final") return 4;
-  if (m.stage === "Semi-final") return 5;
-  if (m.stage === "3rd Place") return 6;
-  if (m.stage === "Final") return 7;
-  return 8;
-}
-
-function fantasyMatchAvailable(m) {
-  return Boolean(m?.id && m?.home && m?.away);
-}
-
 
 async function apiPred(action, params={}, body=null) {
   const qs = new URLSearchParams({ action, ...params }).toString();
@@ -5385,7 +5364,7 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
   const scoredSubmittedRef = useRef(new Map()); // matchId -> "hg-ag" already submitted
   useEffect(() => {
     const finishedWithScores = MATCHES
-      .filter(m => fantasyMatchAvailable(m) && isFinished(m.home, m.away))
+      .filter(m => m.group && isFinished(m.home, m.away))
       .map(m => {
         const sc = getScore(m.home, m.away);
         if (!sc || sc.hg === null || sc.ag === null) return null;
@@ -5467,18 +5446,8 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
   };
 
   // ── Score totals ────────────────────────────────────────────────────────
-  // Fantasy now covers the full tournament: group stage + Round of 32 through Final.
-  // Earlier versions filtered by `m.group`, which silently stopped Fantasy after match 72.
-  const fantasyMatches = MATCHES
-    .filter(fantasyMatchAvailable)
-    .sort((a,b) => {
-      const ak = MATCH_UTC?.[a.id] ? new Date(MATCH_UTC[a.id]).getTime() : fantasyStageSortKey(a) * 100000 + a.id;
-      const bk = MATCH_UTC?.[b.id] ? new Date(MATCH_UTC[b.id]).getTime() : fantasyStageSortKey(b) * 100000 + b.id;
-      return ak - bk;
-    });
-
-  const upcoming  = fantasyMatches.filter(m => !isFinished(m.home, m.away));
-  const finished  = fantasyMatches.filter(m =>  isFinished(m.home, m.away)).sort((a,b) => b.id - a.id);
+  const upcoming  = MATCHES.filter(m => m.group && !isFinished(m.home, m.away));
+  const finished  = MATCHES.filter(m => m.group &&  isFinished(m.home, m.away)).sort((a,b) => b.id - a.id);
   let totalPts = 0, totalPossible = 0, exact = 0, correct = 0;
   finished.forEach(m => {
     const sc = getScore(m.home, m.away);
@@ -5488,7 +5457,7 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
   });
 
   const shownMatches = filter==="fav"
-    ? fantasyMatches.filter(m => favTeams?.includes(m.home) || favTeams?.includes(m.away))
+    ? MATCHES.filter(m=>m.group&&(favTeams?.includes(m.home)||favTeams?.includes(m.away)))
     : filter==="finished" ? finished : upcoming;
 
   // ── Registration gate ───────────────────────────────────────────────────
@@ -5720,7 +5689,7 @@ return (
               <Card key={m.id} style={{marginBottom:8,border:`1px solid ${pts===3?C.green:pts===1?C.gold:pts===0?C.red:hasPred?`${C.green}44`:C.b2}`,opacity:done?0.45:locked?0.72:1,background:done?C.s2:undefined}} >
                 <div style={{padding:"10px 13px"}}>
                   <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
-                    <Badge>{fantasyStageLabel(m)} · {m.date}</Badge>
+                    <Badge>Group {m.group} · {m.date}</Badge>
                     <div style={{display:"flex",alignItems:"center",gap:6}}>
                       {saving && <span style={{fontSize:10,color:C.dim}}>saving...</span>}
                       {!saving && hasPred && !done && !locked && <span style={{fontSize:10,color:C.green}}>✓ saved</span>}
@@ -5803,7 +5772,7 @@ return (
                     <Card key={m.id} style={{marginBottom:8,border:`1px solid ${pts===3?C.green:pts===1?C.gold:pts===0?C.red:C.b2}`,opacity:0.45,background:C.s2}}>
                       <div style={{padding:"10px 13px"}}>
                         <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
-                          <Badge>{fantasyStageLabel(m)} · {m.date}</Badge>
+                          <Badge>Group {m.group} · {m.date}</Badge>
                           <div style={{fontWeight:700,color:ptColor,fontSize:12}}>{pts===3?"⚽⚽⚽ +3":pts===1?"⚽ +1":"❌ 0"}pts</div>
                         </div>
                         <div style={{display:"flex",alignItems:"center",gap:8}}>
