@@ -7179,7 +7179,7 @@ function QuickFacts({ tabTop }) {
             <button
               type="button"
               onClick={()=>clickable && setExpandedFact(prev => prev === f.key ? null : f.key)}
-              disabled={!clickable}
+              aria-disabled={!clickable}
               style={{
                 width:"100%",
                 display:"flex",
@@ -7192,7 +7192,7 @@ function QuickFacts({ tabTop }) {
                 cursor:clickable?"pointer":"default",
               }}
             >
-              <span style={{fontSize:18,flexShrink:0}}>{f.icon}</span>
+              <span style={{fontSize:18,flexShrink:0,opacity:1,filter:"none",color:C.text}}>{f.icon}</span>
               <div style={{flex:1,minWidth:0}}>
                 <div style={{display:"flex",alignItems:"center",gap:6}}>
                   <div style={{fontSize:11,color:C.dim,fontWeight:600}}>{f.label}</div>
