@@ -1777,27 +1777,38 @@ function GrpTab({ onTeam, onMatchTap, tabTop=116 }) {
   });
 
   // Merge live API scores with manual overrides
-  // Live scores take precedence over blank manual entries; manual entries override live for editing
+  // Live scores take precedence over blank manual entries; manual entries override live for editing.
+  // Was: only pulled a score from the live feed once a match was fully
+  // FINISHED, so the group table never reflected what was actually
+  // happening on the pitch during a live match — it'd jump straight from
+  // blank to final. Now also pulls in-progress scores, updating as the
+  // match continues (every live-score poll), same as finished ones.
   const allR = useMemo(() => {
     const merged = {};
     Object.keys(GROUPS).forEach(g => {
       merged[g] = (manualR[g] || []).map(r => {
         // If user has entered a score manually, use that
         if (r.hg !== "" || r.ag !== "") return r;
-        // Otherwise try to find a finished score from the live feed
+        // Otherwise try to find a live or finished score from the live feed
         const live = allFixtures.find(f => {
           const h = normTeam(f?.teams?.home?.name || "");
           const a = normTeam(f?.teams?.away?.name || "");
-          return h === r.home && a === r.away && statusIsFinished(f?.fixture?.status?.short || "");
+          const status = f?.fixture?.status?.short || "";
+          return h === r.home && a === r.away && (statusIsFinished(status) || statusIsLive(status));
         });
         if (live) {
-          return { ...r, hg: String(live.goals?.home ?? ""), ag: String(live.goals?.away ?? ""), fromLive: true };
+          const status = live?.fixture?.status?.short || "";
+          return { ...r, hg: String(live.goals?.home ?? ""), ag: String(live.goals?.away ?? ""), fromLive: true, isLiveNow: statusIsLive(status) };
         }
         return r;
       });
     });
     return merged;
   }, [manualR, allFixtures]);
+
+  // Clears a manual override for one match, falling back to whatever the
+  // live/finished feed shows for it (or blank, if no live data exists yet).
+  const resetToActual = (id) => setManualR(p => ({...p, [sel]: p[sel].map(r => r.id===id ? {...r, hg:"", ag:""} : r)}));
 
   const results = allR[sel] || [];
   const standings = calcStandings(sel, results);
@@ -1850,16 +1861,23 @@ function GrpTab({ onTeam, onMatchTap, tabTop=116 }) {
               <div style={{display:"flex",alignItems:"center",gap:4,fontSize:12,color:C.dim}}><div style={{width:9,height:9,background:C.gold,borderRadius:2}}/>{"Best 3rd"}</div>
             </div>
           </Card>
-          <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>ENTER SCORES</div>
+          <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:4}}>ENTER SCORES</div>
+          <div style={{fontSize:11,color:C.dim,marginBottom:8,lineHeight:1.5}}>Scores fill in automatically as matches are played — live ones update in real time (🔴). Type your own score to play out a "what if", then tap <span style={{color:C.gold,fontWeight:700}}>↺ Reset</span> to go back to the actual result.</div>
           {results.map(r=>{
             const fullMatch = MATCHES.find(m=>m.id===r.id);
+            const manualEntry = (manualR[sel] || []).find(x => x.id === r.id);
+            const hasManualOverride = manualEntry && (manualEntry.hg !== "" || manualEntry.ag !== "");
             return (
             <div key={r.id} style={{display:"flex",alignItems:"center",gap:6,marginBottom:6,background:C.s1,border:`1px solid ${C.b1}`,borderRadius:10,padding:"7px 11px"}}>
               <Crest team={r.home} size={30}/>
               <span onClick={()=>fullMatch&&onMatchTap&&onMatchTap(fullMatch)} style={{fontSize:13,color:C.text,flex:1,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",cursor:onMatchTap?"pointer":"default"}}>{r.home}</span>
-              <input value={r.hg} onChange={e=>upd(r.id,"hg",e.target.value)} placeholder="-" maxLength={2} style={{width:28,textAlign:"center",background:C.s2,border:`1px solid ${C.b2}`,borderRadius:6,color:C.text,fontSize:14,fontWeight:700,padding:"3px 0",outline:"none"}}/>
+              <input value={r.hg} onChange={e=>upd(r.id,"hg",e.target.value)} placeholder="-" maxLength={2} style={{width:28,textAlign:"center",background:C.s2,border:`1px solid ${r.isLiveNow&&!hasManualOverride?C.green:C.b2}`,borderRadius:6,color:C.text,fontSize:14,fontWeight:700,padding:"3px 0",outline:"none"}}/>
               <span style={{color:C.dim,fontWeight:700}}>:</span>
-              <input value={r.ag} onChange={e=>upd(r.id,"ag",e.target.value)} placeholder="-" maxLength={2} style={{width:28,textAlign:"center",background:C.s2,border:`1px solid ${C.b2}`,borderRadius:6,color:C.text,fontSize:14,fontWeight:700,padding:"3px 0",outline:"none"}}/>
+              <input value={r.ag} onChange={e=>upd(r.id,"ag",e.target.value)} placeholder="-" maxLength={2} style={{width:28,textAlign:"center",background:C.s2,border:`1px solid ${r.isLiveNow&&!hasManualOverride?C.green:C.b2}`,borderRadius:6,color:C.text,fontSize:14,fontWeight:700,padding:"3px 0",outline:"none"}}/>
+              {r.isLiveNow && !hasManualOverride && <span style={{fontSize:9,color:C.green,fontWeight:700,flexShrink:0}}>🔴</span>}
+              {hasManualOverride && (
+                <button onClick={()=>resetToActual(r.id)} title="Reset to actual score" style={{fontSize:10,color:C.gold,background:`${C.gold}18`,border:`1px solid ${C.gold}44`,borderRadius:6,padding:"3px 6px",cursor:"pointer",fontWeight:700,flexShrink:0,whiteSpace:"nowrap"}}>↺ Reset</button>
+              )}
               <span onClick={()=>fullMatch&&onMatchTap&&onMatchTap(fullMatch)} style={{fontSize:13,color:C.text,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",cursor:onMatchTap?"pointer":"default"}}>{r.away}</span>
               <Crest team={r.away} size={30}/>
             </div>
