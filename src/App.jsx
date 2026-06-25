@@ -4820,7 +4820,10 @@ function fantasyMatchConfirmed(match) {
 }
 
 function fantasyVisibleMatch(match) {
-  return !!match?.group || fantasyConcreteTeam(match?.home) || fantasyConcreteTeam(match?.away);
+  // Show the full tournament fantasy slate (all 104 matches).
+  // Unknown knockout matchups remain visible but locked until teams are confirmed.
+  const id = Number(match?.id || 0);
+  return id >= 1 && id <= 104;
 }
 
 function fantasyKickoffMs(match) {
@@ -4833,22 +4836,29 @@ function sortFantasyChronological(matches) {
   return [...(matches || [])].sort((a, b) => fantasyKickoffMs(a) - fantasyKickoffMs(b) || Number(a.id || 0) - Number(b.id || 0));
 }
 
-function FantasyTeamSlot({ team, side="left", tag=null, winner=false }) {
+function FantasyTeamSlot({ team, side="left", tag=null, winner=false, compact=false }) {
   const concrete = fantasyConcreteTeam(team);
   const isClinched = tag === "clinched";
   const isProvisional = tag === "provisional";
   const color = winner ? C.green : isClinched ? C.gold : isProvisional ? C.dim : concrete ? C.text : C.dim;
   const align = side === "right" ? "flex-end" : "flex-start";
   const textAlign = side === "right" ? "right" : "left";
-  const crest = <span style={{display:"inline-flex",opacity:isProvisional?0.42:1,filter:isProvisional?"grayscale(1)":"none",flexShrink:0}}><Crest team={team || "TBD"} size={22}/></span>;
+  const crestSize = compact ? 19 : 22;
+  const crest = <span style={{display:"inline-flex",opacity:isProvisional?0.42:1,filter:isProvisional?"grayscale(1)":"none",flexShrink:0}}><Crest team={team || "TBD"} size={crestSize}/></span>;
   const name = (
-    <span style={{fontWeight:isClinched||winner?900:800,color,flex:1,fontSize:13,textAlign,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontStyle:isProvisional?"italic":"normal",opacity:isProvisional?0.78:1}}>
+    <span style={{fontWeight:isClinched||winner?900:800,color,flex:1,fontSize:compact?12:13,textAlign,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontStyle:isProvisional?"italic":"normal",opacity:isProvisional?0.78:1,minWidth:0}}>
       {team || "TBD"}
     </span>
   );
-  const marker = isClinched ? <span title="Confirmed / locked into this slot" style={{fontSize:11,flexShrink:0}}>🔒</span> : isProvisional ? <span style={{fontSize:8,color:C.dim,fontWeight:900,letterSpacing:"0.04em",whiteSpace:"nowrap",flexShrink:0}}>LEADING</span> : null;
+  // On mobile, keep the visual cue (greyed flag/name) but remove the word
+  // "LEADING" so long team names have room to breathe.
+  const marker = isClinched
+    ? <span title="Confirmed / locked into this slot" style={{fontSize:compact?10:11,flexShrink:0}}>🔒</span>
+    : (!compact && isProvisional)
+      ? <span style={{fontSize:8,color:C.dim,fontWeight:900,letterSpacing:"0.04em",whiteSpace:"nowrap",flexShrink:0}}>LEADING</span>
+      : null;
   return (
-    <div style={{display:"flex",alignItems:"center",gap:7,justifyContent:align,minWidth:0,flex:1}}>
+    <div style={{display:"flex",alignItems:"center",gap:compact?5:7,justifyContent:align,minWidth:0,flex:1}}>
       {side === "left" ? crest : marker}
       {name}
       {side === "left" ? marker : crest}
@@ -5696,6 +5706,7 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
   const shownMatches = filter==="fav"
     ? fantasyVisibleMatches.filter(m => favTeams?.includes(m.home) || favTeams?.includes(m.away))
     : filter==="finished" ? finished : upcoming;
+  const isMobileFantasy = typeof window !== "undefined" && window.innerWidth < 520;
 
   // ── Registration gate ───────────────────────────────────────────────────
   if (userLoading) return (
@@ -5913,7 +5924,9 @@ return (
               <div style={{fontSize:13}}>{filter==="upcoming"?"No pending Fantasy Picks right now — check back when fixtures are available!":"No finished matches yet."}</div>
             </div>
           )}
-          {shownMatches.map(m => {
+          {shownMatches.map((m, idx) => {
+            const prev = idx > 0 ? shownMatches[idx - 1] : null;
+            const enteringKnockout = !!m.stage && (!prev || prev.stage !== m.stage);
             const teamsKnown = fantasyTeamsKnown(m);
             const matchupConfirmed = fantasyMatchConfirmed(m);
             const sc = teamsKnown ? getScore(m.home, m.away) : null;
@@ -5925,7 +5938,17 @@ return (
             const hasPred = pred.hg!==undefined && pred.ag!==undefined && pred.hg!=="" && pred.ag!=="";
             const saving = predSaving[m.id];
             return (
-              <Card key={m.id} style={{marginBottom:8,border:`1px solid ${pts===3?C.green:pts===1?C.gold:pts===0?C.red:hasPred?`${C.green}44`:C.b2}`,opacity:done?0.45:locked?0.72:1,background:done?C.s2:undefined}} >
+              <React.Fragment key={m.id}>
+                {enteringKnockout && (
+                  <div style={{display:"flex",alignItems:"center",gap:10,margin:"16px 0 10px"}}>
+                    <div style={{height:1,background:C.b2,flex:1}}/>
+                    <div style={{fontSize:10,color:C.gold,fontWeight:900,letterSpacing:"0.12em",textTransform:"uppercase",whiteSpace:"nowrap"}}>
+                      {m.stage}
+                    </div>
+                    <div style={{height:1,background:C.b2,flex:1}}/>
+                  </div>
+                )}
+              <Card style={{marginBottom:8,border:`1px solid ${pts===3?C.green:pts===1?C.gold:pts===0?C.red:hasPred?`${C.green}44`:C.b2}`,opacity:done?0.45:locked?0.72:1,background:done?C.s2:undefined}} >
                 <div style={{padding:"10px 13px"}}>
                   <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
                     <Badge>{fantasyStageLabel(m)} · {m.date}</Badge>
@@ -5934,7 +5957,7 @@ return (
                       {!saving && hasPred && !done && !locked && <span style={{fontSize:10,color:C.green}}>✓ saved</span>}
                       {!done && (
   locked ? (
-    <span style={{fontSize:10,color:C.gold}}>{!teamsKnown ? "⏳ teams TBD" : !matchupConfirmed ? "⏳ provisional" : "🔒 locked"}</span>
+    <span style={{fontSize:10,color:C.gold}}>{!teamsKnown ? "⏳ teams TBD" : !matchupConfirmed ? (isMobileFantasy ? "⏳ pending" : "⏳ provisional") : "🔒 locked"}</span>
   ) : (
     <span style={{fontSize:10,color:C.dim}}>{fantasyLockLabel(m)}</span>
   )
@@ -5943,7 +5966,7 @@ return (
                     </div>
                   </div>
                   <div style={{display:"flex",alignItems:"center",gap:8}}>
-                    <FantasyTeamSlot team={m.home} side="left" tag={m.homeTag}/>
+                    <FantasyTeamSlot team={m.home} side="left" tag={m.homeTag} compact={isMobileFantasy}/>
                     <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
                       {done && sc && (
                         <div style={{textAlign:"center",minWidth:52,background:C.bg,borderRadius:8,padding:"5px 10px",border:`1px solid ${C.b2}`}}>
@@ -5967,10 +5990,11 @@ return (
                         </div>
                       )}
                     </div>
-                    <FantasyTeamSlot team={m.away} side="right" tag={m.awayTag}/>
+                    <FantasyTeamSlot team={m.away} side="right" tag={m.awayTag} compact={isMobileFantasy}/>
                   </div>
                 </div>
               </Card>
+              </React.Fragment>
             );
           })}
         </>
