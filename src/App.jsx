@@ -7060,13 +7060,26 @@ function timeAgo(isoStr) {
 
 function QuickFacts({ tabTop }) {
   const { getScore, isFinished } = useContext(LiveScoresCtx);
-  const TOTAL_TOURNAMENT_MATCHES = 104;
+  const [expandedFact, setExpandedFact] = useState(null);
+  const [fastestGoals, setFastestGoals] = useState([]);
+
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/matchevents?action=scorers")
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!alive) return;
+        const rows = Array.isArray(data?.fastestGoals) ? data.fastestGoals : [];
+        setFastestGoals(rows.filter(g => Number.isFinite(Number(g.minute))).slice(0, 3));
+      })
+      .catch(() => { if (alive) setFastestGoals([]); });
+    return () => { alive = false; };
+  }, []);
 
   const finishedMatches = MATCHES.filter(m => isFinished(m.home, m.away));
   const scores = finishedMatches.map(m => {
     const sc = getScore(m.home, m.away);
-    if (!sc || sc.hg === null || sc.hg === undefined || sc.ag === null || sc.ag === undefined) return null;
-    return { ...m, hg: Number(sc.hg), ag: Number(sc.ag), status: sc.status };
+    return sc ? { ...m, hg: sc.hg ?? 0, ag: sc.ag ?? 0 } : null;
   }).filter(Boolean);
 
   if (scores.length === 0) return (
@@ -7076,58 +7089,127 @@ function QuickFacts({ tabTop }) {
     </div>
   );
 
-  const totalGoals = scores.reduce((sum,m)=>sum+m.hg+m.ag, 0);
-  const avgGoals = scores.length ? (totalGoals / scores.length).toFixed(2) : "0.00";
+  const totalMatches = 104;
+  const matchGoals = scores.map(m => ({ m, total: m.hg + m.ag }));
+  const highestScoring = [...matchGoals].sort((a,b)=>b.total-a.total)[0];
+  const totalGoals = scores.reduce((s,m)=>s+m.hg+m.ag, 0);
+  const avgGoals = (totalGoals / scores.length).toFixed(1);
 
-  const matchGoals = scores.map(m => ({ m, total: m.hg + m.ag, margin: Math.abs(m.hg - m.ag) }));
-  const highestScoring = [...matchGoals].sort((a,b)=>b.total-a.total || b.margin-a.margin)[0];
-  const mostOneSided = [...matchGoals].sort((a,b)=>b.margin-a.margin || b.total-a.total)[0];
-
-  const teamGoals = {};
-  const teamCleanSheets = {};
+  const teamGoalMap = {};
   scores.forEach(m => {
-    teamGoals[m.home] = (teamGoals[m.home] || 0) + m.hg;
-    teamGoals[m.away] = (teamGoals[m.away] || 0) + m.ag;
-    if (m.ag === 0) teamCleanSheets[m.home] = (teamCleanSheets[m.home] || 0) + 1;
-    if (m.hg === 0) teamCleanSheets[m.away] = (teamCleanSheets[m.away] || 0) + 1;
+    teamGoalMap[m.home] = (teamGoalMap[m.home] || 0) + (m.hg || 0);
+    teamGoalMap[m.away] = (teamGoalMap[m.away] || 0) + (m.ag || 0);
   });
+  const topGoalTeams = Object.entries(teamGoalMap)
+    .map(([team, goals]) => ({ team, goals }))
+    .sort((a,b)=>b.goals-a.goals || a.team.localeCompare(b.team))
+    .slice(0, 3);
 
-  const topScoringTeam = Object.entries(teamGoals)
-    .sort((a,b)=>b[1]-a[1] || String(a[0]).localeCompare(String(b[0])))[0];
-  const cleanSheetLeader = Object.entries(teamCleanSheets)
-    .sort((a,b)=>b[1]-a[1] || String(a[0]).localeCompare(String(b[0])))[0];
-  const cleanSheetTotal = Object.values(teamCleanSheets).reduce((s,n)=>s+n, 0);
+  const cleanSheetMap = {};
+  scores.forEach(m => {
+    if (m.ag === 0) cleanSheetMap[m.home] = (cleanSheetMap[m.home] || 0) + 1;
+    if (m.hg === 0) cleanSheetMap[m.away] = (cleanSheetMap[m.away] || 0) + 1;
+  });
+  const topCleanSheetTeams = Object.entries(cleanSheetMap)
+    .map(([team, cleanSheets]) => ({ team, cleanSheets }))
+    .sort((a,b)=>b.cleanSheets-a.cleanSheets || a.team.localeCompare(b.team))
+    .slice(0, 3);
+
+  const cleanSheets = scores.filter(m => m.hg === 0 || m.ag === 0).length;
+  const mostOneSided = [...scores].sort((a,b)=>(Math.abs(b.hg-b.ag))-(Math.abs(a.hg-a.ag)))[0];
+  const biggestMargin = mostOneSided ? Math.abs(mostOneSided.hg - mostOneSided.ag) : 0;
+
+  const detailRow = (rank, icon, main, sub, color=C.text) => (
+    <div key={`${rank}-${main}-${sub || ""}`} style={{display:"flex",alignItems:"center",gap:9,padding:"7px 0",borderTop:rank===1?"none":`1px solid ${C.b1}`}}>
+      <div style={{width:22,height:22,borderRadius:999,display:"flex",alignItems:"center",justifyContent:"center",background:`${color}18`,border:`1px solid ${color}33`,color,fontSize:11,fontWeight:900,flexShrink:0}}>{rank}</div>
+      <div style={{fontSize:16,flexShrink:0}}>{icon}</div>
+      <div style={{minWidth:0,flex:1}}>
+        <div style={{fontSize:12,color:C.text,fontWeight:800,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{main}</div>
+        {sub && <div style={{fontSize:10,color:C.dim,marginTop:1}}>{sub}</div>}
+      </div>
+    </div>
+  );
 
   const facts = [
-    { icon:"🏟️", label:"Matches played", value:`${scores.length} of ${TOTAL_TOURNAMENT_MATCHES}` },
-    { icon:"⚽", label:"Total goals", value:`${totalGoals}` },
-    { icon:"📈", label:"Goals per match", value:avgGoals },
-    { icon:"🎯", label:"Clean sheets", value:`${cleanSheetTotal} team clean sheet${cleanSheetTotal===1?"":"s"}` },
-    topScoringTeam && { icon:"🚀", label:"Most goals by team", value:`${getFlag(topScoringTeam[0])} ${topScoringTeam[0]} · ${topScoringTeam[1]}` },
-    cleanSheetLeader && { icon:"🧤", label:"Clean sheet leader", value:`${getFlag(cleanSheetLeader[0])} ${cleanSheetLeader[0]} · ${cleanSheetLeader[1]}` },
-    highestScoring && { icon:"🔥", label:"Highest-scoring match", value:`${getFlag(highestScoring.m.home)} ${highestScoring.m.home} ${highestScoring.m.hg}–${highestScoring.m.ag} ${getFlag(highestScoring.m.away)} ${highestScoring.m.away} · ${highestScoring.total} goals` },
-    mostOneSided && mostOneSided.margin > 0 && { icon:"💥", label:"Biggest win", value:`${getFlag(mostOneSided.m.hg > mostOneSided.m.ag ? mostOneSided.m.home : mostOneSided.m.away)} ${mostOneSided.m.hg > mostOneSided.m.ag ? mostOneSided.m.home : mostOneSided.m.away} by ${mostOneSided.margin} · ${mostOneSided.m.hg}–${mostOneSided.m.ag}` },
+    { key:"goals", icon:"⚽", label:"Goals scored", value:`${totalGoals} (avg ${avgGoals}/match)` },
+    { key:"played", icon:"🏟️", label:"Matches played", value:`${scores.length} of ${totalMatches}` },
+    topGoalTeams.length > 0 && {
+      key:"teamGoals",
+      icon:"📈",
+      label:"Most goals by team",
+      value:`${topGoalTeams[0].team} — ${topGoalTeams[0].goals}`,
+      hint:"Tap for top 3",
+      details: topGoalTeams.map((row,i)=>detailRow(i+1, getFlag(row.team), row.team, `${row.goals} goals`, C.green)),
+    },
+    { key:"cleanSheets", icon:"🎯", label:"Clean sheets", value:`${cleanSheets}` },
+    topCleanSheetTeams.length > 0 && {
+      key:"cleanSheetLeader",
+      icon:"🧤",
+      label:"Clean sheet leader",
+      value:`${topCleanSheetTeams[0].team} — ${topCleanSheetTeams[0].cleanSheets}`,
+      hint:"Tap for top 3",
+      details: topCleanSheetTeams.map((row,i)=>detailRow(i+1, getFlag(row.team), row.team, `${row.cleanSheets} clean sheets`, C.blue)),
+    },
+    fastestGoals.length > 0 && {
+      key:"fastestGoals",
+      icon:"⏱️",
+      label:"Fastest goal",
+      value:`${fastestGoals[0].minute}' · ${fastestGoals[0].player || fastestGoals[0].team}`,
+      hint:"Tap for top 3",
+      details: fastestGoals.slice(0,3).map((row,i)=>detailRow(
+        i+1,
+        getFlag(row.team),
+        row.player ? `${row.player} (${row.team})` : row.team,
+        `${row.minute}'${row.match ? ` · ${row.match}` : ""}`,
+        C.gold
+      )),
+    },
+    highestScoring && { key:"highestScoring", icon:"🔥", label:"Highest-scoring match", value:`${highestScoring.m.home} ${highestScoring.m.hg}–${highestScoring.m.ag} ${highestScoring.m.away} (${highestScoring.total} goals)` },
+    biggestMargin > 2 && mostOneSided && { key:"biggestWin", icon:"💥", label:"Biggest win", value:`${mostOneSided.hg > mostOneSided.ag ? mostOneSided.home : mostOneSided.away} won ${Math.max(mostOneSided.hg,mostOneSided.ag)}–${Math.min(mostOneSided.hg,mostOneSided.ag)}` },
   ].filter(Boolean);
 
   return (
     <div style={{background:C.s2,borderRadius:12,padding:16,marginBottom:16,border:`1px solid ${C.b1}`}}>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:12}}>
-        <div style={{fontSize:12,fontWeight:700,color:C.mid,letterSpacing:"0.08em"}}>⚡ TOURNAMENT FACTS SO FAR</div>
-        <div style={{fontSize:10,color:C.dim,background:C.s1,border:`1px solid ${C.b1}`,borderRadius:999,padding:"3px 8px",whiteSpace:"nowrap"}}>
-          {scores.length}/{TOTAL_TOURNAMENT_MATCHES}
-        </div>
-      </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(145px,1fr))",gap:8}}>
-        {facts.map((f,i) => (
-          <div key={i} style={{background:C.s1,border:`1px solid ${C.b1}`,borderRadius:12,padding:"10px 10px",minHeight:72}}>
-            <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:5}}>
-              <span style={{fontSize:17,flexShrink:0}}>{f.icon}</span>
-              <div style={{fontSize:10,color:C.dim,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.05em",lineHeight:1.2}}>{f.label}</div>
-            </div>
-            <div style={{fontSize:13,color:C.text,fontWeight:700,lineHeight:1.35}}>{f.value}</div>
+      <div style={{fontSize:12,fontWeight:700,color:C.mid,letterSpacing:"0.08em",marginBottom:12}}>⚡ TOURNAMENT FACTS SO FAR</div>
+      {facts.map((f,i) => {
+        const open = expandedFact === f.key;
+        const clickable = !!f.details;
+        return (
+          <div key={f.key || i} style={{marginBottom:i<facts.length-1?10:0}}>
+            <button
+              type="button"
+              onClick={()=>clickable && setExpandedFact(prev => prev === f.key ? null : f.key)}
+              disabled={!clickable}
+              style={{
+                width:"100%",
+                display:"flex",
+                alignItems:"flex-start",
+                gap:10,
+                padding:0,
+                background:"transparent",
+                border:"none",
+                textAlign:"left",
+                cursor:clickable?"pointer":"default",
+              }}
+            >
+              <span style={{fontSize:18,flexShrink:0}}>{f.icon}</span>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{display:"flex",alignItems:"center",gap:6}}>
+                  <div style={{fontSize:11,color:C.dim,fontWeight:600}}>{f.label}</div>
+                  {f.hint && <div style={{fontSize:9,color:C.gold,fontWeight:800,background:`${C.gold}14`,border:`1px solid ${C.gold}33`,borderRadius:999,padding:"1px 6px"}}>{open?"Hide":"Top 3"}</div>}
+                </div>
+                <div style={{fontSize:13,color:C.text,fontWeight:600,marginTop:1,overflow:"hidden",textOverflow:"ellipsis"}}>{f.value}</div>
+              </div>
+              {clickable && <span style={{fontSize:12,color:C.dim,transform:open?"rotate(180deg)":"none",transition:"transform .15s"}}>▾</span>}
+            </button>
+            {open && f.details && (
+              <div style={{margin:"8px 0 0 28px",padding:"8px 10px",background:C.s1,border:`1px solid ${C.b1}`,borderRadius:10}}>
+                {f.details}
+              </div>
+            )}
           </div>
-        ))}
-      </div>
+        );
+      })}
     </div>
   );
 }
