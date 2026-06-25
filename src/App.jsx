@@ -4811,8 +4811,49 @@ function fantasyTeamsKnown(match) {
   return fantasyConcreteTeam(match?.home) && fantasyConcreteTeam(match?.away);
 }
 
+function fantasyHasProvisionalTeam(match) {
+  return match?.homeTag === "provisional" || match?.awayTag === "provisional";
+}
+
+function fantasyMatchConfirmed(match) {
+  return fantasyTeamsKnown(match) && !fantasyHasProvisionalTeam(match);
+}
+
 function fantasyVisibleMatch(match) {
   return !!match?.group || fantasyConcreteTeam(match?.home) || fantasyConcreteTeam(match?.away);
+}
+
+function fantasyKickoffMs(match) {
+  const iso = MATCH_UTC?.[match?.id];
+  const ms = iso ? new Date(iso).getTime() : NaN;
+  return Number.isFinite(ms) ? ms : 9999999999999;
+}
+
+function sortFantasyChronological(matches) {
+  return [...(matches || [])].sort((a, b) => fantasyKickoffMs(a) - fantasyKickoffMs(b) || Number(a.id || 0) - Number(b.id || 0));
+}
+
+function FantasyTeamSlot({ team, side="left", tag=null, winner=false }) {
+  const concrete = fantasyConcreteTeam(team);
+  const isClinched = tag === "clinched";
+  const isProvisional = tag === "provisional";
+  const color = winner ? C.green : isClinched ? C.gold : isProvisional ? C.dim : concrete ? C.text : C.dim;
+  const align = side === "right" ? "flex-end" : "flex-start";
+  const textAlign = side === "right" ? "right" : "left";
+  const crest = <span style={{display:"inline-flex",opacity:isProvisional?0.42:1,filter:isProvisional?"grayscale(1)":"none",flexShrink:0}}><Crest team={team || "TBD"} size={22}/></span>;
+  const name = (
+    <span style={{fontWeight:isClinched||winner?900:800,color,flex:1,fontSize:13,textAlign,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontStyle:isProvisional?"italic":"normal",opacity:isProvisional?0.78:1}}>
+      {team || "TBD"}
+    </span>
+  );
+  const marker = isClinched ? <span title="Confirmed / locked into this slot" style={{fontSize:11,flexShrink:0}}>🔒</span> : isProvisional ? <span style={{fontSize:8,color:C.dim,fontWeight:900,letterSpacing:"0.04em",whiteSpace:"nowrap",flexShrink:0}}>LEADING</span> : null;
+  return (
+    <div style={{display:"flex",alignItems:"center",gap:7,justifyContent:align,minWidth:0,flex:1}}>
+      {side === "left" ? crest : marker}
+      {name}
+      {side === "left" ? marker : crest}
+    </div>
+  );
 }
 
 
@@ -5356,12 +5397,53 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
       });
 
     const groupStandings = {};
+    const groupResultsByLetter = {};
+    const groupComplete = {};
     Object.keys(GROUPS).forEach(g => {
-      groupStandings[g] = calcStandings(g, groupResults(g));
+      const res = groupResults(g);
+      groupResultsByLetter[g] = res;
+      groupComplete[g] = res.length > 0 && res.every(r => r.hg !== "" && r.ag !== "");
+      groupStandings[g] = calcStandings(g, res);
+    });
+    const allGroupsComplete = Object.values(groupComplete).every(Boolean);
+
+    const headToHeadWinner = (g, teamA, teamB) => {
+      const m = (groupResultsByLetter[g] || []).find(r =>
+        (r.home === teamA && r.away === teamB) || (r.home === teamB && r.away === teamA)
+      );
+      if (!m || m.hg === "" || m.ag === "") return null;
+      const hg = parseInt(m.hg), ag = parseInt(m.ag);
+      if (isNaN(hg) || isNaN(ag)) return null;
+      if (hg === ag) return "draw";
+      const homeWon = hg > ag;
+      return (m.home === teamA) === homeWon ? teamA : teamB;
+    };
+
+    const clinchedFirst = {};
+    Object.keys(GROUPS).forEach(g => {
+      const table = groupStandings[g] || [];
+      const leader = table[0];
+      if (groupComplete[g]) {
+        clinchedFirst[g] = !!leader;
+        return;
+      }
+      clinchedFirst[g] = !!leader && table.slice(1).every(t => {
+        const maxPossible = t.pts + (3 - t.p) * 3;
+        if (maxPossible < leader.pts) return true;
+        if (maxPossible > leader.pts) return false;
+        return headToHeadWinner(g, leader.team, t.team) === leader.team;
+      });
     });
 
     const firstOf = (g) => groupStandings[g]?.[0]?.team || null;
     const secondOf = (g) => groupStandings[g]?.[1]?.team || null;
+
+    const slotTag = (slot) => {
+      if (typeof slot !== "string") return null;
+      if (slot[0] === "1") return clinchedFirst[slot[1]] ? "clinched" : "provisional";
+      if (slot[0] === "2") return groupComplete[slot[1]] ? "clinched" : "provisional";
+      return null;
+    };
 
     const qualifiedThirds = Object.keys(GROUPS)
       .map(g => ({ group: g, ...(groupStandings[g]?.[2] || {}) }))
@@ -5389,6 +5471,12 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
       return null;
     };
 
+    const resolveSlotTag = (slot) => {
+      if (!slot) return null;
+      if (slot === "3?") return annexMapping ? (allGroupsComplete ? "clinched" : "provisional") : null;
+      return slotTag(slot);
+    };
+
     const lookupRealWinner = (home, away) => {
       if (!fantasyConcreteTeam(home) || !fantasyConcreteTeam(away)) return null;
       let s = getScore(home, away), swapped = false;
@@ -5413,6 +5501,7 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
         originalHome: base.home,
         originalAway: base.away,
         fantasyResolved: fantasyConcreteTeam(resolvedHome) || fantasyConcreteTeam(resolvedAway),
+        fantasyConfirmed: fantasyConcreteTeam(resolvedHome) && fantasyConcreteTeam(resolvedAway) && extra.homeTag !== "provisional" && extra.awayTag !== "provisional",
       };
     };
 
@@ -5424,13 +5513,19 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
       const away = resolveSlot(t.away, t.home) || "TBD";
       const winner = lookupRealWinner(home, away);
       if (winner) winnerMap[t.match] = winner;
-      dynamicById[t.match] = decorate(t.match, home, away, { homeSlot:t.home, awaySlot:t.away });
+      dynamicById[t.match] = decorate(t.match, home, away, {
+        homeSlot:t.home,
+        awaySlot:t.away,
+        homeTag:resolveSlotTag(t.home),
+        awayTag:resolveSlotTag(t.away),
+      });
     });
 
     const resolveRef = (ref) => {
       if (typeof ref === "string" && ref.startsWith("W")) return winnerMap[Number(ref.slice(1))] || "TBD";
       return ref || "TBD";
     };
+    const refTag = (ref) => (typeof ref === "string" && ref.startsWith("W") && winnerMap[Number(ref.slice(1))]) ? "clinched" : null;
 
     const buildRound = (template=[]) => {
       template.forEach(t => {
@@ -5438,7 +5533,7 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
         const away = resolveRef(t.away);
         const winner = lookupRealWinner(home, away);
         if (winner) winnerMap[t.match] = winner;
-        dynamicById[t.match] = decorate(t.match, home, away, { homeSlot:t.home, awaySlot:t.away });
+        dynamicById[t.match] = decorate(t.match, home, away, { homeSlot:t.home, awaySlot:t.away, homeTag:refTag(t.home), awayTag:refTag(t.away) });
       });
     };
 
@@ -5587,9 +5682,9 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
   };
 
   // ── Score totals ────────────────────────────────────────────────────────
-  const fantasyVisibleMatches = fantasyMatches.filter(fantasyVisibleMatch);
-  const upcoming  = fantasyVisibleMatches.filter(m => !isFinished(m.home, m.away));
-  const finished  = fantasyVisibleMatches.filter(m => fantasyTeamsKnown(m) && isFinished(m.home, m.away)).sort((a,b) => b.id - a.id);
+  const fantasyVisibleMatches = sortFantasyChronological(fantasyMatches.filter(fantasyVisibleMatch));
+  const upcoming  = sortFantasyChronological(fantasyVisibleMatches.filter(m => !isFinished(m.home, m.away)));
+  const finished  = sortFantasyChronological(fantasyVisibleMatches.filter(m => fantasyTeamsKnown(m) && isFinished(m.home, m.away)));
   let totalPts = 0, totalPossible = 0, exact = 0, correct = 0;
   finished.forEach(m => {
     const sc = getScore(m.home, m.away);
@@ -5820,9 +5915,10 @@ return (
           )}
           {shownMatches.map(m => {
             const teamsKnown = fantasyTeamsKnown(m);
+            const matchupConfirmed = fantasyMatchConfirmed(m);
             const sc = teamsKnown ? getScore(m.home, m.away) : null;
             const done = teamsKnown && isFinished(m.home, m.away);
-            const locked = done || fantasyMatchLocked(m) || !teamsKnown;
+            const locked = done || fantasyMatchLocked(m) || !teamsKnown || !matchupConfirmed;
             const pred = preds[m.id] || {};
             const pts = done && sc ? scoreOnePred(pred, sc) : null;
             const ptColor = pts===3?C.green:pts===1?C.gold:pts===0?C.red:C.dim;
@@ -5838,7 +5934,7 @@ return (
                       {!saving && hasPred && !done && !locked && <span style={{fontSize:10,color:C.green}}>✓ saved</span>}
                       {!done && (
   locked ? (
-    <span style={{fontSize:10,color:C.gold}}>{!teamsKnown ? "⏳ teams TBD" : "🔒 locked"}</span>
+    <span style={{fontSize:10,color:C.gold}}>{!teamsKnown ? "⏳ teams TBD" : !matchupConfirmed ? "⏳ provisional" : "🔒 locked"}</span>
   ) : (
     <span style={{fontSize:10,color:C.dim}}>{fantasyLockLabel(m)}</span>
   )
@@ -5847,8 +5943,7 @@ return (
                     </div>
                   </div>
                   <div style={{display:"flex",alignItems:"center",gap:8}}>
-                    <Crest team={m.home} size={22}/>
-                    <span style={{fontWeight:800,color:C.text,flex:1,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.home}</span>
+                    <FantasyTeamSlot team={m.home} side="left" tag={m.homeTag}/>
                     <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
                       {done && sc && (
                         <div style={{textAlign:"center",minWidth:52,background:C.bg,borderRadius:8,padding:"5px 10px",border:`1px solid ${C.b2}`}}>
@@ -5872,8 +5967,7 @@ return (
                         </div>
                       )}
                     </div>
-                    <span style={{fontWeight:800,color:C.text,flex:1,fontSize:13,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.away}</span>
-                    <Crest team={m.away} size={22}/>
+                    <FantasyTeamSlot team={m.away} side="right" tag={m.awayTag}/>
                   </div>
                 </div>
               </Card>
