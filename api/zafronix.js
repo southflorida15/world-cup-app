@@ -21,6 +21,13 @@ const HEADERS_DIRECT = {
   "X-API-Key": process.env.ZAFRONIX_API_KEY,
 };
 
+// Historical records that should be merged under the current team identity.
+// Zafronix stores West Germany separately from modern Germany, but the app's
+// user-facing Germany profile should include the full German World Cup record.
+const TEAM_HISTORY_ALIASES = {
+  Germany: ["Germany", "West Germany"],
+};
+
 // KV cache TTLs in seconds
 const TTL = {
   teams:              6 * 60 * 60, // 6 hours — squads don't change mid-tournament
@@ -66,6 +73,67 @@ async function zafronixFetchDirect(path) {
   return res.json();
 }
 
+async function fetchTeamDirectByName(name) {
+  return zafronixFetchDirect(`/teams/${encodeURIComponent(name)}`);
+}
+
+function normalizeYear(value) {
+  const year = Number(value);
+  return Number.isFinite(year) ? year : null;
+}
+
+function mergeTeamHistory(primaryName, teamResponses) {
+  const primary = teamResponses.find(t => t?.name === primaryName) || teamResponses[0] || { name: primaryName };
+  const appearancesByYear = new Map();
+
+  for (const team of teamResponses) {
+    for (const appearance of Array.isArray(team?.appearances) ? team.appearances : []) {
+      const year = normalizeYear(appearance?.year);
+      if (!year) continue;
+
+      // If two records somehow exist for the same year, prefer the primary-name
+      // record, otherwise keep the first seen. Germany/West Germany should not
+      // overlap in the Zafronix dataset.
+      const existing = appearancesByYear.get(year);
+      if (!existing || team?.name === primaryName) {
+        appearancesByYear.set(year, { ...appearance, year });
+      }
+    }
+  }
+
+  return {
+    ...primary,
+    name: primaryName,
+    appearances: Array.from(appearancesByYear.values()).sort((a, b) => a.year - b.year),
+    historyAliases: teamResponses
+      .map(t => t?.name)
+      .filter(Boolean)
+      .filter((name, index, arr) => arr.indexOf(name) === index),
+  };
+}
+
+async function getTeamWithHistoricalAliases(name) {
+  const aliases = TEAM_HISTORY_ALIASES[name];
+
+  if (!aliases) {
+    return fetchTeamDirectByName(name);
+  }
+
+  const results = await Promise.allSettled(aliases.map(fetchTeamDirectByName));
+  const fulfilled = results
+    .filter(result => result.status === "fulfilled" && result.value)
+    .map(result => result.value);
+
+  if (!fulfilled.length) {
+    const errors = results
+      .filter(result => result.status === "rejected")
+      .map(result => result.reason?.message || String(result.reason));
+    throw new Error(`Unable to load ${name} history aliases: ${errors.join(" | ")}`);
+  }
+
+  return mergeTeamHistory(name, fulfilled);
+}
+
 export default async function handler(req, res) {
   const { endpoint } = req.query;
 
@@ -98,10 +166,14 @@ export default async function handler(req, res) {
         if (!process.env.ZAFRONIX_API_KEY) {
           return res.status(500).json({ error: "ZAFRONIX_API_KEY env var not set — run: vercel env add ZAFRONIX_API_KEY" });
         }
-        const cKey = `team_${name}`;
+
+        // v2 cache key intentionally bypasses old cached Germany-only history.
+        const aliases = TEAM_HISTORY_ALIASES[name];
+        const cKey = aliases ? `team_${name}_historyAliases_v2` : `team_${name}`;
+
         data = await getCached(cKey);
         if (!data) {
-          data = await zafronixFetchDirect(`/teams/${encodeURIComponent(name)}`);
+          data = await getTeamWithHistoricalAliases(name);
           if (data) await setCached(cKey, data, "teams");
         }
         break;
