@@ -7190,6 +7190,9 @@ function QuickFacts({ tabTop }) {
                 border:"none",
                 textAlign:"left",
                 cursor:clickable?"pointer":"default",
+                opacity:1,
+                WebkitAppearance:"none",
+                appearance:"none",
               }}
             >
               <span style={{fontSize:18,flexShrink:0,opacity:1,filter:"none",color:C.text}}>{f.icon}</span>
