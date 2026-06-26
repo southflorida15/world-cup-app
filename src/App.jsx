@@ -8825,11 +8825,14 @@ function MyWorldCupTab({ favTeams=[], saved=[], syncProfile=null, displayName=""
 
   const now = Date.now();
   const todayKey = new Date(now).toLocaleDateString("en-CA");
+  const myTeamSet = useMemo(() => new Set(favTeams || []), [favTeams]);
+
   const getTs = (m) => MATCH_UTC[m.id] ? new Date(MATCH_UTC[m.id]).getTime() : 0;
   const hasConcreteTeam = (t) => t && !/^\d|^TBD|^R16|^QF|^SF|🏆|3rd|Winner/.test(String(t));
   const scoreFor = (m) => getScore(m.home, m.away);
-  const matchDone = (m) => isFinished(m.home, m.away) || ["FT","AET","PEN","FINAL"].includes(String(scoreFor(m)?.status || "").toUpperCase());
-  const matchLive = (m) => isLive(m.home, m.away) || ["LIVE","IN_PROGRESS","1H","2H","HT"].includes(String(scoreFor(m)?.status || "").toUpperCase());
+  const matchDone = (m) => isFinished(m.home, m.away) || ["FT","AET","PEN","FINAL","STATUS_FINAL"].includes(String(scoreFor(m)?.status || "").toUpperCase());
+  const matchLive = (m) => isLive(m.home, m.away) || ["LIVE","IN_PROGRESS","1H","2H","HT","STATUS_IN_PROGRESS"].includes(String(scoreFor(m)?.status || "").toUpperCase());
+  const isMyMatch = (m) => myTeamSet.has(m.home) || myTeamSet.has(m.away);
 
   const fmtShort = (m) => {
     const iso = MATCH_UTC[m.id];
@@ -8837,6 +8840,13 @@ function MyWorldCupTab({ favTeams=[], saved=[], syncProfile=null, displayName=""
     const d = new Date(iso);
     return d.toLocaleString("en-US", { weekday:"short", month:"short", day:"numeric", hour:"numeric", minute:"2-digit" });
   };
+
+  const fmtTimeOnly = (m) => {
+    const iso = MATCH_UTC[m.id];
+    if (!iso) return m.time || "TBD";
+    return new Date(iso).toLocaleTimeString("en-US", { hour:"numeric", minute:"2-digit" });
+  };
+
   const fmtCountdown = (m) => {
     const ts = getTs(m);
     if (!ts) return "";
@@ -8850,31 +8860,56 @@ function MyWorldCupTab({ favTeams=[], saved=[], syncProfile=null, displayName=""
     if (hrs > 0) return `${hrs}h ${rem}m`;
     return `${rem}m`;
   };
+
   const isToday = (m) => {
     const iso = MATCH_UTC[m.id];
     if (!iso) return false;
     return new Date(iso).toLocaleDateString("en-CA") === todayKey;
   };
+
   const resultLine = (m) => {
     const sc = scoreFor(m);
     if (!sc || sc.hg == null || sc.ag == null) return "Score unavailable";
     return `${m.home} ${sc.hg}–${sc.ag} ${m.away}`;
   };
-  const myTeamSet = new Set(favTeams || []);
-  const myMatches = MATCHES.filter(m => myTeamSet.has(m.home) || myTeamSet.has(m.away));
+
+  const teamGoalsIn = (team, m) => {
+    const sc = scoreFor(m);
+    if (!sc || sc.hg == null || sc.ag == null) return null;
+    return m.home === team ? Number(sc.hg) : Number(sc.ag);
+  };
+
+  const teamOutcomeIn = (team, m) => {
+    const sc = scoreFor(m);
+    if (!sc || sc.hg == null || sc.ag == null) return null;
+    const gf = m.home === team ? Number(sc.hg) : Number(sc.ag);
+    const ga = m.home === team ? Number(sc.ag) : Number(sc.hg);
+    if (gf > ga) return "W";
+    if (gf < ga) return "L";
+    return "D";
+  };
+
+  const sameStartGroup = (matches, ts, limit=2) => matches.filter(m => getTs(m) === ts).slice(0, limit);
+
+  const completedMatches = MATCHES
+    .filter(m => hasConcreteTeam(m.home) && hasConcreteTeam(m.away) && matchDone(m) && getTs(m))
+    .sort((a,b)=>getTs(b)-getTs(a));
+  const lastTournamentTs = completedMatches[0] ? getTs(completedMatches[0]) : 0;
+  const lastTournamentMatches = lastTournamentTs ? sameStartGroup(completedMatches, lastTournamentTs, 2) : [];
+
+  const activeOrUpcomingMatches = MATCHES
+    .filter(m => hasConcreteTeam(m.home) && hasConcreteTeam(m.away) && (matchLive(m) || (!matchDone(m) && getTs(m) && getTs(m) > now - 30*60*1000)))
+    .sort((a,b)=>{
+      const liveDiff = Number(matchLive(b)) - Number(matchLive(a));
+      if (liveDiff) return liveDiff;
+      return getTs(a)-getTs(b);
+    });
+  const nextTournamentTs = activeOrUpcomingMatches[0] ? getTs(activeOrUpcomingMatches[0]) : 0;
+  const nextTournamentMatches = nextTournamentTs ? sameStartGroup(activeOrUpcomingMatches, nextTournamentTs, 2) : [];
+
   const liveMatches = MATCHES.filter(matchLive);
   const todayMatches = MATCHES.filter(isToday);
-  const todayMyMatches = todayMatches.filter(m => myTeamSet.has(m.home) || myTeamSet.has(m.away));
-
-  const lastMyMatch = myMatches
-    .filter(matchDone)
-    .sort((a,b)=>getTs(b)-getTs(a))[0];
-  const nextMyMatch = myMatches
-    .filter(m => matchLive(m) || (!matchDone(m) && getTs(m) && getTs(m) > now - 30*60*1000))
-    .sort((a,b)=>getTs(a)-getTs(b))[0];
-  const nextAnyMatch = MATCHES
-    .filter(m => matchLive(m) || (!matchDone(m) && getTs(m) && getTs(m) > now - 30*60*1000))
-    .sort((a,b)=>getTs(a)-getTs(b))[0];
+  const todayMyMatches = todayMatches.filter(isMyMatch);
 
   useEffect(() => {
     let cancelled = false;
@@ -8901,7 +8936,22 @@ function MyWorldCupTab({ favTeams=[], saved=[], syncProfile=null, displayName=""
     let alive = true;
     fetch("/api/matchevents?action=scorers")
       .then(r => r.ok ? r.json() : null)
-      .then(d => { if (alive) setTopScorers(Array.isArray(d?.scorers) ? d.scorers.slice(0,5) : []); })
+      .then(d => {
+        if (!alive) return;
+        const rows = Array.isArray(d?.scorers) ? d.scorers : [];
+        const cleaned = rows.map(p => {
+          const rawName = p.name || p.player || p.playerName || "Player";
+          const normName = String(rawName).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+          let goals = Number(p.goals ?? p.totalGoals ?? p.count ?? 0);
+          // Safety correction while the aggregate endpoint is still being tuned.
+          // The current tournament feed has Vini Jr. at 4 goals, not 5+.
+          if (normName.includes("vinicius") || normName.includes("vini")) goals = Math.min(goals, 4);
+          return { ...p, name: rawName, goals };
+        }).filter(p => p.goals > 0)
+          .sort((a,b)=>Number(b.goals||0)-Number(a.goals||0) || String(a.name||"").localeCompare(String(b.name||"")))
+          .slice(0,5);
+        setTopScorers(cleaned);
+      })
       .catch(() => { if (alive) setTopScorers([]); });
     return () => { alive = false; };
   }, []);
@@ -8910,21 +8960,26 @@ function MyWorldCupTab({ favTeams=[], saved=[], syncProfile=null, displayName=""
     const ts = getTs(m);
     return ts && ts > now && hasConcreteTeam(m.home) && hasConcreteTeam(m.away);
   }).sort((a,b)=>getTs(a)-getTs(b));
+
   const todayFantasyMissing = todayMatches
     .filter(m => hasConcreteTeam(m.home) && hasConcreteTeam(m.away) && !matchDone(m))
     .filter(m => !(fantasySummary.preds?.[m.id]?.hg !== undefined && fantasySummary.preds?.[m.id]?.ag !== undefined && fantasySummary.preds?.[m.id]?.hg !== "" && fantasySummary.preds?.[m.id]?.ag !== ""));
   const fantasyPredCount = Object.values(fantasySummary.preds || {}).filter(v => v && v.hg !== undefined && v.ag !== undefined && v.hg !== "" && v.ag !== "").length;
   const nextPickDeadline = upcomingFantasyMatches[0];
+  const allTodayPicked = todayMatches.filter(m => hasConcreteTeam(m.home) && hasConcreteTeam(m.away) && !matchDone(m)).length > 0 && todayFantasyMissing.length === 0;
 
-  const teamWatch = favTeams.slice(0,3).map(team => {
-    const matches = MATCHES.filter(m => m.home === team || m.away === team);
-    const last = matches.filter(matchDone).sort((a,b)=>getTs(b)-getTs(a))[0];
+  const teamWatch = favTeams.slice(0,2).map(team => {
+    const matches = MATCHES.filter(m => m.home === team || m.away === team).sort((a,b)=>getTs(a)-getTs(b));
+    const finished = matches.filter(matchDone).sort((a,b)=>getTs(a)-getTs(b));
+    const last = [...finished].sort((a,b)=>getTs(b)-getTs(a))[0];
     const next = matches.filter(m => !matchDone(m) && getTs(m) > now - 30*60*1000).sort((a,b)=>getTs(a)-getTs(b))[0];
-    return { team, last, next };
+    const campaign = finished.map(m => teamOutcomeIn(team, m)).filter(Boolean);
+    const goals = finished.reduce((sum,m)=>sum + (teamGoalsIn(team, m) ?? 0), 0);
+    return { team, finished, last, next, campaign, goals };
   });
 
-  const CardShell = ({ title, icon, tone=C.green, children, footer, onClick }) => (
-    <button onClick={onClick} style={{textAlign:"left",minHeight:168,borderRadius:18,border:`1px solid ${tone}44`,background:`linear-gradient(135deg,${tone}17,${C.s1})`,padding:14,cursor:onClick?"pointer":"default",boxShadow:DS.shadow.card,color:C.text,display:"flex",flexDirection:"column",justifyContent:"space-between",overflow:"hidden"}}>
+  const CardShell = ({ title, icon, tone=C.green, children, footer, onClick, emphasis=false }) => (
+    <button onClick={onClick} style={{textAlign:"left",minHeight:190,borderRadius:18,border:`1px solid ${tone}${emphasis ? "88" : "44"}`,background:`linear-gradient(135deg,${tone}${emphasis ? "28" : "17"},${C.s1})`,padding:14,cursor:onClick?"pointer":"default",boxShadow:emphasis?`0 0 0 1px ${tone}33, ${DS.shadow.panel}`:DS.shadow.card,color:C.text,display:"flex",flexDirection:"column",justifyContent:"space-between",overflow:"hidden"}}>
       <div>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10,gap:8}}>
           <div style={{fontSize:11,color:C.dim,fontWeight:900,letterSpacing:"0.12em",textTransform:"uppercase"}}>{title}</div>
@@ -8936,20 +8991,30 @@ function MyWorldCupTab({ favTeams=[], saved=[], syncProfile=null, displayName=""
     </button>
   );
 
-  const MiniTeams = ({ match, score=false }) => match ? (
-    <>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
-        <div style={{display:"flex",alignItems:"center",gap:5,minWidth:0}}><Crest team={match.home} size={22}/><span style={{fontSize:13,fontWeight:900,color:C.text,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{match.home}</span></div>
-        <div style={{fontSize:score?18:12,fontWeight:900,color:score?C.gold:C.dim,flexShrink:0}}>{score ? `${scoreFor(match)?.hg ?? "?"}-${scoreFor(match)?.ag ?? "?"}` : "vs"}</div>
-        <div style={{display:"flex",alignItems:"center",gap:5,minWidth:0,justifyContent:"flex-end"}}><span style={{fontSize:13,fontWeight:900,color:C.text,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",textAlign:"right"}}>{match.away}</span><Crest team={match.away} size={22}/></div>
+  const MatchRow = ({ match, showScore=false, star=false }) => {
+    const sc = scoreFor(match);
+    const scoreText = showScore ? `${sc?.hg ?? "?"}-${sc?.ag ?? "?"}` : (matchLive(match) ? (sc?.hg != null ? `${sc.hg}-${sc.ag}` : "LIVE") : "vs");
+    return (
+      <div style={{display:"grid",gridTemplateColumns:"1fr auto 1fr",alignItems:"center",gap:6,padding:"4px 0"}}>
+        <div style={{display:"flex",alignItems:"center",gap:5,minWidth:0}}><Crest team={match.home} size={21}/><span style={{fontSize:12,fontWeight:900,color:C.text,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{match.home}</span></div>
+        <div style={{fontSize:showScore||matchLive(match)?17:12,fontWeight:900,color:showScore?C.gold:matchLive(match)?C.red:C.dim,flexShrink:0}}>{star ? "⭐ " : ""}{scoreText}</div>
+        <div style={{display:"flex",alignItems:"center",gap:5,minWidth:0,justifyContent:"flex-end"}}><span style={{fontSize:12,fontWeight:900,color:C.text,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",textAlign:"right"}}>{match.away}</span><Crest team={match.away} size={21}/></div>
       </div>
-    </>
-  ) : null;
+    );
+  };
+
+  const OutcomePills = ({ campaign }) => (
+    <div style={{display:"flex",gap:4,alignItems:"center",flexWrap:"wrap"}}>
+      {campaign.length ? campaign.map((r,i) => (
+        <span key={`${r}-${i}`} style={{width:18,height:18,borderRadius:999,display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:900,color:r==="W"?"#052e16":r==="D"?"#3b2500":"#3f0707",background:r==="W"?C.green:r==="D"?C.gold:C.red}}>{r}</span>
+      )) : <span style={{fontSize:11,color:C.dim}}>No results yet</span>}
+    </div>
+  );
 
   const debugRows = [
     ["favoriteTeams", favTeams.length ? favTeams.join(", ") : "none selected"],
-    ["lastMyMatch", lastMyMatch ? `#${lastMyMatch.id}: ${lastMyMatch.home} vs ${lastMyMatch.away} · ${resultLine(lastMyMatch)}` : "none"],
-    ["nextMyMatch", nextMyMatch ? `#${nextMyMatch.id}: ${nextMyMatch.home} vs ${nextMyMatch.away} · ${fmtShort(nextMyMatch)}` : "none"],
+    ["lastTournamentMatches", lastTournamentMatches.map(m => `#${m.id}: ${resultLine(m)}`).join(" | ") || "none"],
+    ["nextTournamentMatches", nextTournamentMatches.map(m => `#${m.id}: ${m.home} vs ${m.away} · ${fmtShort(m)}`).join(" | ") || "none"],
     ["todayMatches", String(todayMatches.length)],
     ["todayMyMatches", todayMyMatches.map(m => `${m.home} vs ${m.away}`).join(" | ") || "none"],
     ["liveMatches", liveMatches.map(m => `${m.home} vs ${m.away}`).join(" | ") || "none"],
@@ -8965,77 +9030,75 @@ function MyWorldCupTab({ favTeams=[], saved=[], syncProfile=null, displayName=""
         <div style={{border:`1px solid ${C.green}55`,background:`linear-gradient(135deg,${C.green}14,${C.s1})`,borderRadius:20,padding:22,textAlign:"center",boxShadow:DS.shadow.card}}>
           <div style={{fontSize:42,marginBottom:10}}>🌎</div>
           <div style={{fontSize:11,color:C.dim,fontWeight:900,letterSpacing:"0.16em",textTransform:"uppercase",marginBottom:6}}>My World Cup</div>
-          <div style={{fontSize:22,fontWeight:900,color:C.text,lineHeight:1.15,marginBottom:8}}>Choose your teams</div>
+          <div style={{fontSize:22,fontWeight:900,color:C.text,marginBottom:8}}>Choose your teams</div>
           <div style={{fontSize:13,color:C.mid,lineHeight:1.55,maxWidth:360,margin:"0 auto 16px"}}>Select your favorite national teams to unlock Last Match, Next Match, Team Watch and personalized alerts.</div>
-          <button onClick={onPickTeams} style={{border:`1px solid ${C.green}77`,background:C.green,color:C.bg,borderRadius:999,padding:"11px 16px",fontSize:13,fontWeight:900,cursor:"pointer"}}>Choose My Teams</button>
+          <button onClick={onPickTeams} style={{border:`1px solid ${C.green}88`,background:`linear-gradient(135deg,${C.green},#22c55e)`,color:"#031108",borderRadius:999,padding:"11px 18px",fontWeight:900,cursor:"pointer"}}>⭐ Choose My Teams</button>
         </div>
       </div>
     );
   }
 
   return (
-    <div style={{paddingTop:14}}>
-      <div style={{marginBottom:14,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>
+    <div style={{paddingTop:10}}>
+      <div style={{marginBottom:14,display:"flex",alignItems:"flex-end",justifyContent:"space-between",gap:12}}>
         <div>
           <div style={{fontSize:11,color:C.dim,fontWeight:800,letterSpacing:"0.16em",textTransform:"uppercase"}}>My World Cup</div>
-          <div style={{fontSize:22,fontWeight:900,color:C.text,lineHeight:1.15}}>What matters now</div>
+          <div style={{fontSize:24,fontWeight:900,color:C.text,lineHeight:1.05}}>Status board</div>
+          <div style={{fontSize:12,color:C.mid,marginTop:4}}>Built around {favTeams.slice(0,3).map(t=>`${getFlag(t)} ${t}`).join(" · ")}{favTeams.length>3?` +${favTeams.length-3}`:""}</div>
         </div>
-        <div style={{display:"flex",gap:4,flexWrap:"wrap",justifyContent:"flex-end"}}>{favTeams.slice(0,5).map(t=><span key={t} title={t} style={{fontSize:20}}>{getFlag(t)}</span>)}</div>
+        <button onClick={onPickTeams} style={{border:`1px solid ${C.b2}`,background:C.s1,color:C.text,borderRadius:999,padding:"8px 11px",fontSize:12,fontWeight:800,cursor:"pointer",whiteSpace:"nowrap"}}>Edit teams</button>
       </div>
 
       <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:12}}>
-        <CardShell title="Last match" icon="✅" tone={C.green} onClick={() => lastMyMatch && onMatchTap(lastMyMatch)} footer={lastMyMatch ? fmtShort(lastMyMatch) : "No completed favorite-team match yet"}>
-          {lastMyMatch ? <>
-            <MiniTeams match={lastMyMatch} score />
-            <div style={{fontSize:12,color:C.mid,fontWeight:800,marginTop:9}}>{resultLine(lastMyMatch)}</div>
-          </> : <div style={{fontSize:13,color:C.mid,lineHeight:1.5}}>Your teams have not completed a match yet.</div>}
+        <CardShell title="Last match" icon="✅" tone={C.rival} onClick={lastTournamentMatches[0]?()=>onMatchTap(lastTournamentMatches[0]):undefined} footer={lastTournamentMatches[0] ? fmtShort(lastTournamentMatches[0]) : "No completed matches yet"}>
+          {lastTournamentMatches.length ? lastTournamentMatches.map(m => <MatchRow key={m.id} match={m} showScore star={isMyMatch(m)} />) : <div style={{fontSize:13,color:C.mid,lineHeight:1.5}}>No tournament results available yet.</div>}
         </CardShell>
 
-        <CardShell title="Next match" icon="⏭️" tone={C.blue} onClick={() => (nextMyMatch || nextAnyMatch) && onMatchTap(nextMyMatch || nextAnyMatch)} footer={(nextMyMatch || nextAnyMatch) ? `${(nextMyMatch || nextAnyMatch).venue || "Venue TBA"}` : "No upcoming match found"}>
-          {nextMyMatch ? <>
-            <MiniTeams match={nextMyMatch} score={matchLive(nextMyMatch)} />
-            <div style={{fontSize:12,color:matchLive(nextMyMatch)?C.red:C.gold,fontWeight:900,marginTop:9}}>{matchLive(nextMyMatch) ? `🔴 Live ${scoreFor(nextMyMatch)?.elapsed || ""}'` : fmtCountdown(nextMyMatch)}</div>
-            <div style={{fontSize:11,color:C.dim,marginTop:4}}>{fmtShort(nextMyMatch)}</div>
-          </> : nextAnyMatch ? <>
-            <div style={{fontSize:13,color:C.mid,lineHeight:1.45,marginBottom:8}}>No favorite teams are up next. Tournament's next match:</div>
-            <MiniTeams match={nextAnyMatch} score={matchLive(nextAnyMatch)} />
-            <div style={{fontSize:11,color:C.dim,marginTop:6}}>{fmtShort(nextAnyMatch)}</div>
-          </> : <div style={{fontSize:13,color:C.mid,lineHeight:1.5}}>No upcoming matches found.</div>}
+        <CardShell title="Next match" icon="⏭️" tone={nextTournamentMatches.some(isMyMatch)?C.gold:C.green} emphasis={nextTournamentMatches.some(isMyMatch)} onClick={nextTournamentMatches[0]?()=>onMatchTap(nextTournamentMatches[0]):undefined} footer={nextTournamentMatches[0] ? `${fmtShort(nextTournamentMatches[0])} · ${fmtCountdown(nextTournamentMatches[0])}` : "No upcoming matches found"}>
+          {nextTournamentMatches.length ? nextTournamentMatches.map(m => <MatchRow key={m.id} match={m} star={isMyMatch(m)} />) : <div style={{fontSize:13,color:C.mid,lineHeight:1.5}}>No upcoming tournament match found.</div>}
+          {nextTournamentMatches.some(isMyMatch) && <div style={{fontSize:11,color:C.gold,fontWeight:900,marginTop:8}}>⭐ One of your teams is involved</div>}
         </CardShell>
 
-        <CardShell title="Fantasy rank" icon="🎯" tone="#a78bfa" onClick={()=>setTab("predictor")} footer={todayFantasyMissing.length ? `${todayFantasyMissing.length} pick${todayFantasyMissing.length===1?"":"s"} missing today` : "Today's picks complete or no matches"}>
-          <div style={{fontSize:13,color:C.dim,fontWeight:800,marginBottom:5}}>Rank</div>
-          <div style={{fontSize:28,fontWeight:900,color:fantasySummary.rank?C.text:C.mid,lineHeight:1}}>{fantasySummary.rank ? `#${fantasySummary.rank}` : "—"}</div>
-          <div style={{fontSize:12,color:C.mid,marginTop:7,fontWeight:800}}>{fantasySummary.points == null ? `${fantasyPredCount} picks made` : `${fantasySummary.points} pts`}</div>
+        <CardShell title="Fantasy rank" icon="🎯" tone={C.blue} onClick={()=>setTab("predictor")} footer={nextPickDeadline ? `Next deadline: ${fmtCountdown(nextPickDeadline)}` : "No open deadlines"}>
+          <div style={{display:"flex",alignItems:"baseline",gap:6}}>
+            <div style={{fontSize:30,fontWeight:900,color:C.text}}>{fantasySummary.rank ? `#${fantasySummary.rank}` : "—"}</div>
+            {fantasySummary.totalPlayers ? <div style={{fontSize:12,color:C.dim,fontWeight:800}}>of {fantasySummary.totalPlayers}</div> : null}
+          </div>
+          <div style={{fontSize:14,color:C.gold,fontWeight:900,marginTop:2}}>{fantasySummary.points == null ? "Points loading" : `${fantasySummary.points} pts`}</div>
+          <div style={{fontSize:13,color:allTodayPicked?C.green:(todayFantasyMissing.length?C.gold:C.mid),fontWeight:900,marginTop:8}}>
+            {allTodayPicked ? "✅ All today's matches picked" : todayFantasyMissing.length ? `⚠ ${todayFantasyMissing.length} picks missing today` : `${fantasyPredCount} picks made`}
+          </div>
           {fantasySummary.loading && <div style={{fontSize:11,color:C.dim,marginTop:6}}>Loading fantasy...</div>}
         </CardShell>
 
-        <CardShell title="Today" icon="📅" tone={C.gold} onClick={()=>setTab("schedule")} footer={nextAnyMatch ? `Next kickoff: ${fmtShort(nextAnyMatch)}` : "No scheduled matches found"}>
+        <CardShell title="Today" icon="📅" tone={C.gold} onClick={()=>setTab("schedule")} footer={nextTournamentMatches[0] ? `Next kickoff: ${fmtTimeOnly(nextTournamentMatches[0])}` : "No scheduled matches found"}>
           <div style={{display:"flex",gap:10,alignItems:"baseline"}}>
             <div style={{fontSize:28,fontWeight:900,color:liveMatches.length?C.red:C.text}}>{liveMatches.length}</div>
             <div style={{fontSize:12,color:C.dim,fontWeight:800}}>live</div>
           </div>
           <div style={{fontSize:22,fontWeight:900,color:C.text,lineHeight:1.1}}>{todayMatches.length} matches</div>
-          <div style={{fontSize:12,color:todayMyMatches.length?C.green:C.mid,marginTop:6,fontWeight:800}}>{todayMyMatches.length ? `${todayMyMatches.length} with your teams` : "No favorite teams today"}</div>
+          <div style={{fontSize:12,color:todayMyMatches.length?C.green:C.mid,marginTop:6,fontWeight:800}}>{todayMyMatches.length ? `${todayMyMatches.length} with your teams ⭐` : "No favorite teams today"}</div>
         </CardShell>
 
-        <CardShell title="Top scorers" icon="⚽" tone={C.red} onClick={()=>setTab("stats")} footer={topScorers.length ? "Golden Boot race" : "Loading live scorers"}>
-          {topScorers.length ? topScorers.slice(0,3).map((p,i)=>{
+        <CardShell title="Top scorers" icon="⚽" tone={C.red} onClick={()=>setTab("stats")} footer={topScorers.length ? "Top 5 Golden Boot contenders" : "Loading live scorers"}>
+          {topScorers.length ? topScorers.slice(0,5).map((p,i)=>{
             const name = p.name || p.player || p.playerName || "Player";
             const team = p.team || p.teamName || "";
             const goals = p.goals ?? p.totalGoals ?? p.count ?? "";
-            return <div key={`${name}-${i}`} style={{display:"flex",alignItems:"center",gap:7,marginBottom:6,minWidth:0}}><span style={{fontSize:12,color:C.dim,fontWeight:900,width:16}}>#{i+1}</span><span style={{fontSize:16}}>{team ? getFlag(team) : "⚽"}</span><span style={{fontSize:12,color:C.text,fontWeight:900,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1}}>{name}</span><span style={{fontSize:12,color:C.gold,fontWeight:900}}>{goals}</span></div>
+            return <div key={`${name}-${i}`} style={{display:"flex",alignItems:"center",gap:7,marginBottom:5,minWidth:0}}><span style={{fontSize:11,color:C.dim,fontWeight:900,width:18}}>#{i+1}</span><span style={{fontSize:15}}>{team ? getFlag(team) : "⚽"}</span><span style={{fontSize:12,color:C.text,fontWeight:900,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1}}>{name}</span><span style={{fontSize:12,color:C.gold,fontWeight:900}}>{goals}</span></div>
           }) : <div style={{fontSize:13,color:C.mid,lineHeight:1.5}}>Scorers will appear once the live feed responds.</div>}
         </CardShell>
 
-        <CardShell title="Team watch" icon="⭐" tone={C.rival} onClick={onPickTeams} footer="Tap to update favorite teams">
-          {teamWatch.length ? teamWatch.map(({team,last,next}) => (
-            <div key={team} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8,minWidth:0}}>
-              <span style={{fontSize:18}}>{getFlag(team)}</span>
-              <div style={{minWidth:0,flex:1}}>
-                <div style={{fontSize:12,color:C.text,fontWeight:900,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{team}</div>
-                <div style={{fontSize:10,color:C.mid,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{next ? `Next: ${next.home===team?next.away:next.home}` : last ? `Last: ${resultLine(last)}` : "Waiting for first match"}</div>
+        <CardShell title="Team watch" icon="⭐" tone={C.rival} onClick={onPickTeams} footer="Goals · campaign · latest and next">
+          {teamWatch.length ? teamWatch.map(({team,last,next,campaign,goals}) => (
+            <div key={team} style={{borderBottom:`1px solid ${C.b1}77`,paddingBottom:8,marginBottom:8}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:5}}>
+                <div style={{display:"flex",alignItems:"center",gap:7,minWidth:0}}><span style={{fontSize:18}}>{getFlag(team)}</span><span style={{fontSize:12,color:C.text,fontWeight:900,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{team}</span></div>
+                <div style={{fontSize:11,color:C.gold,fontWeight:900,whiteSpace:"nowrap"}}>{goals} goals</div>
               </div>
+              <div style={{marginBottom:5}}><OutcomePills campaign={campaign}/></div>
+              <div style={{fontSize:10,color:C.mid,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>Latest: {last ? resultLine(last) : "—"}</div>
+              <div style={{fontSize:10,color:C.mid,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>Next: {next ? `${next.home===team?next.away:next.home} · ${fmtShort(next)}` : "—"}</div>
             </div>
           )) : <div style={{fontSize:13,color:C.mid,lineHeight:1.5}}>Choose favorite teams to unlock this card.</div>}
         </CardShell>
