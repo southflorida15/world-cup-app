@@ -1069,6 +1069,45 @@ export default async function handler(req, res) {
     }
   }
 
+  // Flush all match event caches (useful while iterating on parsers/momentum)
+  // Must run before home/away validation.
+  if (req.query.action === "flush-all") {
+    try {
+      const memKeys = Object.keys(memCache);
+      memKeys.forEach(k => delete memCache[k]);
+
+      const candidates = FULL_SCHEDULE.filter(m =>
+        m?.home && m?.away &&
+        !String(m.home).includes("TBD") &&
+        !String(m.away).includes("TBD") &&
+        !String(m.home).includes("R16") &&
+        !String(m.home).includes("QF") &&
+        !String(m.home).includes("SF") &&
+        !String(m.home).includes("🏆") &&
+        !String(m.away).includes("3rd")
+      );
+
+      let kvDeleted = 0;
+      for (const { home, away } of candidates) {
+        const h = normESPN(String(home));
+        const a = normESPN(String(away));
+        await kv.del(kvKey(h, a)).then(() => { kvDeleted++; }).catch(() => {});
+        await kv.del(kvKey(a, h)).catch(() => {});
+      }
+
+      return res.status(200).json({
+        ok: true,
+        flushed: {
+          memoryKeys: memKeys.length,
+          kvMatchKeysAttempted: candidates.length,
+          kvDeleted
+        }
+      });
+    } catch(e) {
+      return res.status(500).json({ error: e.message });
+    }
+  }
+
   // Auto-seed IDs once per day on first request
   try {
     const lastSeed = await kv.get("wc2026:espn_ids_seeded_date").catch(() => null);
