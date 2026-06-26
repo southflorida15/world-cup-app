@@ -6194,7 +6194,7 @@ function MatchMomentum({ match, events=[], commentary=[], momentum=[], stats, C 
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,gap:8}}>
           <div>
             <div style={{fontSize:12,fontWeight:900,color:C.green,letterSpacing:".08em"}}>MATCH MOMENTUM</div>
-            <div style={{fontSize:11,color:C.dim}}>1-minute pilot · goals, cards and substitutions on the line</div>
+            <div style={{fontSize:11,color:C.dim}}>ESPN stats-informed pressure · goals, cards and substitutions on the line</div>
           </div>
           <div style={{fontSize:11,color:C.mid,textAlign:"right"}}>{goals.length} ⚽ · {cards.length} cards · {subs.length} subs</div>
         </div>
@@ -6620,7 +6620,14 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
                 ["Fouls", matchStats.home.fouls, matchStats.away.fouls, true, ""],
                 ["Offsides", matchStats.home.offsides, matchStats.away.offsides, true, ""],
                 ["Passes", matchStats.home.passes, matchStats.away.passes, false, ""],
+                ["Accurate Passes", matchStats.home.accuratePasses, matchStats.away.accuratePasses, false, ""],
                 ["Pass Accuracy", matchStats.home.passAcc, matchStats.away.passAcc, true, "%"],
+                ["Crosses", matchStats.home.crosses, matchStats.away.crosses, false, ""],
+                ["Accurate Crosses", matchStats.home.accurateCrosses, matchStats.away.accurateCrosses, false, ""],
+                ["Blocked Shots", matchStats.home.blockedShots, matchStats.away.blockedShots, false, ""],
+                ["Tackles", matchStats.home.tackles, matchStats.away.tackles, false, ""],
+                ["Interceptions", matchStats.home.interceptions, matchStats.away.interceptions, false, ""],
+                ["Clearances", matchStats.home.clearances, matchStats.away.clearances, false, ""],
               ].filter(([,h,a]) => h!==null && a!==null && h!==undefined && a!==undefined).map(([label, hv, av, lowerBetter, unit]) => {
                 const total = hv + av || 1;
                 const hPct = Math.round((hv/total)*100);

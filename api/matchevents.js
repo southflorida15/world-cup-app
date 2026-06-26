@@ -213,27 +213,70 @@ async function saveESPNId(home, away, id) {
 // ── Stats parser ──────────────────────────────────────────────────────────
 function parseStats(boxscore, homeTeam) {
   if (!boxscore?.teams?.length) return null;
+
+  const toNum = raw => {
+    if (raw === undefined || raw === null || raw === "") return null;
+    const n = parseFloat(String(raw).replace("%", ""));
+    return Number.isFinite(n) ? n : null;
+  };
+  const pct = raw => {
+    const n = toNum(raw);
+    if (n === null) return null;
+    // ESPN often returns pct values as 0.9 instead of 90.
+    return n > 0 && n <= 1 ? Math.round(n * 1000) / 10 : n;
+  };
+
   const result = { home: {}, away: {} };
+
   boxscore.teams.forEach(t => {
     const teamName = normESPN(t.team?.displayName || t.team?.name || "");
     const side = teamName === homeTeam ? "home" : "away";
     const stats = {};
+
     (t.statistics || []).forEach(s => {
-      const name = (s.name || s.abbreviation || "").toLowerCase();
-      const val = parseFloat(s.displayValue ?? s.value ?? 0);
-      if (name.includes("possession")) stats.possession = val;
-      else if (name === "shotsontarget" || name.includes("shots on target")) stats.shotsOn = val;
-      else if (name === "shots" || name === "totalshots") stats.shots = val;
-      else if (name.includes("corner")) stats.corners = val;
-      else if (name.includes("foul")) stats.fouls = val;
-      else if (name.includes("yellowcard") || name === "yellowcards") stats.yellowCards = val;
-      else if (name.includes("redcard") || name === "redcards") stats.redCards = val;
-      else if (name.includes("offside")) stats.offsides = val;
-      else if (name.includes("save")) stats.saves = val;
-      else if (name.includes("pass") && name.includes("acc")) stats.passAcc = (val > 0 && val <= 100) ? val : null;
+      const name = String(s.name || s.abbreviation || "").toLowerCase();
+      const label = String(s.label || s.displayName || "").toLowerCase();
+      const val = toNum(s.displayValue ?? s.value);
+      if (val === null) return;
+
+      if (name.includes("possession") || label.includes("possession")) stats.possession = val;
+      else if (name === "shotsontarget" || label.includes("on goal") || label.includes("shots on")) stats.shotsOn = val;
+      else if (name === "totalshots" || name === "shots" || label === "shots") stats.shots = val;
+      else if (name === "shotpct" || label.includes("on target %")) stats.shotPct = pct(s.displayValue ?? s.value);
+      else if (name.includes("corner") || label.includes("corner")) stats.corners = val;
+      else if (name.includes("foulscommitted") || label === "fouls") stats.fouls = val;
+      else if (name.includes("yellowcard") || label.includes("yellow")) stats.yellowCards = val;
+      else if (name.includes("redcard") || label.includes("red card")) stats.redCards = val;
+      else if (name.includes("offside") || label.includes("offside")) stats.offsides = val;
+      else if (name === "saves" || label === "saves") stats.saves = val;
+
+      else if (name === "accuratepasses") stats.accuratePasses = val;
+      else if (name === "totalpasses") stats.passes = val;
+      else if (name === "passpct" || label.includes("pass completion")) stats.passAcc = pct(s.displayValue ?? s.value);
+
+      else if (name === "accuratecrosses") stats.accurateCrosses = val;
+      else if (name === "totalcrosses") stats.crosses = val;
+      else if (name === "crosspct" || label === "cross %") stats.crossPct = pct(s.displayValue ?? s.value);
+
+      else if (name === "accuratelongballs") stats.accurateLongBalls = val;
+      else if (name === "totallongballs") stats.longBalls = val;
+      else if (name === "longballpct" || label.includes("long balls %")) stats.longBallPct = pct(s.displayValue ?? s.value);
+
+      else if (name === "blockedshots" || label.includes("blocked shots")) stats.blockedShots = val;
+      else if (name === "effectivetackles" || label.includes("effective tackles")) stats.effectiveTackles = val;
+      else if (name === "totaltackles" || label === "tackles") stats.tackles = val;
+      else if (name === "tacklepct" || label === "tackle %") stats.tacklePct = pct(s.displayValue ?? s.value);
+      else if (name === "interceptions" || label.includes("interceptions")) stats.interceptions = val;
+      else if (name === "effectiveclearance" || label.includes("effective clearances")) stats.effectiveClearances = val;
+      else if (name === "totalclearance" || label === "clearances") stats.clearances = val;
+
+      else if (name === "penaltykickgoals") stats.penaltyGoals = val;
+      else if (name === "penaltykickshots") stats.penaltyShots = val;
     });
+
     result[side] = stats;
   });
+
   return result;
 }
 
@@ -421,11 +464,19 @@ function parseCommentary(data) {
 
 function parseMomentum(data, events=[], homeTeam="") {
   const buckets = Array.from({ length: 90 }, (_, i) => ({ minute: i + 1, home: 0, away: 0 }));
-  const add = (minute, teamName, weight) => {
+  const stats = parseStats(data.boxscore, homeTeam) || { home: {}, away: {} };
+
+  const add = (minute, teamName, weight, radius=4) => {
     const m = Math.max(1, Math.min(90, Number(minute) || 1));
     const side = normESPN(teamName || "") === homeTeam ? "home" : "away";
-    buckets[m - 1][side] += weight;
+    for (let d = -radius; d <= radius; d++) {
+      const idx = m - 1 + d;
+      if (idx < 0 || idx >= 90) continue;
+      const falloff = Math.max(0.15, 1 - Math.abs(d) / (radius + 1));
+      buckets[idx][side] += weight * falloff;
+    }
   };
+
   const minuteOf = item => {
     const clock = item.clock || item.time || {};
     if (clock.displayValue) return parseInt(clock.displayValue, 10);
@@ -435,15 +486,68 @@ function parseMomentum(data, events=[], homeTeam="") {
   const teamOf = item => normESPN(item.team?.displayName || item.team?.name || "");
   const classify = item => {
     const t = `${item.type?.text || ""} ${item.type?.type || ""} ${item.text || ""} ${item.shortText || ""}`.toLowerCase();
-    if (item.scoringPlay || t.includes("goal")) return 7;
-    if (t.includes("shot on") || t.includes("saved") || t.includes("woodwork") || t.includes("post")) return 3.5;
-    if (t.includes("shot")) return 2.2;
-    if (t.includes("corner")) return 2.0;
+    if (item.scoringPlay || t.includes("goal")) return 9;
+    if (t.includes("shot on") || t.includes("saved") || t.includes("woodwork") || t.includes("post")) return 4.2;
+    if (t.includes("shot")) return 2.7;
+    if (t.includes("corner")) return 2.2;
     if (t.includes("free kick") || t.includes("cross")) return 1.2;
-    if (t.includes("yellow") || t.includes("red card") || t.includes("substitut")) return 0.7;
-    if (t.includes("offside") || t.includes("foul")) return 0.4;
-    return 0.25;
+    if (t.includes("red card")) return 2.5;
+    if (t.includes("yellow")) return 0.7;
+    if (t.includes("substitut")) return 0.45;
+    if (t.includes("offside") || t.includes("foul")) return 0.35;
+    return 0.18;
   };
+
+  const pressureScore = s => (
+    (s.shots || 0) * 0.34 +
+    (s.shotsOn || 0) * 0.95 +
+    (s.corners || 0) * 0.48 +
+    (s.blockedShots || 0) * 0.28 +
+    (s.crosses || 0) * 0.055 +
+    (s.accurateCrosses || 0) * 0.16 +
+    (s.possession || 0) * 0.055 +
+    (s.passes || 0) * 0.006 +
+    (s.interceptions || 0) * 0.08 +
+    (s.tackles || 0) * 0.04
+  );
+
+  const homePressure = Math.max(1, pressureScore(stats.home || {}));
+  const awayPressure = Math.max(1, pressureScore(stats.away || {}));
+  const totalPressure = homePressure + awayPressure;
+
+  const goals = (Array.isArray(events) ? events : [])
+    .filter(ev => ev.type === "Goal")
+    .map(ev => ({ minute: Math.max(1, Math.min(90, Number(ev.time?.elapsed) || 1)), side: normESPN(ev.team?.name || "") === homeTeam ? "home" : "away" }))
+    .sort((a,b) => a.minute - b.minute);
+  const redCards = (Array.isArray(events) ? events : [])
+    .filter(ev => ev.type === "Card" && ev.detail === "Red Card")
+    .map(ev => ({ minute: Math.max(1, Math.min(90, Number(ev.time?.elapsed) || 1)), side: normESPN(ev.team?.name || "") === homeTeam ? "home" : "away" }));
+
+  // Continuous match-control baseline from aggregate ESPN boxscore stats.
+  // This makes the graph feel closer to ESPN's sustained pressure view when
+  // the public summary endpoint does not expose the private momentum series.
+  for (let minute = 1; minute <= 90; minute++) {
+    let hFactor = homePressure / totalPressure;
+    let aFactor = awayPressure / totalPressure;
+
+    let homeGoals = 0, awayGoals = 0;
+    goals.forEach(g => { if (g.minute <= minute) g.side === "home" ? homeGoals++ : awayGoals++; });
+    if (homeGoals < awayGoals) hFactor *= 1.12;
+    if (awayGoals < homeGoals) aFactor *= 1.12;
+
+    redCards.forEach(rc => {
+      if (minute >= rc.minute) {
+        if (rc.side === "home") { hFactor *= 0.72; aFactor *= 1.22; }
+        else { aFactor *= 0.72; hFactor *= 1.22; }
+      }
+    });
+
+    // Gentle deterministic wave so the baseline is not visually flat.
+    const waveH = 1 + 0.13 * Math.sin(minute / 5.4) + 0.06 * Math.sin(minute / 2.7);
+    const waveA = 1 + 0.13 * Math.cos(minute / 5.1) + 0.06 * Math.cos(minute / 3.1);
+    buckets[minute - 1].home += 0.25 + (hFactor * 3.6 * waveH);
+    buckets[minute - 1].away += 0.25 + (aFactor * 3.6 * waveA);
+  }
 
   const sources = [];
   if (Array.isArray(data.commentary)) sources.push(...data.commentary);
@@ -457,21 +561,20 @@ function parseMomentum(data, events=[], homeTeam="") {
     add(min, team, classify(item));
   });
 
-  // Ensure key app events are always reflected even when ESPN's granular feed is sparse.
   (Array.isArray(events) ? events : []).forEach(ev => {
     const min = ev.time?.elapsed;
     const team = ev.team?.name;
-    const weight = ev.type === "Goal" ? 7 : ev.type === "Card" ? (ev.detail === "Red Card" ? 3.5 : 1.4) : ev.type === "subst" ? 0.8 : 0.5;
-    if (min && team) add(min, team, weight);
+    const weight = ev.type === "Goal" ? 9 : ev.type === "Card" ? (ev.detail === "Red Card" ? 4.8 : 1.2) : ev.type === "subst" ? 0.7 : 0.5;
+    if (min && team) add(min, team, weight, ev.type === "Goal" ? 6 : 3);
   });
 
-  // Return only the compact signal; frontend does final smoothing/rendering.
   return buckets.map(b => ({
     minute: b.minute,
     home: Number(b.home.toFixed(3)),
     away: Number(b.away.toFixed(3)),
   }));
 }
+
 
 // ── Scorers aggregator ────────────────────────────────────────────────────
 // Hardcoded events for matches that may have aged out of ESPN feed
@@ -1000,10 +1103,6 @@ export default async function handler(req, res) {
       });
     }
 
-    if (req.query.raw === "1") {
-  return res.status(200).json(data);
-}
-    
     const statusType = data.header?.competitions?.[0]?.status?.type?.name || "NS";
     const isDone = DONE_STATUSES.includes(statusType);
     const isLive = LIVE_STATUSES.includes(statusType);
