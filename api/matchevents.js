@@ -57,9 +57,9 @@ async function loadFromKV(home, away) {
 
 const SCORERS_AGGREGATE_KEY = "wc2026:scorers_aggregate";
 
-async function saveToKV(home, away, events, stats, lineups=null, commentary=[]) {
+async function saveToKV(home, away, events, stats, lineups=null, commentary=[], momentum=[]) {
   try {
-    await kv.set(kvKey(home, away), { events, stats, lineups, commentary, savedAt: Date.now() });
+    await kv.set(kvKey(home, away), { events, stats, lineups, commentary, momentum, savedAt: Date.now() });
     console.log(`[matchevents] Persisted ${events.length} events for ${home} vs ${away}`);
   } catch(e) {
     console.warn("[matchevents] KV save:", e.message);
@@ -380,22 +380,35 @@ function parseEvents(data, homeTeam) {
 }
 
 function parseCommentary(data) {
-  const raw = data.commentary || data.commentaries || [];
-  if (!Array.isArray(raw)) return [];
+  // ESPN's soccer summary is inconsistent: some matches expose a real
+  // `commentary` feed, others only expose rich play-by-play text in
+  // `keyEvents`, and occasionally the commentary payload is nested under
+  // items/events/comments. Normalize all of those into one feed so the UI
+  // always has something useful to show.
+  const commentaryPayload = data.commentary || data.commentaries || [];
+  const raw = Array.isArray(commentaryPayload)
+    ? commentaryPayload
+    : (commentaryPayload.items || commentaryPayload.events || commentaryPayload.comments || []);
 
-  return raw.map(item => {
+  const source = Array.isArray(raw) && raw.length > 0
+    ? raw
+    : (Array.isArray(data.keyEvents) ? data.keyEvents : []);
+
+  return source.map(item => {
     const clock = item.clock || item.time || {};
-    const elapsed = clock.displayValue
+    const elapsedRaw = clock.displayValue
       ? parseInt(clock.displayValue, 10)
       : clock.value ? Math.round(clock.value / 60)
       : item.minute ?? item.time?.elapsed ?? null;
+    const elapsed = Number(elapsedRaw);
 
     const typeText = item.type?.text || item.type?.type || item.type || "";
     const text = item.text || item.commentary || item.description || item.shortText || "";
     const team = normESPN(item.team?.displayName || item.team?.name || "");
+    const display = clock.displayValue || (Number.isFinite(elapsed) ? `${elapsed}'` : "");
 
     return {
-      time: { elapsed: Number.isFinite(elapsed) ? elapsed : null, display: clock.displayValue || (elapsed ? `${elapsed}'` : "") },
+      time: { elapsed: Number.isFinite(elapsed) ? elapsed : null, display },
       type: typeText,
       team: team || null,
       text,
@@ -404,6 +417,60 @@ function parseCommentary(data) {
   .filter(x => x.text)
   .sort((a, b) => (b.time?.elapsed || 0) - (a.time?.elapsed || 0))
   .slice(0, 80);
+}
+
+function parseMomentum(data, events=[], homeTeam="") {
+  const buckets = Array.from({ length: 90 }, (_, i) => ({ minute: i + 1, home: 0, away: 0 }));
+  const add = (minute, teamName, weight) => {
+    const m = Math.max(1, Math.min(90, Number(minute) || 1));
+    const side = normESPN(teamName || "") === homeTeam ? "home" : "away";
+    buckets[m - 1][side] += weight;
+  };
+  const minuteOf = item => {
+    const clock = item.clock || item.time || {};
+    if (clock.displayValue) return parseInt(clock.displayValue, 10);
+    if (clock.value) return Math.round(clock.value / 60);
+    return item.minute ?? item.time?.elapsed ?? null;
+  };
+  const teamOf = item => normESPN(item.team?.displayName || item.team?.name || "");
+  const classify = item => {
+    const t = `${item.type?.text || ""} ${item.type?.type || ""} ${item.text || ""} ${item.shortText || ""}`.toLowerCase();
+    if (item.scoringPlay || t.includes("goal")) return 7;
+    if (t.includes("shot on") || t.includes("saved") || t.includes("woodwork") || t.includes("post")) return 3.5;
+    if (t.includes("shot")) return 2.2;
+    if (t.includes("corner")) return 2.0;
+    if (t.includes("free kick") || t.includes("cross")) return 1.2;
+    if (t.includes("yellow") || t.includes("red card") || t.includes("substitut")) return 0.7;
+    if (t.includes("offside") || t.includes("foul")) return 0.4;
+    return 0.25;
+  };
+
+  const sources = [];
+  if (Array.isArray(data.commentary)) sources.push(...data.commentary);
+  if (Array.isArray(data.plays)) sources.push(...data.plays);
+  if (Array.isArray(data.keyEvents)) sources.push(...data.keyEvents);
+
+  sources.forEach(item => {
+    const min = minuteOf(item);
+    const team = teamOf(item);
+    if (!min || !team) return;
+    add(min, team, classify(item));
+  });
+
+  // Ensure key app events are always reflected even when ESPN's granular feed is sparse.
+  (Array.isArray(events) ? events : []).forEach(ev => {
+    const min = ev.time?.elapsed;
+    const team = ev.team?.name;
+    const weight = ev.type === "Goal" ? 7 : ev.type === "Card" ? (ev.detail === "Red Card" ? 3.5 : 1.4) : ev.type === "subst" ? 0.8 : 0.5;
+    if (min && team) add(min, team, weight);
+  });
+
+  // Return only the compact signal; frontend does final smoothing/rendering.
+  return buckets.map(b => ({
+    minute: b.minute,
+    home: Number(b.home.toFixed(3)),
+    away: Number(b.away.toFixed(3)),
+  }));
 }
 
 // ── Scorers aggregator ────────────────────────────────────────────────────
@@ -874,7 +941,8 @@ export default async function handler(req, res) {
         events: memCached.events,
         stats: memCached.stats,
         lineups: memCached.lineups || null,
-        commentary: memCached.commentary || []
+        commentary: memCached.commentary || [],
+        momentum: memCached.momentum || []
       });
     }
   }
@@ -887,7 +955,7 @@ export default async function handler(req, res) {
       memCache[cacheKey] = { ...persisted, isDone: true, ts: Date.now() };
       // Finished match — data is permanent, cache aggressively.
       res.setHeader("Cache-Control", "public, max-age=3600, s-maxage=3600");
-      return res.status(200).json({ events: persisted.events, stats: persisted.stats, lineups: persisted.lineups || null, commentary: persisted.commentary || [] });
+      return res.status(200).json({ events: persisted.events, stats: persisted.stats, lineups: persisted.lineups || null, commentary: persisted.commentary || [], momentum: persisted.momentum || [] });
     }
   }
 
@@ -941,6 +1009,7 @@ export default async function handler(req, res) {
     const stats = parseStats(data.boxscore, home);
     const lineups = parseLineups(data, home);
     const commentary = parseCommentary(data);
+    const momentum = parseMomentum(data, events, home);
 
     console.log(`[matchevents] ${home} vs ${away}: ${events.length} events, stats=${!!stats}, lineups=${!!lineups}, status=${statusType}`);
 
@@ -949,7 +1018,7 @@ export default async function handler(req, res) {
     // is done forever" and serves it with a 1-hour TTL, so live data must
     // never be written here).
     if (isDone && events.length > 0) {
-      await saveToKV(home, away, events, stats, lineups, commentary);
+      await saveToKV(home, away, events, stats, lineups, commentary, momentum);
     } else if (isLive && events.length > 0) {
       // Was: a goal scored mid-match never reached the Stats tab's live
       // scorers total until the match fully ended — even though this
@@ -963,11 +1032,11 @@ export default async function handler(req, res) {
 
     // Cache lineups pre-match with short TTL (5min) so we pick them up when published
     const TTL_PREMATCH_LINEUPS = 5 * 60 * 1000;
-    memCache[cacheKey] = { events, stats, lineups, commentary, isDone, isLive, ts: Date.now(), ttlOverride: isPrematch && lineups ? TTL_PREMATCH_LINEUPS : null };
+    memCache[cacheKey] = { events, stats, lineups, commentary, momentum, isDone, isLive, ts: Date.now(), ttlOverride: isPrematch && lineups ? TTL_PREMATCH_LINEUPS : null };
     res.setHeader("Cache-Control", isDone
       ? "public, max-age=3600, s-maxage=3600"
       : "public, max-age=15, s-maxage=20, stale-while-revalidate=30");
-    return res.status(200).json({ events, stats, lineups, commentary });
+    return res.status(200).json({ events, stats, lineups, commentary, momentum });
 
   } catch(e) {
     console.error("[matchevents] Error:", e.message);
