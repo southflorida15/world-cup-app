@@ -1959,37 +1959,137 @@ function parseScorerText(raw) {
   return { name: txt, goals: 1 };
 }
 
-function buildLiveScorersFromHistory2026() {
-  const map = new Map();
+function isConcreteMatchTeamName(team) {
+  const t = String(team || "").trim();
+  if (!t) return false;
+  if (/^(TBD|R16|QF|SF|3rd Place|🏆 Final)/i.test(t)) return false;
+  if (/^(1|2)[A-L]$/i.test(t)) return false;
+  if (/^3rd\s/i.test(t)) return false;
+  return true;
+}
 
-  Object.entries(WC_TEAM_HISTORY || {}).forEach(([team, years]) => {
-    const data = years?.[2026] || years?.["2026"];
-    if (!data || data.didNotQualify) return;
+function normalizeTeamForScorers(team) {
+  const raw = String(team || "").trim();
+  const aliases = {
+    "turkey":"Turkiye",
+    "türkiye":"Turkiye",
+    "turkiye":"Turkiye",
+    "united states of america":"United States",
+    "usa":"United States",
+    "u.s.":"United States",
+    "bosnia and herzegovina":"Bosnia & Herz.",
+    "bosnia & herz":"Bosnia & Herz.",
+    "czech republic":"Czechia",
+    "cote d ivoire":"Ivory Coast",
+    "côte d ivoire":"Ivory Coast",
+    "ivory coast":"Ivory Coast",
+    "dr congo":"DR Congo",
+    "democratic republic of congo":"DR Congo",
+    "korea republic":"South Korea",
+    "republic of korea":"South Korea",
+    "south korea":"South Korea",
+    "ir iran":"Iran",
+    "cabo verde":"Cape Verde",
+    "cape verde":"Cape Verde",
+    "curacao":"Curacao",
+    "curaçao":"Curacao"
+  };
+  const key = raw.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9&. ]+/g, " ").replace(/\s+/g, " ").trim();
+  if (aliases[key]) return aliases[key];
+  const allTeams = Object.values(GROUPS).flatMap(g => g.teams || []);
+  const exact = allTeams.find(t => normalizePlayerName(t) === normalizePlayerName(raw));
+  return exact || raw;
+}
 
-    // IMPORTANT: do NOT use data.topScorers here.
-    // Some 2026 topScorers aggregates were inflated by earlier rebuilds.
-    // The match-by-match scorer log is the source that the player detail
-    // modal uses correctly, so build the live Golden Boot table from those
-    // individual match scorer strings every time.
-    (data.matches || []).forEach(m => {
-      (m.scorers || []).forEach(raw => {
-        const parsed = parseScorerText(raw);
-        addScorerRow(map, { name: parsed.name, team, goals: parsed.goals });
+function addScorerRow(map, { name, team, goals=0, assists=0 }) {
+  const cleanName = String(name || "").trim();
+  const cleanTeam = normalizeTeamForScorers(team);
+  if (!cleanName || !cleanTeam) return;
+  const key = `${normalizePlayerName(cleanTeam)}|${normalizePlayerName(cleanName)}`;
+  const prev = map.get(key) || { name: cleanName, team: cleanTeam, goals:0, assists:0 };
+  prev.goals += Number(goals || 0);
+  prev.assists += Number(assists || 0);
+  map.set(key, prev);
+}
+
+async function fetchMatchEventsForScorers(match) {
+  try {
+    const url = `/api/matchevents?home=${encodeURIComponent(match.home)}&away=${encodeURIComponent(match.away)}`;
+    const res = await fetch(url);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data?.events) ? data.events : [];
+  } catch(e) {
+    return [];
+  }
+}
+
+async function buildLiveScorersFromMatchEvents2026() {
+  const now = Date.now();
+  const kickoffGraceMs = 3 * 60 * 60 * 1000;
+  const candidateMatches = MATCHES
+    .filter(m => isConcreteMatchTeamName(m.home) && isConcreteMatchTeamName(m.away))
+    .filter(m => {
+      const ts = MATCH_UTC[m.id] ? new Date(MATCH_UTC[m.id]).getTime() : 0;
+      return ts && ts <= now + kickoffGraceMs;
+    })
+    .sort((a,b) => (new Date(MATCH_UTC[a.id]).getTime()) - (new Date(MATCH_UTC[b.id]).getTime()));
+
+  const scorerMap = new Map();
+  const seenGoals = new Set();
+  const seenAssists = new Set();
+  const batchSize = 8;
+
+  for (let i = 0; i < candidateMatches.length; i += batchSize) {
+    const batch = candidateMatches.slice(i, i + batchSize);
+    const rows = await Promise.all(batch.map(async match => ({ match, events: await fetchMatchEventsForScorers(match) })));
+
+    rows.forEach(({ match, events }) => {
+      events.forEach((ev, idx) => {
+        if (ev?.type !== "Goal") return;
+        if (/own goal/i.test(ev?.detail || "")) return;
+
+        const playerName = ev?.player?.name;
+        const scoringTeam = normalizeTeamForScorers(ev?.team?.name);
+        if (!playerName || !scoringTeam) return;
+
+        const minute = ev?.time?.elapsed ?? "";
+        const extra = ev?.time?.extra ?? "";
+        const goalKey = `${match.id}|${minute}|${extra}|${normalizePlayerName(scoringTeam)}|${normalizePlayerName(playerName)}|${idx}`;
+        // ESPN occasionally returns duplicate IDs / repeated event rows. Keep
+        // the index in the key so legitimate same-player multi-goal matches
+        // still count, but also dedupe an exact semantic duplicate below.
+        const semanticGoalKey = `${match.id}|${minute}|${extra}|${normalizePlayerName(scoringTeam)}|${normalizePlayerName(playerName)}`;
+        if (seenGoals.has(semanticGoalKey)) return;
+        seenGoals.add(semanticGoalKey);
+        seenGoals.add(goalKey);
+
+        addScorerRow(scorerMap, { name: playerName, team: scoringTeam, goals: 1 });
+
+        const assistName = ev?.assist?.name;
+        if (assistName) {
+          const assistKey = `${match.id}|${minute}|${extra}|${normalizePlayerName(scoringTeam)}|${normalizePlayerName(assistName)}`;
+          if (!seenAssists.has(assistKey)) {
+            seenAssists.add(assistKey);
+            addScorerRow(scorerMap, { name: assistName, team: scoringTeam, assists: 1 });
+          }
+        }
       });
     });
-  });
+  }
 
-  return [...map.values()]
-    .sort((a,b) => Number(b.goals || 0) - Number(a.goals || 0) || String(a.name || "").localeCompare(String(b.name || "")));
+  return [...scorerMap.values()]
+    .filter(p => Number(p.goals || 0) > 0)
+    .sort((a,b) => Number(b.goals || 0) - Number(a.goals || 0) || Number(b.assists || 0) - Number(a.assists || 0) || String(a.name || "").localeCompare(String(b.name || "")));
 }
 
 async function getLiveScorers2026() {
-  if (liveScorersCache && Date.now() - liveScorersFetchedAt < 30000) return liveScorersCache;
+  if (liveScorersCache && Date.now() - liveScorersFetchedAt < 60000) return liveScorersCache;
 
-  // Single source of truth for the UI: local WC history match logs.
-  // This intentionally avoids /api/matchevents?action=scorers because that
-  // persisted aggregate can be stale or double-counted after parser changes.
-  liveScorersCache = buildLiveScorersFromHistory2026();
+  // Single source of truth for tournament scorer UI: the same per-match
+  // event endpoint used by Match OG / player detail modals. Avoid the old
+  // persisted scorer aggregate because it can be stale or double-counted.
+  liveScorersCache = await buildLiveScorersFromMatchEvents2026();
   liveScorersFetchedAt = Date.now();
   return liveScorersCache;
 }
