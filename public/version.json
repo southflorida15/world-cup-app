@@ -1,6 +1,6 @@
 {
-  "version": "3.0.0",
+  "version": "3.0.1",
   "name": "The Foundation",
   "released": "2026-06-25",
-  "notes": "Professional documentation baseline, fantasy full-tournament support, actual bracket integration, tournament statistics, historical continuity, and live-score architecture documentation."
+  "notes": "Professional documentation baseline, fantasy full-tournament support, actual bracket integration (default selection), tournament statistics, historical continuity, and live-score architecture documentation."
 }
