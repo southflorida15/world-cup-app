@@ -6354,9 +6354,9 @@ function MatchMomentum({ match, events=[], momentum=[], stats, C }) {
   const sideName = side => side === "home" ? match.home : side === "away" ? match.away : "Balanced";
   const sideColor = side => side === "home" ? C.green : side === "away" ? C.rival : C.mid;
   const engineMeta = {
-    balanced: "Balanced wave · safest fallback",
-    spikes: "Local spikes · no long memory",
-    hybrid: "Hybrid wave v2 · organic threat",
+    balanced: "Balanced view · safest fallback",
+    spikes: "Event pulse · key moments only",
+    hybrid: "Organic threat · current view",
   };
 
   return (
@@ -6364,7 +6364,7 @@ function MatchMomentum({ match, events=[], momentum=[], stats, C }) {
       <div style={{background:C.s1,border:`1px solid ${C.b1}`,borderRadius:12,padding:12,marginBottom:10}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,gap:8}}>
           <div>
-            <div style={{fontSize:12,fontWeight:900,color:C.green,letterSpacing:".08em"}}>MATCH MOMENTUM</div>
+            <div style={{fontSize:12,fontWeight:900,color:C.green,letterSpacing:".08em"}}>MATCH FLOW</div>
             <div style={{fontSize:11,color:C.dim}}>{engineMeta[engine]}</div>
           </div>
           <div style={{fontSize:11,color:C.mid,textAlign:"right"}}>{goals.length} ⚽ · {cardSummary} · {subs.length} 🔄</div>
@@ -6433,7 +6433,7 @@ function MatchMomentum({ match, events=[], momentum=[], stats, C }) {
           <div style={{fontSize:11,color:C.mid}}>{strongestSpell.start}'–{strongestSpell.end}'</div>
         </div>
         <div style={{background:C.s1,border:`1px solid ${C.b1}`,borderRadius:10,padding:10}}>
-          <div style={{fontSize:10,color:C.dim,fontWeight:800}}>⏱️ LONGEST RUN</div>
+          <div style={{fontSize:10,color:C.dim,fontWeight:800}}>📈 LONGEST CONTROL</div>
           <div style={{fontSize:12,color:sideColor(longestRun.side),fontWeight:900}}>{sideName(longestRun.side)}</div>
           <div style={{fontSize:11,color:C.mid}}>{longestRun.len} min</div>
         </div>
@@ -6755,7 +6755,7 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
             );
             return (
               <div style={{display:"flex",gap:8,marginBottom:14}}>
-                {["Lineups", timelineLabel, "Match Stats", "Momentum", "Commentary"].map((label, i) => {
+                {["Lineups", timelineLabel, "Stats", "Insights", "Commentary"].map((label, i) => {
                   const hasMomentum = isPlayed && ((events && events.length > 0) || matchStats || (momentumData && momentumData.length > 0));
                   const hasCommentary = isPlayed;
                   const [active, toggle, disabled] = [
@@ -6765,7 +6765,7 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
                     [momentumOpen,   ()=>setMomentumOpen(o=>!o),   !hasMomentum],
                     [commentaryOpen, ()=>setCommentaryOpen(o=>!o), !hasCommentary],
                   ][i];
-                  const flexes = [0.85, 1.35, 1.0, 1.0, 1.05];
+                  const flexes = [0.85, 1.35, 0.85, 1.0, 1.05];
                   return (
                     <button key={label} onClick={disabled ? undefined : toggle} style={{flex:flexes[i],padding:"6px 4px",borderRadius:999,border:`1.5px solid ${active?C.green:disabled?C.b1:C.b2}`,background:active?`${C.green}18`:C.s2,color:active?C.green:disabled?C.dim:C.mid,fontSize:12,fontWeight:700,cursor:disabled?"default":"pointer",opacity:disabled?0.4:1,transition:"all .15s",textAlign:"center",whiteSpace:"nowrap"}}>
                       {label}
@@ -6815,7 +6815,7 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
             </div>
           )}
 
-          {/* ── MATCH STATS ── */}
+          {/* ── STATS ── */}
           {matchStats && isPlayed && statsOpen && (
             <div style={{marginBottom:12}}>
               {[
@@ -6855,7 +6855,7 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
             </div>
           )}
 
-          {/* ── MOMENTUM + COMMENTARY ── */}
+          {/* ── INSIGHTS / MATCH FLOW ── */}
           {isPlayed && momentumOpen && (
             <MatchMomentum match={match} events={events || []} momentum={momentumData || []} stats={matchStats} C={C} />
           )}
