@@ -463,20 +463,39 @@ function parseCommentary(data) {
 }
 
 function parseMomentum(data, events=[], homeTeam="") {
-  const buckets = Array.from({ length: 90 }, (_, i) => ({ minute: i + 1, home: 0, away: 0 }));
   const stats = parseStats(data.boxscore, homeTeam) || { home: {}, away: {} };
+  const rows = Array.from({ length: 90 }, (_, i) => ({ minute: i + 1, signed: 0 }));
 
-  const add = (minute, teamName, weight, radius=4) => {
-    const m = Math.max(1, Math.min(90, Number(minute) || 1));
-    const side = normESPN(teamName || "") === homeTeam ? "home" : "away";
-    for (let d = -radius; d <= radius; d++) {
-      const idx = m - 1 + d;
-      if (idx < 0 || idx >= 90) continue;
-      const falloff = Math.max(0.15, 1 - Math.abs(d) / (radius + 1));
-      buckets[idx][side] += weight * falloff;
-    }
-  };
+  const pressureScore = s => (
+    (s.shots || 0) * 0.70 +
+    (s.shotsOn || 0) * 2.15 +
+    (s.corners || 0) * 1.25 +
+    (s.blockedShots || 0) * 0.45 +
+    (s.crosses || 0) * 0.08 +
+    (s.accurateCrosses || 0) * 0.22 +
+    (s.possession || 0) * 0.05 +
+    (s.interceptions || 0) * 0.08
+  );
 
+  const hp = pressureScore(stats.home || {});
+  const ap = pressureScore(stats.away || {});
+  const globalBias = hp + ap > 0 ? ((hp - ap) / (hp + ap)) * 13 : 0;
+
+  // Synthetic but transparent pressure model:
+  // one signed value per minute. Positive = home. Negative = away.
+  // The public ESPN summary does not expose the site's private momentum graph,
+  // so this uses aggregate stats plus event shocks with natural decay.
+  let energy = 0;
+  for (let minute = 1; minute <= 90; minute++) {
+    const burstWave =
+      Math.sin(minute / 4.7) * 3.8 +
+      Math.sin(minute / 2.35) * 1.9 +
+      Math.cos(minute / 8.2) * 2.4;
+    energy = energy * 0.86 + globalBias * 0.26 + burstWave * 0.22;
+    rows[minute - 1].signed = energy;
+  }
+
+  const teamSide = name => normESPN(name || "") === homeTeam ? 1 : -1;
   const minuteOf = item => {
     const clock = item.clock || item.time || {};
     if (clock.displayValue) return parseInt(clock.displayValue, 10);
@@ -484,70 +503,31 @@ function parseMomentum(data, events=[], homeTeam="") {
     return item.minute ?? item.time?.elapsed ?? null;
   };
   const teamOf = item => normESPN(item.team?.displayName || item.team?.name || "");
-  const classify = item => {
-    const t = `${item.type?.text || ""} ${item.type?.type || ""} ${item.text || ""} ${item.shortText || ""}`.toLowerCase();
-    if (item.scoringPlay || t.includes("goal")) return 9;
-    if (t.includes("shot on") || t.includes("saved") || t.includes("woodwork") || t.includes("post")) return 4.2;
-    if (t.includes("shot")) return 2.7;
-    if (t.includes("corner")) return 2.2;
-    if (t.includes("free kick") || t.includes("cross")) return 1.2;
-    if (t.includes("red card")) return 2.5;
-    if (t.includes("yellow")) return 0.7;
-    if (t.includes("substitut")) return 0.45;
-    if (t.includes("offside") || t.includes("foul")) return 0.35;
-    return 0.18;
+
+  const addImpulse = (minute, signedImpulse, radius=5, pre=2) => {
+    const m = Math.max(1, Math.min(90, Number(minute) || 1));
+    for (let d = 0; d <= radius; d++) {
+      const idx = m - 1 + d;
+      if (idx >= 0 && idx < rows.length) rows[idx].signed += signedImpulse * Math.pow(0.72, d);
+    }
+    for (let d = 1; d <= pre; d++) {
+      const idx = m - 1 - d;
+      if (idx >= 0) rows[idx].signed += signedImpulse * Math.pow(0.45, d);
+    }
   };
 
-  const pressureScore = s => (
-    (s.shots || 0) * 0.34 +
-    (s.shotsOn || 0) * 0.95 +
-    (s.corners || 0) * 0.48 +
-    (s.blockedShots || 0) * 0.28 +
-    (s.crosses || 0) * 0.055 +
-    (s.accurateCrosses || 0) * 0.16 +
-    (s.possession || 0) * 0.055 +
-    (s.passes || 0) * 0.006 +
-    (s.interceptions || 0) * 0.08 +
-    (s.tackles || 0) * 0.04
-  );
-
-  const homePressure = Math.max(1, pressureScore(stats.home || {}));
-  const awayPressure = Math.max(1, pressureScore(stats.away || {}));
-  const totalPressure = homePressure + awayPressure;
-
-  const goals = (Array.isArray(events) ? events : [])
-    .filter(ev => ev.type === "Goal")
-    .map(ev => ({ minute: Math.max(1, Math.min(90, Number(ev.time?.elapsed) || 1)), side: normESPN(ev.team?.name || "") === homeTeam ? "home" : "away" }))
-    .sort((a,b) => a.minute - b.minute);
-  const redCards = (Array.isArray(events) ? events : [])
-    .filter(ev => ev.type === "Card" && ev.detail === "Red Card")
-    .map(ev => ({ minute: Math.max(1, Math.min(90, Number(ev.time?.elapsed) || 1)), side: normESPN(ev.team?.name || "") === homeTeam ? "home" : "away" }));
-
-  // Continuous match-control baseline from aggregate ESPN boxscore stats.
-  // This makes the graph feel closer to ESPN's sustained pressure view when
-  // the public summary endpoint does not expose the private momentum series.
-  for (let minute = 1; minute <= 90; minute++) {
-    let hFactor = homePressure / totalPressure;
-    let aFactor = awayPressure / totalPressure;
-
-    let homeGoals = 0, awayGoals = 0;
-    goals.forEach(g => { if (g.minute <= minute) g.side === "home" ? homeGoals++ : awayGoals++; });
-    if (homeGoals < awayGoals) hFactor *= 1.12;
-    if (awayGoals < homeGoals) aFactor *= 1.12;
-
-    redCards.forEach(rc => {
-      if (minute >= rc.minute) {
-        if (rc.side === "home") { hFactor *= 0.72; aFactor *= 1.22; }
-        else { aFactor *= 0.72; hFactor *= 1.22; }
-      }
-    });
-
-    // Gentle deterministic wave so the baseline is not visually flat.
-    const waveH = 1 + 0.13 * Math.sin(minute / 5.4) + 0.06 * Math.sin(minute / 2.7);
-    const waveA = 1 + 0.13 * Math.cos(minute / 5.1) + 0.06 * Math.cos(minute / 3.1);
-    buckets[minute - 1].home += 0.25 + (hFactor * 3.6 * waveH);
-    buckets[minute - 1].away += 0.25 + (aFactor * 3.6 * waveA);
-  }
+  const classifyImpulse = item => {
+    const t = `${item.type?.text || ""} ${item.type?.type || ""} ${item.text || ""} ${item.shortText || ""}`.toLowerCase();
+    if (item.scoringPlay || t.includes("goal")) return { weight: 34, radius: 7, invert: false };
+    if (t.includes("red card")) return { weight: 30, radius: 8, invert: true };
+    if (t.includes("shot on") || t.includes("saved") || t.includes("woodwork") || t.includes("post")) return { weight: 13, radius: 4, invert: false };
+    if (t.includes("shot")) return { weight: 7.5, radius: 3, invert: false };
+    if (t.includes("corner")) return { weight: 9, radius: 3, invert: false };
+    if (t.includes("yellow")) return { weight: 6, radius: 2, invert: true };
+    if (t.includes("free kick") || t.includes("cross")) return { weight: 4.5, radius: 2, invert: false };
+    if (t.includes("substitut")) return { weight: 2.2, radius: 2, invert: false };
+    return null;
+  };
 
   const sources = [];
   if (Array.isArray(data.commentary)) sources.push(...data.commentary);
@@ -557,24 +537,36 @@ function parseMomentum(data, events=[], homeTeam="") {
   sources.forEach(item => {
     const min = minuteOf(item);
     const team = teamOf(item);
-    if (!min || !team) return;
-    add(min, team, classify(item));
+    const info = classifyImpulse(item);
+    if (!min || !team || !info) return;
+    const side = teamSide(team);
+    addImpulse(min, side * info.weight * (info.invert ? -1 : 1), info.radius);
   });
 
   (Array.isArray(events) ? events : []).forEach(ev => {
     const min = ev.time?.elapsed;
-    const team = ev.team?.name;
-    const weight = ev.type === "Goal" ? 9 : ev.type === "Card" ? (ev.detail === "Red Card" ? 4.8 : 1.2) : ev.type === "subst" ? 0.7 : 0.5;
-    if (min && team) add(min, team, weight, ev.type === "Goal" ? 6 : 3);
+    const side = teamSide(ev.team?.name);
+    let info = null;
+    if (ev.type === "Goal") info = { weight: 38, radius: 7, invert: false };
+    else if (ev.type === "Card" && ev.detail === "Red Card") info = { weight: 34, radius: 8, invert: true };
+    else if (ev.type === "Card") info = { weight: 7, radius: 3, invert: true };
+    else if (ev.type === "subst") info = { weight: 2.5, radius: 2, invert: false };
+    if (min && info) addImpulse(min, side * info.weight * (info.invert ? -1 : 1), info.radius);
   });
 
-  return buckets.map(b => ({
-    minute: b.minute,
-    home: Number(b.home.toFixed(3)),
-    away: Number(b.away.toFixed(3)),
-  }));
+  // Normalize to pleasant visual range and return both the signed value and
+  // home/away magnitude for backward compatibility with the existing UI.
+  const maxAbs = Math.max(8, ...rows.map(r => Math.abs(r.signed)));
+  return rows.map(r => {
+    const signed = Number(((r.signed / maxAbs) * 100).toFixed(3));
+    return {
+      minute: r.minute,
+      signed,
+      home: Number(Math.max(0, signed).toFixed(3)),
+      away: Number(Math.max(0, -signed).toFixed(3)),
+    };
+  });
 }
-
 
 // ── Scorers aggregator ────────────────────────────────────────────────────
 // Hardcoded events for matches that may have aged out of ESPN feed
