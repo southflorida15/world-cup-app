@@ -1,4 +1,4 @@
-# Version 3.0.2
+# Version 3.0.1
 
 ## Release Name
 
@@ -8,7 +8,7 @@
 
 ## Release Summary
 
-Version `3.0.3` is a documentation and repository-quality release.
+Version `3.0.1` is a documentation and repository-quality release.
 
 The goal of this release is to make the World Cup App repository match the ambition of the application itself: polished, professional, understandable, and ready to be shared publicly.
 
@@ -77,6 +77,6 @@ Expected focus for `v3.1`:
 
 ## Status
 
-Current version: `3.0.2`  
+Current version: `3.0.1`  
 Release type: Documentation refresh  
 Project status: Active development

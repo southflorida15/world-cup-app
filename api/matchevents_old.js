@@ -27,29 +27,15 @@ const TTL_DONE = 60 * 60 * 1000;
 
 const ESPN_NAME_MAP = {
   "USA": "United States",
-  "United States": "United States",
-
-  // Turkey/Türkiye appears differently depending on source/feed.
-  // Internally the app schedule uses "Turkiye", so normalize all variants to that.
-  "Turkey": "Turkiye",
-  "Türkiye": "Turkiye",
-  "Turkiye": "Turkiye",
-  "Republic of Türkiye": "Turkiye",
-
   "Bosnia and Herzegovina": "Bosnia & Herz.",
-  "Bosnia & Herz.": "Bosnia & Herz.",
   "Cape Verde Islands": "Cape Verde",
-  "Cape Verde": "Cape Verde",
+  "Turkey": "Turkiye",
   "Curaçao": "Curacao",
-  "Curacao": "Curacao",
   "Congo, DR": "DR Congo",
   "DR Congo": "DR Congo",
   "Côte d'Ivoire": "Ivory Coast",
-  "Ivory Coast": "Ivory Coast",
   "Korea Republic": "South Korea",
-  "South Korea": "South Korea",
   "Czech Republic": "Czechia",
-  "Czechia": "Czechia",
 };
 const normESPN = n => ESPN_NAME_MAP[n] || n;
 
@@ -154,25 +140,10 @@ const HARDCODED_ESPN_IDS = {
   "Ghana|Panama":"760436","Uzbekistan|Colombia":"760437",
 };
 
-async function getESPNEventId(home, away, debugInfo = null) {
-  home = normESPN(home);
-  away = normESPN(away);
-
+async function getESPNEventId(home, away) {
   const key = `${home}|${away}`;
-  const reverseKey = `${away}|${home}`;
 
-  if (debugInfo) {
-    debugInfo.requestedKey = key;
-    debugInfo.reverseKey = reverseKey;
-    debugInfo.lookupSteps = [];
-  }
-
-  const note = (step, value = {}) => {
-    if (debugInfo) debugInfo.lookupSteps.push({ step, ...value });
-  };
-
-  // 1. Livescores KV — usually has the real ESPN IDs from the live feed.
-  // Match BOTH orientations because different sources can flip home/away.
+  // 1. Livescores KV — always has correct real ESPN IDs from the live feed
   try {
     const cached = await kv.get("wc2026:livescores");
     if (cached) {
@@ -180,64 +151,31 @@ async function getESPNEventId(home, away, debugInfo = null) {
       const match = fixtures.find(f => {
         const h = normESPN(f?.teams?.home?.name || "");
         const a = normESPN(f?.teams?.away?.name || "");
-        return (
-          (h === home && a === away) ||
-          (h === away && a === home)
-        );
+        return h === home && a === away;
       });
-
       if (match?.fixture?.id && !String(match.fixture.id).includes("|")) {
-        const matchedHome = normESPN(match?.teams?.home?.name || "");
-        const matchedAway = normESPN(match?.teams?.away?.name || "");
-        const matchedKey = `${matchedHome}|${matchedAway}`;
-
-        await saveESPNId(matchedHome, matchedAway, match.fixture.id);
-        await saveESPNId(home, away, match.fixture.id);
-
-        note("livescores_kv", { matchedKey, eventId: match.fixture.id });
+        saveESPNId(home, away, match.fixture.id);
         return match.fixture.id;
       }
-
-      note("livescores_kv_no_match", { fixtureCount: fixtures.length });
-    } else {
-      note("livescores_kv_empty");
     }
   } catch(e) {
     console.warn("[matchevents] livescores KV lookup:", e.message);
-    note("livescores_kv_error", { error: e.message });
   }
 
-  // 2. Persisted ID map — check both requested and reverse orientations.
+  // 2. Persisted ID map — IDs saved from previous correct lookups
   try {
     const idMap = await kv.get(ESPN_ID_MAP_KEY) || {};
-    if (idMap[key]) {
-      note("id_map", { matchedKey: key, eventId: idMap[key] });
-      return idMap[key];
-    }
-    if (idMap[reverseKey]) {
-      note("id_map_reverse", { matchedKey: reverseKey, eventId: idMap[reverseKey] });
-      await saveESPNId(home, away, idMap[reverseKey]);
-      return idMap[reverseKey];
-    }
-    note("id_map_no_match", { totalIds: Object.keys(idMap).length });
+    if (idMap[key]) return idMap[key];
   } catch(e) {
     console.warn("[matchevents] ESPN ID map lookup:", e.message);
-    note("id_map_error", { error: e.message });
   }
 
-  // 3. Hardcoded map — last resort. Check both orientations.
-  if (HARDCODED_ESPN_IDS[key]) {
-    note("hardcoded", { matchedKey: key, eventId: HARDCODED_ESPN_IDS[key] });
-    return HARDCODED_ESPN_IDS[key];
-  }
-  if (HARDCODED_ESPN_IDS[reverseKey]) {
-    note("hardcoded_reverse", { matchedKey: reverseKey, eventId: HARDCODED_ESPN_IDS[reverseKey] });
-    return HARDCODED_ESPN_IDS[reverseKey];
-  }
+  // 3. Hardcoded map — last resort only (may have wrong IDs)
+  if (HARDCODED_ESPN_IDS[key]) return HARDCODED_ESPN_IDS[key];
 
-  note("no_event_id");
   return null;
 }
+
 async function saveESPNId(home, away, id) {
   try {
     const idMap = await kv.get(ESPN_ID_MAP_KEY) || {};
@@ -749,10 +687,8 @@ async function seedESPNIds() {
   const dateStr = d => `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`;
   const now = new Date();
 
-  // Fetch yesterday + next 7 days.
-  // Yesterday matters because a match can finish shortly before midnight
-  // and still need its ESPN event ID seeded after full-time.
-  const dates = Array.from({length: 8}, (_, i) => dateStr(new Date(now.getTime() + (i - 1) * 86400000)));
+  // Fetch next 7 days to cover upcoming matchdays
+  const dates = Array.from({length: 7}, (_, i) => dateStr(new Date(now.getTime() + i * 86400000)));
 
   // Start from existing KV only — never seed from hardcoded (they may be wrong)
   const idMap = await kv.get(ESPN_ID_MAP_KEY).catch(() => ({})) || {};
@@ -825,9 +761,6 @@ export default async function handler(req, res) {
   }
   if (!home || !away) return res.status(400).json({ error: "home and away required" });
 
-  home = normESPN(String(home));
-  away = normESPN(String(away));
-
   // Flush stale KV cache for this match
   if (flush === "1") {
     await kv.del(kvKey(home, away)).catch(() => {});
@@ -869,17 +802,11 @@ export default async function handler(req, res) {
 
   // 3. Fetch from ESPN
   try {
-    const debugInfo = {};
-    const eventId = await getESPNEventId(home, away, debugInfo);
+    const eventId = await getESPNEventId(home, away);
 
     if (!eventId) {
       console.warn(`[matchevents] No ESPN event ID for ${home} vs ${away}`);
-      return res.status(200).json({
-        events: [],
-        stats: null,
-        _debug: "no_event_id",
-        ...(debug === "1" ? { lookup: debugInfo } : {})
-      });
+      return res.status(200).json({ events: [], stats: null, _debug: "no_event_id" });
     }
 
     console.log(`[matchevents] Fetching ESPN summary for event ${eventId} (${home} vs ${away})`);
@@ -895,7 +822,6 @@ export default async function handler(req, res) {
     if (debug === "1") {
       return res.status(200).json({
         _debug: true,
-        lookup: debugInfo,
         eventId,
         topKeys: Object.keys(data),
         scoringPlaysCount: data.scoringPlays?.length || 0,
