@@ -802,7 +802,11 @@ export default async function handler(req, res) {
       res.setHeader("Cache-Control", memCached.isDone
         ? "public, max-age=3600, s-maxage=3600"
         : "public, max-age=15, s-maxage=20, stale-while-revalidate=30");
-      return res.status(200).json({ events: memCached.events, stats: memCached.stats });
+      return res.status(200).json({
+  events: memCached.events,
+  stats: memCached.stats,
+  lineups: memCached.lineups || null
+});
     }
   }
 
