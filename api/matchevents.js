@@ -752,11 +752,47 @@ export default async function handler(req, res) {
     }
   }
 
-  // Seed ESPN IDs for today + tomorrow
+    // Seed ESPN IDs for today + tomorrow
   if (req.query.action === "seed-ids") {
     try {
       const result = await seedESPNIds();
       return res.status(200).json({ ok: true, ...result });
+    } catch(e) {
+      return res.status(500).json({ error: e.message });
+    }
+  }
+
+  // Audit ESPN IDs for all known matches
+  if (req.query.action === "audit-ids") {
+    try {
+      const candidates = FULL_SCHEDULE.filter(m =>
+        !String(m.home).includes("TBD") &&
+        !String(m.away).includes("TBD") &&
+        !String(m.home).includes("R16") &&
+        !String(m.home).includes("QF") &&
+        !String(m.home).includes("SF") &&
+        !String(m.home).includes("🏆") &&
+        !String(m.away).includes("3rd")
+      );
+
+      const results = [];
+
+      for (const { home, away } of candidates) {
+        const id = await getESPNEventId(home, away);
+        results.push({
+          match: `${home}|${away}`,
+          eventId: id || null,
+          status: id ? "OK" : "MISSING"
+        });
+      }
+
+      return res.status(200).json({
+        total: results.length,
+        ok: results.filter(r => r.status === "OK").length,
+        missingCount: results.filter(r => r.status === "MISSING").length,
+        missing: results.filter(r => r.status === "MISSING"),
+        results
+      });
     } catch(e) {
       return res.status(500).json({ error: e.message });
     }
