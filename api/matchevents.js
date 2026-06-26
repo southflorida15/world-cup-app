@@ -464,25 +464,28 @@ function parseCommentary(data) {
 
 function parseMomentum(data, events=[], homeTeam="") {
   const stats = parseStats(data.boxscore, homeTeam) || { home: {}, away: {} };
-  const rows = Array.from({ length: 90 }, (_, i) => ({ minute: i + 1, signed: 0 }));
+  const rows = Array.from({ length: 90 }, (_, i) => ({ minute: i + 1, raw: 0, signed: 0 }));
 
   const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
   const num = v => Number.isFinite(Number(v)) ? Number(v) : 0;
   const homeStats = stats.home || {};
   const awayStats = stats.away || {};
 
-  // Intentional: this is NOT a possession bar. It is a minute-by-minute
-  // pressure owner. Aggregate stats only bias the number of attacking bursts;
-  // they should not create a long flat plateau.
+  // Momentum v3: pressure DIFFERENTIAL, not accumulated pressure.
+  // The raw signal can rise during sustained pressure, but the displayed
+  // bars are the difference between current pressure and a rolling baseline.
+  // That prevents long possession spells from becoming flat plateaus and
+  // creates the ESPN/Sofascore-style bursts when pressure changes.
   const pressureScore = s => (
-    num(s.shots) * 1.4 +
-    num(s.shotsOn) * 5.2 +
-    num(s.corners) * 3.0 +
-    num(s.blockedShots) * 1.4 +
-    num(s.accurateCrosses) * 1.0 +
-    num(s.crosses) * 0.18 +
-    num(s.interceptions) * 0.18 +
-    num(s.tackles) * 0.12
+    num(s.shots) * 1.15 +
+    num(s.shotsOn) * 5.4 +
+    num(s.corners) * 3.8 +
+    num(s.blockedShots) * 1.8 +
+    num(s.accurateCrosses) * 1.25 +
+    num(s.crosses) * 0.25 +
+    num(s.interceptions) * 0.16 +
+    num(s.tackles) * 0.10 +
+    num(s.clearances) * 0.05
   );
 
   const hp = pressureScore(homeStats);
@@ -491,7 +494,7 @@ function parseMomentum(data, events=[], homeTeam="") {
   const homeShare = hp / totalPressure;
   const awayShare = ap / totalPressure;
 
-  const seedText = `${homeTeam}|${events.map(e => `${e.time?.elapsed}-${e.team?.name}-${e.type}`).join('|')}|v3`;
+  const seedText = `${homeTeam}|${events.map(e => `${e.time?.elapsed}-${e.team?.name}-${e.type}-${e.detail}`).join('|')}|momentum-diff-v1`;
   let seed = 0;
   for (let i = 0; i < seedText.length; i++) seed = (seed * 31 + seedText.charCodeAt(i)) >>> 0;
   const rand = () => {
@@ -499,45 +502,56 @@ function parseMomentum(data, events=[], homeTeam="") {
     return seed / 4294967296;
   };
 
-  const addWave = (center, amp, width, side=1) => {
+  const addRawWave = (center, amp, width, side=1) => {
     const c = clamp(Number(center) || 1, 1, 90);
-    const w = Math.max(0.75, Number(width) || 2);
+    const w = Math.max(0.55, Number(width) || 1.3);
     const a = Number(amp) || 0;
     for (let m = 1; m <= 90; m++) {
       const d = Math.abs(m - c);
-      if (d > w * 2.65) continue;
+      if (d > w * 2.9) continue;
       const gaussian = Math.exp(-(d * d) / (2 * w * w));
-      const jagged = 0.88 + rand() * 0.24;
-      rows[m - 1].signed += side * a * gaussian * jagged;
+      const saw = 0.82 + rand() * 0.36;
+      rows[m - 1].raw += side * a * gaussian * saw;
     }
   };
 
-  // Small baseline only. This prevents empty charts without flattening the match.
-  const tinyBias = clamp((homeShare - awayShare) * 4.5, -4.5, 4.5);
+  const addCluster = (center, amp, side, count=3) => {
+    // Multiple narrow pulses look more like attacking waves than a single mound.
+    for (let i = 0; i < count; i++) {
+      const offset = (i - (count - 1) / 2) * (0.85 + rand() * 0.85);
+      const width = 0.55 + rand() * 1.15;
+      const localAmp = amp * (0.42 + rand() * 0.72) * (i === Math.floor(count/2) ? 1.18 : 1);
+      addRawWave(Number(center) + offset, localAmp, width, side);
+    }
+  };
+
+  // Very small match-level tilt only. It should guide spell distribution,
+  // never become the chart itself.
+  const tinyTilt = clamp((homeShare - awayShare) * 2.2, -2.2, 2.2);
   for (let m = 1; m <= 90; m++) {
-    rows[m - 1].signed += tinyBias + Math.sin(m / 3.7) * 1.3 + Math.cos(m / 8.9) * 0.9;
+    rows[m - 1].raw += tinyTilt + Math.sin(m / 4.8) * 0.8 + Math.cos(m / 11.5) * 0.7;
   }
 
-  // Create short attacking spells. Dominant teams get more bursts, not a permanent block.
-  const homeWaveCount = clamp(Math.round(4 + num(homeStats.shots) / 3.7 + num(homeStats.corners) / 2.8), 5, 18);
-  const awayWaveCount = clamp(Math.round(4 + num(awayStats.shots) / 3.7 + num(awayStats.corners) / 2.8), 4, 16);
-  const homeAmpBase = clamp(12 + homeShare * 20 + num(homeStats.shotsOn) * 1.2, 14, 34);
-  const awayAmpBase = clamp(12 + awayShare * 20 + num(awayStats.shotsOn) * 1.2, 14, 34);
+  // Simulated attacking spells from aggregate stats. Dominant teams get more
+  // short spells, not a permanent plateau.
+  const homeSpellCount = clamp(Math.round(3 + num(homeStats.shots) / 4.2 + num(homeStats.corners) / 3.0 + num(homeStats.shotsOn) / 2.5), 4, 15);
+  const awaySpellCount = clamp(Math.round(3 + num(awayStats.shots) / 4.2 + num(awayStats.corners) / 3.0 + num(awayStats.shotsOn) / 2.5), 3, 13);
+  const homeAmp = clamp(13 + homeShare * 21 + num(homeStats.shotsOn) * 0.9, 13, 34);
+  const awayAmp = clamp(13 + awayShare * 21 + num(awayStats.shotsOn) * 0.9, 13, 34);
 
-  const placeWaves = (count, side, ampBase, shotOn, corners) => {
+  const placeSpells = (count, side, ampBase, shots, corners, shotsOn) => {
     for (let i = 0; i < count; i++) {
       const bucket = 90 / count;
       const center = bucket * i + 1 + rand() * bucket;
-      const width = 0.9 + rand() * 2.1;
-      const amp = ampBase * (0.50 + rand() * 1.05) + num(shotOn) * 0.55 + num(corners) * 0.22;
-      addWave(center, amp, width, side);
-      // Add a close secondary pulse to create the ESPN-like bar clusters.
-      if (rand() > 0.45) addWave(center + 1.2 + rand() * 2.8, amp * (0.35 + rand() * 0.35), width * 0.75, side);
+      const amp = ampBase * (0.48 + rand() * 0.95) + num(shotsOn) * 0.9 + num(corners) * 0.28 + num(shots) * 0.06;
+      const pulses = rand() > 0.35 ? 3 : 2;
+      addCluster(center, amp, side, pulses);
+      if (rand() > 0.66) addRawWave(center + 2.8 + rand()*2.8, amp * 0.35, 0.95 + rand()*1.2, side);
     }
   };
 
-  placeWaves(homeWaveCount, 1, homeAmpBase, homeStats.shotsOn, homeStats.corners);
-  placeWaves(awayWaveCount, -1, awayAmpBase, awayStats.shotsOn, awayStats.corners);
+  placeSpells(homeSpellCount, 1, homeAmp, homeStats.shots, homeStats.corners, homeStats.shotsOn);
+  placeSpells(awaySpellCount, -1, awayAmp, awayStats.shots, awayStats.corners, awayStats.shotsOn);
 
   const teamSide = name => normESPN(name || "") === homeTeam ? 1 : -1;
   const minuteOf = item => {
@@ -548,25 +562,16 @@ function parseMomentum(data, events=[], homeTeam="") {
   };
   const teamOf = item => normESPN(item.team?.displayName || item.team?.name || "");
 
-  const addImpulse = (minute, signedImpulse, width=1.8) => {
-    const m = clamp(Number(minute) || 1, 1, 90);
-    const side = signedImpulse >= 0 ? 1 : -1;
-    const amp = Math.abs(signedImpulse);
-    addWave(m, amp, width, side);
-    addWave(m + 1.3, amp * 0.42, width * 0.9, side);
-    addWave(m - 1.1, amp * 0.24, width * 0.65, side);
-  };
-
   const classifyImpulse = item => {
     const t = `${item.type?.text || ""} ${item.type?.type || ""} ${item.type || ""} ${item.text || ""} ${item.shortText || ""} ${item.detail || ""}`.toLowerCase();
-    if (item.scoringPlay || t.includes("goal")) return { weight: 74, width: 1.35, invert: false };
-    if (t.includes("red card")) return { weight: 58, width: 1.55, invert: true };
-    if (t.includes("shot on") || t.includes("saved") || t.includes("woodwork") || t.includes("post")) return { weight: 34, width: 1.2, invert: false };
-    if (t.includes("corner")) return { weight: 28, width: 1.05, invert: false };
-    if (t.includes("shot")) return { weight: 20, width: 0.95, invert: false };
-    if (t.includes("yellow")) return { weight: 10, width: 0.8, invert: true };
-    if (t.includes("free kick") || t.includes("cross")) return { weight: 12, width: 0.9, invert: false };
-    if (t.includes("substitut")) return { weight: 6, width: 0.75, invert: false };
+    if (item.scoringPlay || t.includes("goal")) return { weight: 105, width: 0.70, invert: false, cluster: 3 };
+    if (t.includes("red card")) return { weight: 82, width: 0.82, invert: true, cluster: 3 };
+    if (t.includes("shot on") || t.includes("saved") || t.includes("woodwork") || t.includes("post")) return { weight: 48, width: 0.75, invert: false, cluster: 2 };
+    if (t.includes("corner")) return { weight: 36, width: 0.65, invert: false, cluster: 2 };
+    if (t.includes("shot")) return { weight: 26, width: 0.62, invert: false, cluster: 2 };
+    if (t.includes("yellow")) return { weight: 14, width: 0.55, invert: true, cluster: 1 };
+    if (t.includes("free kick") || t.includes("cross")) return { weight: 18, width: 0.60, invert: false, cluster: 1 };
+    if (t.includes("substitut")) return { weight: 7, width: 0.48, invert: false, cluster: 1 };
     return null;
   };
 
@@ -583,35 +588,60 @@ function parseMomentum(data, events=[], homeTeam="") {
     if (!min || !team || !info) return;
     const side = teamSide(team);
     const targetSide = info.invert ? -side : side;
-    addImpulse(min, targetSide * info.weight, info.width);
+    addCluster(min, info.weight, targetSide, info.cluster || 1);
 
     const text = `${item.type?.text || ""} ${item.type || ""} ${item.detail || ""}`.toLowerCase();
     if (item.scoringPlay || text.includes("goal")) {
-      // Small response by the conceding team, but don't overpower the goal spike.
-      addWave(Number(min) + 4.0, 20, 1.9, -side);
+      // Kickoff response by the conceding team.
+      addCluster(Number(min) + 4.2, 32, -side, 2);
     }
     if (text.includes("red")) {
-      addWave(Number(min) + 5.0, 30, 3.0, -side);
+      // Opponent pressure after a sending-off.
+      addCluster(Number(min) + 4.8, 48, -side, 3);
+      addRawWave(Number(min) + 9.5, 26, 2.2, -side);
     }
   });
 
-  // One light smoothing pass only. More smoothing turns this into a plateau.
-  const copy = rows.map(r => r.signed);
+  // Rolling differential: the displayed value is current pressure minus the
+  // recent baseline, preserving only the acceleration/attack wave.
+  const raw = rows.map(r => r.raw);
+  const baseline = raw.map((_, i) => {
+    let sum = 0, weight = 0;
+    for (let j = Math.max(0, i - 5); j <= Math.min(89, i + 5); j++) {
+      const d = Math.abs(i - j);
+      const w = 1 / (1 + d);
+      sum += raw[j] * w;
+      weight += w;
+    }
+    return weight ? sum / weight : 0;
+  });
+
+  // Keep some absolute pressure so long dominance is visible, but mostly show
+  // pressure change. This is what removes the long flat blocks.
   for (let i = 0; i < rows.length; i++) {
-    const left = copy[Math.max(0, i - 1)];
-    const mid = copy[i];
-    const right = copy[Math.min(rows.length - 1, i + 1)];
-    rows[i].signed = left * 0.16 + mid * 0.68 + right * 0.16;
+    const diff = raw[i] - baseline[i];
+    const absoluteHint = raw[i] * 0.18;
+    rows[i].signed = diff * 1.95 + absoluteHint;
   }
 
-  // Normalize per match and exaggerate peaks while shrinking mid-level noise.
-  const maxAbs = Math.max(12, ...rows.map(r => Math.abs(r.signed || 0)));
+  // Light adjacent smoothing only, preserving spikes.
+  const before = rows.map(r => r.signed);
+  for (let i = 0; i < rows.length; i++) {
+    const left = before[Math.max(0, i - 1)];
+    const mid = before[i];
+    const right = before[Math.min(rows.length - 1, i + 1)];
+    rows[i].signed = left * 0.10 + mid * 0.80 + right * 0.10;
+  }
+
+  // Winner-takes-minute: no dual colors. Suppress tiny noise and shape peaks.
+  const maxAbs = Math.max(10, ...rows.map(r => Math.abs(r.signed || 0)));
   return rows.map(r => {
     const sign = r.signed >= 0 ? 1 : -1;
     const ratio = Math.abs(r.signed || 0) / maxAbs;
-    const shaped = Math.pow(ratio, 1.55) * 90;
-    const signed = ratio < 0.035 ? 0 : sign * shaped;
-    return { minute: r.minute, signed: Math.round(clamp(signed, -90, 90) * 10) / 10 };
+    if (ratio < 0.055) return { minute: r.minute, signed: 0 };
+    const shaped = Math.pow(ratio, 1.28) * 92;
+    const signed = sign * shaped;
+    return { minute: r.minute, signed: Math.round(clamp(signed, -92, 92) * 10) / 10 };
   });
 }
 
