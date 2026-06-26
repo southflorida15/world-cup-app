@@ -3,6 +3,7 @@ import FantasyScoringRules from "./components/FantasyScoringRules";
 import FantasyStatsSummary from "./components/FantasyStatsSummary";
 import MatchHeader from "./components/MatchHeader";
 import MatchInfoSection from "./components/MatchInfoSection";
+import { buildMomentumEngineRows } from "./engine/momentum/momentumEngine";
 import React, { useState, useEffect, useContext, createContext, useCallback, useMemo, useRef } from "react";
 import { buildQualifiedThirdsFromSelectedTeams, buildThirdGroupsKey, ROUND_OF_16_TEMPLATE, QUARTER_FINAL_TEMPLATE, SEMI_FINAL_TEMPLATE, FINAL_TEMPLATE } from "./engine/fifa2026Bracket";
 import { getAnnexCMapping } from "./engine/annexC";
@@ -6292,10 +6293,12 @@ function MatchMomentum({ match, events=[], momentum=[], stats, C }) {
     });
   };
 
-  const engineRows = useMemo(() => ({
-    balanced: buildBalanced(),
-    spikes: buildLocalSpikes(),
-    hybrid: buildHybrid(),
+  const engineRows = useMemo(() => buildMomentumEngineRows({
+    match,
+    events: safeEvents,
+    momentum: safeMomentum,
+    stats,
+    normTeam,
   }), [safeEvents, safeMomentum, stats, match.home, match.away]);
 
   const rows = engineRows[engine] || engineRows.hybrid;
