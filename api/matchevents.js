@@ -1000,6 +1000,10 @@ export default async function handler(req, res) {
       });
     }
 
+    if (req.query.raw === "1") {
+  return res.status(200).json(data);
+}
+    
     const statusType = data.header?.competitions?.[0]?.status?.type?.name || "NS";
     const isDone = DONE_STATUSES.includes(statusType);
     const isLive = LIVE_STATUSES.includes(statusType);
