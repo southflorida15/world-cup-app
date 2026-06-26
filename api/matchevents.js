@@ -141,6 +141,7 @@ const HARDCODED_ESPN_IDS = {
   "Portugal|DR Congo":"760434","England|Croatia":"760435",
   "Ghana|Panama":"760436","Uzbekistan|Colombia":"760437",
   "Turkiye|United States":"760470",
+  "Turkiye|Paraguay":"760443",
 };
 
 async function getESPNEventId(home, away) {
