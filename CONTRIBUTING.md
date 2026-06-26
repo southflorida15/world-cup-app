@@ -1,27 +1,109 @@
 # Contributing
 
-## Safe change process
+Thank you for your interest in contributing to World Cup App.
 
-1. Pull latest `main`.
-2. Make a small, focused change.
-3. Run:
+This project is actively evolving, and thoughtful contributions are welcome.
+
+---
+
+## Ways to Contribute
+
+You can help by:
+
+- Reporting bugs.
+- Suggesting features.
+- Improving documentation.
+- Improving UI polish.
+- Adding screenshots.
+- Improving tournament data.
+- Testing live score behavior.
+- Reviewing bracket logic.
+- Improving accessibility.
+- Improving performance.
+
+---
+
+## Development Setup
+
+```bash
+git clone https://github.com/southflorida15/world-cup-app.git
+cd world-cup-app
+npm install
+npm run dev
+```
+
+---
+
+## Before Opening a Pull Request
+
+Please make sure:
+
+- The app runs locally.
+- The production build succeeds.
+- Your change is focused.
+- You describe what changed and why.
+- You avoid committing API keys or secrets.
+- You update documentation when needed.
+
+Recommended checks:
 
 ```bash
 npm run build
+npm run lint
 ```
 
-4. Test the affected tab locally.
-5. Commit with a descriptive message.
-6. Push and verify Vercel deployment.
+---
 
-## Code principles
+## Commit Style
 
-- Keep tournament rules in `src/engine`.
-- Keep provider-specific API logic in `api/`.
-- Avoid duplicating match, bracket, or historical-stat logic in UI components.
-- Prefer shared renderers for team rows, badges, cards, and status indicators.
-- Do not fake unavailable metrics. Hide metrics until a reliable source exists.
+Use clear, descriptive commit messages.
 
-## Documentation rule
+Examples:
 
-Any major feature change should update the relevant document under `docs/`.
+```text
+Improve match card layout
+Add roadmap documentation
+Fix third-place qualifier display
+Update live score status handling
+```
+
+---
+
+## Pull Request Guidelines
+
+A good pull request should include:
+
+- Summary of changes.
+- Reason for the change.
+- Screenshots for UI changes.
+- Notes about testing.
+- Any known limitations.
+
+---
+
+## Data Accuracy
+
+Because this app involves tournament structure, match schedules, and live data, accuracy matters.
+
+Please include a source or explanation when updating:
+
+- Fixtures.
+- Teams.
+- Bracket logic.
+- Historical records.
+- Broadcasting information.
+- Tournament rules.
+
+---
+
+## Security
+
+Do not commit:
+
+- API keys.
+- Tokens.
+- Credentials.
+- Private configuration.
+- Personal data.
+
+See [SECURITY.md](SECURITY.md) for responsible disclosure.

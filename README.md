@@ -1,214 +1,264 @@
-# World Cup 2026 Companion App
+# 🏆 World Cup App
 
-A full-featured FIFA World Cup 2026 companion built with React, Vite, Vercel serverless functions, Upstash Redis, and a custom tournament engine.
+![Version](https://img.shields.io/badge/version-3.0.1-blue)
+![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
+![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white)
+![Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?logo=vercel)
+![License](https://img.shields.io/badge/license-MIT-green)
+![Status](https://img.shields.io/badge/status-active-success)
 
-The app combines live match tracking, fantasy score predictions, an official-style actual bracket, user bracket simulation, standings, tournament statistics, historical team profiles, and World Cup data exploration in one mobile-first experience.
+> **The most comprehensive FIFA World Cup companion built with React.**  
+> Live Scores • Actual Bracket • Fantasy Bracket • Statistics • Historical Records • Team Profiles • Tournament Analytics
 
-## Live Demo
+---
 
-Production deployment: `https://world-cup-app-iota.vercel.app`
+## 🌍 Overview
 
-Project repository: `https://github.com/southflorida15/world-cup-app`
+**World Cup App** is a modern, fast, and interactive FIFA World Cup companion designed for fans who want more than a static schedule.
 
-## Core Features
+It combines live match information, official-style tournament structure, bracket visualization, fantasy simulation, team profiles, historical data, tournament statistics, and a polished user experience in one React application.
 
-### Match Center
+The goal is simple:
 
-- Full 104-match World Cup 2026 schedule.
-- Group-stage and knockout-stage match cards.
-- Live status, final scores, match metadata, and TV information.
-- Saved matches and match reminders.
+> Build a World Cup experience that feels useful, beautiful, and complete.
 
-### Live Scores
+---
 
-- Serverless `/api/livescores` endpoint.
-- Primary source: `football-data.org`.
-- Fallback source: Highlightly through RapidAPI, when available.
-- Upstash Redis cache to avoid every user calling the upstream API directly.
-- Smart TTL based on whether matches are live.
-- Manual cache flush support for troubleshooting.
+## ✨ Features
 
-### Groups and Standings
+### ⚽ Live Scores
 
-- 12 official groups, A through L.
-- Automatic standings calculation from match results.
-- Points, goal difference, goals scored, wins, draws, losses, and qualification status.
-- Best third-place team ranking support.
+Follow World Cup matches with live score updates, match status, and tournament context.
 
-### Actual Bracket
+### 🏆 Actual Bracket
 
-- Official World Cup 2026 knockout structure.
-- Round of 32 through Final.
-- Uses group results and FIFA Annex C third-place mapping.
-- Locked team indicators for confirmed teams.
-- Provisional/leading team indicators where slots are not mathematically final.
-- Automatic propagation through R16, QF, SF, and Final as actual results are known.
+Explore the official tournament bracket structure, including knockout progression and Round of 32 logic.
 
-### My Bracket
+### 🎮 Fantasy Bracket
 
-- Manual bracket builder and simulator.
-- Drag-and-drop group ordering.
-- Select best third-place teams.
-- Generate the knockout bracket.
-- Pick winners round by round.
-- Share bracket card.
-- Local persistence using browser storage.
+Create your own tournament outcome by reordering groups, selecting third-place qualifiers, and simulating the knockout path.
 
-### Fantasy / Bolão
+### 📊 Tournament Stats
 
-- Predict exact scores for tournament matches.
-- Scoring rules:
-  - 3 points for exact score.
-  - 1 point for correct result.
-  - Extra-time goals count.
-  - Penalty shootout results do not change score-prediction scoring.
-- Supports all 104 matches, not only the group phase.
-- Knockout match cards appear chronologically.
-- Future knockout matchups stay locked until both teams are actually known.
-- Fantasy score picks do not populate the bracket; actual results do.
+Review tournament-level data, standings, match outcomes, and team performance indicators.
 
-### Tournament Statistics
+### 📚 Historical Stats
 
-- Matches played out of 104.
-- Total goals.
-- Goals per match.
-- Clean sheets.
-- Most goals by team.
-- Clean sheet leader.
-- Highest-scoring match.
-- Biggest win.
-- Fastest goal, if reliable event data is available.
-- Click-through cards for top-ranked stat details.
+Browse historical World Cup records, past winners, and legacy performance data.
 
-### Historical Team Statistics
+### 👥 Team Profiles
 
-- Team history from Zafronix data, with local continuity logic for historical country names.
-- Merges historical records for countries whose football history is split across names in the API:
-  - Germany + West Germany
-  - Czech Republic / Czechia + Czechoslovakia
-  - Serbia + Yugoslavia + Serbia and Montenegro
-  - Russia + Soviet Union
-  - DR Congo + Zaire
-- Supports titles, appearances, finals, goals, tournament-by-tournament history, and top player records.
+Explore participating teams with flags, profiles, and tournament context.
 
-## Technology Stack
+### 🧩 Modern UI
 
-| Layer | Technology |
-| --- | --- |
-| Frontend | React + Vite |
-| Hosting | Vercel |
-| Serverless APIs | Vercel Functions |
-| Cache | Upstash Redis |
-| Live Scores | football-data.org, Highlightly fallback |
-| Historical Stats | Zafronix |
-| Flags | FlagCDN + fallback emoji flags |
-| Tournament Engine | Custom JavaScript engine |
-| Bracket Mapping | FIFA Annex C table |
+Built with a clean React interface, responsive layouts, reusable components, and a product-focused design.
 
-## High-Level Architecture
+---
 
-```text
-React App
-  |
-  |-- Static Data
-  |     |-- Groups
-  |     |-- Match schedule
-  |     |-- Team metadata
-  |
-  |-- Tournament Engine
-  |     |-- Standings
-  |     |-- Best third-place teams
-  |     |-- Annex C mapping
-  |     |-- Knockout templates
-  |
-  |-- Serverless APIs
-  |     |-- /api/livescores
-  |     |-- /api/zafronix
-  |     |-- /api/matchevents
-  |     |-- /api/bracket-share
-  |
-  |-- External Sources
-        |-- football-data.org
-        |-- Zafronix
-        |-- Highlightly
-        |-- Upstash Redis
+## 🖼️ Screenshots
+
+Add screenshots here once the final UI is captured.
+
+Recommended screenshots:
+
+| Area | Suggested Image |
+|---|---|
+| Home | Main dashboard |
+| Schedule | Match list and live scores |
+| Bracket | Actual tournament bracket |
+| My Bracket | Fantasy bracket simulator |
+| Stats | Tournament analytics |
+| Teams | Team profile page |
+
+```md
+![Home](docs/screenshots/home.png)
+![Bracket](docs/screenshots/bracket.png)
+![My Bracket](docs/screenshots/my-bracket.png)
 ```
 
-## Local Development
+---
 
-Install dependencies:
+## 🧱 Architecture
+
+The app is designed around a clear separation of data, UI, tournament logic, and integrations.
+
+```text
+world-cup-app/
+├── api/
+│   └── livescores.js
+├── src/
+│   ├── components/
+│   ├── data/
+│   ├── engine/
+│   ├── hooks/
+│   ├── styles/
+│   └── App.jsx
+├── public/
+├── README.md
+├── CHANGELOG.md
+├── ROADMAP.md
+└── VERSION.md
+```
+
+### Core concepts
+
+- **React UI** for the main user experience
+- **Vite** for fast local development and production builds
+- **Vercel** for deployment
+- **Serverless API route** for live score integration
+- **Tournament engine** for bracket and qualification logic
+- **Static data modules** for teams, fixtures, historical stats, and tournament metadata
+
+---
+
+## 🛠️ Technology Stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | React |
+| Build Tool | Vite |
+| Deployment | Vercel |
+| Styling | CSS |
+| API Integration | Vercel Serverless Functions |
+| Live Data | External football data API |
+| Versioning | Semantic Versioning |
+| Repository | GitHub |
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+Install:
+
+- Node.js
+- npm
+- Git
+
+### Installation
 
 ```bash
+git clone https://github.com/southflorida15/world-cup-app.git
+cd world-cup-app
 npm install
 ```
 
-Run locally:
+### Run locally
 
 ```bash
 npm run dev
 ```
 
-Build:
+### Build
 
 ```bash
 npm run build
 ```
 
-Preview production build:
+### Preview production build
 
 ```bash
 npm run preview
 ```
 
-## Environment Variables
+---
 
-Configure these in Vercel and, if needed, in local `.env` files.
+## 🔐 Environment Variables
 
-| Variable | Purpose |
-| --- | --- |
-| `FOOTBALL_DATA_API_KEY` | Primary live-score provider token |
-| `RAPIDAPI_KEY` | Highlightly/RapidAPI fallback token |
-| `RAPIDAPI_HOST` | RapidAPI host for fallback provider |
-| `KV_REST_API_URL` | Upstash Redis REST URL |
-| `KV_REST_API_TOKEN` | Upstash Redis REST token |
-| `ZAFRONIX_API_KEY` | Zafronix API key, if required by proxy |
+Live score functionality requires API credentials configured in Vercel.
 
-## Deployment
+Recommended variables:
 
-The app is deployed through Vercel and connected to the GitHub repository.
-
-Typical workflow:
-
-```bash
-git add .
-git commit -m "Describe the change"
-git push
+```env
+RAPIDAPI_KEY=your_api_key_here
+RAPIDAPI_HOST=your_api_host_here
 ```
 
-If Vercel does not automatically deploy from Git, use the deploy hook alias configured locally:
+Do not commit secrets to the repository.
 
-```bash
-wcdeploy
-```
+---
 
-## Documentation
+## 📚 Documentation
 
-Detailed documentation is available in `/docs`:
+| Document | Purpose |
+|---|---|
+| [CHANGELOG.md](CHANGELOG.md) | Release history |
+| [ROADMAP.md](ROADMAP.md) | Product roadmap |
+| [VERSION.md](VERSION.md) | Current release details |
+| [AUTHORS.md](AUTHORS.md) | Project authorship |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Contribution guidelines |
+| [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Community standards |
+| [SECURITY.md](SECURITY.md) | Security reporting |
 
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
-- [`docs/TOURNAMENT_ENGINE.md`](docs/TOURNAMENT_ENGINE.md)
-- [`docs/LIVE_SCORES.md`](docs/LIVE_SCORES.md)
-- [`docs/FANTASY_MODE.md`](docs/FANTASY_MODE.md)
-- [`docs/STATS_ENGINE.md`](docs/STATS_ENGINE.md)
-- [`docs/DATA_SOURCES.md`](docs/DATA_SOURCES.md)
-- [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
-- [`docs/PROJECT_STRUCTURE.md`](docs/PROJECT_STRUCTURE.md)
-- [`docs/DESIGN_SYSTEM.md`](docs/DESIGN_SYSTEM.md)
+---
 
-## Roadmap
+## 🧭 Roadmap
 
-See [`ROADMAP.md`](ROADMAP.md).
+The current focus is turning the app into a polished, reliable, and scalable World Cup companion.
 
-## Status
+Upcoming priorities include:
 
-The app is actively evolving. The current priority is documentation, data accuracy, UI consistency, and maintainability before adding larger aspirational features such as a full World Cup Wiki.
+- Stronger live match coverage
+- Improved broadcasting data
+- Better match detail pages
+- Expanded team profiles
+- Richer tournament analytics
+- More complete historical records
+- Enhanced fantasy bracket scenarios
+- Additional documentation and screenshots
+
+See [ROADMAP.md](ROADMAP.md) for the full roadmap.
+
+---
+
+## 🤝 Contributing
+
+Contributions, ideas, bug reports, and improvements are welcome.
+
+Before contributing, please read:
+
+- [CONTRIBUTING.md](CONTRIBUTING.md)
+- [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+
+---
+
+## 🔒 Security
+
+Please do not publicly disclose security issues.
+
+See [SECURITY.md](SECURITY.md) for responsible reporting guidelines.
+
+---
+
+## 🙏 Acknowledgements
+
+This project is inspired by the global passion, history, drama, and community of the FIFA World Cup.
+
+Special thanks to:
+
+- Football fans around the world
+- Open-source contributors
+- React and Vite communities
+- Vercel platform
+- Public football data providers
+
+---
+
+## 📌 Project Status
+
+**Current release:** `v3.0.1`  
+**Status:** Active development  
+**Deployment:** Vercel  
+**Repository:** GitHub
+
+---
+
+## 🏁 Closing Note
+
+World Cup App is built with the ambition of becoming a serious, polished, and genuinely useful tournament companion.
+
+Not just a schedule.  
+Not just a bracket.  
+A complete World Cup experience.
