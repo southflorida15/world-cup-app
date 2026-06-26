@@ -5860,7 +5860,7 @@ return (
       <div style={{display:"flex",gap:6,marginBottom:14,overflowX:"auto",scrollbarWidth:"none"}}>
         {(syncProfile?.pin || displayName) && <Pill active={filter==="leagues"} onClick={()=>setFilter("leagues")} color={C.blue}>🏆 Leagues</Pill>}
         <Pill active={filter==="board"} onClick={()=>setFilter("board")} color={C.rival}>🏅 Rankings</Pill>
-        <Pill active={filter==="upcoming"} onClick={()=>setFilter("upcoming")} color={C.green}>Pending Picks ({upcoming.length})</Pill>
+        <Pill active={filter==="upcoming"} onClick={()=>setFilter("upcoming")} color={C.green}>Picks ({upcoming.length})</Pill>
         <Pill active={filter==="finished"} onClick={()=>setFilter("finished")} color={C.gold}>Scored ({finished.length})</Pill>
       </div>
 
@@ -8811,7 +8811,197 @@ function ShopTab({ tabTop=116, geoData=null }) {
   );
 }
 
+
+
+// ── MY WORLD CUP HOME ─────────────────────────────────────────────────────
+// A compact status board: four useful cards, not a launcher.
+function MyWorldCupTab({ favTeams=[], saved=[], syncProfile=null, displayName="", userAvatar=null, onMatchTap=()=>{}, setTab=()=>{}, onPickTeams=()=>{} }) {
+  const { scores, getScore, isLive, isFinished } = useContext(LiveScoresCtx);
+  const [fantasySummary, setFantasySummary] = useState({ loading:true, user:null, preds:{}, rank:0, totalPlayers:0 });
+  const fantasyUserId = useMemo(() => syncProfile?.uid || getUserId(), [syncProfile?.uid]);
+  const isLocalDev = typeof window !== "undefined" && ["localhost", "127.0.0.1"].includes(window.location.hostname);
+  const [homeDebug, setHomeDebug] = useState(false);
+
+  const now = Date.now();
+  const todayKey = new Date(now).toLocaleDateString("en-CA");
+  const getTs = (m) => MATCH_UTC[m.id] ? new Date(MATCH_UTC[m.id]).getTime() : 0;
+  const fmtShort = (m) => {
+    const iso = MATCH_UTC[m.id];
+    if (!iso) return `${m.date} • ${m.time}`;
+    const d = new Date(iso);
+    return d.toLocaleString("en-US", { weekday:"short", month:"short", day:"numeric", hour:"numeric", minute:"2-digit" });
+  };
+  const fmtCountdown = (m) => {
+    const ts = getTs(m);
+    if (!ts) return "";
+    const diff = ts - now;
+    if (diff <= 0) return "Started";
+    const mins = Math.round(diff / 60000);
+    const days = Math.floor(mins / 1440);
+    const hrs = Math.floor((mins % 1440) / 60);
+    const rem = mins % 60;
+    if (days > 0) return `${days}d ${hrs}h`;
+    if (hrs > 0) return `${hrs}h ${rem}m`;
+    return `${rem}m`;
+  };
+  const isToday = (m) => {
+    const iso = MATCH_UTC[m.id];
+    if (!iso) return false;
+    return new Date(iso).toLocaleDateString("en-CA") === todayKey;
+  };
+  const hasRealTeam = (t) => t && !/^\d|^TBD|^R16|^QF|^SF|🏆|3rd/.test(String(t));
+  const myTeamSet = new Set(favTeams || []);
+  const myMatches = MATCHES.filter(m => myTeamSet.has(m.home) || myTeamSet.has(m.away));
+  const liveMatches = MATCHES.filter(m => {
+    const sc = getScore(m.home, m.away);
+    return sc && (isLive(m.home, m.away) || String(sc.status||"").toUpperCase().includes("LIVE"));
+  });
+  const todayMatches = MATCHES.filter(isToday);
+  const todayMyMatches = todayMatches.filter(m => myTeamSet.has(m.home) || myTeamSet.has(m.away));
+  const nextMyMatch = myMatches
+    .filter(m => !isFinished(m.home, m.away) && (getTs(m) + 3*60*60*1000 > now))
+    .sort((a,b)=>getTs(a)-getTs(b))[0];
+  const nextAnyMatch = MATCHES
+    .filter(m => getTs(m) && getTs(m) + 3*60*60*1000 > now)
+    .sort((a,b)=>getTs(a)-getTs(b))[0];
+  const nextMatch = nextMyMatch || nextAnyMatch;
+  const nextScore = nextMatch ? getScore(nextMatch.home, nextMatch.away) : null;
+  const savedBracket = useMemo(() => {
+    try { return JSON.parse(localStorage.getItem(MY_BRACKET_STORAGE_KEY) || "null"); } catch { return null; }
+  }, []);
+  const bracketChampion = savedBracket?.result?.champion || savedBracket?.manualPicks?.[104] || savedBracket?.champion || "Not picked";
+  const bracketGenerated = !!(savedBracket?.result || savedBracket?.manualPicks);
+  const bracketPicks = savedBracket?.manualPicks ? Object.keys(savedBracket.manualPicks).length : 0;
+
+  useEffect(() => {
+    let cancelled = false;
+    setFantasySummary(s => ({ ...s, loading:true }));
+    Promise.allSettled([
+      apiPred("getUser", { userId: fantasyUserId }),
+      apiPred("getPreds", { userId: fantasyUserId }),
+      apiPred("leaderboard")
+    ]).then(([u,p,b]) => {
+      if (cancelled) return;
+      const user = u.status === "fulfilled" ? u.value : null;
+      const preds = p.status === "fulfilled" && p.value ? p.value : {};
+      const board = b.status === "fulfilled" && Array.isArray(b.value) ? b.value : [];
+      const myName = String(user?.name || displayName || "").trim().toLowerCase();
+      const idx = board.findIndex(r => String(r.userId || r.id || "") === String(fantasyUserId) || (!!myName && String(r.name || r.displayName || "").trim().toLowerCase() === myName));
+      setFantasySummary({ loading:false, user, preds, rank:idx>=0?idx+1:0, totalPlayers:board.length });
+    }).catch(() => { if (!cancelled) setFantasySummary({ loading:false, user:null, preds:{}, rank:0, totalPlayers:0 }); });
+    return () => { cancelled = true; };
+  }, [fantasyUserId, displayName]);
+
+  const upcomingFantasyMatches = MATCHES.filter(m => {
+    const ts = getTs(m);
+    return ts && ts > now && hasRealTeam(m.home) && hasRealTeam(m.away);
+  });
+  const fantasyPredCount = Object.values(fantasySummary.preds || {}).filter(v => v && v.hg !== undefined && v.ag !== undefined && v.hg !== "" && v.ag !== "").length;
+  const nextPickDeadline = upcomingFantasyMatches[0];
+  const nextPickSet = nextPickDeadline ? !!fantasySummary.preds?.[nextPickDeadline.id] : false;
+
+  const CardShell = ({ title, icon, tone=C.green, children, footer, onClick }) => (
+    <button onClick={onClick} style={{textAlign:"left",minHeight:172,borderRadius:18,border:`1px solid ${tone}44`,background:`linear-gradient(135deg,${tone}18,${C.s1})`,padding:14,cursor:onClick?"pointer":"default",boxShadow:DS.shadow.card,color:C.text,display:"flex",flexDirection:"column",justifyContent:"space-between",overflow:"hidden"}}>
+      <div>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10,gap:8}}>
+          <div style={{fontSize:11,color:C.dim,fontWeight:900,letterSpacing:"0.12em",textTransform:"uppercase"}}>{title}</div>
+          <div style={{fontSize:22,lineHeight:1}}>{icon}</div>
+        </div>
+        {children}
+      </div>
+      {footer && <div style={{fontSize:11,color:C.dim,marginTop:10,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{footer}</div>}
+    </button>
+  );
+
+  const debugRows = [
+    ["favoriteTeams", favTeams.length ? favTeams.join(", ") : "none selected"],
+    ["todayKey", todayKey],
+    ["todayMatches", String(todayMatches.length)],
+    ["liveMatches", liveMatches.map(m => `${m.home} vs ${m.away}`).join(" | ") || "none"],
+    ["todayMyMatches", todayMyMatches.map(m => `${m.home} vs ${m.away}`).join(" | ") || "none"],
+    ["nextMyMatch", nextMyMatch ? `#${nextMyMatch.id}: ${nextMyMatch.home} vs ${nextMyMatch.away} · ${fmtShort(nextMyMatch)}` : "none"],
+    ["nextFallbackMatch", nextAnyMatch ? `#${nextAnyMatch.id}: ${nextAnyMatch.home} vs ${nextAnyMatch.away} · ${fmtShort(nextAnyMatch)}` : "none"],
+    ["nextMatchScore", nextScore ? `${nextScore.hg ?? "?"}-${nextScore.ag ?? "?"} · ${nextScore.status || "status?"} · ${nextScore.elapsed || ""}` : "none"],
+    ["bracketStored", bracketGenerated ? "yes" : "no"],
+    ["bracketChampion", bracketChampion],
+    ["bracketPickCount", String(bracketPicks)],
+    ["fantasyUserId", String(fantasyUserId || "none")],
+    ["fantasyPredCount", String(fantasyPredCount)],
+    ["fantasyRank", fantasySummary.rank ? `#${fantasySummary.rank} of ${fantasySummary.totalPlayers || "?"}` : "none"],
+    ["nextFantasyDeadline", nextPickDeadline ? `#${nextPickDeadline.id}: ${nextPickDeadline.home} vs ${nextPickDeadline.away} · ${fmtShort(nextPickDeadline)} · pickSaved=${nextPickSet ? "yes" : "no"}` : "none"]
+  ];
+
+  return (
+    <div style={{paddingTop:14}}>
+      <div style={{marginBottom:14,display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>
+        <div>
+          <div style={{fontSize:11,color:C.dim,fontWeight:800,letterSpacing:"0.16em",textTransform:"uppercase"}}>My World Cup</div>
+          <div style={{fontSize:22,fontWeight:900,color:C.text,lineHeight:1.15}}>What matters now</div>
+        </div>
+        {favTeams.length ? <div style={{display:"flex",gap:4,flexWrap:"wrap",justifyContent:"flex-end"}}>{favTeams.slice(0,4).map(t=><span key={t} title={t} style={{fontSize:20}}>{getFlag(t)}</span>)}</div> : <button onClick={onPickTeams} style={{border:`1px solid ${C.green}55`,background:`${C.green}14`,color:C.green,borderRadius:999,padding:"8px 10px",fontSize:12,fontWeight:800,cursor:"pointer"}}>Pick teams</button>}
+      </div>
+
+      <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:12}}>
+        <CardShell title="Next match" icon="⭐" tone={C.blue} onClick={() => nextMatch && onMatchTap(nextMatch)} footer={nextMatch ? `${nextMatch.venue || "Venue TBA"}` : "Pick favorite teams to personalize"}>
+          {nextMatch ? (
+            <>
+              <div style={{fontSize:26,fontWeight:900,color:C.text,lineHeight:1}}>{getFlag(nextMatch.home)} {nextScore ? `${nextScore.hg ?? ""}-${nextScore.ag ?? ""}` : "vs"} {getFlag(nextMatch.away)}</div>
+              <div style={{fontSize:13,color:C.mid,fontWeight:800,marginTop:8}}>{nextMatch.home} vs {nextMatch.away}</div>
+              <div style={{fontSize:12,color:C.dim,marginTop:5}}>{nextScore && isLive(nextMatch.home,nextMatch.away) ? `🔴 Live ${nextScore.elapsed || ""}'` : `${fmtShort(nextMatch)} · ${fmtCountdown(nextMatch)}`}</div>
+            </>
+          ) : <div style={{fontSize:13,color:C.mid,lineHeight:1.5}}>Choose favorite teams and this card becomes your tournament shortcut.</div>}
+        </CardShell>
+
+        <CardShell title="Today" icon="📅" tone={C.gold} onClick={()=>setTab("schedule")} footer={nextAnyMatch ? `Next kickoff: ${fmtShort(nextAnyMatch)}` : "No scheduled matches found"}>
+          <div style={{display:"flex",gap:10,alignItems:"baseline"}}>
+            <div style={{fontSize:28,fontWeight:900,color:liveMatches.length?C.red:C.text}}>{liveMatches.length}</div>
+            <div style={{fontSize:12,color:C.dim,fontWeight:800}}>live</div>
+          </div>
+          <div style={{fontSize:22,fontWeight:900,color:C.text,lineHeight:1.1}}>{todayMatches.length} matches</div>
+          <div style={{fontSize:12,color:todayMyMatches.length?C.green:C.mid,marginTop:6,fontWeight:700}}>{todayMyMatches.length ? `${todayMyMatches.length} with your teams` : "No favorite teams today"}</div>
+        </CardShell>
+
+        <CardShell title="My bracket" icon="🏆" tone={C.green} onClick={()=>setTab("bracket")} footer={bracketGenerated ? `${bracketPicks} knockout pick${bracketPicks===1?"":"s"}` : "Generate your bracket to track progress"}>
+          <div style={{fontSize:13,color:C.dim,fontWeight:800,marginBottom:5}}>Champion pick</div>
+          <div style={{fontSize:20,fontWeight:900,color:bracketChampion==="Not picked"?C.mid:C.text,lineHeight:1.1}}>{bracketChampion!=="Not picked" ? `${getFlag(bracketChampion)} ${bracketChampion}` : "Not picked"}</div>
+          <div style={{fontSize:12,color:bracketGenerated?C.green:C.gold,marginTop:8,fontWeight:800}}>{bracketGenerated ? "Bracket active" : "Needs setup"}</div>
+        </CardShell>
+
+        <CardShell title="Fantasy" icon="🎯" tone="#a78bfa" onClick={()=>setTab("predictor")} footer={fantasySummary.rank ? `Rank #${fantasySummary.rank}${fantasySummary.totalPlayers?` of ${fantasySummary.totalPlayers}`:""}` : (fantasySummary.user ? "Leaderboard opens in Fantasy" : "Join Fantasy to track picks")}>
+          <div style={{fontSize:13,color:C.dim,fontWeight:800,marginBottom:5}}>Picks</div>
+          <div style={{fontSize:26,fontWeight:900,color:C.text,lineHeight:1}}>{fantasyPredCount}</div>
+          <div style={{fontSize:12,color:nextPickSet?C.green:C.gold,marginTop:8,fontWeight:800}}>{nextPickDeadline ? (nextPickSet ? "Next pick saved" : `Next deadline ${fmtCountdown(nextPickDeadline)}`) : "No upcoming picks"}</div>
+          {fantasySummary.loading && <div style={{fontSize:11,color:C.dim,marginTop:6}}>Loading fantasy...</div>}
+        </CardShell>
+      </div>
+
+      {isLocalDev && (
+        <div style={{marginTop:14,border:`1px solid ${homeDebug ? C.gold : C.b1}`,background:C.s1,borderRadius:14,overflow:"hidden"}}>
+          <button onClick={()=>setHomeDebug(v=>!v)} style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,padding:"11px 12px",background:"transparent",border:"none",color:C.text,cursor:"pointer"}}>
+            <span style={{fontSize:12,fontWeight:900,letterSpacing:"0.1em",textTransform:"uppercase",color:homeDebug?C.gold:C.dim}}>🧪 My WC debug</span>
+            <span style={{fontSize:12,color:C.mid}}>{homeDebug ? "Hide" : "Show raw values"}</span>
+          </button>
+          {homeDebug && (
+            <div style={{borderTop:`1px solid ${C.b1}`,padding:12}}>
+              {debugRows.map(([k,v]) => (
+                <div key={k} style={{display:"grid",gridTemplateColumns:"130px 1fr",gap:8,padding:"6px 0",borderBottom:`1px solid ${C.b1}66`,fontSize:11,lineHeight:1.35}}>
+                  <div style={{color:C.dim,fontWeight:800}}>{k}</div>
+                  <div style={{color:C.text,wordBreak:"break-word"}}>{v}</div>
+                </div>
+              ))}
+              <div style={{fontSize:10,color:C.dim,lineHeight:1.5,marginTop:8}}>
+                This panel only appears on localhost/127.0.0.1. It helps confirm whether each Home card is limited by missing favorite teams, unavailable API data, local proxy issues, or card logic.
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 const TABS = [
+  {id:"home",      icon:"🏠", label:"My WC"},
   {id:"live",      icon:"🔴", label:"Live"},
   {id:"schedule",  icon:"📋", label:"Schedule"},
   {id:"groups",    icon:"🗂️", label:"Groups"},
@@ -8956,7 +9146,7 @@ export default function App() {
     }, 1800);
     return () => clearTimeout(t);
   }, []);
-  const [tab, setTab] = useState("live");
+  const [tab, setTab] = useState("home");
   const [masterPushSubscribed, setMasterPushSubscribed] = useState(false);
 
   // Detect league invite from URL ?join=CODE
@@ -9427,6 +9617,7 @@ export default function App() {
         </div>
         <PullToRefresh onRefresh={async()=>{ if(refreshScores) await refreshScores(); }}>
         <div style={{padding:"0 13px 100px"}}>
+          {tab==="home"      && <MyWorldCupTab favTeams={favTeams} saved={saved} syncProfile={syncProfile} displayName={displayName} userAvatar={userAvatar} onMatchTap={onMatchTap} setTab={setTab} onPickTeams={()=>setShowFavPicker(true)}/>}
           {tab==="live"      && <LiveTab onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} tabTop={tabBarBottom} savedIds={savedIds}/>}
           {tab==="schedule"  && <SchedTab onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} tabTop={tabBarBottom} savedIds={savedIds}/>}
           {tab==="groups"    && <GrpTab onTeam={onTeam} onMatchTap={onMatchTap} tabTop={tabBarBottom}/>}
