@@ -30,6 +30,8 @@ const ESPN_NAME_MAP = {
   "Bosnia and Herzegovina": "Bosnia & Herz.",
   "Cape Verde Islands": "Cape Verde",
   "Turkey": "Turkiye",
+  "Türkiye": "Turkiye",
+  "Turkiye": "Turkiye",
   "Curaçao": "Curacao",
   "Congo, DR": "DR Congo",
   "DR Congo": "DR Congo",
