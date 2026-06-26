@@ -564,14 +564,14 @@ function parseMomentum(data, events=[], homeTeam="") {
 
   const classifyImpulse = item => {
     const t = `${item.type?.text || ""} ${item.type?.type || ""} ${item.type || ""} ${item.text || ""} ${item.shortText || ""} ${item.detail || ""}`.toLowerCase();
-    if (item.scoringPlay || t.includes("goal")) return { weight: 175, width: 0.42, invert: false, cluster: 2 };
-    if (t.includes("red card")) return { weight: 140, width: 0.48, invert: true, cluster: 2 };
-    if (t.includes("shot on") || t.includes("saved") || t.includes("woodwork") || t.includes("post")) return { weight: 82, width: 0.42, invert: false, cluster: 2 };
-    if (t.includes("corner")) return { weight: 64, width: 0.36, invert: false, cluster: 1 };
-    if (t.includes("shot")) return { weight: 44, width: 0.34, invert: false, cluster: 1 };
-    if (t.includes("yellow")) return { weight: 26, width: 0.30, invert: true, cluster: 1 };
-    if (t.includes("free kick") || t.includes("cross")) return { weight: 32, width: 0.34, invert: false, cluster: 1 };
-    if (t.includes("substitut")) return { weight: 10, width: 0.24, invert: false, cluster: 1 };
+    if (item.scoringPlay || t.includes("goal")) return { weight: 155, width: 0.72, invert: false, cluster: 2 };
+    if (t.includes("red card")) return { weight: 120, width: 0.68, invert: true, cluster: 2 };
+    if (t.includes("shot on") || t.includes("saved") || t.includes("woodwork") || t.includes("post")) return { weight: 64, width: 0.58, invert: false, cluster: 2 };
+    if (t.includes("corner")) return { weight: 42, width: 0.48, invert: false, cluster: 1 };
+    if (t.includes("shot")) return { weight: 30, width: 0.42, invert: false, cluster: 1 };
+    if (t.includes("yellow")) return { weight: 18, width: 0.34, invert: true, cluster: 1 };
+    if (t.includes("free kick") || t.includes("cross")) return { weight: 22, width: 0.40, invert: false, cluster: 1 };
+    if (t.includes("substitut")) return { weight: 7, width: 0.28, invert: false, cluster: 1 };
     return null;
   };
 
@@ -593,12 +593,12 @@ function parseMomentum(data, events=[], homeTeam="") {
     const text = `${item.type?.text || ""} ${item.type || ""} ${item.detail || ""}`.toLowerCase();
     if (item.scoringPlay || text.includes("goal")) {
       // Kickoff response by the conceding team.
-      addCluster(Number(min) + 2.2, 42, -side, 1);
+      addCluster(Number(min) + 2.4, 32, -side, 1);
     }
     if (text.includes("red")) {
       // Opponent pressure after a sending-off.
-      addCluster(Number(min) + 2.8, 56, -side, 2);
-      addRawWave(Number(min) + 6.0, 22, 0.85, -side);
+      addCluster(Number(min) + 2.8, 44, -side, 2);
+      addRawWave(Number(min) + 5.8, 16, 1.1, -side);
     }
   });
 
@@ -620,8 +620,8 @@ function parseMomentum(data, events=[], homeTeam="") {
   // pressure change. This is what removes the long flat blocks.
   for (let i = 0; i < rows.length; i++) {
     const diff = raw[i] - baseline[i];
-    const absoluteHint = raw[i] * 0.05;
-    rows[i].signed = diff * 3.35 + absoluteHint;
+    const absoluteHint = raw[i] * 0.12;
+    rows[i].signed = diff * 2.35 + absoluteHint;
   }
 
   // Light adjacent smoothing only, preserving spikes.
@@ -630,7 +630,7 @@ function parseMomentum(data, events=[], homeTeam="") {
     const left = before[Math.max(0, i - 1)];
     const mid = before[i];
     const right = before[Math.min(rows.length - 1, i + 1)];
-    rows[i].signed = left * 0.04 + mid * 0.92 + right * 0.04;
+    rows[i].signed = left * 0.16 + mid * 0.68 + right * 0.16;
   }
 
   // Winner-takes-minute: no dual colors. Suppress tiny noise and shape peaks.
@@ -638,10 +638,10 @@ function parseMomentum(data, events=[], homeTeam="") {
   return rows.map(r => {
     const sign = r.signed >= 0 ? 1 : -1;
     const ratio = Math.abs(r.signed || 0) / maxAbs;
-    if (ratio < 0.075) return { minute: r.minute, signed: 0 };
-    const shaped = Math.pow(ratio, 0.52) * 96;
+    if (ratio < 0.035) return { minute: r.minute, signed: 0 };
+    const shaped = Math.pow(ratio, 0.62) * 92;
     const signed = sign * shaped;
-    return { minute: r.minute, signed: Math.round(clamp(signed, -96, 96) * 10) / 10 };
+    return { minute: r.minute, signed: Math.round(clamp(signed, -92, 92) * 10) / 10 };
   });
 }
 

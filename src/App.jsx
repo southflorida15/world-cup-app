@@ -6204,7 +6204,7 @@ function MatchMomentum({ match, events=[], momentum=[], stats, C }) {
     const priorSigned = Number(prev?.signed) || 0;
     if (Math.abs(signed) < 0.35) {
       const carry = priorSigned < 0 ? -1 : 1;
-      signed = carry * 0.9;
+      signed = carry * 0.45;
     }
 
     return {
@@ -6251,7 +6251,7 @@ function MatchMomentum({ match, events=[], momentum=[], stats, C }) {
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,gap:8}}>
           <div>
             <div style={{fontSize:12,fontWeight:900,color:C.green,letterSpacing:".08em"}}>MATCH MOMENTUM</div>
-            <div style={{fontSize:11,color:C.dim}}>True 1-minute signal · one team owns each minute · events attached to peaks</div>
+            <div style={{fontSize:11,color:C.dim}}>Balanced 1-minute signal · short pressure waves · events attached to peaks</div>
           </div>
           <div style={{fontSize:11,color:C.mid,textAlign:"right"}}>{goals.length} ⚽ · {cards.length} cards · {subs.length} subs</div>
         </div>
@@ -6262,8 +6262,8 @@ function MatchMomentum({ match, events=[], momentum=[], stats, C }) {
           <div style={{height:148,display:"flex",alignItems:"stretch",gap:1}}>
             {compact.map((b, i) => {
               const ratio = Math.abs(b.signed || 0) / maxVal;
-              const rawHeight = Math.pow(ratio, 0.46) * 76;
-              const magnitude = Math.max(2, Math.round(rawHeight));
+              const rawHeight = ratio < 0.025 ? 1 : Math.pow(ratio, 0.60) * 74;
+              const magnitude = ratio < 0.025 ? 1 : Math.max(2, Math.round(rawHeight));
               const isHomeMinute = b.side === "home";
               const isAwayMinute = b.side === "away";
               const owner = sideName(b.side);
