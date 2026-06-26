@@ -6192,12 +6192,25 @@ function MatchMomentum({ match, events=[], momentum=[], stats, C }) {
       })
     : buildFallback();
 
-  const compact = rows.slice(0, 90).map((b, i) => {
-    const signed = Math.abs(b.signed) < 1.1 ? 0 : b.signed;
+  const compact = Array.from({ length: 90 }, (_, i) => {
+    const b = rows[i] || { minute: i + 1, signed: 0 };
+    let signed = Number(b.signed) || 0;
+
+    // Always render a true 1-minute signal. Even quiet minutes get a tiny
+    // signed tick so the chart reads as a continuous match-flow trace rather
+    // than isolated event clusters. If a minute is perfectly neutral, carry
+    // forward the prior owner so the visual remains one-team-per-minute.
+    const prev = i > 0 ? rows[i - 1] : null;
+    const priorSigned = Number(prev?.signed) || 0;
+    if (Math.abs(signed) < 0.35) {
+      const carry = priorSigned < 0 ? -1 : 1;
+      signed = carry * 0.9;
+    }
+
     return {
-      minute: b.minute || i + 1,
+      minute: Number(b.minute) || i + 1,
       signed,
-      side: signed === 0 ? "even" : signed > 0 ? "home" : "away",
+      side: signed > 0 ? "home" : "away",
     };
   });
 
@@ -6238,7 +6251,7 @@ function MatchMomentum({ match, events=[], momentum=[], stats, C }) {
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,gap:8}}>
           <div>
             <div style={{fontSize:12,fontWeight:900,color:C.green,letterSpacing:".08em"}}>MATCH MOMENTUM</div>
-            <div style={{fontSize:11,color:C.dim}}>One team owns each minute · organic pressure waves · events attached to peaks</div>
+            <div style={{fontSize:11,color:C.dim}}>True 1-minute signal · one team owns each minute · events attached to peaks</div>
           </div>
           <div style={{fontSize:11,color:C.mid,textAlign:"right"}}>{goals.length} ⚽ · {cards.length} cards · {subs.length} subs</div>
         </div>
@@ -6249,18 +6262,18 @@ function MatchMomentum({ match, events=[], momentum=[], stats, C }) {
           <div style={{height:148,display:"flex",alignItems:"stretch",gap:1}}>
             {compact.map((b, i) => {
               const ratio = Math.abs(b.signed || 0) / maxVal;
-              const rawHeight = Math.pow(ratio, 0.50) * 72;
-              const magnitude = b.side === "even" ? 1 : Math.max(3, Math.round(rawHeight));
+              const rawHeight = Math.pow(ratio, 0.46) * 76;
+              const magnitude = Math.max(2, Math.round(rawHeight));
               const isHomeMinute = b.side === "home";
               const isAwayMinute = b.side === "away";
               const owner = sideName(b.side);
               return (
                 <div key={i} title={`${b.minute}' · ${owner}`} style={{flex:1,display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"stretch",gap:1,minWidth:0}}>
                   <div style={{height:72,display:"flex",alignItems:"flex-end"}}>
-                    {isHomeMinute ? <div style={{width:"100%",height:magnitude,background:C.green,borderRadius:"3px 3px 1px 1px",opacity:.92,boxShadow:magnitude>42?`0 0 8px ${C.greenS}`:"none"}} /> : <div style={{width:"100%",height:1,background:C.b2,opacity:.18,borderRadius:2}} />}
+                    {isHomeMinute ? <div style={{width:"100%",height:magnitude,background:C.green,borderRadius:"3px 3px 1px 1px",opacity:.92,boxShadow:magnitude>42?`0 0 8px ${C.greenS}`:"none"}} /> : <div style={{width:"100%",height:0}} />}
                   </div>
                   <div style={{height:72,display:"flex",alignItems:"flex-start"}}>
-                    {isAwayMinute ? <div style={{width:"100%",height:magnitude,background:C.rival,borderRadius:"1px 1px 3px 3px",opacity:.92,boxShadow:magnitude>42?`0 0 8px ${C.rival}55`:"none"}} /> : <div style={{width:"100%",height:1,background:C.b2,opacity:.18,borderRadius:2}} />}
+                    {isAwayMinute ? <div style={{width:"100%",height:magnitude,background:C.rival,borderRadius:"1px 1px 3px 3px",opacity:.92,boxShadow:magnitude>42?`0 0 8px ${C.rival}55`:"none"}} /> : <div style={{width:"100%",height:0}} />}
                   </div>
                 </div>
               );
