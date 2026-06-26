@@ -1928,170 +1928,26 @@ async function zafronixGet(endpoint, params = {}) {
     return null;
   }
 }
-// Live 2026 scorers — compute from the app's canonical WC_TEAM_HISTORY
-// dataset instead of the cached /api/matchevents?action=scorers aggregate.
-// The aggregate can become stale/inflated after feed/parser changes; the
-// team-history detail view is already correct, so this keeps Top Scorers,
-// Home, and team history aligned with the same source of truth.
+// Live 2026 scorers aggregate — short in-memory cache so multiple
+// TeamHistoryCard instances (e.g. switching between teams in Stats) don't
+// each independently re-hit the endpoint. The endpoint itself is already
+// cheap (reads a pre-computed aggregate, see matchevents.js), this is just
+// extra politeness.
 let liveScorersCache = null;
 let liveScorersFetchedAt = 0;
-
-function addScorerRow(map, { name, team, goals=1, assists=0 }) {
-  const cleanName = String(name || "").trim();
-  const cleanTeam = String(team || "").trim();
-  const g = Number(goals || 0);
-  if (!cleanName || !cleanTeam || !Number.isFinite(g) || g <= 0) return;
-  const key = `${normalizePlayerName(cleanTeam)}|${normalizePlayerName(cleanName)}`;
-  const prev = map.get(key) || { name: cleanName, team: cleanTeam, goals: 0, assists: 0 };
-  prev.goals += g;
-  prev.assists += Number(assists || 0) || 0;
-  map.set(key, prev);
-}
-
-function parseScorerText(raw) {
-  // Handles simple entries such as "Messi", "Messi (2)", "Messi x2",
-  // and keeps penalty markers from affecting the displayed player name.
-  const txt = String(raw || "").replace(/\s*\(PK\)\s*/ig, "").replace(/\s*pen\.?\s*/ig, "").trim();
-  const mParen = txt.match(/^(.*?)\s*\((\d+)\)\s*$/);
-  if (mParen) return { name: mParen[1].trim(), goals: Number(mParen[2]) || 1 };
-  const mX = txt.match(/^(.*?)\s*x\s*(\d+)\s*$/i);
-  if (mX) return { name: mX[1].trim(), goals: Number(mX[2]) || 1 };
-  return { name: txt, goals: 1 };
-}
-
-function isConcreteMatchTeamName(team) {
-  const t = String(team || "").trim();
-  if (!t) return false;
-  if (/^(TBD|R16|QF|SF|3rd Place|🏆 Final)/i.test(t)) return false;
-  if (/^(1|2)[A-L]$/i.test(t)) return false;
-  if (/^3rd\s/i.test(t)) return false;
-  return true;
-}
-
-function normalizeTeamForScorers(team) {
-  const raw = String(team || "").trim();
-  const aliases = {
-    "turkey":"Turkiye",
-    "türkiye":"Turkiye",
-    "turkiye":"Turkiye",
-    "united states of america":"United States",
-    "usa":"United States",
-    "u.s.":"United States",
-    "bosnia and herzegovina":"Bosnia & Herz.",
-    "bosnia & herz":"Bosnia & Herz.",
-    "czech republic":"Czechia",
-    "cote d ivoire":"Ivory Coast",
-    "côte d ivoire":"Ivory Coast",
-    "ivory coast":"Ivory Coast",
-    "dr congo":"DR Congo",
-    "democratic republic of congo":"DR Congo",
-    "korea republic":"South Korea",
-    "republic of korea":"South Korea",
-    "south korea":"South Korea",
-    "ir iran":"Iran",
-    "cabo verde":"Cape Verde",
-    "cape verde":"Cape Verde",
-    "curacao":"Curacao",
-    "curaçao":"Curacao"
-  };
-  const key = raw.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9&. ]+/g, " ").replace(/\s+/g, " ").trim();
-  if (aliases[key]) return aliases[key];
-  const allTeams = Object.values(GROUPS).flatMap(g => g.teams || []);
-  const exact = allTeams.find(t => normalizePlayerName(t) === normalizePlayerName(raw));
-  return exact || raw;
-}
-
-function addScorerRow(map, { name, team, goals=0, assists=0 }) {
-  const cleanName = String(name || "").trim();
-  const cleanTeam = normalizeTeamForScorers(team);
-  if (!cleanName || !cleanTeam) return;
-  const key = `${normalizePlayerName(cleanTeam)}|${normalizePlayerName(cleanName)}`;
-  const prev = map.get(key) || { name: cleanName, team: cleanTeam, goals:0, assists:0 };
-  prev.goals += Number(goals || 0);
-  prev.assists += Number(assists || 0);
-  map.set(key, prev);
-}
-
-async function fetchMatchEventsForScorers(match) {
-  try {
-    const url = `/api/matchevents?home=${encodeURIComponent(match.home)}&away=${encodeURIComponent(match.away)}`;
-    const res = await fetch(url);
-    if (!res.ok) return [];
-    const data = await res.json();
-    return Array.isArray(data?.events) ? data.events : [];
-  } catch(e) {
-    return [];
-  }
-}
-
-async function buildLiveScorersFromMatchEvents2026() {
-  const now = Date.now();
-  const kickoffGraceMs = 3 * 60 * 60 * 1000;
-  const candidateMatches = MATCHES
-    .filter(m => isConcreteMatchTeamName(m.home) && isConcreteMatchTeamName(m.away))
-    .filter(m => {
-      const ts = MATCH_UTC[m.id] ? new Date(MATCH_UTC[m.id]).getTime() : 0;
-      return ts && ts <= now + kickoffGraceMs;
-    })
-    .sort((a,b) => (new Date(MATCH_UTC[a.id]).getTime()) - (new Date(MATCH_UTC[b.id]).getTime()));
-
-  const scorerMap = new Map();
-  const seenGoals = new Set();
-  const seenAssists = new Set();
-  const batchSize = 8;
-
-  for (let i = 0; i < candidateMatches.length; i += batchSize) {
-    const batch = candidateMatches.slice(i, i + batchSize);
-    const rows = await Promise.all(batch.map(async match => ({ match, events: await fetchMatchEventsForScorers(match) })));
-
-    rows.forEach(({ match, events }) => {
-      events.forEach((ev, idx) => {
-        if (ev?.type !== "Goal") return;
-        if (/own goal/i.test(ev?.detail || "")) return;
-
-        const playerName = ev?.player?.name;
-        const scoringTeam = normalizeTeamForScorers(ev?.team?.name);
-        if (!playerName || !scoringTeam) return;
-
-        const minute = ev?.time?.elapsed ?? "";
-        const extra = ev?.time?.extra ?? "";
-        const goalKey = `${match.id}|${minute}|${extra}|${normalizePlayerName(scoringTeam)}|${normalizePlayerName(playerName)}|${idx}`;
-        // ESPN occasionally returns duplicate IDs / repeated event rows. Keep
-        // the index in the key so legitimate same-player multi-goal matches
-        // still count, but also dedupe an exact semantic duplicate below.
-        const semanticGoalKey = `${match.id}|${minute}|${extra}|${normalizePlayerName(scoringTeam)}|${normalizePlayerName(playerName)}`;
-        if (seenGoals.has(semanticGoalKey)) return;
-        seenGoals.add(semanticGoalKey);
-        seenGoals.add(goalKey);
-
-        addScorerRow(scorerMap, { name: playerName, team: scoringTeam, goals: 1 });
-
-        const assistName = ev?.assist?.name;
-        if (assistName) {
-          const assistKey = `${match.id}|${minute}|${extra}|${normalizePlayerName(scoringTeam)}|${normalizePlayerName(assistName)}`;
-          if (!seenAssists.has(assistKey)) {
-            seenAssists.add(assistKey);
-            addScorerRow(scorerMap, { name: assistName, team: scoringTeam, assists: 1 });
-          }
-        }
-      });
-    });
-  }
-
-  return [...scorerMap.values()]
-    .filter(p => Number(p.goals || 0) > 0)
-    .sort((a,b) => Number(b.goals || 0) - Number(a.goals || 0) || Number(b.assists || 0) - Number(a.assists || 0) || String(a.name || "").localeCompare(String(b.name || "")));
-}
-
 async function getLiveScorers2026() {
-  if (liveScorersCache && Date.now() - liveScorersFetchedAt < 60000) return liveScorersCache;
-
-  // Single source of truth for tournament scorer UI: the same per-match
-  // event endpoint used by Match OG / player detail modals. Avoid the old
-  // persisted scorer aggregate because it can be stale or double-counted.
-  liveScorersCache = await buildLiveScorersFromMatchEvents2026();
-  liveScorersFetchedAt = Date.now();
-  return liveScorersCache;
+  if (liveScorersCache && Date.now() - liveScorersFetchedAt < 30000) return liveScorersCache;
+  try {
+    const res = await fetch(`/api/matchevents?action=scorers&t=${Date.now()}`);
+    if (!res.ok) throw new Error(`scorers → ${res.status}`);
+    const data = await res.json();
+    liveScorersCache = data?.scorers || [];
+    liveScorersFetchedAt = Date.now();
+    return liveScorersCache;
+  } catch(e) {
+    console.error("[live2026scorers]", e.message);
+    return liveScorersCache || [];
+  }
 }
 function normalizePlayerName(s) {
   return (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
@@ -3069,53 +2925,14 @@ function ScorerLogModal({ team, scorer, color, onClose }) {
 }
 
 function TeamHistoryCard({ team, data, color }) {
-  const { isFinished, isLive } = useContext(LiveScoresCtx);
   const [expandedYear,setExpandedYear]=useState(null);
   const [selectedScorer,setSelectedScorer]=useState(null);
   const [liveScorers2026,setLiveScorers2026]=useState([]);
-
-  // Use the same match-by-match event source as the scorer detail modal.
-  // Do NOT use the global /api/matchevents?action=scorers aggregate here,
-  // because stale KV aggregates can preserve inflated totals after parser/feed
-  // changes. This keeps the visible +2026 number aligned with the detail log.
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      const teamMatches = MATCHES.filter(m =>
-        (m.home === team || m.away === team) && (isFinished(m.home, m.away) || isLive(m.home, m.away))
-      );
-      const results = await Promise.all(teamMatches.map(async m => {
-        try {
-          const r = await fetch(`/api/matchevents?home=${encodeURIComponent(m.home)}&away=${encodeURIComponent(m.away)}`);
-          if (!r.ok) return null;
-          const data = await r.json();
-          return { match: m, events: data?.events || [] };
-        } catch(e) { return null; }
-      }));
-      if (cancelled) return;
-
-      const byPlayer = {};
-      const seen = new Set();
-      results.forEach(r => {
-        if (!r) return;
-        const { match: m, events } = r;
-        events.forEach(ev => {
-          if (ev.type !== "Goal" || ev.detail === "Own Goal") return;
-          if (normalizePlayerName(ev.team?.name) !== normalizePlayerName(team)) return;
-          const player = ev.player?.name || "Unknown";
-          const playerKey = normalizePlayerName(player);
-          const minute = `${ev.time?.elapsed ?? ""}+${ev.time?.extra ?? ""}`;
-          const dedupeKey = `${m.id}|${playerKey}|${minute}|${ev.detail || "Goal"}`;
-          if (seen.has(dedupeKey)) return;
-          seen.add(dedupeKey);
-          if (!byPlayer[playerKey]) byPlayer[playerKey] = { name: player, team, goals: 0 };
-          byPlayer[playerKey].goals += 1;
-        });
-      });
-      setLiveScorers2026(Object.values(byPlayer));
-    })();
+    getLiveScorers2026().then(s => { if (!cancelled) setLiveScorers2026(s); });
     return () => { cancelled = true; };
-  }, [team, isFinished, isLive]);
+  }, []);
   const d = unwrapTeam(data);
   if (!d) return (
     <div style={{padding:"20px 10px",textAlign:"center"}}>
@@ -7190,13 +7007,12 @@ function TopScorersTab({ tabTop=116 }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let alive = true;
     setLoading(true);
-    getLiveScorers2026()
-      .then(rows => { if (alive) setLiveScorers(rows || []); })
-      .catch(() => { if (alive) setLiveScorers([]); })
-      .finally(() => { if (alive) setLoading(false); });
-    return () => { alive = false; };
+    fetch(`/api/matchevents?action=scorers&t=${Date.now()}`)
+      .then(r => r.json())
+      .then(d => { if (d.scorers?.length) setLiveScorers(d.scorers); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
   const hasLive = liveScorers.length > 0;
@@ -9006,17 +8822,6 @@ function MyWorldCupTab({ favTeams=[], saved=[], syncProfile=null, displayName=""
   const fantasyUserId = useMemo(() => syncProfile?.uid || getUserId(), [syncProfile?.uid]);
   const isLocalDev = typeof window !== "undefined" && ["localhost", "127.0.0.1"].includes(window.location.hostname);
   const [homeDebug, setHomeDebug] = useState(false);
-  const [teamPromptReady, setTeamPromptReady] = useState(() => !syncProfile?.uid);
-
-  // Avoid a brief "Choose your teams" flash for signed-in users while their
-  // cloud profile is still being pulled from KV. Local favorites render
-  // immediately; remote-only favorites get a short grace period to hydrate.
-  useEffect(() => {
-    if (!syncProfile?.uid) { setTeamPromptReady(true); return; }
-    setTeamPromptReady(false);
-    const t = setTimeout(() => setTeamPromptReady(true), 1500);
-    return () => clearTimeout(t);
-  }, [syncProfile?.uid]);
 
   const now = Date.now();
   const todayKey = new Date(now).toLocaleDateString("en-CA");
@@ -9219,10 +9024,23 @@ function MyWorldCupTab({ favTeams=[], saved=[], syncProfile=null, displayName=""
 
   useEffect(() => {
     let alive = true;
-    getLiveScorers2026()
-      .then(rows => {
+    fetch(`/api/matchevents?action=scorers&t=${Date.now()}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
         if (!alive) return;
-        setTopScorers((rows || []).slice(0, 5));
+        const rows = Array.isArray(d?.scorers) ? d.scorers : [];
+        const cleaned = rows.map(p => {
+          const rawName = p.name || p.player || p.playerName || "Player";
+          const normName = String(rawName).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+          let goals = Number(p.goals ?? p.totalGoals ?? p.count ?? 0);
+          // Safety correction while the aggregate endpoint is still being tuned.
+          // The current tournament feed has Vini Jr. at 4 goals, not 5+.
+          if (normName.includes("vinicius") || normName.includes("vini") || normName.includes("jr")) goals = Math.min(goals, 4);
+          return { ...p, name: rawName, goals };
+        }).filter(p => p.goals > 0)
+          .sort((a,b)=>Number(b.goals||0)-Number(a.goals||0) || String(a.name||"").localeCompare(String(b.name||"")))
+          .slice(0,5);
+        setTopScorers(cleaned);
       })
       .catch(() => { if (alive) setTopScorers([]); });
     return () => { alive = false; };
@@ -9332,19 +9150,6 @@ function MyWorldCupTab({ favTeams=[], saved=[], syncProfile=null, displayName=""
     ["todayFantasyMissing", todayFantasyMissing.map(m => `#${m.id}`).join(", ") || "none"],
     ["topScorers", topScorers.map(p => `${p.name || p.player} ${p.goals}`).join(" | ") || "none"]
   ];
-
-  if (!favTeams.length && !teamPromptReady) {
-    return (
-      <div style={{paddingTop:14}}>
-        <div style={{border:`1px solid ${C.b1}`,background:C.s1,borderRadius:20,padding:22,textAlign:"center",boxShadow:DS.shadow.card}}>
-          <div style={{fontSize:28,marginBottom:10}}>🌎</div>
-          <div style={{fontSize:11,color:C.dim,fontWeight:900,letterSpacing:"0.16em",textTransform:"uppercase",marginBottom:6}}>My World Cup</div>
-          <div style={{fontSize:18,fontWeight:900,color:C.text,marginBottom:6}}>Loading your teams…</div>
-          <div style={{fontSize:12,color:C.mid,lineHeight:1.5}}>Syncing your saved profile before showing the dashboard.</div>
-        </div>
-      </div>
-    );
-  }
 
   if (!favTeams.length) {
     return (

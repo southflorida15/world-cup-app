@@ -180,7 +180,8 @@ async function updateScorersAggregate(home, away, events) {
   }
 }
 
-async function rebuildScorersAggregate() {
+
+async function buildScorersFromPersistedEvents({ persist=false } = {}) {
   let allKeys = [];
   let cursor = 0;
   do {
@@ -188,6 +189,18 @@ async function rebuildScorersAggregate() {
     cursor = parseInt(next) || 0;
     allKeys.push(...batch);
   } while (cursor !== 0);
+
+  // If no cached matches exist yet, seed them once so the leaderboard can
+  // populate without relying on the old mutable aggregate.
+  if (!allKeys.length) {
+    await autoSeedEvents().catch(e => console.warn("[scorers] seed before rebuild failed:", e.message));
+    cursor = 0;
+    do {
+      const [next, batch] = await kv.scan(cursor, { match: "wc2026:events:*", count: 200 });
+      cursor = parseInt(next) || 0;
+      allKeys.push(...batch);
+    } while (cursor !== 0);
+  }
 
   let aggregate = ensureScorersAggregateShape({ goals: {}, cards: {}, processedCounts: {}, processedEventKeys: {} });
   let goalEvents = 0;
@@ -206,15 +219,28 @@ async function rebuildScorersAggregate() {
   }
 
   aggregate.rebuiltAt = Date.now();
-  await kv.set(SCORERS_AGGREGATE_KEY, aggregate);
+  if (persist) await kv.set(SCORERS_AGGREGATE_KEY, aggregate).catch(() => {});
+
+  return {
+    scorers: Object.values(aggregate.goals).sort((a,b) => b.goals-a.goals || b.assists-a.assists || String(a.name).localeCompare(String(b.name))).slice(0,30),
+    cards: Object.values(aggregate.cards).sort((a,b) => (b.red*2+b.yellow)-(a.red*2+a.yellow) || String(a.name).localeCompare(String(b.name))).slice(0,20),
+    matchCount: Object.keys(aggregate.processedEventKeys || {}).length,
+    rebuiltAt: aggregate.rebuiltAt,
+    goalEvents,
+    cardEvents,
+  };
+}
+
+async function rebuildScorersAggregate() {
+  const result = await buildScorersFromPersistedEvents({ persist:true });
   return {
     ok: true,
     rebuilt: true,
-    matches: allKeys.length,
-    goalEvents,
-    cardEvents,
-    scorers: Object.values(aggregate.goals).sort((a,b) => b.goals-a.goals || b.assists-a.assists).slice(0,30),
-    cards: Object.values(aggregate.cards).sort((a,b) => (b.red*2+b.yellow)-(a.red*2+a.yellow)).slice(0,20),
+    matches: result.matchCount,
+    goalEvents: result.goalEvents,
+    cardEvents: result.cardEvents,
+    scorers: result.scorers,
+    cards: result.cards,
   };
 }
 
@@ -738,61 +764,19 @@ async function autoSeedEvents() {
 }
 
 
+
 async function getScorers() {
-  let allKeys = [];
-  let cursor = 0;
-  do {
-    const [next, batch] = await kv.scan(cursor, { match: "wc2026:events:*", count: 200 });
-    cursor = parseInt(next) || 0;
-    allKeys.push(...batch);
-  } while (cursor !== 0);
-
-  // Sweep periodically so matches nobody opened still enter the scorer table.
-  const lastSweep = await kv.get("wc2026:scorers_seed_sweep").catch(() => null);
-  const SWEEP_INTERVAL_MS = 5 * 60 * 1000;
-  if (!allKeys.length || !lastSweep || Date.now() - Number(lastSweep) > SWEEP_INTERVAL_MS) {
-    await autoSeedEvents();
-    await kv.set("wc2026:scorers_seed_sweep", String(Date.now())).catch(() => {});
-    allKeys = [];
-    let cursor2 = 0;
-    do {
-      const [next, batch] = await kv.scan(cursor2, { match: "wc2026:events:*", count: 200 });
-      cursor2 = parseInt(next) || 0;
-      allKeys.push(...batch);
-    } while (cursor2 !== 0);
-  }
-
-  if (!allKeys.length) return { scorers: [], cards: [] };
-
-  let aggregate = ensureScorersAggregateShape(await kv.get(SCORERS_AGGREGATE_KEY));
-
-  // Anything not represented by per-event keys gets folded in. This avoids
-  // relying on the old processedCounts-only state that could preserve wrong
-  // double-counted totals indefinitely.
-  const needsProcessing = allKeys.filter(k => !aggregate.processedEventKeys?.[k]);
-
-  if (needsProcessing.length) {
-    for (let i = 0; i < needsProcessing.length; i += 50) {
-      const keys = needsProcessing.slice(i, i + 50);
-      const records = await kv.mget(...keys).catch(() => keys.map(() => null));
-      records.forEach((record, idx) => {
-        if (record?.events?.length) {
-          const result = foldEventsIntoScorersAggregate(aggregate, keys[idx], record.events);
-          aggregate = result.aggregate;
-        } else {
-          if (!aggregate.processedEventKeys[keys[idx]]) aggregate.processedEventKeys[keys[idx]] = {};
-          aggregate.processedCounts[keys[idx]] = 0;
-        }
-      });
-    }
-    await kv.set(SCORERS_AGGREGATE_KEY, aggregate).catch(() => {});
-  }
-
+  // IMPORTANT: derive the leaderboard from persisted per-match event caches on
+  // every request. The old mutable scorer aggregate was the source of the
+  // Messi 15 / Vinicius 10 inflation bug after the same matches were folded in
+  // more than once. This tournament is small, so recalculating from ~100 match
+  // event arrays is fast and keeps Stats, Home, and Top Scorers aligned.
+  const result = await buildScorersFromPersistedEvents({ persist:false });
   return {
-    scorers: Object.values(aggregate.goals).sort((a,b) => b.goals-a.goals || b.assists-a.assists).slice(0,30),
-    cards: Object.values(aggregate.cards).sort((a,b) => (b.red*2+b.yellow)-(a.red*2+a.yellow)).slice(0,20),
-    matchCount: Object.keys(aggregate.processedEventKeys || {}).length,
-    rebuiltAt: aggregate.rebuiltAt || null,
+    scorers: result.scorers,
+    cards: result.cards,
+    matchCount: result.matchCount,
+    rebuiltAt: result.rebuiltAt,
   };
 }
 
