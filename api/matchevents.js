@@ -27,17 +27,29 @@ const TTL_DONE = 60 * 60 * 1000;
 
 const ESPN_NAME_MAP = {
   "USA": "United States",
-  "Bosnia and Herzegovina": "Bosnia & Herz.",
-  "Cape Verde Islands": "Cape Verde",
+  "United States": "United States",
+
+  // Turkey/Türkiye appears differently depending on source/feed.
+  // Internally the app schedule uses "Turkiye", so normalize all variants to that.
   "Turkey": "Turkiye",
   "Türkiye": "Turkiye",
   "Turkiye": "Turkiye",
+  "Republic of Türkiye": "Turkiye",
+
+  "Bosnia and Herzegovina": "Bosnia & Herz.",
+  "Bosnia & Herz.": "Bosnia & Herz.",
+  "Cape Verde Islands": "Cape Verde",
+  "Cape Verde": "Cape Verde",
   "Curaçao": "Curacao",
+  "Curacao": "Curacao",
   "Congo, DR": "DR Congo",
   "DR Congo": "DR Congo",
   "Côte d'Ivoire": "Ivory Coast",
+  "Ivory Coast": "Ivory Coast",
   "Korea Republic": "South Korea",
+  "South Korea": "South Korea",
   "Czech Republic": "Czechia",
+  "Czechia": "Czechia",
 };
 const normESPN = n => ESPN_NAME_MAP[n] || n;
 
@@ -57,9 +69,9 @@ async function loadFromKV(home, away) {
 
 const SCORERS_AGGREGATE_KEY = "wc2026:scorers_aggregate";
 
-async function saveToKV(home, away, events, stats, lineups=null, commentary=[], momentum=[]) {
+async function saveToKV(home, away, events, stats, lineups=null) {
   try {
-    await kv.set(kvKey(home, away), { events, stats, lineups, commentary, momentum, savedAt: Date.now() });
+    await kv.set(kvKey(home, away), { events, stats, lineups, savedAt: Date.now() });
     console.log(`[matchevents] Persisted ${events.length} events for ${home} vs ${away}`);
   } catch(e) {
     console.warn("[matchevents] KV save:", e.message);
@@ -75,52 +87,135 @@ async function saveToKV(home, away, events, stats, lineups=null, commentary=[], 
 // is over. Each call only processes events beyond what was already
 // counted last time, so nothing gets double-counted as the same match
 // gets checked repeatedly while it's still in progress.
+
+function scorerEventKey(matchKey, ev) {
+  const minute = ev?.time?.elapsed ?? "";
+  const type = ev?.type || "";
+  const detail = ev?.detail || "";
+  const team = ev?.team?.name || "";
+  const player = ev?.player?.name || "";
+  return `${matchKey}|${type}|${detail}|${team}|${player}|${minute}`;
+}
+
+function ensureScorersAggregateShape(aggregate) {
+  aggregate = aggregate || {};
+  if (!aggregate.goals) aggregate.goals = {};
+  if (!aggregate.cards) aggregate.cards = {};
+  if (!aggregate.processedEventKeys) aggregate.processedEventKeys = {};
+  if (!aggregate.processedCounts) aggregate.processedCounts = {};
+
+  // Old versions used processedMatches or processedCounts only. Those can
+  // hide corrupted / double-counted totals because the aggregate looked
+  // "already processed" even when the scorer totals were wrong. Keep the old
+  // fields for compatibility, but the new source of truth is per-event keys.
+  if (Array.isArray(aggregate.processedMatches)) delete aggregate.processedMatches;
+  return aggregate;
+}
+
+function foldEventsIntoScorersAggregate(aggregate, matchKey, events) {
+  aggregate = ensureScorersAggregateShape(aggregate);
+  if (!aggregate.processedEventKeys[matchKey]) aggregate.processedEventKeys[matchKey] = {};
+  const seenForMatch = aggregate.processedEventKeys[matchKey];
+
+  let addedGoals = 0;
+  let addedCards = 0;
+
+  (events || []).forEach(ev => {
+    const key = scorerEventKey(matchKey, ev);
+    if (seenForMatch[key]) return;
+    seenForMatch[key] = true;
+
+    if (ev.type === "Goal" && ev.detail !== "Own Goal") {
+      const name = ev.player?.name;
+      const team = ev.team?.name;
+      if (!name) return;
+      if (!aggregate.goals[name]) aggregate.goals[name] = { name, team, goals: 0, assists: 0 };
+      aggregate.goals[name].team = aggregate.goals[name].team || team;
+      aggregate.goals[name].goals++;
+      addedGoals++;
+
+      const assist = ev.assist?.name;
+      if (assist) {
+        if (!aggregate.goals[assist]) aggregate.goals[assist] = { name: assist, team, goals: 0, assists: 0 };
+        aggregate.goals[assist].team = aggregate.goals[assist].team || team;
+        aggregate.goals[assist].assists++;
+      }
+    }
+
+    if (ev.type === "Card") {
+      const name = ev.player?.name;
+      const team = ev.team?.name;
+      if (!name) return;
+      if (!aggregate.cards[name]) aggregate.cards[name] = { name, team, yellow: 0, red: 0 };
+      aggregate.cards[name].team = aggregate.cards[name].team || team;
+      if (ev.detail === "Yellow Card") aggregate.cards[name].yellow++;
+      if (ev.detail === "Red Card") aggregate.cards[name].red++;
+      addedCards++;
+    }
+  });
+
+  aggregate.processedCounts[matchKey] = Math.max(
+    aggregate.processedCounts[matchKey] || 0,
+    Array.isArray(events) ? events.length : 0
+  );
+
+  return { aggregate, addedGoals, addedCards };
+}
+
+// Folds NEW goals/cards into the running scorers aggregate — called for
+// both live and finished matches. Uses event-level keys, not just "number
+// of events processed", so revised/reordered ESPN feeds cannot double-count
+// goals or hide a corrupted aggregate.
 async function updateScorersAggregate(home, away, events) {
   try {
     const matchKey = kvKey(home, away);
-    const aggregate = await kv.get(SCORERS_AGGREGATE_KEY) || { goals: {}, cards: {}, processedCounts: {} };
-    if (!aggregate.processedCounts) aggregate.processedCounts = {};
-    // Backward-compat: an older aggregate shape stored a plain array of
-    // fully-processed match keys instead of per-match counts. Treat any
-    // match already in that array as "everything in it so far is counted".
-    if (Array.isArray(aggregate.processedMatches)) {
-      aggregate.processedMatches.forEach(k => {
-        if (aggregate.processedCounts[k] === undefined) aggregate.processedCounts[k] = Infinity;
-      });
-      delete aggregate.processedMatches;
+    let aggregate = ensureScorersAggregateShape(await kv.get(SCORERS_AGGREGATE_KEY));
+    const result = foldEventsIntoScorersAggregate(aggregate, matchKey, events);
+    aggregate = result.aggregate;
+    if (result.addedGoals || result.addedCards) {
+      await kv.set(SCORERS_AGGREGATE_KEY, aggregate);
     }
-
-    const alreadyProcessed = aggregate.processedCounts[matchKey] || 0;
-    if (!Array.isArray(events) || events.length <= alreadyProcessed) return; // nothing new since last check
-
-    const newEvents = events.slice(alreadyProcessed);
-    newEvents.forEach(ev => {
-      if (ev.type === "Goal" && ev.detail !== "Own Goal") {
-        const name = ev.player?.name;
-        const team = ev.team?.name;
-        if (!name) return;
-        if (!aggregate.goals[name]) aggregate.goals[name] = { name, team, goals: 0, assists: 0 };
-        aggregate.goals[name].goals++;
-        const assist = ev.assist?.name;
-        if (assist) {
-          if (!aggregate.goals[assist]) aggregate.goals[assist] = { name: assist, team, goals: 0, assists: 0 };
-          aggregate.goals[assist].assists++;
-        }
-      }
-      if (ev.type === "Card") {
-        const name = ev.player?.name;
-        const team = ev.team?.name;
-        if (!name) return;
-        if (!aggregate.cards[name]) aggregate.cards[name] = { name, team, yellow: 0, red: 0 };
-        if (ev.detail === "Yellow Card") aggregate.cards[name].yellow++;
-        if (ev.detail === "Red Card") aggregate.cards[name].red++;
-      }
-    });
-    aggregate.processedCounts[matchKey] = events.length;
-    await kv.set(SCORERS_AGGREGATE_KEY, aggregate);
   } catch(e) {
     console.warn("[matchevents] scorers aggregate update:", e.message);
   }
+}
+
+async function rebuildScorersAggregate() {
+  let allKeys = [];
+  let cursor = 0;
+  do {
+    const [next, batch] = await kv.scan(cursor, { match: "wc2026:events:*", count: 200 });
+    cursor = parseInt(next) || 0;
+    allKeys.push(...batch);
+  } while (cursor !== 0);
+
+  let aggregate = ensureScorersAggregateShape({ goals: {}, cards: {}, processedCounts: {}, processedEventKeys: {} });
+  let goalEvents = 0;
+  let cardEvents = 0;
+
+  for (let i = 0; i < allKeys.length; i += 50) {
+    const keys = allKeys.slice(i, i + 50);
+    const records = await kv.mget(...keys).catch(() => keys.map(() => null));
+    records.forEach((record, idx) => {
+      if (!record?.events?.length) return;
+      const result = foldEventsIntoScorersAggregate(aggregate, keys[idx], record.events);
+      aggregate = result.aggregate;
+      goalEvents += result.addedGoals;
+      cardEvents += result.addedCards;
+    });
+  }
+
+  aggregate.rebuiltAt = Date.now();
+  await kv.set(SCORERS_AGGREGATE_KEY, aggregate);
+  return {
+    ok: true,
+    rebuilt: true,
+    matches: allKeys.length,
+    goalEvents,
+    cardEvents,
+    scorers: Object.values(aggregate.goals).sort((a,b) => b.goals-a.goals || b.assists-a.assists).slice(0,30),
+    cards: Object.values(aggregate.cards).sort((a,b) => (b.red*2+b.yellow)-(a.red*2+a.yellow)).slice(0,20),
+  };
 }
 
 // ── ESPN event ID lookup ───────────────────────────────────────────────────
@@ -140,22 +235,27 @@ const HARDCODED_ESPN_IDS = {
   "Argentina|Algeria":"760432","Austria|Jordan":"760433",
   "Portugal|DR Congo":"760434","England|Croatia":"760435",
   "Ghana|Panama":"760436","Uzbekistan|Colombia":"760437",
-  "Turkiye|United States":"760470",
-  "Turkiye|Paraguay":"760443",
-  "Switzerland|Bosnia & Herz.":"760439",
-  "Colombia|DR Congo":"760459",
-  "Bosnia & Herz.|Qatar":"760462",
-  "DR Congo|Uzbekistan":"760482",
 };
 
-async function getESPNEventId(home, away) {
+async function getESPNEventId(home, away, debugInfo = null) {
   home = normESPN(home);
   away = normESPN(away);
 
   const key = `${home}|${away}`;
   const reverseKey = `${away}|${home}`;
 
-  // 1. Livescores KV — check both home/away directions
+  if (debugInfo) {
+    debugInfo.requestedKey = key;
+    debugInfo.reverseKey = reverseKey;
+    debugInfo.lookupSteps = [];
+  }
+
+  const note = (step, value = {}) => {
+    if (debugInfo) debugInfo.lookupSteps.push({ step, ...value });
+  };
+
+  // 1. Livescores KV — usually has the real ESPN IDs from the live feed.
+  // Match BOTH orientations because different sources can flip home/away.
   try {
     const cached = await kv.get("wc2026:livescores");
     if (cached) {
@@ -170,33 +270,57 @@ async function getESPNEventId(home, away) {
       });
 
       if (match?.fixture?.id && !String(match.fixture.id).includes("|")) {
+        const matchedHome = normESPN(match?.teams?.home?.name || "");
+        const matchedAway = normESPN(match?.teams?.away?.name || "");
+        const matchedKey = `${matchedHome}|${matchedAway}`;
+
+        await saveESPNId(matchedHome, matchedAway, match.fixture.id);
         await saveESPNId(home, away, match.fixture.id);
+
+        note("livescores_kv", { matchedKey, eventId: match.fixture.id });
         return match.fixture.id;
       }
+
+      note("livescores_kv_no_match", { fixtureCount: fixtures.length });
+    } else {
+      note("livescores_kv_empty");
     }
   } catch(e) {
     console.warn("[matchevents] livescores KV lookup:", e.message);
+    note("livescores_kv_error", { error: e.message });
   }
 
-  // 2. Persisted ID map — check normal and reverse keys
+  // 2. Persisted ID map — check both requested and reverse orientations.
   try {
     const idMap = await kv.get(ESPN_ID_MAP_KEY) || {};
-    if (idMap[key]) return idMap[key];
+    if (idMap[key]) {
+      note("id_map", { matchedKey: key, eventId: idMap[key] });
+      return idMap[key];
+    }
     if (idMap[reverseKey]) {
+      note("id_map_reverse", { matchedKey: reverseKey, eventId: idMap[reverseKey] });
       await saveESPNId(home, away, idMap[reverseKey]);
       return idMap[reverseKey];
     }
+    note("id_map_no_match", { totalIds: Object.keys(idMap).length });
   } catch(e) {
     console.warn("[matchevents] ESPN ID map lookup:", e.message);
+    note("id_map_error", { error: e.message });
   }
 
-  // 3. Hardcoded map — check normal and reverse keys
-  if (HARDCODED_ESPN_IDS[key]) return HARDCODED_ESPN_IDS[key];
-  if (HARDCODED_ESPN_IDS[reverseKey]) return HARDCODED_ESPN_IDS[reverseKey];
+  // 3. Hardcoded map — last resort. Check both orientations.
+  if (HARDCODED_ESPN_IDS[key]) {
+    note("hardcoded", { matchedKey: key, eventId: HARDCODED_ESPN_IDS[key] });
+    return HARDCODED_ESPN_IDS[key];
+  }
+  if (HARDCODED_ESPN_IDS[reverseKey]) {
+    note("hardcoded_reverse", { matchedKey: reverseKey, eventId: HARDCODED_ESPN_IDS[reverseKey] });
+    return HARDCODED_ESPN_IDS[reverseKey];
+  }
 
+  note("no_event_id");
   return null;
 }
-
 async function saveESPNId(home, away, id) {
   try {
     const idMap = await kv.get(ESPN_ID_MAP_KEY) || {};
@@ -213,70 +337,27 @@ async function saveESPNId(home, away, id) {
 // ── Stats parser ──────────────────────────────────────────────────────────
 function parseStats(boxscore, homeTeam) {
   if (!boxscore?.teams?.length) return null;
-
-  const toNum = raw => {
-    if (raw === undefined || raw === null || raw === "") return null;
-    const n = parseFloat(String(raw).replace("%", ""));
-    return Number.isFinite(n) ? n : null;
-  };
-  const pct = raw => {
-    const n = toNum(raw);
-    if (n === null) return null;
-    // ESPN often returns pct values as 0.9 instead of 90.
-    return n > 0 && n <= 1 ? Math.round(n * 1000) / 10 : n;
-  };
-
   const result = { home: {}, away: {} };
-
   boxscore.teams.forEach(t => {
     const teamName = normESPN(t.team?.displayName || t.team?.name || "");
     const side = teamName === homeTeam ? "home" : "away";
     const stats = {};
-
     (t.statistics || []).forEach(s => {
-      const name = String(s.name || s.abbreviation || "").toLowerCase();
-      const label = String(s.label || s.displayName || "").toLowerCase();
-      const val = toNum(s.displayValue ?? s.value);
-      if (val === null) return;
-
-      if (name.includes("possession") || label.includes("possession")) stats.possession = val;
-      else if (name === "shotsontarget" || label.includes("on goal") || label.includes("shots on")) stats.shotsOn = val;
-      else if (name === "totalshots" || name === "shots" || label === "shots") stats.shots = val;
-      else if (name === "shotpct" || label.includes("on target %")) stats.shotPct = pct(s.displayValue ?? s.value);
-      else if (name.includes("corner") || label.includes("corner")) stats.corners = val;
-      else if (name.includes("foulscommitted") || label === "fouls") stats.fouls = val;
-      else if (name.includes("yellowcard") || label.includes("yellow")) stats.yellowCards = val;
-      else if (name.includes("redcard") || label.includes("red card")) stats.redCards = val;
-      else if (name.includes("offside") || label.includes("offside")) stats.offsides = val;
-      else if (name === "saves" || label === "saves") stats.saves = val;
-
-      else if (name === "accuratepasses") stats.accuratePasses = val;
-      else if (name === "totalpasses") stats.passes = val;
-      else if (name === "passpct" || label.includes("pass completion")) stats.passAcc = pct(s.displayValue ?? s.value);
-
-      else if (name === "accuratecrosses") stats.accurateCrosses = val;
-      else if (name === "totalcrosses") stats.crosses = val;
-      else if (name === "crosspct" || label === "cross %") stats.crossPct = pct(s.displayValue ?? s.value);
-
-      else if (name === "accuratelongballs") stats.accurateLongBalls = val;
-      else if (name === "totallongballs") stats.longBalls = val;
-      else if (name === "longballpct" || label.includes("long balls %")) stats.longBallPct = pct(s.displayValue ?? s.value);
-
-      else if (name === "blockedshots" || label.includes("blocked shots")) stats.blockedShots = val;
-      else if (name === "effectivetackles" || label.includes("effective tackles")) stats.effectiveTackles = val;
-      else if (name === "totaltackles" || label === "tackles") stats.tackles = val;
-      else if (name === "tacklepct" || label === "tackle %") stats.tacklePct = pct(s.displayValue ?? s.value);
-      else if (name === "interceptions" || label.includes("interceptions")) stats.interceptions = val;
-      else if (name === "effectiveclearance" || label.includes("effective clearances")) stats.effectiveClearances = val;
-      else if (name === "totalclearance" || label === "clearances") stats.clearances = val;
-
-      else if (name === "penaltykickgoals") stats.penaltyGoals = val;
-      else if (name === "penaltykickshots") stats.penaltyShots = val;
+      const name = (s.name || s.abbreviation || "").toLowerCase();
+      const val = parseFloat(s.displayValue ?? s.value ?? 0);
+      if (name.includes("possession")) stats.possession = val;
+      else if (name === "shotsontarget" || name.includes("shots on target")) stats.shotsOn = val;
+      else if (name === "shots" || name === "totalshots") stats.shots = val;
+      else if (name.includes("corner")) stats.corners = val;
+      else if (name.includes("foul")) stats.fouls = val;
+      else if (name.includes("yellowcard") || name === "yellowcards") stats.yellowCards = val;
+      else if (name.includes("redcard") || name === "redcards") stats.redCards = val;
+      else if (name.includes("offside")) stats.offsides = val;
+      else if (name.includes("save")) stats.saves = val;
+      else if (name.includes("pass") && name.includes("acc")) stats.passAcc = (val > 0 && val <= 100) ? val : null;
     });
-
     result[side] = stats;
   });
-
   return result;
 }
 
@@ -421,230 +502,6 @@ function parseEvents(data, homeTeam) {
 
   return deduped.sort((a, b) => (a.time?.elapsed || 0) - (b.time?.elapsed || 0));
 }
-
-function parseCommentary(data) {
-  // ESPN's soccer summary is inconsistent: some matches expose a real
-  // `commentary` feed, others only expose rich play-by-play text in
-  // `keyEvents`, and occasionally the commentary payload is nested under
-  // items/events/comments. Normalize all of those into one feed so the UI
-  // always has something useful to show.
-  const commentaryPayload = data.commentary || data.commentaries || [];
-  const raw = Array.isArray(commentaryPayload)
-    ? commentaryPayload
-    : (commentaryPayload.items || commentaryPayload.events || commentaryPayload.comments || []);
-
-  const source = Array.isArray(raw) && raw.length > 0
-    ? raw
-    : (Array.isArray(data.keyEvents) ? data.keyEvents : []);
-
-  return source.map(item => {
-    const clock = item.clock || item.time || {};
-    const elapsedRaw = clock.displayValue
-      ? parseInt(clock.displayValue, 10)
-      : clock.value ? Math.round(clock.value / 60)
-      : item.minute ?? item.time?.elapsed ?? null;
-    const elapsed = Number(elapsedRaw);
-
-    const typeText = item.type?.text || item.type?.type || item.type || "";
-    const text = item.text || item.commentary || item.description || item.shortText || "";
-    const team = normESPN(item.team?.displayName || item.team?.name || "");
-    const display = clock.displayValue || (Number.isFinite(elapsed) ? `${elapsed}'` : "");
-
-    return {
-      time: { elapsed: Number.isFinite(elapsed) ? elapsed : null, display },
-      type: typeText,
-      team: team || null,
-      text,
-    };
-  })
-  .filter(x => x.text)
-  .sort((a, b) => (b.time?.elapsed || 0) - (a.time?.elapsed || 0))
-  .slice(0, 80);
-}
-
-function parseMomentum(data, events=[], homeTeam="") {
-  const stats = parseStats(data.boxscore, homeTeam) || { home: {}, away: {} };
-  const rows = Array.from({ length: 90 }, (_, i) => ({ minute: i + 1, raw: 0, signed: 0 }));
-
-  const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
-  const num = v => Number.isFinite(Number(v)) ? Number(v) : 0;
-  const homeStats = stats.home || {};
-  const awayStats = stats.away || {};
-
-  // Momentum v3: pressure DIFFERENTIAL, not accumulated pressure.
-  // The raw signal can rise during sustained pressure, but the displayed
-  // bars are the difference between current pressure and a rolling baseline.
-  // That prevents long possession spells from becoming flat plateaus and
-  // creates the ESPN/Sofascore-style bursts when pressure changes.
-  const pressureScore = s => (
-    num(s.shots) * 1.15 +
-    num(s.shotsOn) * 5.4 +
-    num(s.corners) * 3.8 +
-    num(s.blockedShots) * 1.8 +
-    num(s.accurateCrosses) * 1.25 +
-    num(s.crosses) * 0.25 +
-    num(s.interceptions) * 0.16 +
-    num(s.tackles) * 0.10 +
-    num(s.clearances) * 0.05
-  );
-
-  const hp = pressureScore(homeStats);
-  const ap = pressureScore(awayStats);
-  const totalPressure = Math.max(1, hp + ap);
-  const homeShare = hp / totalPressure;
-  const awayShare = ap / totalPressure;
-
-  const seedText = `${homeTeam}|${events.map(e => `${e.time?.elapsed}-${e.team?.name}-${e.type}-${e.detail}`).join('|')}|momentum-diff-v1`;
-  let seed = 0;
-  for (let i = 0; i < seedText.length; i++) seed = (seed * 31 + seedText.charCodeAt(i)) >>> 0;
-  const rand = () => {
-    seed = (seed * 1664525 + 1013904223) >>> 0;
-    return seed / 4294967296;
-  };
-
-  const addRawWave = (center, amp, width, side=1) => {
-    const c = clamp(Number(center) || 1, 1, 90);
-    const w = Math.max(0.55, Number(width) || 1.3);
-    const a = Number(amp) || 0;
-    for (let m = 1; m <= 90; m++) {
-      const d = Math.abs(m - c);
-      if (d > w * 2.9) continue;
-      const gaussian = Math.exp(-(d * d) / (2 * w * w));
-      const saw = 0.82 + rand() * 0.36;
-      rows[m - 1].raw += side * a * gaussian * saw;
-    }
-  };
-
-  const addCluster = (center, amp, side, count=3) => {
-    // Multiple narrow pulses look more like attacking waves than a single mound.
-    for (let i = 0; i < count; i++) {
-      const offset = (i - (count - 1) / 2) * (0.35 + rand() * 0.55);
-      const width = 0.28 + rand() * 0.58;
-      const localAmp = amp * (0.72 + rand() * 1.05) * (i === Math.floor(count/2) ? 1.35 : 1);
-      addRawWave(Number(center) + offset, localAmp, width, side);
-    }
-  };
-
-  // Very small match-level tilt only. It should guide spell distribution,
-  // never become the chart itself.
-  const tinyTilt = clamp((homeShare - awayShare) * 2.2, -2.2, 2.2);
-  for (let m = 1; m <= 90; m++) {
-    rows[m - 1].raw += tinyTilt + Math.sin(m / 4.8) * 0.8 + Math.cos(m / 11.5) * 0.7;
-  }
-
-  // Simulated attacking spells from aggregate stats. Dominant teams get more
-  // short spells, not a permanent plateau.
-  const homeSpellCount = clamp(Math.round(3 + num(homeStats.shots) / 4.2 + num(homeStats.corners) / 3.0 + num(homeStats.shotsOn) / 2.5), 4, 15);
-  const awaySpellCount = clamp(Math.round(3 + num(awayStats.shots) / 4.2 + num(awayStats.corners) / 3.0 + num(awayStats.shotsOn) / 2.5), 3, 13);
-  const homeAmp = clamp(13 + homeShare * 21 + num(homeStats.shotsOn) * 0.9, 13, 34);
-  const awayAmp = clamp(13 + awayShare * 21 + num(awayStats.shotsOn) * 0.9, 13, 34);
-
-  const placeSpells = (count, side, ampBase, shots, corners, shotsOn) => {
-    for (let i = 0; i < count; i++) {
-      const bucket = 90 / count;
-      const center = bucket * i + 1 + rand() * bucket;
-      const amp = ampBase * (0.48 + rand() * 0.95) + num(shotsOn) * 0.9 + num(corners) * 0.28 + num(shots) * 0.06;
-      const pulses = rand() > 0.35 ? 3 : 2;
-      addCluster(center, amp, side, pulses);
-      if (rand() > 0.66) addRawWave(center + 2.8 + rand()*2.8, amp * 0.35, 0.95 + rand()*1.2, side);
-    }
-  };
-
-  placeSpells(homeSpellCount, 1, homeAmp, homeStats.shots, homeStats.corners, homeStats.shotsOn);
-  placeSpells(awaySpellCount, -1, awayAmp, awayStats.shots, awayStats.corners, awayStats.shotsOn);
-
-  const teamSide = name => normESPN(name || "") === homeTeam ? 1 : -1;
-  const minuteOf = item => {
-    const clock = item.clock || item.time || {};
-    if (clock.displayValue) return parseInt(clock.displayValue, 10);
-    if (clock.value) return Math.round(clock.value / 60);
-    return item.minute ?? item.time?.elapsed ?? null;
-  };
-  const teamOf = item => normESPN(item.team?.displayName || item.team?.name || "");
-
-  const classifyImpulse = item => {
-    const t = `${item.type?.text || ""} ${item.type?.type || ""} ${item.type || ""} ${item.text || ""} ${item.shortText || ""} ${item.detail || ""}`.toLowerCase();
-    if (item.scoringPlay || t.includes("goal")) return { weight: 155, width: 0.72, invert: false, cluster: 2 };
-    if (t.includes("red card")) return { weight: 120, width: 0.68, invert: true, cluster: 2 };
-    if (t.includes("shot on") || t.includes("saved") || t.includes("woodwork") || t.includes("post")) return { weight: 64, width: 0.58, invert: false, cluster: 2 };
-    if (t.includes("corner")) return { weight: 42, width: 0.48, invert: false, cluster: 1 };
-    if (t.includes("shot")) return { weight: 30, width: 0.42, invert: false, cluster: 1 };
-    if (t.includes("yellow")) return { weight: 18, width: 0.34, invert: true, cluster: 1 };
-    if (t.includes("free kick") || t.includes("cross")) return { weight: 22, width: 0.40, invert: false, cluster: 1 };
-    if (t.includes("substitut")) return { weight: 7, width: 0.28, invert: false, cluster: 1 };
-    return null;
-  };
-
-  const sources = [];
-  if (Array.isArray(data.commentary)) sources.push(...data.commentary);
-  if (Array.isArray(data.plays)) sources.push(...data.plays);
-  if (Array.isArray(data.keyEvents)) sources.push(...data.keyEvents);
-  if (Array.isArray(events)) sources.push(...events);
-
-  sources.forEach(item => {
-    const min = minuteOf(item);
-    const team = teamOf(item);
-    const info = classifyImpulse(item);
-    if (!min || !team || !info) return;
-    const side = teamSide(team);
-    const targetSide = info.invert ? -side : side;
-    addCluster(min, info.weight, targetSide, info.cluster || 1);
-
-    const text = `${item.type?.text || ""} ${item.type || ""} ${item.detail || ""}`.toLowerCase();
-    if (item.scoringPlay || text.includes("goal")) {
-      // Kickoff response by the conceding team.
-      addCluster(Number(min) + 2.4, 32, -side, 1);
-    }
-    if (text.includes("red")) {
-      // Opponent pressure after a sending-off.
-      addCluster(Number(min) + 2.8, 44, -side, 2);
-      addRawWave(Number(min) + 5.8, 16, 1.1, -side);
-    }
-  });
-
-  // Rolling differential: the displayed value is current pressure minus the
-  // recent baseline, preserving only the acceleration/attack wave.
-  const raw = rows.map(r => r.raw);
-  const baseline = raw.map((_, i) => {
-    let sum = 0, weight = 0;
-    for (let j = Math.max(0, i - 3); j <= Math.min(89, i + 3); j++) {
-      const d = Math.abs(i - j);
-      const w = 1 / (1 + d);
-      sum += raw[j] * w;
-      weight += w;
-    }
-    return weight ? sum / weight : 0;
-  });
-
-  // Keep some absolute pressure so long dominance is visible, but mostly show
-  // pressure change. This is what removes the long flat blocks.
-  for (let i = 0; i < rows.length; i++) {
-    const diff = raw[i] - baseline[i];
-    const absoluteHint = raw[i] * 0.12;
-    rows[i].signed = diff * 2.35 + absoluteHint;
-  }
-
-  // Light adjacent smoothing only, preserving spikes.
-  const before = rows.map(r => r.signed);
-  for (let i = 0; i < rows.length; i++) {
-    const left = before[Math.max(0, i - 1)];
-    const mid = before[i];
-    const right = before[Math.min(rows.length - 1, i + 1)];
-    rows[i].signed = left * 0.16 + mid * 0.68 + right * 0.16;
-  }
-
-  // Winner-takes-minute: no dual colors. Suppress tiny noise and shape peaks.
-  const maxAbs = Math.max(10, ...rows.map(r => Math.abs(r.signed || 0)));
-  return rows.map(r => {
-    const sign = r.signed >= 0 ? 1 : -1;
-    const ratio = Math.abs(r.signed || 0) / maxAbs;
-    if (ratio < 0.035) return { minute: r.minute, signed: 0 };
-    const shaped = Math.pow(ratio, 0.62) * 92;
-    const signed = sign * shaped;
-    return { minute: r.minute, signed: Math.round(clamp(signed, -92, 92) * 10) / 10 };
-  });
-}
-
 
 // ── Scorers aggregator ────────────────────────────────────────────────────
 // Hardcoded events for matches that may have aged out of ESPN feed
@@ -880,6 +737,7 @@ async function autoSeedEvents() {
   }
 }
 
+
 async function getScorers() {
   let allKeys = [];
   let cursor = 0;
@@ -889,13 +747,7 @@ async function getScorers() {
     allKeys.push(...batch);
   } while (cursor !== 0);
 
-  // Was: only ran autoSeedEvents() if the persisted set was completely
-  // empty — meaning it effectively only mattered once, at the very start.
-  // Any match that finished afterward and that nobody happened to open the
-  // timeline modal for (e.g. France vs Senegal, where Mbappé broke the
-  // national scoring record) silently never made it into the aggregate.
-  // Now sweeps periodically (throttled via a KV timestamp, not on every
-  // single call) so newly-finished matches get picked up automatically.
+  // Sweep periodically so matches nobody opened still enter the scorer table.
   const lastSweep = await kv.get("wc2026:scorers_seed_sweep").catch(() => null);
   const SWEEP_INTERVAL_MS = 5 * 60 * 1000;
   if (!allKeys.length || !lastSweep || Date.now() - Number(lastSweep) > SWEEP_INTERVAL_MS) {
@@ -912,60 +764,35 @@ async function getScorers() {
 
   if (!allKeys.length) return { scorers: [], cards: [] };
 
-  // Read the pre-computed aggregate (maintained incrementally by saveToKV
-  // and updateScorersAggregate, both for finished matches and — as of the
-  // live-update fix — in-progress ones too) instead of re-fetching and
-  // re-aggregating every persisted match's full event list on every single
-  // call. Self-healing: any finished match whose events were persisted
-  // before this aggregate existed gets folded in once here, then never
-  // touched again (a finished match's permanent cache entry never grows,
-  // unlike a live one, so "processed once" is correct and final for these).
-  let aggregate = await kv.get(SCORERS_AGGREGATE_KEY) || { goals: {}, cards: {}, processedCounts: {} };
-  if (!aggregate.processedCounts) aggregate.processedCounts = {};
-  if (Array.isArray(aggregate.processedMatches)) {
-    aggregate.processedMatches.forEach(k => {
-      if (aggregate.processedCounts[k] === undefined) aggregate.processedCounts[k] = Infinity;
-    });
-    delete aggregate.processedMatches;
-  }
-  const unprocessedKeys = allKeys.filter(k => aggregate.processedCounts[k] === undefined);
+  let aggregate = ensureScorersAggregateShape(await kv.get(SCORERS_AGGREGATE_KEY));
 
-  if (unprocessedKeys.length) {
-    const records = await kv.mget(...unprocessedKeys).catch(() => unprocessedKeys.map(() => null));
-    records.forEach((record, i) => {
-      if (record?.events?.length) {
-        record.events.forEach(ev => {
-          if (ev.type === "Goal" && ev.detail !== "Own Goal") {
-            const name = ev.player?.name;
-            const team = ev.team?.name;
-            if (!name) return;
-            if (!aggregate.goals[name]) aggregate.goals[name] = { name, team, goals: 0, assists: 0 };
-            aggregate.goals[name].goals++;
-            const assist = ev.assist?.name;
-            if (assist) {
-              if (!aggregate.goals[assist]) aggregate.goals[assist] = { name: assist, team, goals: 0, assists: 0 };
-              aggregate.goals[assist].assists++;
-            }
-          }
-          if (ev.type === "Card") {
-            const name = ev.player?.name;
-            const team = ev.team?.name;
-            if (!name) return;
-            if (!aggregate.cards[name]) aggregate.cards[name] = { name, team, yellow: 0, red: 0 };
-            if (ev.detail === "Yellow Card") aggregate.cards[name].yellow++;
-            if (ev.detail === "Red Card") aggregate.cards[name].red++;
-          }
-        });
-      }
-      aggregate.processedCounts[unprocessedKeys[i]] = record?.events?.length || 0;
-    });
+  // Anything not represented by per-event keys gets folded in. This avoids
+  // relying on the old processedCounts-only state that could preserve wrong
+  // double-counted totals indefinitely.
+  const needsProcessing = allKeys.filter(k => !aggregate.processedEventKeys?.[k]);
+
+  if (needsProcessing.length) {
+    for (let i = 0; i < needsProcessing.length; i += 50) {
+      const keys = needsProcessing.slice(i, i + 50);
+      const records = await kv.mget(...keys).catch(() => keys.map(() => null));
+      records.forEach((record, idx) => {
+        if (record?.events?.length) {
+          const result = foldEventsIntoScorersAggregate(aggregate, keys[idx], record.events);
+          aggregate = result.aggregate;
+        } else {
+          if (!aggregate.processedEventKeys[keys[idx]]) aggregate.processedEventKeys[keys[idx]] = {};
+          aggregate.processedCounts[keys[idx]] = 0;
+        }
+      });
+    }
     await kv.set(SCORERS_AGGREGATE_KEY, aggregate).catch(() => {});
   }
 
   return {
     scorers: Object.values(aggregate.goals).sort((a,b) => b.goals-a.goals || b.assists-a.assists).slice(0,30),
     cards: Object.values(aggregate.cards).sort((a,b) => (b.red*2+b.yellow)-(a.red*2+a.yellow)).slice(0,20),
-    matchCount: Object.keys(aggregate.processedCounts).length,
+    matchCount: Object.keys(aggregate.processedEventKeys || {}).length,
+    rebuiltAt: aggregate.rebuiltAt || null,
   };
 }
 
@@ -975,7 +802,9 @@ async function seedESPNIds() {
   const dateStr = d => `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`;
   const now = new Date();
 
-  // Fetch next 7 days to cover upcoming matchdays
+  // Fetch yesterday + next 7 days.
+  // Yesterday matters because a match can finish shortly before midnight
+  // and still need its ESPN event ID seeded after full-time.
   const dates = Array.from({length: 8}, (_, i) => dateStr(new Date(now.getTime() + (i - 1) * 86400000)));
 
   // Start from existing KV only — never seed from hardcoded (they may be wrong)
@@ -1013,6 +842,17 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   if (req.method === "OPTIONS") return res.status(200).end();
 
+  // Rebuild scorers/cards aggregate from persisted match event caches.
+  // Use this if the leaderboard looks inflated or stale after parser changes.
+  if (req.query.action === "rebuild-scorers") {
+    try {
+      res.setHeader("Cache-Control", "no-store");
+      return res.status(200).json(await rebuildScorersAggregate());
+    } catch(e) {
+      return res.status(500).json({ ok: false, error: e.message });
+    }
+  }
+
   // Scorers aggregation
   if (req.query.action === "scorers") {
     try {
@@ -1023,86 +863,11 @@ export default async function handler(req, res) {
     }
   }
 
-    // Seed ESPN IDs for today + tomorrow
+  // Seed ESPN IDs for today + tomorrow
   if (req.query.action === "seed-ids") {
     try {
       const result = await seedESPNIds();
       return res.status(200).json({ ok: true, ...result });
-    } catch(e) {
-      return res.status(500).json({ error: e.message });
-    }
-  }
-
-  // Audit ESPN IDs for all known matches
-  if (req.query.action === "audit-ids") {
-    try {
-      const candidates = FULL_SCHEDULE.filter(m =>
-        !String(m.home).includes("TBD") &&
-        !String(m.away).includes("TBD") &&
-        !String(m.home).includes("R16") &&
-        !String(m.home).includes("QF") &&
-        !String(m.home).includes("SF") &&
-        !String(m.home).includes("🏆") &&
-        !String(m.away).includes("3rd")
-      );
-
-      const results = [];
-
-      for (const { home, away } of candidates) {
-        const id = await getESPNEventId(home, away);
-        results.push({
-          match: `${home}|${away}`,
-          eventId: id || null,
-          status: id ? "OK" : "MISSING"
-        });
-      }
-
-      return res.status(200).json({
-        total: results.length,
-        ok: results.filter(r => r.status === "OK").length,
-        missingCount: results.filter(r => r.status === "MISSING").length,
-        missing: results.filter(r => r.status === "MISSING"),
-        results
-      });
-    } catch(e) {
-      return res.status(500).json({ error: e.message });
-    }
-  }
-
-  // Flush all match event caches (useful while iterating on parsers/momentum)
-  // Must run before home/away validation.
-  if (req.query.action === "flush-all") {
-    try {
-      const memKeys = Object.keys(memCache);
-      memKeys.forEach(k => delete memCache[k]);
-
-      const candidates = FULL_SCHEDULE.filter(m =>
-        m?.home && m?.away &&
-        !String(m.home).includes("TBD") &&
-        !String(m.away).includes("TBD") &&
-        !String(m.home).includes("R16") &&
-        !String(m.home).includes("QF") &&
-        !String(m.home).includes("SF") &&
-        !String(m.home).includes("🏆") &&
-        !String(m.away).includes("3rd")
-      );
-
-      let kvDeleted = 0;
-      for (const { home, away } of candidates) {
-        const h = normESPN(String(home));
-        const a = normESPN(String(away));
-        await kv.del(kvKey(h, a)).then(() => { kvDeleted++; }).catch(() => {});
-        await kv.del(kvKey(a, h)).catch(() => {});
-      }
-
-      return res.status(200).json({
-        ok: true,
-        flushed: {
-          memoryKeys: memKeys.length,
-          kvMatchKeysAttempted: candidates.length,
-          kvDeleted
-        }
-      });
     } catch(e) {
       return res.status(500).json({ error: e.message });
     }
@@ -1123,6 +888,7 @@ export default async function handler(req, res) {
     [home, away] = fixtureId.split("|");
   }
   if (!home || !away) return res.status(400).json({ error: "home and away required" });
+
   home = normESPN(String(home));
   away = normESPN(String(away));
 
@@ -1149,13 +915,7 @@ export default async function handler(req, res) {
       res.setHeader("Cache-Control", memCached.isDone
         ? "public, max-age=3600, s-maxage=3600"
         : "public, max-age=15, s-maxage=20, stale-while-revalidate=30");
-      return res.status(200).json({
-        events: memCached.events,
-        stats: memCached.stats,
-        lineups: memCached.lineups || null,
-        commentary: memCached.commentary || [],
-        momentum: memCached.momentum || []
-      });
+      return res.status(200).json({ events: memCached.events, stats: memCached.stats });
     }
   }
 
@@ -1167,17 +927,23 @@ export default async function handler(req, res) {
       memCache[cacheKey] = { ...persisted, isDone: true, ts: Date.now() };
       // Finished match — data is permanent, cache aggressively.
       res.setHeader("Cache-Control", "public, max-age=3600, s-maxage=3600");
-      return res.status(200).json({ events: persisted.events, stats: persisted.stats, lineups: persisted.lineups || null, commentary: persisted.commentary || [], momentum: persisted.momentum || [] });
+      return res.status(200).json({ events: persisted.events, stats: persisted.stats, lineups: persisted.lineups || null });
     }
   }
 
   // 3. Fetch from ESPN
   try {
-    const eventId = await getESPNEventId(home, away);
+    const debugInfo = {};
+    const eventId = await getESPNEventId(home, away, debugInfo);
 
     if (!eventId) {
       console.warn(`[matchevents] No ESPN event ID for ${home} vs ${away}`);
-      return res.status(200).json({ events: [], stats: null, _debug: "no_event_id" });
+      return res.status(200).json({
+        events: [],
+        stats: null,
+        _debug: "no_event_id",
+        ...(debug === "1" ? { lookup: debugInfo } : {})
+      });
     }
 
     console.log(`[matchevents] Fetching ESPN summary for event ${eventId} (${home} vs ${away})`);
@@ -1193,6 +959,7 @@ export default async function handler(req, res) {
     if (debug === "1") {
       return res.status(200).json({
         _debug: true,
+        lookup: debugInfo,
         eventId,
         topKeys: Object.keys(data),
         scoringPlaysCount: data.scoringPlays?.length || 0,
@@ -1220,8 +987,6 @@ export default async function handler(req, res) {
     const events = parseEvents(data, home);
     const stats = parseStats(data.boxscore, home);
     const lineups = parseLineups(data, home);
-    const commentary = parseCommentary(data);
-    const momentum = parseMomentum(data, events, home);
 
     console.log(`[matchevents] ${home} vs ${away}: ${events.length} events, stats=${!!stats}, lineups=${!!lineups}, status=${statusType}`);
 
@@ -1230,7 +995,7 @@ export default async function handler(req, res) {
     // is done forever" and serves it with a 1-hour TTL, so live data must
     // never be written here).
     if (isDone && events.length > 0) {
-      await saveToKV(home, away, events, stats, lineups, commentary, momentum);
+      await saveToKV(home, away, events, stats, lineups);
     } else if (isLive && events.length > 0) {
       // Was: a goal scored mid-match never reached the Stats tab's live
       // scorers total until the match fully ended — even though this
@@ -1244,11 +1009,11 @@ export default async function handler(req, res) {
 
     // Cache lineups pre-match with short TTL (5min) so we pick them up when published
     const TTL_PREMATCH_LINEUPS = 5 * 60 * 1000;
-    memCache[cacheKey] = { events, stats, lineups, commentary, momentum, isDone, isLive, ts: Date.now(), ttlOverride: isPrematch && lineups ? TTL_PREMATCH_LINEUPS : null };
+    memCache[cacheKey] = { events, stats, lineups, isDone, isLive, ts: Date.now(), ttlOverride: isPrematch && lineups ? TTL_PREMATCH_LINEUPS : null };
     res.setHeader("Cache-Control", isDone
       ? "public, max-age=3600, s-maxage=3600"
       : "public, max-age=15, s-maxage=20, stale-while-revalidate=30");
-    return res.status(200).json({ events, stats, lineups, commentary, momentum });
+    return res.status(200).json({ events, stats, lineups });
 
   } catch(e) {
     console.error("[matchevents] Error:", e.message);

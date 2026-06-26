@@ -8891,6 +8891,12 @@ function MyWorldCupTab({ favTeams=[], saved=[], syncProfile=null, displayName=""
   };
 
   const sameStartGroup = (matches, ts, limit=2) => matches.filter(m => getTs(m) === ts).slice(0, limit);
+  const dateKeyOf = (m) => {
+    const ts = getTs(m);
+    return ts ? new Date(ts).toLocaleDateString("en-CA") : "";
+  };
+  const displayLimitForDay = (matches) => matches.some(m => !!m.stage) ? 3 : 2;
+  const sameDayGroup = (matches, key) => matches.filter(m => dateKeyOf(m) === key).slice(0, displayLimitForDay(matches.filter(m => dateKeyOf(m) === key)));
 
   const phaseLabel = (m) => {
     if (!m?.stage) return "Group phase";
@@ -8950,28 +8956,45 @@ function MyWorldCupTab({ favTeams=[], saved=[], syncProfile=null, displayName=""
   const completedMatches = dashboardMatches
     .filter(m => hasConcreteTeam(m.home) && hasConcreteTeam(m.away) && matchDone(m) && getTs(m))
     .sort((a,b)=>getTs(b)-getTs(a));
-  const lastTournamentTs = completedMatches[0] ? getTs(completedMatches[0]) : 0;
-  const lastTournamentMatches = lastTournamentTs ? sameStartGroup(completedMatches, lastTournamentTs, 2) : [];
+  const lastTournamentDay = completedMatches[0] ? dateKeyOf(completedMatches[0]) : "";
+  const lastTournamentMatches = lastTournamentDay
+    ? dashboardMatches
+        .filter(m => hasConcreteTeam(m.home) && hasConcreteTeam(m.away) && matchDone(m) && dateKeyOf(m) === lastTournamentDay)
+        .sort((a,b)=>getTs(a)-getTs(b))
+        .slice(0, displayLimitForDay(dashboardMatches.filter(m => dateKeyOf(m) === lastTournamentDay)))
+    : [];
 
-  const activeOrUpcomingMatches = dashboardMatches
-    .filter(m => hasConcreteTeam(m.home) && hasConcreteTeam(m.away) && (matchLive(m) || (!matchDone(m) && getTs(m) && getTs(m) > now - 30*60*1000)))
-    .sort((a,b)=>{
-      const liveDiff = Number(matchLive(b)) - Number(matchLive(a));
-      if (liveDiff) return liveDiff;
-      return getTs(a)-getTs(b);
-    });
-  const nextTournamentTs = activeOrUpcomingMatches[0] ? getTs(activeOrUpcomingMatches[0]) : 0;
-  const nextTournamentMatches = nextTournamentTs ? sameStartGroup(activeOrUpcomingMatches, nextTournamentTs, 2) : [];
+  const upcomingMatches = dashboardMatches
+    .filter(m => hasConcreteTeam(m.home) && hasConcreteTeam(m.away) && !matchDone(m) && getTs(m) && getTs(m) > now - 30*60*1000)
+    .sort((a,b)=>getTs(a)-getTs(b));
 
   const liveMatches = dashboardMatches
     .filter(m => hasConcreteTeam(m.home) && hasConcreteTeam(m.away) && matchLive(m))
     .sort((a,b)=>getTs(a)-getTs(b));
-  const liveCardTs = liveMatches[0] ? getTs(liveMatches[0]) : 0;
-  const liveCardMatches = liveCardTs ? sameStartGroup(liveMatches, liveCardTs, 2) : liveMatches.slice(0,2);
-  const nextCardMatches = liveCardMatches.length ? liveCardMatches : nextTournamentMatches;
-  const nextCardIsLive = liveCardMatches.length > 0;
+
   const todayMatches = dashboardMatches.filter(isToday);
   const todayMyMatches = todayMatches.filter(isMyMatch);
+  const todayUpcomingMatches = todayMatches
+    .filter(m => hasConcreteTeam(m.home) && hasConcreteTeam(m.away) && !matchDone(m) && getTs(m) && getTs(m) > now - 30*60*1000)
+    .sort((a,b)=>getTs(a)-getTs(b));
+
+  const nextTournamentDay = todayUpcomingMatches.length
+    ? todayKey
+    : (upcomingMatches[0] ? dateKeyOf(upcomingMatches[0]) : "");
+  const nextTournamentMatches = nextTournamentDay
+    ? dashboardMatches
+        .filter(m => hasConcreteTeam(m.home) && hasConcreteTeam(m.away) && !matchDone(m) && dateKeyOf(m) === nextTournamentDay)
+        .sort((a,b)=>getTs(a)-getTs(b))
+        .slice(0, displayLimitForDay(dashboardMatches.filter(m => dateKeyOf(m) === nextTournamentDay)))
+    : [];
+
+  const liveCardDay = liveMatches[0] ? dateKeyOf(liveMatches[0]) : "";
+  const liveCardMatches = liveCardDay
+    ? liveMatches.filter(m => dateKeyOf(m) === liveCardDay).slice(0, displayLimitForDay(liveMatches.filter(m => dateKeyOf(m) === liveCardDay)))
+    : [];
+  const nextCardMatches = liveCardMatches.length ? liveCardMatches : nextTournamentMatches;
+  const nextCardIsLive = liveCardMatches.length > 0;
+  const phaseForMatches = (matches) => matches?.length ? phaseLabel(matches[0]) : "";
 
   useEffect(() => {
     let cancelled = false;
@@ -9081,10 +9104,9 @@ function MyWorldCupTab({ favTeams=[], saved=[], syncProfile=null, displayName=""
     );
     return (
       <button onClick={(e)=>{ e.stopPropagation(); onClick?.(match); }} style={{width:"100%",display:"block",background:ko && (homeWon || awayWon) ? `${C.green}08` : "transparent",border:`1px solid ${ko && (homeWon || awayWon) ? C.green+"33" : "transparent"}`,borderRadius:11,padding:"6px 4px",margin:"3px 0",cursor:onClick?"pointer":"default",color:C.text}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:4}}>
-          <span style={{fontSize:10,color:C.dim,fontWeight:900,letterSpacing:"0.08em",textTransform:"uppercase"}}>{phaseLabel(match)}</span>
-          {star && <span style={{fontSize:11,color:C.gold,fontWeight:900}}>⭐ My team</span>}
-        </div>
+        {star && <div style={{display:"flex",alignItems:"center",justifyContent:"flex-end",gap:8,marginBottom:4}}>
+          <span style={{fontSize:11,color:C.gold,fontWeight:900}}>⭐ My team</span>
+        </div>}
         <div style={{display:"grid",gridTemplateColumns:compactMatchCards?"46px auto 46px":"1fr auto 1fr",alignItems:"center",gap:6}}>
           <div style={{display:"flex",alignItems:"center",gap:5,minWidth:0,justifyContent:compactMatchCards?"center":"flex-start"}}><Crest team={match.home} size={compactMatchCards?28:22}/><TeamName side="home" won={homeWon}/></div>
           <div style={{fontSize:showScore||matchLive(match)?18:12,fontWeight:900,color:showScore?C.gold:matchLive(match)?C.red:C.dim,flexShrink:0,whiteSpace:"nowrap"}}>{scoreText}</div>
@@ -9101,6 +9123,19 @@ function MyWorldCupTab({ favTeams=[], saved=[], syncProfile=null, displayName=""
       )) : <span style={{fontSize:11,color:C.dim}}>No results yet</span>}
     </div>
   );
+
+  const PhaseBadge = ({ matches }) => {
+    const phase = phaseForMatches(matches);
+    if (!phase) return null;
+    return <div style={{fontSize:10,color:C.dim,fontWeight:900,letterSpacing:"0.1em",textTransform:"uppercase",margin:"-1px 0 6px"}}>{phase}</div>;
+  };
+
+  const matchLabelMobile = (m, showScore=false) => {
+    if (!m) return "—";
+    const sc = scoreFor(m);
+    if (showScore && sc?.hg != null && sc?.ag != null) return `${getFlag(m.home)} ${sc.hg} - ${sc.ag} ${getFlag(m.away)}`;
+    return `${getFlag(m.home)} vs ${getFlag(m.away)}`;
+  };
 
   const debugRows = [
     ["favoriteTeams", favTeams.length ? favTeams.join(", ") : "none selected"],
@@ -9141,11 +9176,13 @@ function MyWorldCupTab({ favTeams=[], saved=[], syncProfile=null, displayName=""
       </div>
 
       <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:12}}>
-        <CardShell title="Last match" icon="✅" tone={C.rival} footer={lastTournamentMatches[0] ? fmtShort(lastTournamentMatches[0]) : "No completed matches yet"}>
+        <CardShell title="Last matchday" icon="✅" tone={C.rival} footer={lastTournamentMatches[0] ? new Date(getTs(lastTournamentMatches[0])).toLocaleDateString("en-US", { weekday:"short", month:"short", day:"numeric" }) : "No completed matches yet"}>
+          <PhaseBadge matches={lastTournamentMatches} />
           {lastTournamentMatches.length ? lastTournamentMatches.map(m => <MatchRow key={m.id} match={m} showScore star={isMyMatch(m)} onClick={onMatchTap} />) : <div style={{fontSize:13,color:C.mid,lineHeight:1.5}}>No tournament results available yet.</div>}
         </CardShell>
 
-        <CardShell title={nextCardIsLive ? "Live matches" : "Next match"} icon={nextCardIsLive ? "🔴" : "⏭️"} tone={nextCardMatches.some(isMyMatch)?C.gold:(nextCardIsLive?C.red:C.green)} emphasis={nextCardMatches.some(isMyMatch) || nextCardIsLive} footer={nextCardMatches[0] ? (nextCardIsLive ? "Scores update from live feed" : fmtShort(nextCardMatches[0])) : "No upcoming matches found"}>
+        <CardShell title={nextCardIsLive ? "Live matches" : (nextTournamentDay === todayKey ? "Today's matches" : "Next matchday")} icon={nextCardIsLive ? "🔴" : "⏭️"} tone={nextCardMatches.some(isMyMatch)?C.gold:(nextCardIsLive?C.red:C.green)} emphasis={nextCardMatches.some(isMyMatch) || nextCardIsLive} footer={nextCardMatches[0] ? (nextCardIsLive ? "Scores update from live feed" : new Date(getTs(nextCardMatches[0])).toLocaleDateString("en-US", { weekday:"short", month:"short", day:"numeric" })) : "No upcoming matches found"}>
+          <PhaseBadge matches={nextCardMatches} />
           {nextCardMatches.length ? nextCardMatches.map(m => <MatchRow key={m.id} match={m} showScore={nextCardIsLive} star={isMyMatch(m)} onClick={onMatchTap} />) : <div style={{fontSize:13,color:C.mid,lineHeight:1.5}}>No upcoming tournament match found.</div>}
           {!nextCardIsLive && nextCardMatches[0] && <CountdownBadge match={nextCardMatches[0]} />}
           {nextCardMatches.some(isMyMatch) && <div style={{fontSize:11,color:C.gold,fontWeight:900,marginTop:8}}>⭐ One of your teams is involved</div>}
@@ -9198,8 +9235,8 @@ function MyWorldCupTab({ favTeams=[], saved=[], syncProfile=null, displayName=""
                 <div style={{fontSize:11,color:C.gold,fontWeight:900,whiteSpace:"nowrap"}}>{goals} goals</div>
               </div>
               <div style={{marginBottom:5}}><OutcomePills campaign={campaign}/></div>
-              <div style={{fontSize:12,color:C.mid,fontWeight:800,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>Latest: {last ? resultLine(last) : "—"}</div>
-              <div style={{fontSize:12,color:next?C.green:C.mid,fontWeight:900,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>Next: {next ? `${next.home===team?next.away:next.home} · ${fmtShort(next)}` : "—"}</div>
+              <div style={{fontSize:compactMatchCards?14:13,color:C.mid,fontWeight:900,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>Latest: {last ? (compactMatchCards ? matchLabelMobile(last, true) : resultLine(last)) : "—"}</div>
+              <div style={{fontSize:compactMatchCards?14:13,color:next?C.green:C.mid,fontWeight:950,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>Next: {next ? (compactMatchCards ? `${matchLabelMobile(next, false)} · ${fmtShort(next)}` : `${next.home===team?next.away:next.home} · ${fmtShort(next)}`) : "—"}</div>
             </div>
           )) : <div style={{fontSize:13,color:C.mid,lineHeight:1.5}}>Choose favorite teams to unlock this card.</div>}
         </CardShell>
