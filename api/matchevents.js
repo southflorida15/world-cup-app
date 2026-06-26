@@ -464,29 +464,28 @@ function parseCommentary(data) {
 
 function parseMomentum(data, events=[], homeTeam="") {
   const stats = parseStats(data.boxscore, homeTeam) || { home: {}, away: {} };
+  const rows = Array.from({ length: 90 }, (_, i) => ({ minute: i + 1, raw: 0, signed: 0 }));
+
   const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
   const num = v => Number.isFinite(Number(v)) ? Number(v) : 0;
   const homeStats = stats.home || {};
   const awayStats = stats.away || {};
 
-  // Momentum Engine v4 — local influence / "event fingerprint" model.
-  // Important design choice: this is NOT cumulative possession pressure.
-  // Each goal/card/sub/derived attacking spell paints a short-lived local
-  // fingerprint onto the timeline. Those fingerprints overlap, normalize,
-  // and produce a one-team-per-minute signed signal. This better matches
-  // broadcast-style charts when we do not have true Opta/ESPN event-chain data.
-  const signal = Array.from({ length: 90 }, () => 0);
-
+  // Momentum v3: pressure DIFFERENTIAL, not accumulated pressure.
+  // The raw signal can rise during sustained pressure, but the displayed
+  // bars are the difference between current pressure and a rolling baseline.
+  // That prevents long possession spells from becoming flat plateaus and
+  // creates the ESPN/Sofascore-style bursts when pressure changes.
   const pressureScore = s => (
-    num(s.shots) * 1.00 +
-    num(s.shotsOn) * 4.8 +
-    num(s.corners) * 3.0 +
-    num(s.blockedShots) * 1.35 +
-    num(s.accurateCrosses) * 0.95 +
-    num(s.crosses) * 0.18 +
-    num(s.interceptions) * 0.08 +
-    num(s.tackles) * 0.05 +
-    num(s.clearances) * 0.02
+    num(s.shots) * 1.15 +
+    num(s.shotsOn) * 5.4 +
+    num(s.corners) * 3.8 +
+    num(s.blockedShots) * 1.8 +
+    num(s.accurateCrosses) * 1.25 +
+    num(s.crosses) * 0.25 +
+    num(s.interceptions) * 0.16 +
+    num(s.tackles) * 0.10 +
+    num(s.clearances) * 0.05
   );
 
   const hp = pressureScore(homeStats);
@@ -494,10 +493,8 @@ function parseMomentum(data, events=[], homeTeam="") {
   const totalPressure = Math.max(1, hp + ap);
   const homeShare = hp / totalPressure;
   const awayShare = ap / totalPressure;
-  const homeTilt = clamp((homeShare - 0.5) * 0.34, -0.12, 0.12);
-  const awayTilt = clamp((awayShare - 0.5) * 0.34, -0.12, 0.12);
 
-  const seedText = `${homeTeam}|${events.map(e => `${e.time?.elapsed}-${e.team?.name}-${e.type}-${e.detail}`).join('|')}|momentum-local-v4`;
+  const seedText = `${homeTeam}|${events.map(e => `${e.time?.elapsed}-${e.team?.name}-${e.type}-${e.detail}`).join('|')}|momentum-diff-v1`;
   let seed = 0;
   for (let i = 0; i < seedText.length; i++) seed = (seed * 31 + seedText.charCodeAt(i)) >>> 0;
   const rand = () => {
@@ -505,94 +502,58 @@ function parseMomentum(data, events=[], homeTeam="") {
     return seed / 4294967296;
   };
 
-  const teamSide = name => normESPN(name || "") === homeTeam ? 1 : -1;
-
-  const addKernel = (center, amp, side=1, width=1.4, skew=0) => {
-    const c = Number(center) || 1;
-    const radius = Math.ceil(width * 3.2 + Math.abs(skew));
-    for (let m = Math.max(1, Math.floor(c - radius)); m <= Math.min(90, Math.ceil(c + radius)); m++) {
-      const x = m - c;
-      const adjusted = skew && x > 0 ? x / (1 + Math.abs(skew)) : x;
-      const falloff = Math.exp(-(adjusted * adjusted) / (2 * width * width));
-      signal[m - 1] += side * amp * falloff;
+  const addRawWave = (center, amp, width, side=1) => {
+    const c = clamp(Number(center) || 1, 1, 90);
+    const w = Math.max(0.55, Number(width) || 1.3);
+    const a = Number(amp) || 0;
+    for (let m = 1; m <= 90; m++) {
+      const d = Math.abs(m - c);
+      if (d > w * 2.9) continue;
+      const gaussian = Math.exp(-(d * d) / (2 * w * w));
+      const saw = 0.82 + rand() * 0.36;
+      rows[m - 1].raw += side * a * gaussian * saw;
     }
   };
 
-  const addTemplate = (center, amp, side=1, template=[0.10,0.35,1.00,0.62,0.28,0.10]) => {
-    const c = Math.round(Number(center) || 1);
-    const offset = Math.floor(template.length / 2);
-    template.forEach((w, i) => {
-      const m = c + i - offset;
-      if (m >= 1 && m <= 90) signal[m - 1] += side * amp * w;
-    });
-  };
-
-  // Derived attacking spells from aggregate stats. These are intentionally
-  // local, irregular "brush strokes" rather than a long possession baseline.
-  const eventMinutes = Array.isArray(events) ? events.map(e => Number(e.time?.elapsed)).filter(Number.isFinite) : [];
-  const redCards = (Array.isArray(events) ? events : [])
-    .filter(e => e.type === "Card" && e.detail === "Red Card")
-    .map(e => ({ minute: Number(e.time?.elapsed) || 45, side: teamSide(e.team?.name) }));
-
-  const chooseCenter = (teamSideVal, idx, count) => {
-    const base = ((idx + 0.5) * 90) / Math.max(1, count);
-    let c = base + (rand() - 0.5) * 9;
-
-    // If opponent got a red card, bias the attacking team into the period
-    // after the card. If this team got a red, bias their attacks earlier.
-    redCards.forEach(rc => {
-      if (rc.side === -teamSideVal && rand() < 0.70) {
-        c = rc.minute + 4 + rand() * Math.max(6, 90 - rc.minute - 4);
-      } else if (rc.side === teamSideVal && rand() < 0.58) {
-        c = 3 + rand() * Math.max(8, rc.minute - 5);
-      }
-    });
-
-    // Avoid making every synthetic spell sit exactly on top of known events.
-    for (const em of eventMinutes) {
-      if (Math.abs(c - em) < 1.2) c += (rand() > 0.5 ? 1 : -1) * (1.5 + rand() * 2.5);
-    }
-    return clamp(c, 1, 90);
-  };
-
-  const addSyntheticSpells = (side, s, share) => {
-    const shots = num(s.shots), shotsOn = num(s.shotsOn), corners = num(s.corners);
-    const crosses = num(s.accurateCrosses) + num(s.crosses) * 0.25;
-    const count = clamp(Math.round(3 + shots / 6 + shotsOn / 2 + corners / 3), 4, 15);
-    const ampBase = clamp(11 + share * 18 + shotsOn * 1.1 + corners * 0.25, 13, 34);
-
+  const addCluster = (center, amp, side, count=3) => {
+    // Multiple narrow pulses look more like attacking waves than a single mound.
     for (let i = 0; i < count; i++) {
-      const center = chooseCenter(side, i, count);
-      const amp = ampBase * (0.45 + rand() * 0.85);
-      const width = 0.85 + rand() * 1.55;
-      // Primary burst, then a small follow-up pulse to form a natural wave.
-      addKernel(center, amp, side, width, rand() * 0.55);
-      if (rand() > 0.54) addKernel(center + 1.4 + rand() * 2.6, amp * (0.26 + rand() * 0.24), side, 0.8 + rand() * 1.2, 0.3);
-    }
-
-    // Extra corner fingerprints: sharp, short, visible but not dominant.
-    for (let i = 0; i < clamp(Math.round(corners), 0, 16); i++) {
-      const center = chooseCenter(side, i + 0.35, Math.max(1, corners));
-      addTemplate(center, 10 + rand() * 10, side, [0.18,0.56,1.00,0.42,0.14]);
-    }
-
-    // Shots on target get more pronounced short spikes.
-    for (let i = 0; i < clamp(Math.round(shotsOn), 0, 12); i++) {
-      const center = chooseCenter(side, i + 0.65, Math.max(1, shotsOn));
-      addTemplate(center, 18 + rand() * 16, side, [0.10,0.35,1.00,0.58,0.22]);
-    }
-
-    // Cross volume creates light texture, not a plateau.
-    const textureCount = clamp(Math.round(crosses / 4), 0, 10);
-    for (let i = 0; i < textureCount; i++) {
-      const center = chooseCenter(side, i + 0.1, Math.max(1, textureCount));
-      addKernel(center, 4 + rand() * 5, side, 0.65 + rand() * 0.45);
+      const offset = (i - (count - 1) / 2) * (0.35 + rand() * 0.55);
+      const width = 0.28 + rand() * 0.58;
+      const localAmp = amp * (0.72 + rand() * 1.05) * (i === Math.floor(count/2) ? 1.35 : 1);
+      addRawWave(Number(center) + offset, localAmp, width, side);
     }
   };
 
-  addSyntheticSpells(1, homeStats, homeShare + homeTilt);
-  addSyntheticSpells(-1, awayStats, awayShare + awayTilt);
+  // Very small match-level tilt only. It should guide spell distribution,
+  // never become the chart itself.
+  const tinyTilt = clamp((homeShare - awayShare) * 2.2, -2.2, 2.2);
+  for (let m = 1; m <= 90; m++) {
+    rows[m - 1].raw += tinyTilt + Math.sin(m / 4.8) * 0.8 + Math.cos(m / 11.5) * 0.7;
+  }
 
+  // Simulated attacking spells from aggregate stats. Dominant teams get more
+  // short spells, not a permanent plateau.
+  const homeSpellCount = clamp(Math.round(3 + num(homeStats.shots) / 4.2 + num(homeStats.corners) / 3.0 + num(homeStats.shotsOn) / 2.5), 4, 15);
+  const awaySpellCount = clamp(Math.round(3 + num(awayStats.shots) / 4.2 + num(awayStats.corners) / 3.0 + num(awayStats.shotsOn) / 2.5), 3, 13);
+  const homeAmp = clamp(13 + homeShare * 21 + num(homeStats.shotsOn) * 0.9, 13, 34);
+  const awayAmp = clamp(13 + awayShare * 21 + num(awayStats.shotsOn) * 0.9, 13, 34);
+
+  const placeSpells = (count, side, ampBase, shots, corners, shotsOn) => {
+    for (let i = 0; i < count; i++) {
+      const bucket = 90 / count;
+      const center = bucket * i + 1 + rand() * bucket;
+      const amp = ampBase * (0.48 + rand() * 0.95) + num(shotsOn) * 0.9 + num(corners) * 0.28 + num(shots) * 0.06;
+      const pulses = rand() > 0.35 ? 3 : 2;
+      addCluster(center, amp, side, pulses);
+      if (rand() > 0.66) addRawWave(center + 2.8 + rand()*2.8, amp * 0.35, 0.95 + rand()*1.2, side);
+    }
+  };
+
+  placeSpells(homeSpellCount, 1, homeAmp, homeStats.shots, homeStats.corners, homeStats.shotsOn);
+  placeSpells(awaySpellCount, -1, awayAmp, awayStats.shots, awayStats.corners, awayStats.shotsOn);
+
+  const teamSide = name => normESPN(name || "") === homeTeam ? 1 : -1;
   const minuteOf = item => {
     const clock = item.clock || item.time || {};
     if (clock.displayValue) return parseInt(clock.displayValue, 10);
@@ -601,16 +562,16 @@ function parseMomentum(data, events=[], homeTeam="") {
   };
   const teamOf = item => normESPN(item.team?.displayName || item.team?.name || "");
 
-  const classify = item => {
+  const classifyImpulse = item => {
     const t = `${item.type?.text || ""} ${item.type?.type || ""} ${item.type || ""} ${item.text || ""} ${item.shortText || ""} ${item.detail || ""}`.toLowerCase();
-    if (item.scoringPlay || t.includes("goal")) return { kind:"goal" };
-    if (t.includes("red card")) return { kind:"red" };
-    if (t.includes("shot on") || t.includes("saved") || t.includes("woodwork") || t.includes("post")) return { kind:"sot" };
-    if (t.includes("corner")) return { kind:"corner" };
-    if (t.includes("shot")) return { kind:"shot" };
-    if (t.includes("yellow")) return { kind:"yellow" };
-    if (t.includes("substitut")) return { kind:"sub" };
-    if (t.includes("free kick") || t.includes("cross")) return { kind:"danger" };
+    if (item.scoringPlay || t.includes("goal")) return { weight: 155, width: 0.72, invert: false, cluster: 2 };
+    if (t.includes("red card")) return { weight: 120, width: 0.68, invert: true, cluster: 2 };
+    if (t.includes("shot on") || t.includes("saved") || t.includes("woodwork") || t.includes("post")) return { weight: 64, width: 0.58, invert: false, cluster: 2 };
+    if (t.includes("corner")) return { weight: 42, width: 0.48, invert: false, cluster: 1 };
+    if (t.includes("shot")) return { weight: 30, width: 0.42, invert: false, cluster: 1 };
+    if (t.includes("yellow")) return { weight: 18, width: 0.34, invert: true, cluster: 1 };
+    if (t.includes("free kick") || t.includes("cross")) return { weight: 22, width: 0.40, invert: false, cluster: 1 };
+    if (t.includes("substitut")) return { weight: 7, width: 0.28, invert: false, cluster: 1 };
     return null;
   };
 
@@ -620,69 +581,70 @@ function parseMomentum(data, events=[], homeTeam="") {
   if (Array.isArray(data.keyEvents)) sources.push(...data.keyEvents);
   if (Array.isArray(events)) sources.push(...events);
 
-  // Event templates. These are intentionally short and visual: goals/cards do
-  // not create a permanent state; they paint a recognizable local pattern.
   sources.forEach(item => {
     const min = minuteOf(item);
     const team = teamOf(item);
-    const info = classify(item);
+    const info = classifyImpulse(item);
     if (!min || !team || !info) return;
     const side = teamSide(team);
+    const targetSide = info.invert ? -side : side;
+    addCluster(min, info.weight, targetSide, info.cluster || 1);
 
-    if (info.kind === "goal") {
-      addTemplate(min, 78, side, [0.16,0.48,1.00,0.72,0.38,0.15]);
-      addTemplate(Number(min) + 3, 24, -side, [0.12,0.42,1.00,0.55,0.20]);
-    } else if (info.kind === "red") {
-      // Red card is a negative event for carded team and a stronger advantage
-      // fingerprint for the opponent after play restarts.
-      addTemplate(min, 36, -side, [0.25,0.70,1.00,0.55,0.18]);
-      addKernel(Number(min) + 3.5, 44, -side, 2.2, 0.75);
-    } else if (info.kind === "sot") {
-      addTemplate(min, 36, side, [0.12,0.38,1.00,0.56,0.20]);
-    } else if (info.kind === "corner") {
-      addTemplate(min, 22, side, [0.18,0.58,1.00,0.44,0.14]);
-    } else if (info.kind === "shot") {
-      addTemplate(min, 18, side, [0.16,0.50,1.00,0.36]);
-    } else if (info.kind === "yellow") {
-      addTemplate(min, 10, -side, [0.22,0.75,1.00,0.35]);
-    } else if (info.kind === "sub") {
-      addTemplate(min, 6, side, [0.18,0.80,1.00,0.25]);
-    } else if (info.kind === "danger") {
-      addTemplate(min, 14, side, [0.10,0.42,1.00,0.42,0.10]);
+    const text = `${item.type?.text || ""} ${item.type || ""} ${item.detail || ""}`.toLowerCase();
+    if (item.scoringPlay || text.includes("goal")) {
+      // Kickoff response by the conceding team.
+      addCluster(Number(min) + 2.4, 32, -side, 1);
+    }
+    if (text.includes("red")) {
+      // Opponent pressure after a sending-off.
+      addCluster(Number(min) + 2.8, 44, -side, 2);
+      addRawWave(Number(min) + 5.8, 16, 1.1, -side);
     }
   });
 
-  // Light match texture: just enough to keep 90 one-minute ticks from looking
-  // computer-perfect. It follows the stat tilt but remains near the baseline.
-  for (let i = 0; i < 90; i++) {
-    const m = i + 1;
-    const texture = Math.sin(m / 4.9) * 0.8 + Math.cos(m / 9.7) * 0.55 + (rand() - 0.5) * 0.9;
-    const tilt = (homeShare - awayShare) * 1.4;
-    signal[i] += texture + tilt;
+  // Rolling differential: the displayed value is current pressure minus the
+  // recent baseline, preserving only the acceleration/attack wave.
+  const raw = rows.map(r => r.raw);
+  const baseline = raw.map((_, i) => {
+    let sum = 0, weight = 0;
+    for (let j = Math.max(0, i - 3); j <= Math.min(89, i + 3); j++) {
+      const d = Math.abs(i - j);
+      const w = 1 / (1 + d);
+      sum += raw[j] * w;
+      weight += w;
+    }
+    return weight ? sum / weight : 0;
+  });
+
+  // Keep some absolute pressure so long dominance is visible, but mostly show
+  // pressure change. This is what removes the long flat blocks.
+  for (let i = 0; i < rows.length; i++) {
+    const diff = raw[i] - baseline[i];
+    const absoluteHint = raw[i] * 0.12;
+    rows[i].signed = diff * 2.35 + absoluteHint;
   }
 
-  // Short visual smoothing only. No state memory, no long accumulation.
-  const smooth = signal.map((v, i, arr) => {
-    const l1 = arr[Math.max(0, i - 1)] || 0;
-    const r1 = arr[Math.min(89, i + 1)] || 0;
-    return l1 * 0.16 + v * 0.68 + r1 * 0.16;
-  });
+  // Light adjacent smoothing only, preserving spikes.
+  const before = rows.map(r => r.signed);
+  for (let i = 0; i < rows.length; i++) {
+    const left = before[Math.max(0, i - 1)];
+    const mid = before[i];
+    const right = before[Math.min(rows.length - 1, i + 1)];
+    rows[i].signed = left * 0.16 + mid * 0.68 + right * 0.16;
+  }
 
-  // Suppress tiny noise, but keep a continuous minute signal via the frontend's
-  // tiny carry/tick behavior. Percentile cap prevents one event from crushing
-  // the rest of the match.
-  const absVals = smooth.map(v => Math.abs(v)).sort((a,b)=>a-b);
-  const p92 = absVals[Math.floor(absVals.length * 0.92)] || absVals[absVals.length - 1] || 1;
-  const maxAbs = Math.max(12, p92);
-
-  return smooth.map((v, i) => {
-    const sign = v >= 0 ? 1 : -1;
-    const ratio = Math.min(1, Math.abs(v) / maxAbs);
-    if (ratio < 0.055) return { minute: i + 1, signed: 0 };
-    const shaped = Math.pow(ratio, 0.52) * 82;
-    return { minute: i + 1, signed: Math.round(clamp(sign * shaped, -88, 88) * 10) / 10 };
+  // Winner-takes-minute: no dual colors. Suppress tiny noise and shape peaks.
+  const maxAbs = Math.max(10, ...rows.map(r => Math.abs(r.signed || 0)));
+  return rows.map(r => {
+    const sign = r.signed >= 0 ? 1 : -1;
+    const ratio = Math.abs(r.signed || 0) / maxAbs;
+    if (ratio < 0.035) return { minute: r.minute, signed: 0 };
+    const shaped = Math.pow(ratio, 0.62) * 92;
+    const signed = sign * shaped;
+    return { minute: r.minute, signed: Math.round(clamp(signed, -92, 92) * 10) / 10 };
   });
 }
+
 
 // ── Scorers aggregator ────────────────────────────────────────────────────
 // Hardcoded events for matches that may have aged out of ESPN feed

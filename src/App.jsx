@@ -6132,86 +6132,176 @@ function WeatherBadge({ lat, lon }) {
 function MatchMomentum({ match, events=[], momentum=[], stats, C }) {
   const safeEvents = Array.isArray(events) ? events : [];
   const safeMomentum = Array.isArray(momentum) ? momentum : [];
+  const [engine, setEngine] = useState("hybrid");
 
+  const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
   const eventIcon = ev => ev.type === "Goal" ? "⚽" : ev.type === "Card" ? (ev.detail === "Red Card" ? "🟥" : "🟨") : ev.type === "subst" ? "🔄" : "•";
   const eventWeight = ev => ev.type === "Goal" ? 3 : ev.type === "Card" && ev.detail === "Red Card" ? 2 : ev.type === "Card" ? 1 : 0;
+  const sideFor = ev => normTeam(ev.team?.name || "") === match.home ? 1 : -1;
 
-  const buildFallback = () => {
-    const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
-    const rows = Array.from({ length: 90 }, (_, i) => ({ minute: i + 1, signed: 0 }));
-    const pressure = s => (
-      (s?.shots || 0) * 1.25 +
-      (s?.shotsOn || 0) * 4.2 +
-      (s?.corners || 0) * 2.6 +
-      (s?.blockedShots || 0) * 1.35 +
-      (s?.accurateCrosses || 0) * 1.15 +
-      (s?.crosses || 0) * 0.22 +
-      (s?.possession || 0) * 0.10
-    );
-    const hp = pressure(stats?.home || {});
-    const ap = pressure(stats?.away || {});
-    const total = Math.max(1, hp + ap);
-    const bias = ((hp - ap) / total) * 18;
-    let seed = `${match.home}|${match.away}|${safeEvents.length}`.split("").reduce((a, ch) => ((a * 31 + ch.charCodeAt(0)) >>> 0), 7);
-    const rand = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
-    const addWave = (center, amp, width, side) => {
-      for (let m = 1; m <= 90; m++) {
-        const d = Math.abs(m - center);
-        if (d > width * 3) continue;
-        rows[m - 1].signed += side * amp * Math.exp(-(d*d)/(2*width*width)) * (1 + Math.sin((m-center)*2.2) * 0.12);
-      }
-    };
-    for (let m = 1; m <= 90; m++) {
-      rows[m - 1].signed += bias + Math.sin(m/2.7)*1.5 + Math.cos(m/7.5)*2.2;
-    }
-    const homeCount = clamp(Math.round(4 + (stats?.home?.shots || 0)/5 + (stats?.home?.corners || 0)/4), 4, 14);
-    const awayCount = clamp(Math.round(3 + (stats?.away?.shots || 0)/5 + (stats?.away?.corners || 0)/4), 3, 12);
-    for (let i=0; i<homeCount; i++) addWave((90/(homeCount+1))*(i+1)+(rand()-.5)*7, 14+rand()*16, 1.8+rand()*3.5, 1);
-    for (let i=0; i<awayCount; i++) addWave((90/(awayCount+1))*(i+1)+(rand()-.5)*7, 12+rand()*14, 1.7+rand()*3.2, -1);
-    safeEvents.forEach(ev => {
-      const min = Math.max(1, Math.min(90, Number(ev.time?.elapsed) || 1));
-      const homeSide = normTeam(ev.team?.name || "") === match.home;
-      let impulse = 0;
-      if (ev.type === "Goal") impulse = 52;
-      else if (ev.type === "Card" && ev.detail === "Red Card") impulse = -42;
-      else if (ev.type === "Card") impulse = -8;
-      else if (ev.type === "subst") impulse = 3;
-      const side = homeSide ? 1 : -1;
-      addWave(min, Math.abs(impulse), ev.type === "Goal" ? 2.6 : ev.detail === "Red Card" ? 3.8 : 1.5, impulse >= 0 ? side : -side);
-      if (ev.type === "Goal") addWave(min + 4, 15, 3.2, -side);
-      if (ev.detail === "Red Card") addWave(min + 6, 18, 6.5, -side);
-    });
-    const maxAbs = Math.max(12, ...rows.map(r => Math.abs(r.signed)));
-    return rows.map(r => ({ minute:r.minute, signed: Math.max(-82, Math.min(82, (r.signed / maxAbs) * 82)) }));
+  const statPressure = s => (
+    (s?.shots || 0) * 1.0 +
+    (s?.shotsOn || 0) * 3.2 +
+    (s?.corners || 0) * 2.1 +
+    (s?.blockedShots || 0) * 0.9 +
+    (s?.accurateCrosses || 0) * 0.7 +
+    (s?.possession || 0) * 0.05
+  );
+
+  const seedFromMatch = () => `${match.home}|${match.away}|${safeEvents.length}`.split("").reduce((a, ch) => ((a * 31 + ch.charCodeAt(0)) >>> 0), 7);
+  const makeRand = () => {
+    let seed = seedFromMatch();
+    return () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
   };
 
-  const rows = safeMomentum.length
-    ? safeMomentum.map((m, i) => {
-        const signed = Number(m.signed ?? ((Number(m.home) || 0) - (Number(m.away) || 0))) || 0;
-        return { minute: Number(m.minute) || i + 1, signed };
-      })
-    : buildFallback();
+  const normalizeRows = (rows, power=0.72, maxOut=82, floor=0.8) => {
+    const maxAbs = Math.max(10, ...rows.map(r => Math.abs(r.signed || 0)));
+    return rows.map((r, i) => {
+      const raw = Number(r.signed) || 0;
+      const sign = raw < 0 ? -1 : 1;
+      const mag = Math.abs(raw) / maxAbs;
+      const shaped = mag < 0.018 ? floor : Math.pow(mag, power) * maxOut;
+      return { minute: r.minute || i + 1, signed: sign * shaped };
+    });
+  };
 
-  const compact = Array.from({ length: 90 }, (_, i) => {
-    const b = rows[i] || { minute: i + 1, signed: 0 };
-    let signed = Number(b.signed) || 0;
+  const addKernel = (rows, center, side, amp, pattern) => {
+    const mid = Math.floor(pattern.length / 2);
+    pattern.forEach((w, idx) => {
+      const minute = center + idx - mid;
+      if (minute < 1 || minute > 90) return;
+      rows[minute - 1].signed += side * amp * w;
+    });
+  };
 
-    // Always render a true 1-minute signal. Even quiet minutes get a tiny
-    // signed tick so the chart reads as a continuous match-flow trace rather
-    // than isolated event clusters. If a minute is perfectly neutral, carry
-    // forward the prior owner so the visual remains one-team-per-minute.
-    const prev = i > 0 ? rows[i - 1] : null;
-    const priorSigned = Number(prev?.signed) || 0;
-    if (Math.abs(signed) < 0.35) {
-      const carry = priorSigned < 0 ? -1 : 1;
-      signed = carry * 0.45;
+  const addGaussian = (rows, center, side, amp, width) => {
+    for (let m = Math.max(1, Math.floor(center - width * 3)); m <= Math.min(90, Math.ceil(center + width * 3)); m++) {
+      const d = Math.abs(m - center);
+      rows[m - 1].signed += side * amp * Math.exp(-(d*d)/(2*width*width));
+    }
+  };
+
+  const buildBalanced = () => {
+    if (safeMomentum.length) {
+      return safeMomentum.map((m, i) => ({ minute: Number(m.minute) || i + 1, signed: Number(m.signed ?? ((Number(m.home) || 0) - (Number(m.away) || 0))) || 0 }));
+    }
+    const rows = Array.from({ length: 90 }, (_, i) => ({ minute: i + 1, signed: 0 }));
+    const hp = statPressure(stats?.home || {});
+    const ap = statPressure(stats?.away || {});
+    const total = Math.max(1, hp + ap);
+    const bias = ((hp - ap) / total) * 8;
+    const rand = makeRand();
+    for (let m = 1; m <= 90; m++) rows[m - 1].signed += bias + Math.sin(m/8)*1.3;
+    const homeBursts = clamp(Math.round(3 + (stats?.home?.shots || 0)/8 + (stats?.home?.corners || 0)/6), 3, 9);
+    const awayBursts = clamp(Math.round(2 + (stats?.away?.shots || 0)/8 + (stats?.away?.corners || 0)/6), 2, 8);
+    for (let i=0; i<homeBursts; i++) addGaussian(rows, (90/(homeBursts+1))*(i+1)+(rand()-.5)*8, 1, 14+rand()*16, 2.1+rand()*1.4);
+    for (let i=0; i<awayBursts; i++) addGaussian(rows, (90/(awayBursts+1))*(i+1)+(rand()-.5)*8, -1, 12+rand()*14, 2.0+rand()*1.3);
+    safeEvents.forEach(ev => {
+      const min = clamp(Number(ev.time?.elapsed) || 1, 1, 90);
+      const side = sideFor(ev);
+      if (ev.type === "Goal") addGaussian(rows, min, side, 48, 1.8);
+      else if (ev.type === "Card" && ev.detail === "Red Card") addGaussian(rows, min, -side, 38, 1.9);
+      else if (ev.type === "Card") addGaussian(rows, min, -side, 9, 1.2);
+      else if (ev.type === "subst") addGaussian(rows, min, side, 5, 1.1);
+    });
+    return normalizeRows(rows, 0.66, 78, 0.6);
+  };
+
+  const buildLocalSpikes = () => {
+    const rows = Array.from({ length: 90 }, (_, i) => ({ minute: i + 1, signed: 0 }));
+    const hp = statPressure(stats?.home || {});
+    const ap = statPressure(stats?.away || {});
+    const biasSide = hp >= ap ? 1 : -1;
+    const total = Math.max(1, hp + ap);
+    const biasMag = Math.min(8, Math.abs(hp - ap) / total * 16);
+    for (let m = 1; m <= 90; m++) rows[m - 1].signed += biasSide * biasMag * (0.35 + 0.2 * Math.sin(m/5));
+
+    const kernels = {
+      goal: [0.08,0.28,0.68,1.00,0.72,0.34,0.12],
+      red:  [0.10,0.28,0.72,1.00,0.56,0.24],
+      yellow:[0.10,0.42,1.00,0.45,0.12],
+      sub: [0.06,0.24,0.52,0.24,0.06]
+    };
+    safeEvents.forEach(ev => {
+      const min = clamp(Number(ev.time?.elapsed) || 1, 1, 90);
+      const side = sideFor(ev);
+      if (ev.type === "Goal") {
+        addKernel(rows, min, side, 66, kernels.goal);
+        addKernel(rows, min + 4, -side, 16, [0.08,0.28,0.62,0.28,0.08]);
+      } else if (ev.type === "Card" && ev.detail === "Red Card") {
+        addKernel(rows, min, -side, 50, kernels.red);
+        addKernel(rows, min + 6, -side, 22, [0.08,0.22,0.44,0.62,0.44,0.22,0.08]);
+      } else if (ev.type === "Card") {
+        addKernel(rows, min, -side, 13, kernels.yellow);
+      } else if (ev.type === "subst") {
+        addKernel(rows, min, side, 8, kernels.sub);
+      }
+    });
+    return normalizeRows(rows, 0.52, 82, 0.8);
+  };
+
+  const buildHybrid = () => {
+    const rows = Array.from({ length: 90 }, (_, i) => ({ minute: i + 1, signed: 0 }));
+    const rand = makeRand();
+    const hp = statPressure(stats?.home || {});
+    const ap = statPressure(stats?.away || {});
+    const total = Math.max(1, hp + ap);
+    const homeShare = hp / total;
+    const bias = (homeShare - 0.5) * 13;
+
+    // Low-amplitude phase texture: enough to avoid gaps, not enough to dominate.
+    for (let m = 1; m <= 90; m++) {
+      const wobble = Math.sin(m/4.4)*1.8 + Math.sin(m/11.5)*2.3;
+      rows[m - 1].signed += bias + wobble;
     }
 
-    return {
-      minute: Number(b.minute) || i + 1,
-      signed,
-      side: signed > 0 ? "home" : "away",
-    };
+    // Distribute generic attacking spells based on aggregate shots/corners.
+    const homeEpisodes = clamp(Math.round(2 + (stats?.home?.shots || 0)/10 + (stats?.home?.corners || 0)/5), 3, 8);
+    const awayEpisodes = clamp(Math.round(2 + (stats?.away?.shots || 0)/10 + (stats?.away?.corners || 0)/5), 2, 7);
+    for (let i=0; i<homeEpisodes; i++) {
+      const center = (90/(homeEpisodes+1))*(i+1)+(rand()-.5)*6;
+      addGaussian(rows, center, 1, 12+rand()*18, 1.25+rand()*0.7);
+    }
+    for (let i=0; i<awayEpisodes; i++) {
+      const center = (90/(awayEpisodes+1))*(i+1)+(rand()-.5)*6;
+      addGaussian(rows, center, -1, 11+rand()*16, 1.25+rand()*0.7);
+    }
+
+    safeEvents.forEach(ev => {
+      const min = clamp(Number(ev.time?.elapsed) || 1, 1, 90);
+      const side = sideFor(ev);
+      if (ev.type === "Goal") {
+        addGaussian(rows, min, side, 70, 1.15);
+        addGaussian(rows, min + 3, -side, 18, 1.6);
+      } else if (ev.type === "Card" && ev.detail === "Red Card") {
+        addGaussian(rows, min, -side, 58, 1.2);
+        addGaussian(rows, min + 5, -side, 20, 2.0);
+      } else if (ev.type === "Card") addGaussian(rows, min, -side, 13, 0.95);
+      else if (ev.type === "subst") addGaussian(rows, min, side, 7, 0.8);
+    });
+
+    // Keep ownership continuous but avoid possession plateaus: if a minute is too quiet,
+    // borrow only the sign from neighbors and draw a tiny tick.
+    const normalized = normalizeRows(rows, 0.56, 84, 0.7);
+    return normalized.map((r, i, arr) => {
+      if (Math.abs(r.signed) > 2) return r;
+      const prev = i > 0 ? arr[i-1]?.signed : 0;
+      const next = i < arr.length-1 ? arr[i+1]?.signed : 0;
+      const sign = (prev + next) < 0 ? -1 : 1;
+      return { ...r, signed: sign * 0.8 };
+    });
+  };
+
+  const engineRows = useMemo(() => ({
+    balanced: buildBalanced(),
+    spikes: buildLocalSpikes(),
+    hybrid: buildHybrid(),
+  }), [safeEvents, safeMomentum, stats, match.home, match.away]);
+
+  const rows = engineRows[engine] || engineRows.hybrid;
+  const compact = rows.map((b, i) => {
+    let signed = Number(b.signed) || 0;
+    return { minute: Number(b.minute) || i + 1, signed, side: signed >= 0 ? "home" : "away" };
   });
 
   const markersByMinute = Array.from({ length: 90 }, () => []);
@@ -6244,6 +6334,11 @@ function MatchMomentum({ match, events=[], momentum=[], stats, C }) {
 
   const sideName = side => side === "home" ? match.home : side === "away" ? match.away : "Balanced";
   const sideColor = side => side === "home" ? C.green : side === "away" ? C.rival : C.mid;
+  const engineMeta = {
+    balanced: "Balanced wave · safest fallback",
+    spikes: "Local spikes · no long memory",
+    hybrid: "Hybrid wave · current candidate",
+  };
 
   return (
     <div style={{marginBottom:12}}>
@@ -6251,9 +6346,21 @@ function MatchMomentum({ match, events=[], momentum=[], stats, C }) {
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,gap:8}}>
           <div>
             <div style={{fontSize:12,fontWeight:900,color:C.green,letterSpacing:".08em"}}>MATCH MOMENTUM</div>
-            <div style={{fontSize:11,color:C.dim}}>Local pressure fingerprints · one team owns each minute</div>
+            <div style={{fontSize:11,color:C.dim}}>{engineMeta[engine]}</div>
           </div>
           <div style={{fontSize:11,color:C.mid,textAlign:"right"}}>{goals.length} ⚽ · {cards.length} cards · {subs.length} subs</div>
+        </div>
+
+        <div style={{display:"flex",gap:6,marginBottom:10,flexWrap:"wrap"}}>
+          {[
+            ["hybrid","Hybrid"],
+            ["spikes","Spikes"],
+            ["balanced","Balanced"],
+          ].map(([key,label]) => (
+            <button key={key} onClick={()=>setEngine(key)} style={{border:`1px solid ${engine===key?C.green:C.b1}`,background:engine===key?C.greenS:C.s2,color:engine===key?C.green:C.mid,borderRadius:999,padding:"5px 10px",fontSize:11,fontWeight:900,cursor:"pointer"}}>
+              {label}
+            </button>
+          ))}
         </div>
 
         <div style={{height:174,position:"relative",borderTop:`1px solid ${C.b1}`,borderBottom:`1px solid ${C.b1}`,padding:"12px 0 10px",overflow:"hidden"}}>
@@ -6262,8 +6369,8 @@ function MatchMomentum({ match, events=[], momentum=[], stats, C }) {
           <div style={{height:148,display:"flex",alignItems:"stretch",gap:1}}>
             {compact.map((b, i) => {
               const ratio = Math.abs(b.signed || 0) / maxVal;
-              const rawHeight = ratio < 0.025 ? 1 : Math.pow(ratio, 0.60) * 74;
-              const magnitude = ratio < 0.025 ? 1 : Math.max(2, Math.round(rawHeight));
+              const rawHeight = ratio < 0.018 ? 1 : Math.pow(ratio, 0.58) * 74;
+              const magnitude = ratio < 0.018 ? 1 : Math.max(2, Math.round(rawHeight));
               const isHomeMinute = b.side === "home";
               const isAwayMinute = b.side === "away";
               const owner = sideName(b.side);
@@ -6303,50 +6410,20 @@ function MatchMomentum({ match, events=[], momentum=[], stats, C }) {
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
         <div style={{background:C.s1,border:`1px solid ${C.b1}`,borderRadius:10,padding:10}}>
           <div style={{fontSize:10,color:C.dim,fontWeight:800}}>HIGHEST PRESSURE</div>
-          <div style={{fontSize:12,color:sideColor(peak.side),fontWeight:800,marginTop:3}}>{sideName(peak.side)}</div>
+          <div style={{fontSize:12,color:sideColor(peak.side),fontWeight:900}}>{sideName(peak.side)}</div>
           <div style={{fontSize:11,color:C.mid}}>{peak.minute}'</div>
         </div>
         <div style={{background:C.s1,border:`1px solid ${C.b1}`,borderRadius:10,padding:10}}>
           <div style={{fontSize:10,color:C.dim,fontWeight:800}}>LONGEST RUN</div>
-          <div style={{fontSize:12,color:sideColor(longestRun.side),fontWeight:800,marginTop:3}}>{sideName(longestRun.side)}</div>
-          <div style={{fontSize:11,color:C.mid}}>{longestRun.len ? `${longestRun.len} min` : "—"}</div>
+          <div style={{fontSize:12,color:sideColor(longestRun.side),fontWeight:900}}>{sideName(longestRun.side)}</div>
+          <div style={{fontSize:11,color:C.mid}}>{longestRun.len} min</div>
         </div>
         <div style={{background:C.s1,border:`1px solid ${C.b1}`,borderRadius:10,padding:10}}>
           <div style={{fontSize:10,color:C.dim,fontWeight:800}}>TURNING POINT</div>
-          <div style={{fontSize:12,color:C.text,fontWeight:800,marginTop:3}}>{swing.minute}'</div>
+          <div style={{fontSize:12,color:C.text,fontWeight:900}}>{swing.minute}'</div>
           <div style={{fontSize:11,color:C.mid}}>{Math.round(swing.change)} pt swing</div>
         </div>
       </div>
-    </div>
-  );
-}
-
-
-function MatchCommentary({ commentary=[], C }) {
-  const [expanded, setExpanded] = useState(false);
-  const items = Array.isArray(commentary) ? commentary : [];
-  const shown = expanded ? items : items.slice(0, 8);
-  return (
-    <div style={{background:C.s1,border:`1px solid ${C.b1}`,borderRadius:12,padding:12,marginBottom:12}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,marginBottom:8}}>
-        <div>
-          <div style={{fontSize:12,fontWeight:900,color:C.green,letterSpacing:".08em"}}>COMMENTARY</div>
-          <div style={{fontSize:11,color:C.dim}}>ESPN feed when available · scrollable match notes</div>
-        </div>
-        {items.length > 8 && <button onClick={()=>setExpanded(e=>!e)} style={{border:`1px solid ${C.b2}`,background:C.s2,color:C.green,borderRadius:999,padding:"5px 10px",fontSize:11,fontWeight:800,cursor:"pointer"}}>{expanded ? "Collapse" : `Expand ${items.length}`}</button>}
-      </div>
-      {items.length > 0 ? (
-        <div style={{maxHeight:expanded?360:240,overflowY:"auto",paddingRight:4,borderTop:`1px solid ${C.b1}`}}>
-          {shown.map((c, i) => (
-            <div key={i} style={{display:"flex",gap:8,padding:"8px 0",borderBottom:i<shown.length-1?`1px solid ${C.b1}`:"none"}}>
-              <div style={{fontSize:11,color:C.gold,fontWeight:800,minWidth:42,textAlign:"right"}}>{c.time?.display || (c.time?.elapsed ? `${c.time.elapsed}'` : "—")}</div>
-              <div style={{fontSize:12,color:C.text,lineHeight:1.35,flex:1}}>{c.text}</div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div style={{fontSize:12,color:C.dim,textAlign:"center",padding:"14px 0",borderTop:`1px solid ${C.b1}`}}>No commentary available for this match.</div>
-      )}
     </div>
   );
 }
