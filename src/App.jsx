@@ -6316,6 +6316,9 @@ function MatchMomentum({ match, events=[], momentum=[], stats, C }) {
   const maxVal = Math.max(12, ...compact.map(b => Math.abs(b.signed || 0)));
   const goals = safeEvents.filter(e => e.type === "Goal");
   const cards = safeEvents.filter(e => e.type === "Card");
+  const yellowCards = cards.filter(e => e.detail !== "Red Card");
+  const redCards = cards.filter(e => e.detail === "Red Card");
+  const cardSummary = `${yellowCards.length} 🟨${redCards.length ? ` · ${redCards.length} 🟥` : ""}`;
   const subs = safeEvents.filter(e => e.type === "subst");
 
   const longestRun = (() => {
@@ -6364,7 +6367,7 @@ function MatchMomentum({ match, events=[], momentum=[], stats, C }) {
             <div style={{fontSize:12,fontWeight:900,color:C.green,letterSpacing:".08em"}}>MATCH MOMENTUM</div>
             <div style={{fontSize:11,color:C.dim}}>{engineMeta[engine]}</div>
           </div>
-          <div style={{fontSize:11,color:C.mid,textAlign:"right"}}>{goals.length} ⚽ · {cards.length} cards · {subs.length} subs</div>
+          <div style={{fontSize:11,color:C.mid,textAlign:"right"}}>{goals.length} ⚽ · {cardSummary} · {subs.length} 🔄</div>
         </div>
 
         <div style={{display:"flex",gap:6,marginBottom:10,flexWrap:"wrap"}}>
@@ -6386,7 +6389,7 @@ function MatchMomentum({ match, events=[], momentum=[], stats, C }) {
             {compact.map((b, i) => {
               const ratio = Math.abs(b.signed || 0) / maxVal;
               const rawHeight = ratio < 0.018 ? 1 : Math.pow(ratio, 0.58) * 74;
-              const magnitude = ratio < 0.018 ? 1 : Math.max(2, Math.round(rawHeight));
+              const magnitude = ratio < 0.018 ? 1 : Math.max(2, rawHeight);
               const isHomeMinute = b.side === "home";
               const isAwayMinute = b.side === "away";
               const owner = sideName(b.side);
@@ -6425,17 +6428,17 @@ function MatchMomentum({ match, events=[], momentum=[], stats, C }) {
 
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
         <div style={{background:C.s1,border:`1px solid ${C.b1}`,borderRadius:10,padding:10}}>
-          <div style={{fontSize:10,color:C.dim,fontWeight:800}}>STRONGEST SPELL</div>
+          <div style={{fontSize:10,color:C.dim,fontWeight:800}}>⚡ STRONGEST SPELL</div>
           <div style={{fontSize:12,color:sideColor(strongestSpell.side),fontWeight:900}}>{sideName(strongestSpell.side)}</div>
           <div style={{fontSize:11,color:C.mid}}>{strongestSpell.start}'–{strongestSpell.end}'</div>
         </div>
         <div style={{background:C.s1,border:`1px solid ${C.b1}`,borderRadius:10,padding:10}}>
-          <div style={{fontSize:10,color:C.dim,fontWeight:800}}>LONGEST RUN</div>
+          <div style={{fontSize:10,color:C.dim,fontWeight:800}}>⏱️ LONGEST RUN</div>
           <div style={{fontSize:12,color:sideColor(longestRun.side),fontWeight:900}}>{sideName(longestRun.side)}</div>
           <div style={{fontSize:11,color:C.mid}}>{longestRun.len} min</div>
         </div>
         <div style={{background:C.s1,border:`1px solid ${C.b1}`,borderRadius:10,padding:10}}>
-          <div style={{fontSize:10,color:C.dim,fontWeight:800}}>TURNING POINT</div>
+          <div style={{fontSize:10,color:C.dim,fontWeight:800}}>🔥 BIGGEST SWING</div>
           <div style={{fontSize:12,color:C.text,fontWeight:900}}>{swing.minute}'</div>
           <div style={{fontSize:11,color:C.mid}}>{Math.round(swing.change)} pt swing</div>
         </div>
@@ -6742,7 +6745,9 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
             const hasTimeline = isPlayed;
             const goals = events ? events.filter(e=>e.type==="Goal").length : 0;
             const cards = events ? events.filter(e=>e.type==="Card").length : 0;
-            const timelineLabel = evOpen ? "Timeline" : `Timeline${events?.length ? ` · ${goals}⚽ ${cards}🟨` : ""}`;
+            const redCards = (events||[]).filter(e=>e.type==="Card" && e.detail==="Red Card").length;
+            const yellowCards = Math.max(0, cards - redCards);
+            const timelineLabel = evOpen ? "Timeline" : `Timeline${events?.length ? ` · ${goals}⚽ ${yellowCards}🟨${redCards ? ` ${redCards}🟥` : ""}` : ""}`;
             const pill = (label, active, onClick, disabled) => (
               <button onClick={disabled ? undefined : onClick} style={{padding:"6px 14px",borderRadius:999,border:`1.5px solid ${active?C.green:disabled?C.b1:C.b2}`,background:active?`${C.green}18`:C.s2,color:active?C.green:disabled?C.dim:C.mid,fontSize:12,fontWeight:700,cursor:disabled?"default":"pointer",opacity:disabled?0.4:1,transition:"all .15s"}}>
                 {label}
@@ -6867,9 +6872,11 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
             const toggleFilter = (t) => setEvFilter(f => f.includes(t) ? f.filter(x=>x!==t) : [...f,t]);
             const goals  = events ? events.filter(e=>e.type==="Goal").length : 0;
             const cards  = events ? events.filter(e=>e.type==="Card").length : 0;
+            const redCards = events ? events.filter(e=>e.type==="Card" && e.detail==="Red Card").length : 0;
             const subs   = events ? events.filter(e=>e.type==="subst").length : 0;
             const filtered = events ? events.filter(e=>evFilter.includes(e.type)) : [];
-            const FILTERS = [{type:"Goal",label:`⚽ ${goals}`},{type:"Card",label:`🟨 ${cards}`},{type:"subst",label:`🔄 ${subs}`}];
+            const yellowCards = Math.max(0, cards - redCards);
+            const FILTERS = [{type:"Goal",label:`⚽ ${goals}`},{type:"Card",label:`🟨 ${yellowCards}${redCards ? `  🟥 ${redCards}` : ""}`},{type:"subst",label:`🔄 ${subs}`}];
             return (
               <div style={{marginBottom:12}}>
                 <>
