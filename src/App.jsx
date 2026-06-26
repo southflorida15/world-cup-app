@@ -6447,6 +6447,52 @@ function MatchMomentum({ match, events=[], momentum=[], stats, C }) {
   );
 }
 
+
+function MatchCommentary({ commentary = [], C }) {
+  const items = Array.isArray(commentary) ? commentary : [];
+  const rows = items.map((item, idx) => {
+    if (typeof item === "string") return { key: idx, time: "", text: item, type: "" };
+    const minute = item.minute ?? item.time?.elapsed ?? item.clock?.displayValue ?? item.time?.displayValue ?? item.displayTime ?? "";
+    const time = typeof minute === "number" ? `${minute}'` : String(minute || "");
+    return {
+      key: item.id || idx,
+      time,
+      text: item.text || item.shortText || item.description || item.commentary || item.play?.text || "",
+      type: item.type?.text || item.type || item.detail || ""
+    };
+  }).filter(r => r.text);
+
+  return (
+    <div style={{background:C.s1,border:`1px solid ${C.b1}`,borderRadius:12,padding:12,marginBottom:12}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:8}}>
+        <div>
+          <div style={{fontSize:12,fontWeight:900,color:C.green,letterSpacing:1}}>COMMENTARY</div>
+          <div style={{fontSize:10,color:C.dim}}>Minute-by-minute match notes when available</div>
+        </div>
+        <div style={{fontSize:11,color:C.dim,fontWeight:700}}>{rows.length} notes</div>
+      </div>
+
+      {rows.length === 0 ? (
+        <div style={{padding:"18px 10px",border:`1px dashed ${C.b2}`,borderRadius:10,color:C.dim,fontSize:12,textAlign:"center"}}>
+          No commentary available for this match yet.
+        </div>
+      ) : (
+        <div style={{maxHeight:360,overflowY:"auto",paddingRight:4}}>
+          {rows.map((r, i) => (
+            <div key={r.key} style={{display:"grid",gridTemplateColumns:"46px 1fr",gap:10,padding:"9px 0",borderBottom:i<rows.length-1?`1px solid ${C.b1}`:"none"}}>
+              <div style={{fontSize:12,fontWeight:900,color:C.gold,textAlign:"right"}}>{r.time}</div>
+              <div>
+                {r.type && <div style={{fontSize:10,color:C.dim,fontWeight:800,textTransform:"uppercase",letterSpacing:.5,marginBottom:2}}>{r.type}</div>}
+                <div style={{fontSize:12,lineHeight:1.35,color:C.text}}>{r.text}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), userPredHg, userPredAg }) {
   const [events, setEvents] = useState(null);
   const [matchStats, setMatchStats] = useState(null);
