@@ -6095,12 +6095,18 @@ const eventsCache = {};
 async function fetchMatchEvents(fixtureId) {
   if (eventsCache[fixtureId]) return eventsCache[fixtureId];
   try {
-    const res = await fetch(`/api/matchevents?fixtureId=${encodeURIComponent(fixtureId)}`);
+    const res = await fetch(`/api/matchevents?fixtureId=${encodeURIComponent(fixtureId)}&t=${Date.now()}`);
     if (!res.ok) throw new Error(res.statusText);
     const data = await res.json();
     // Handle both old format (array) and new format ({events, stats})
     const result = Array.isArray(data) ? { events: data, stats: null } : data;
-    if (result?.events?.length > 0) eventsCache[fixtureId] = result;
+    if (
+  result?.events?.length > 0 ||
+  result?.stats ||
+  result?.lineups
+) {
+  eventsCache[fixtureId] = result;
+}
     return result;
   } catch(e) {
     console.error("[matchevents]", e.message);
