@@ -6248,7 +6248,8 @@ function MatchMomentum({ match, events=[], momentum=[], stats, C }) {
           <div style={{position:"absolute",left:"50%",top:0,bottom:0,width:1,background:C.b1,opacity:.65}} />
           <div style={{height:148,display:"flex",alignItems:"stretch",gap:1}}>
             {compact.map((b, i) => {
-              const rawHeight = (Math.abs(b.signed || 0) / maxVal) * 70;
+              const ratio = Math.abs(b.signed || 0) / maxVal;
+              const rawHeight = Math.pow(ratio, 0.50) * 72;
               const magnitude = b.side === "even" ? 1 : Math.max(3, Math.round(rawHeight));
               const isHomeMinute = b.side === "home";
               const isAwayMinute = b.side === "away";

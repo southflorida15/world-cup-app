@@ -518,9 +518,9 @@ function parseMomentum(data, events=[], homeTeam="") {
   const addCluster = (center, amp, side, count=3) => {
     // Multiple narrow pulses look more like attacking waves than a single mound.
     for (let i = 0; i < count; i++) {
-      const offset = (i - (count - 1) / 2) * (0.85 + rand() * 0.85);
-      const width = 0.55 + rand() * 1.15;
-      const localAmp = amp * (0.42 + rand() * 0.72) * (i === Math.floor(count/2) ? 1.18 : 1);
+      const offset = (i - (count - 1) / 2) * (0.35 + rand() * 0.55);
+      const width = 0.28 + rand() * 0.58;
+      const localAmp = amp * (0.72 + rand() * 1.05) * (i === Math.floor(count/2) ? 1.35 : 1);
       addRawWave(Number(center) + offset, localAmp, width, side);
     }
   };
@@ -564,14 +564,14 @@ function parseMomentum(data, events=[], homeTeam="") {
 
   const classifyImpulse = item => {
     const t = `${item.type?.text || ""} ${item.type?.type || ""} ${item.type || ""} ${item.text || ""} ${item.shortText || ""} ${item.detail || ""}`.toLowerCase();
-    if (item.scoringPlay || t.includes("goal")) return { weight: 105, width: 0.70, invert: false, cluster: 3 };
-    if (t.includes("red card")) return { weight: 82, width: 0.82, invert: true, cluster: 3 };
-    if (t.includes("shot on") || t.includes("saved") || t.includes("woodwork") || t.includes("post")) return { weight: 48, width: 0.75, invert: false, cluster: 2 };
-    if (t.includes("corner")) return { weight: 36, width: 0.65, invert: false, cluster: 2 };
-    if (t.includes("shot")) return { weight: 26, width: 0.62, invert: false, cluster: 2 };
-    if (t.includes("yellow")) return { weight: 14, width: 0.55, invert: true, cluster: 1 };
-    if (t.includes("free kick") || t.includes("cross")) return { weight: 18, width: 0.60, invert: false, cluster: 1 };
-    if (t.includes("substitut")) return { weight: 7, width: 0.48, invert: false, cluster: 1 };
+    if (item.scoringPlay || t.includes("goal")) return { weight: 175, width: 0.42, invert: false, cluster: 2 };
+    if (t.includes("red card")) return { weight: 140, width: 0.48, invert: true, cluster: 2 };
+    if (t.includes("shot on") || t.includes("saved") || t.includes("woodwork") || t.includes("post")) return { weight: 82, width: 0.42, invert: false, cluster: 2 };
+    if (t.includes("corner")) return { weight: 64, width: 0.36, invert: false, cluster: 1 };
+    if (t.includes("shot")) return { weight: 44, width: 0.34, invert: false, cluster: 1 };
+    if (t.includes("yellow")) return { weight: 26, width: 0.30, invert: true, cluster: 1 };
+    if (t.includes("free kick") || t.includes("cross")) return { weight: 32, width: 0.34, invert: false, cluster: 1 };
+    if (t.includes("substitut")) return { weight: 10, width: 0.24, invert: false, cluster: 1 };
     return null;
   };
 
@@ -593,12 +593,12 @@ function parseMomentum(data, events=[], homeTeam="") {
     const text = `${item.type?.text || ""} ${item.type || ""} ${item.detail || ""}`.toLowerCase();
     if (item.scoringPlay || text.includes("goal")) {
       // Kickoff response by the conceding team.
-      addCluster(Number(min) + 4.2, 32, -side, 2);
+      addCluster(Number(min) + 2.2, 42, -side, 1);
     }
     if (text.includes("red")) {
       // Opponent pressure after a sending-off.
-      addCluster(Number(min) + 4.8, 48, -side, 3);
-      addRawWave(Number(min) + 9.5, 26, 2.2, -side);
+      addCluster(Number(min) + 2.8, 56, -side, 2);
+      addRawWave(Number(min) + 6.0, 22, 0.85, -side);
     }
   });
 
@@ -607,7 +607,7 @@ function parseMomentum(data, events=[], homeTeam="") {
   const raw = rows.map(r => r.raw);
   const baseline = raw.map((_, i) => {
     let sum = 0, weight = 0;
-    for (let j = Math.max(0, i - 5); j <= Math.min(89, i + 5); j++) {
+    for (let j = Math.max(0, i - 3); j <= Math.min(89, i + 3); j++) {
       const d = Math.abs(i - j);
       const w = 1 / (1 + d);
       sum += raw[j] * w;
@@ -620,8 +620,8 @@ function parseMomentum(data, events=[], homeTeam="") {
   // pressure change. This is what removes the long flat blocks.
   for (let i = 0; i < rows.length; i++) {
     const diff = raw[i] - baseline[i];
-    const absoluteHint = raw[i] * 0.18;
-    rows[i].signed = diff * 1.95 + absoluteHint;
+    const absoluteHint = raw[i] * 0.05;
+    rows[i].signed = diff * 3.35 + absoluteHint;
   }
 
   // Light adjacent smoothing only, preserving spikes.
@@ -630,7 +630,7 @@ function parseMomentum(data, events=[], homeTeam="") {
     const left = before[Math.max(0, i - 1)];
     const mid = before[i];
     const right = before[Math.min(rows.length - 1, i + 1)];
-    rows[i].signed = left * 0.10 + mid * 0.80 + right * 0.10;
+    rows[i].signed = left * 0.04 + mid * 0.92 + right * 0.04;
   }
 
   // Winner-takes-minute: no dual colors. Suppress tiny noise and shape peaks.
@@ -638,10 +638,10 @@ function parseMomentum(data, events=[], homeTeam="") {
   return rows.map(r => {
     const sign = r.signed >= 0 ? 1 : -1;
     const ratio = Math.abs(r.signed || 0) / maxAbs;
-    if (ratio < 0.055) return { minute: r.minute, signed: 0 };
-    const shaped = Math.pow(ratio, 1.28) * 92;
+    if (ratio < 0.075) return { minute: r.minute, signed: 0 };
+    const shaped = Math.pow(ratio, 0.52) * 96;
     const signed = sign * shaped;
-    return { minute: r.minute, signed: Math.round(clamp(signed, -92, 92) * 10) / 10 };
+    return { minute: r.minute, signed: Math.round(clamp(signed, -96, 96) * 10) / 10 };
   });
 }
 
