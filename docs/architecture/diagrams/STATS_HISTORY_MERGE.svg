@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="560" viewBox="0 0 1100 560" role="img" aria-label="Historical team stats merge">
+  <defs><style>.bg{fill:#06100b}.box{fill:#0c1a12;stroke:#4ade80;stroke-width:2;rx:16}.old{fill:#2b2110;stroke:#fbbf24;stroke-width:2;rx:16}.api{fill:#132033;stroke:#60a5fa;stroke-width:2;rx:16}.txt{font-family:Inter,Arial,sans-serif;fill:#d4ead9;font-size:18px;font-weight:700}.small{font-family:Inter,Arial,sans-serif;fill:#9bc9a8;font-size:13px}.arrow{stroke:#7aaa8a;stroke-width:3;fill:none;marker-end:url(#arrow)}</style><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#7aaa8a"/></marker></defs>
+  <rect class="bg" width="1100" height="560"/>
+  <text x="550" y="48" text-anchor="middle" class="txt" font-size="28">Historical Team Continuity</text>
+  <rect x="90" y="120" width="240" height="82" class="box"/><text x="210" y="154" text-anchor="middle" class="txt">Germany</text><text x="210" y="179" text-anchor="middle" class="small">Modern source record</text>
+  <rect x="90" y="260" width="240" height="82" class="old"/><text x="210" y="294" text-anchor="middle" class="txt">West Germany</text><text x="210" y="319" text-anchor="middle" class="small">Historical source record</text>
+  <rect x="430" y="190" width="240" height="92" class="api"/><text x="550" y="224" text-anchor="middle" class="txt">Alias Merge</text><text x="550" y="249" text-anchor="middle" class="small">Deduplicate by year</text>
+  <rect x="780" y="190" width="240" height="92" class="box"/><text x="900" y="224" text-anchor="middle" class="txt">Display Record</text><text x="900" y="249" text-anchor="middle" class="small">Titles • appearances • goals</text>
+  <rect x="260" y="420" width="580" height="70" class="old"/><text x="550" y="450" text-anchor="middle" class="txt">Also used for Czechia, Serbia, Russia, DR Congo</text><text x="550" y="475" text-anchor="middle" class="small">Czechoslovakia • Yugoslavia • Soviet Union • Zaire</text>
+  <path class="arrow" d="M330 161 C380 170 405 195 425 225"/><path class="arrow" d="M330 301 C385 290 410 260 425 240"/><path class="arrow" d="M670 236 L775 236"/><path class="arrow" d="M550 282 L550 415"/>
+</svg>

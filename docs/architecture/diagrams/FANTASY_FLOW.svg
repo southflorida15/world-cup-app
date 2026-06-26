@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="560" viewBox="0 0 1100 560" role="img" aria-label="Fantasy mode flow">
+  <defs><style>.bg{fill:#06100b}.box{fill:#0c1a12;stroke:#4ade80;stroke-width:2;rx:16}.blue{fill:#132033;stroke:#60a5fa;stroke-width:2;rx:16}.gold{fill:#2b2110;stroke:#fbbf24;stroke-width:2;rx:16}.txt{font-family:Inter,Arial,sans-serif;fill:#d4ead9;font-size:18px;font-weight:700}.small{font-family:Inter,Arial,sans-serif;fill:#9bc9a8;font-size:13px}.arrow{stroke:#7aaa8a;stroke-width:3;fill:none;marker-end:url(#arrow)}</style><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#7aaa8a"/></marker></defs>
+  <rect class="bg" width="1100" height="560"/>
+  <text x="550" y="48" text-anchor="middle" class="txt" font-size="28">Fantasy Mode Flow</text>
+  <rect x="70" y="120" width="250" height="82" class="box"/><text x="195" y="154" text-anchor="middle" class="txt">Scheduled Match</text><text x="195" y="179" text-anchor="middle" class="small">Known teams + kickoff</text>
+  <rect x="425" y="120" width="250" height="82" class="blue"/><text x="550" y="154" text-anchor="middle" class="txt">User Score Pick</text><text x="550" y="179" text-anchor="middle" class="small">Exact score prediction</text>
+  <rect x="780" y="120" width="250" height="82" class="box"/><text x="905" y="154" text-anchor="middle" class="txt">Lock at Kickoff</text><text x="905" y="179" text-anchor="middle" class="small">No edits after start</text>
+  <rect x="70" y="320" width="250" height="82" class="gold"/><text x="195" y="354" text-anchor="middle" class="txt">Actual Result</text><text x="195" y="379" text-anchor="middle" class="small">Live/finished source</text>
+  <rect x="425" y="320" width="250" height="82" class="blue"/><text x="550" y="354" text-anchor="middle" class="txt">Score Fantasy</text><text x="550" y="379" text-anchor="middle" class="small">3 exact • 1 result</text>
+  <rect x="780" y="320" width="250" height="82" class="gold"/><text x="905" y="354" text-anchor="middle" class="txt">Actual Bracket</text><text x="905" y="379" text-anchor="middle" class="small">Populates future rounds</text>
+  <path class="arrow" d="M320 161 L420 161"/><path class="arrow" d="M675 161 L775 161"/><path class="arrow" d="M195 202 L195 315"/><path class="arrow" d="M320 361 L420 361"/><path class="arrow" d="M675 361 L775 361"/>
+  <text x="550" y="485" text-anchor="middle" class="small">Fantasy picks do not advance teams. Actual results advance teams.</text>
+</svg>

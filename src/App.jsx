@@ -902,8 +902,9 @@ function auditMatchSchedule() {
 const SCHEDULE_AUDIT_ISSUES = auditMatchSchedule();
 // ----------------------------------------------------------------------------
 
-const APP_VERSION = "2.2.1";
-const APP_DATE = "Jun 17, 2026";
+const APP_VERSION = "3.0.0";
+const APP_RELEASE_NAME = "The Foundation";
+const APP_DATE = "2026-06-25";
 
 function getDeviceType() {
   const ua = navigator.userAgent;
@@ -6761,12 +6762,30 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
   const [avatarSearch, setAvatarSearch] = useState("");
   const [nameInput, setNameInput] = useState(displayName || "");
   const [nameEditing, setNameEditing] = useState(false);
+  const [appInfo, setAppInfo] = useState({ version: APP_VERSION, name: APP_RELEASE_NAME, released: APP_DATE });
 
   useEffect(() => { if (open) { setScreen("home"); setError(""); } }, [open]);
+  useEffect(() => {
+    let alive = true;
+    fetch("/version.json", { cache: "no-store" })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!alive || !data?.version) return;
+        setAppInfo({
+          version: String(data.version || APP_VERSION),
+          name: data.name || APP_RELEASE_NAME,
+          released: data.released || data.date || APP_DATE
+        });
+      })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
   if (!open) return null;
 
   const isDesktop = typeof window !== "undefined" && window.innerWidth >= 640;
   const isSynced = !!syncProfile;
+  const versionLabel = `v${appInfo.version}${appInfo.name ? ` · ${appInfo.name}` : ""}`;
+  const versionSubLabel = appInfo.released ? `Released ${appInfo.released}` : "";
   const persistProfile = (p) => { setSyncProfile(p); try { localStorage.setItem("wc2026_syncprofile", JSON.stringify(p)); } catch {} };
 
   const ALL_TEAMS_LIST = ALL_TEAMS;
@@ -6932,8 +6951,9 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
         {syncProfile?.pin && (
           <NotifyEnableBtn syncUid={syncUid} syncPin={syncProfile.pin}/>
         )}
-        <div style={{textAlign:"center",marginTop:10}}>
-          <span style={{fontSize:10,color:C.dim}}>v{APP_VERSION} · {APP_DATE}</span>
+        <div style={{textAlign:"center",marginTop:10,lineHeight:1.35}}>
+          <div style={{fontSize:10,color:C.dim}}>{versionLabel}</div>
+          {versionSubLabel && <div style={{fontSize:9,color:C.dim,opacity:0.75}}>{versionSubLabel}</div>}
         </div>
         </>
       )}
