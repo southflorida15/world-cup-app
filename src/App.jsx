@@ -1990,6 +1990,35 @@ function buildLiveScorersFromHistory2026() {
 
 async function getLiveScorers2026() {
   if (liveScorersCache && Date.now() - liveScorersFetchedAt < 30000) return liveScorersCache;
+
+  // Primary source: backend scorer aggregate rebuilt from match events.
+  // This keeps the Stats scorer tab and My WC Top Scorers card aligned
+  // with the actual goal-event feed instead of pre-tournament contenders.
+  try {
+    const r = await fetch(`/api/matchevents?action=scorers&t=${Date.now()}`);
+    if (r.ok) {
+      const data = await r.json();
+      const raw = Array.isArray(data?.scorers) ? data.scorers : [];
+      const rows = raw
+        .map(x => ({
+          name: x.name || x.player || x.playerName || "",
+          team: x.team || x.teamName || "",
+          goals: Number(x.goals ?? x.totalGoals ?? x.count ?? 0) || 0,
+          assists: Number(x.assists ?? x.totalAssists ?? 0) || 0,
+        }))
+        .filter(x => x.name && x.team && x.goals > 0)
+        .sort((a,b) => b.goals - a.goals || b.assists - a.assists || a.name.localeCompare(b.name));
+      if (rows.length) {
+        liveScorersCache = rows;
+        liveScorersFetchedAt = Date.now();
+        return liveScorersCache;
+      }
+    }
+  } catch(e) {
+    console.warn("[top scorers] backend scorer feed unavailable, falling back to history", e?.message || e);
+  }
+
+  // Fallback: local WC history. This is only used if the backend feed is empty.
   liveScorersCache = buildLiveScorersFromHistory2026();
   liveScorersFetchedAt = Date.now();
   return liveScorersCache;
