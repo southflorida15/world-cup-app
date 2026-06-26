@@ -1961,21 +1961,16 @@ function parseScorerText(raw) {
 
 function buildLiveScorersFromHistory2026() {
   const map = new Map();
+
   Object.entries(WC_TEAM_HISTORY || {}).forEach(([team, years]) => {
     const data = years?.[2026] || years?.["2026"];
     if (!data || data.didNotQualify) return;
 
-    if (Array.isArray(data.topScorers) && data.topScorers.length) {
-      data.topScorers.forEach(s => addScorerRow(map, {
-        name: s.name,
-        team,
-        goals: s.goals,
-        assists: s.assists || 0,
-      }));
-      return;
-    }
-
-    // Fallback for teams where only match-level scorer strings exist.
+    // IMPORTANT: do NOT use data.topScorers here.
+    // Some 2026 topScorers aggregates were inflated by earlier rebuilds.
+    // The match-by-match scorer log is the source that the player detail
+    // modal uses correctly, so build the live Golden Boot table from those
+    // individual match scorer strings every time.
     (data.matches || []).forEach(m => {
       (m.scorers || []).forEach(raw => {
         const parsed = parseScorerText(raw);
@@ -1991,34 +1986,9 @@ function buildLiveScorersFromHistory2026() {
 async function getLiveScorers2026() {
   if (liveScorersCache && Date.now() - liveScorersFetchedAt < 30000) return liveScorersCache;
 
-  // Primary source: backend scorer aggregate rebuilt from match events.
-  // This keeps the Stats scorer tab and My WC Top Scorers card aligned
-  // with the actual goal-event feed instead of pre-tournament contenders.
-  try {
-    const r = await fetch(`/api/matchevents?action=scorers&t=${Date.now()}`);
-    if (r.ok) {
-      const data = await r.json();
-      const raw = Array.isArray(data?.scorers) ? data.scorers : [];
-      const rows = raw
-        .map(x => ({
-          name: x.name || x.player || x.playerName || "",
-          team: x.team || x.teamName || "",
-          goals: Number(x.goals ?? x.totalGoals ?? x.count ?? 0) || 0,
-          assists: Number(x.assists ?? x.totalAssists ?? 0) || 0,
-        }))
-        .filter(x => x.name && x.team && x.goals > 0)
-        .sort((a,b) => b.goals - a.goals || b.assists - a.assists || a.name.localeCompare(b.name));
-      if (rows.length) {
-        liveScorersCache = rows;
-        liveScorersFetchedAt = Date.now();
-        return liveScorersCache;
-      }
-    }
-  } catch(e) {
-    console.warn("[top scorers] backend scorer feed unavailable, falling back to history", e?.message || e);
-  }
-
-  // Fallback: local WC history. This is only used if the backend feed is empty.
+  // Single source of truth for the UI: local WC history match logs.
+  // This intentionally avoids /api/matchevents?action=scorers because that
+  // persisted aggregate can be stale or double-counted after parser changes.
   liveScorersCache = buildLiveScorersFromHistory2026();
   liveScorersFetchedAt = Date.now();
   return liveScorersCache;
