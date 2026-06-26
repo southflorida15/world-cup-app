@@ -6134,55 +6134,55 @@ function MatchMomentum({ match, events=[], momentum=[], stats, C }) {
   const safeMomentum = Array.isArray(momentum) ? momentum : [];
 
   const eventIcon = ev => ev.type === "Goal" ? "⚽" : ev.type === "Card" ? (ev.detail === "Red Card" ? "🟥" : "🟨") : ev.type === "subst" ? "🔄" : "•";
-
-  // Professional-style signed model:
-  // one value per minute, one team owns that minute.
-  // Positive = home momentum; negative = away momentum.
-  const markerBuckets = Array.from({ length: 90 }, () => []);
-  safeEvents.filter(ev => ["Goal","Card","subst"].includes(ev.type)).forEach(ev => {
-    const min = Math.max(1, Math.min(90, Number(ev.time?.elapsed) || 1));
-    markerBuckets[min - 1].push({ ...ev, min, isHome: normTeam(ev.team?.name || "") === match.home });
-  });
+  const eventWeight = ev => ev.type === "Goal" ? 3 : ev.type === "Card" && ev.detail === "Red Card" ? 2 : ev.type === "Card" ? 1 : 0;
 
   const buildFallback = () => {
+    const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
     const rows = Array.from({ length: 90 }, (_, i) => ({ minute: i + 1, signed: 0 }));
     const pressure = s => (
-      (s?.shots || 0) * 0.7 +
-      (s?.shotsOn || 0) * 2.1 +
-      (s?.corners || 0) * 1.2 +
-      (s?.blockedShots || 0) * 0.45 +
-      (s?.crosses || 0) * 0.08 +
-      (s?.possession || 0) * 0.05
+      (s?.shots || 0) * 1.25 +
+      (s?.shotsOn || 0) * 4.2 +
+      (s?.corners || 0) * 2.6 +
+      (s?.blockedShots || 0) * 1.35 +
+      (s?.accurateCrosses || 0) * 1.15 +
+      (s?.crosses || 0) * 0.22 +
+      (s?.possession || 0) * 0.10
     );
     const hp = pressure(stats?.home || {});
     const ap = pressure(stats?.away || {});
-    const bias = hp + ap > 0 ? ((hp - ap) / (hp + ap)) * 12 : 0;
-    let energy = 0;
+    const total = Math.max(1, hp + ap);
+    const bias = ((hp - ap) / total) * 18;
+    let seed = `${match.home}|${match.away}|${safeEvents.length}`.split("").reduce((a, ch) => ((a * 31 + ch.charCodeAt(0)) >>> 0), 7);
+    const rand = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+    const addWave = (center, amp, width, side) => {
+      for (let m = 1; m <= 90; m++) {
+        const d = Math.abs(m - center);
+        if (d > width * 3) continue;
+        rows[m - 1].signed += side * amp * Math.exp(-(d*d)/(2*width*width)) * (1 + Math.sin((m-center)*2.2) * 0.12);
+      }
+    };
     for (let m = 1; m <= 90; m++) {
-      const wave = Math.sin(m / 5.2) * 4 + Math.sin(m / 2.9) * 2.3 + Math.cos(m / 8.5) * 2;
-      energy = energy * 0.86 + bias * 0.24 + wave * 0.18;
-      rows[m - 1].signed = energy;
+      rows[m - 1].signed += bias + Math.sin(m/2.7)*1.5 + Math.cos(m/7.5)*2.2;
     }
+    const homeCount = clamp(Math.round(4 + (stats?.home?.shots || 0)/5 + (stats?.home?.corners || 0)/4), 4, 14);
+    const awayCount = clamp(Math.round(3 + (stats?.away?.shots || 0)/5 + (stats?.away?.corners || 0)/4), 3, 12);
+    for (let i=0; i<homeCount; i++) addWave((90/(homeCount+1))*(i+1)+(rand()-.5)*7, 14+rand()*16, 1.8+rand()*3.5, 1);
+    for (let i=0; i<awayCount; i++) addWave((90/(awayCount+1))*(i+1)+(rand()-.5)*7, 12+rand()*14, 1.7+rand()*3.2, -1);
     safeEvents.forEach(ev => {
       const min = Math.max(1, Math.min(90, Number(ev.time?.elapsed) || 1));
       const homeSide = normTeam(ev.team?.name || "") === match.home;
       let impulse = 0;
-      if (ev.type === "Goal") impulse = 38;
-      else if (ev.type === "Card" && ev.detail === "Red Card") impulse = -32; // card hurts the carded side
-      else if (ev.type === "Card") impulse = -7;
-      else if (ev.type === "subst") impulse = 2.5;
-      const signedImpulse = homeSide ? impulse : -impulse;
-      const radius = ev.type === "Goal" ? 7 : ev.detail === "Red Card" ? 8 : 3;
-      for (let d = 0; d <= radius; d++) {
-        const idx = min - 1 + d;
-        if (idx >= 0 && idx < rows.length) rows[idx].signed += signedImpulse * Math.pow(0.72, d);
-      }
-      for (let d = 1; d <= 2; d++) {
-        const idx = min - 1 - d;
-        if (idx >= 0) rows[idx].signed += signedImpulse * Math.pow(0.45, d);
-      }
+      if (ev.type === "Goal") impulse = 52;
+      else if (ev.type === "Card" && ev.detail === "Red Card") impulse = -42;
+      else if (ev.type === "Card") impulse = -8;
+      else if (ev.type === "subst") impulse = 3;
+      const side = homeSide ? 1 : -1;
+      addWave(min, Math.abs(impulse), ev.type === "Goal" ? 2.6 : ev.detail === "Red Card" ? 3.8 : 1.5, impulse >= 0 ? side : -side);
+      if (ev.type === "Goal") addWave(min + 4, 15, 3.2, -side);
+      if (ev.detail === "Red Card") addWave(min + 6, 18, 6.5, -side);
     });
-    return rows;
+    const maxAbs = Math.max(12, ...rows.map(r => Math.abs(r.signed)));
+    return rows.map(r => ({ minute:r.minute, signed: Math.max(-82, Math.min(82, (r.signed / maxAbs) * 82)) }));
   };
 
   const rows = safeMomentum.length
@@ -6193,16 +6193,21 @@ function MatchMomentum({ match, events=[], momentum=[], stats, C }) {
     : buildFallback();
 
   const compact = rows.slice(0, 90).map((b, i) => {
-    const signed = Math.abs(b.signed) < 0.7 ? 0 : b.signed;
+    const signed = Math.abs(b.signed) < 1.1 ? 0 : b.signed;
     return {
       minute: b.minute || i + 1,
       signed,
       side: signed === 0 ? "even" : signed > 0 ? "home" : "away",
-      markers: markerBuckets[i] || [],
     };
   });
 
-  const maxVal = Math.max(8, ...compact.map(b => Math.abs(b.signed || 0)));
+  const markersByMinute = Array.from({ length: 90 }, () => []);
+  safeEvents.filter(ev => ["Goal","Card","subst"].includes(ev.type)).sort((a,b)=>eventWeight(b)-eventWeight(a)).forEach(ev => {
+    const min = Math.max(1, Math.min(90, Number(ev.time?.elapsed) || 1));
+    markersByMinute[min - 1].push({ ...ev, min, isHome: normTeam(ev.team?.name || "") === match.home });
+  });
+
+  const maxVal = Math.max(12, ...compact.map(b => Math.abs(b.signed || 0)));
   const goals = safeEvents.filter(e => e.type === "Goal");
   const cards = safeEvents.filter(e => e.type === "Card");
   const subs = safeEvents.filter(e => e.type === "subst");
@@ -6216,7 +6221,16 @@ function MatchMomentum({ match, events=[], momentum=[], stats, C }) {
     });
     return best;
   })();
+
   const peak = compact.reduce((a,b)=>Math.abs(b.signed)>Math.abs(a.signed)?b:a,{minute:1,signed:0,side:"even"});
+  const swing = compact.reduce((best, b, i, arr) => {
+    if (i === 0) return best;
+    const change = Math.abs((b.signed || 0) - (arr[i-1].signed || 0));
+    return change > best.change ? { minute:b.minute, change, from:arr[i-1], to:b } : best;
+  }, { minute:1, change:0, from:null, to:null });
+
+  const sideName = side => side === "home" ? match.home : side === "away" ? match.away : "Balanced";
+  const sideColor = side => side === "home" ? C.green : side === "away" ? C.rival : C.mid;
 
   return (
     <div style={{marginBottom:12}}>
@@ -6224,43 +6238,50 @@ function MatchMomentum({ match, events=[], momentum=[], stats, C }) {
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,gap:8}}>
           <div>
             <div style={{fontSize:12,fontWeight:900,color:C.green,letterSpacing:".08em"}}>MATCH MOMENTUM</div>
-            <div style={{fontSize:11,color:C.dim}}>One team owns each minute · decaying pressure model · events pinned to center line</div>
+            <div style={{fontSize:11,color:C.dim}}>One team owns each minute · organic pressure waves · events attached to peaks</div>
           </div>
           <div style={{fontSize:11,color:C.mid,textAlign:"right"}}>{goals.length} ⚽ · {cards.length} cards · {subs.length} subs</div>
         </div>
 
-        <div style={{height:156,position:"relative",borderTop:`1px solid ${C.b1}`,borderBottom:`1px solid ${C.b1}`,padding:"10px 0 8px"}}>
+        <div style={{height:174,position:"relative",borderTop:`1px solid ${C.b1}`,borderBottom:`1px solid ${C.b1}`,padding:"12px 0 10px",overflow:"hidden"}}>
           <div style={{position:"absolute",left:0,right:0,top:"50%",height:2,background:C.b2,opacity:.9,borderRadius:2}} />
-          <div style={{height:134,display:"flex",alignItems:"stretch",gap:1}}>
+          <div style={{position:"absolute",left:"50%",top:0,bottom:0,width:1,background:C.b1,opacity:.65}} />
+          <div style={{height:148,display:"flex",alignItems:"stretch",gap:1}}>
             {compact.map((b, i) => {
-              const magnitude = Math.max(2, Math.round((Math.abs(b.signed || 0) / maxVal) * 62));
+              const rawHeight = (Math.abs(b.signed || 0) / maxVal) * 70;
+              const magnitude = b.side === "even" ? 1 : Math.max(3, Math.round(rawHeight));
               const isHomeMinute = b.side === "home";
               const isAwayMinute = b.side === "away";
-              const owner = isHomeMinute ? match.home : isAwayMinute ? match.away : "Balanced";
+              const owner = sideName(b.side);
               return (
                 <div key={i} title={`${b.minute}' · ${owner}`} style={{flex:1,display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"stretch",gap:1,minWidth:0}}>
-                  <div style={{height:66,display:"flex",alignItems:"flex-end"}}>
-                    {isHomeMinute ? <div style={{width:"100%",height:magnitude,background:C.green,borderRadius:"3px 3px 1px 1px",opacity:.9}} /> : <div style={{width:"100%",height:1,background:C.b2,opacity:.2,borderRadius:2}} />}
+                  <div style={{height:72,display:"flex",alignItems:"flex-end"}}>
+                    {isHomeMinute ? <div style={{width:"100%",height:magnitude,background:C.green,borderRadius:"3px 3px 1px 1px",opacity:.92,boxShadow:magnitude>42?`0 0 8px ${C.greenS}`:"none"}} /> : <div style={{width:"100%",height:1,background:C.b2,opacity:.18,borderRadius:2}} />}
                   </div>
-                  <div style={{height:66,display:"flex",alignItems:"flex-start"}}>
-                    {isAwayMinute ? <div style={{width:"100%",height:magnitude,background:C.rival,borderRadius:"1px 1px 3px 3px",opacity:.9}} /> : <div style={{width:"100%",height:1,background:C.b2,opacity:.2,borderRadius:2}} />}
+                  <div style={{height:72,display:"flex",alignItems:"flex-start"}}>
+                    {isAwayMinute ? <div style={{width:"100%",height:magnitude,background:C.rival,borderRadius:"1px 1px 3px 3px",opacity:.92,boxShadow:magnitude>42?`0 0 8px ${C.rival}55`:"none"}} /> : <div style={{width:"100%",height:1,background:C.b2,opacity:.18,borderRadius:2}} />}
                   </div>
                 </div>
               );
             })}
           </div>
 
-          {safeEvents.filter(ev => ["Goal","Card","subst"].includes(ev.type)).map((ev, i) => {
-            const min = Math.max(1, Math.min(90, Number(ev.time?.elapsed) || 1));
+          {markersByMinute.flatMap((bucket, minuteIndex) => bucket.map((ev, stackIndex) => {
+            const min = minuteIndex + 1;
+            const b = compact[minuteIndex] || { signed:0 };
             const left = `${((min - 1) / 89) * 100}%`;
-            const sameMinuteIndex = safeEvents.filter(e => ["Goal","Card","subst"].includes(e.type) && Math.max(1, Math.min(90, Number(e.time?.elapsed) || 1)) === min).findIndex(e => e === ev);
-            const yOffset = sameMinuteIndex * 15;
+            const teamIsHome = ev.isHome;
+            const barHeight = Math.max(8, Math.min(64, Math.round((Math.abs(b.signed || 0) / maxVal) * 70)));
+            const size = ev.type === "Goal" ? 18 : ev.detail === "Red Card" ? 16 : 14;
+            const top = teamIsHome
+              ? `calc(50% - ${barHeight + 12 + stackIndex * 15}px)`
+              : `calc(50% + ${barHeight + 12 + stackIndex * 15}px)`;
             return (
-              <div key={i} title={`${min}' ${ev.team?.name || ""} · ${ev.detail || ev.type} · ${ev.player?.name || ""}`} style={{position:"absolute",left,top:`calc(50% + ${yOffset}px)`,transform:"translate(-50%,-50%)",fontSize:ev.type==="Goal"?18:14,lineHeight:1,filter:"drop-shadow(0 1px 2px rgba(0,0,0,.8))",zIndex:3}}>
+              <div key={`${min}-${stackIndex}-${ev.type}-${ev.player?.name}`} title={`${min}' ${ev.team?.name || ""} · ${ev.detail || ev.type} · ${ev.player?.name || ""}`} style={{position:"absolute",left,top,transform:"translate(-50%,-50%)",fontSize:size,lineHeight:1,filter:"drop-shadow(0 1px 2px rgba(0,0,0,.85))",zIndex:4}}>
                 {eventIcon(ev)}
               </div>
             );
-          })}
+          }))}
         </div>
         <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:C.dim,marginTop:5}}><span>1'</span><span>15'</span><span>30'</span><span>HT</span><span>60'</span><span>75'</span><span>90'</span></div>
       </div>
@@ -6268,23 +6289,24 @@ function MatchMomentum({ match, events=[], momentum=[], stats, C }) {
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
         <div style={{background:C.s1,border:`1px solid ${C.b1}`,borderRadius:10,padding:10}}>
           <div style={{fontSize:10,color:C.dim,fontWeight:800}}>HIGHEST PRESSURE</div>
-          <div style={{fontSize:12,color:C.text,fontWeight:800,marginTop:3}}>{peak.side === "home" ? match.home : peak.side === "away" ? match.away : "Balanced"}</div>
+          <div style={{fontSize:12,color:sideColor(peak.side),fontWeight:800,marginTop:3}}>{sideName(peak.side)}</div>
           <div style={{fontSize:11,color:C.mid}}>{peak.minute}'</div>
         </div>
         <div style={{background:C.s1,border:`1px solid ${C.b1}`,borderRadius:10,padding:10}}>
           <div style={{fontSize:10,color:C.dim,fontWeight:800}}>LONGEST RUN</div>
-          <div style={{fontSize:12,color:C.text,fontWeight:800,marginTop:3}}>{longestRun.side === "home" ? match.home : longestRun.side === "away" ? match.away : "—"}</div>
+          <div style={{fontSize:12,color:sideColor(longestRun.side),fontWeight:800,marginTop:3}}>{sideName(longestRun.side)}</div>
           <div style={{fontSize:11,color:C.mid}}>{longestRun.len ? `${longestRun.len} min` : "—"}</div>
         </div>
         <div style={{background:C.s1,border:`1px solid ${C.b1}`,borderRadius:10,padding:10}}>
-          <div style={{fontSize:10,color:C.dim,fontWeight:800}}>EVENTS</div>
-          <div style={{fontSize:12,color:C.text,fontWeight:800,marginTop:3}}>{goals.length} goals</div>
-          <div style={{fontSize:11,color:C.mid}}>{cards.length} cards · {subs.length} subs</div>
+          <div style={{fontSize:10,color:C.dim,fontWeight:800}}>TURNING POINT</div>
+          <div style={{fontSize:12,color:C.text,fontWeight:800,marginTop:3}}>{swing.minute}'</div>
+          <div style={{fontSize:11,color:C.mid}}>{Math.round(swing.change)} pt swing</div>
         </div>
       </div>
     </div>
   );
 }
+
 
 function MatchCommentary({ commentary=[], C }) {
   const [expanded, setExpanded] = useState(false);

@@ -466,34 +466,79 @@ function parseMomentum(data, events=[], homeTeam="") {
   const stats = parseStats(data.boxscore, homeTeam) || { home: {}, away: {} };
   const rows = Array.from({ length: 90 }, (_, i) => ({ minute: i + 1, signed: 0 }));
 
+  const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
+  const num = v => Number.isFinite(Number(v)) ? Number(v) : 0;
+  const homeStats = stats.home || {};
+  const awayStats = stats.away || {};
+
   const pressureScore = s => (
-    (s.shots || 0) * 0.70 +
-    (s.shotsOn || 0) * 2.15 +
-    (s.corners || 0) * 1.25 +
-    (s.blockedShots || 0) * 0.45 +
-    (s.crosses || 0) * 0.08 +
-    (s.accurateCrosses || 0) * 0.22 +
-    (s.possession || 0) * 0.05 +
-    (s.interceptions || 0) * 0.08
+    num(s.shots) * 1.25 +
+    num(s.shotsOn) * 4.2 +
+    num(s.corners) * 2.6 +
+    num(s.blockedShots) * 1.35 +
+    num(s.accurateCrosses) * 1.15 +
+    num(s.crosses) * 0.22 +
+    num(s.saves) * 0.55 +
+    num(s.interceptions) * 0.32 +
+    num(s.tackles) * 0.18 +
+    num(s.clearances) * -0.05 +
+    num(s.possession) * 0.10
   );
 
-  const hp = pressureScore(stats.home || {});
-  const ap = pressureScore(stats.away || {});
-  const globalBias = hp + ap > 0 ? ((hp - ap) / (hp + ap)) * 13 : 0;
+  const hp = pressureScore(homeStats);
+  const ap = pressureScore(awayStats);
+  const totalPressure = Math.max(1, hp + ap);
+  const homeShare = hp / totalPressure;
+  const awayShare = ap / totalPressure;
+  const statBias = clamp((homeShare - awayShare) * 20, -16, 16);
 
-  // Synthetic but transparent pressure model:
-  // one signed value per minute. Positive = home. Negative = away.
-  // The public ESPN summary does not expose the site's private momentum graph,
-  // so this uses aggregate stats plus event shocks with natural decay.
-  let energy = 0;
-  for (let minute = 1; minute <= 90; minute++) {
-    const burstWave =
-      Math.sin(minute / 4.7) * 3.8 +
-      Math.sin(minute / 2.35) * 1.9 +
-      Math.cos(minute / 8.2) * 2.4;
-    energy = energy * 0.86 + globalBias * 0.26 + burstWave * 0.22;
-    rows[minute - 1].signed = energy;
+  const seedText = `${homeTeam}|${events.map(e => `${e.time?.elapsed}-${e.team?.name}-${e.type}`).join('|')}`;
+  let seed = 0;
+  for (let i = 0; i < seedText.length; i++) seed = (seed * 31 + seedText.charCodeAt(i)) >>> 0;
+  const rand = () => {
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    return seed / 4294967296;
+  };
+
+  const addWave = (center, amp, width, side=1) => {
+    const c = clamp(Number(center) || 1, 1, 90);
+    const w = Math.max(1.2, Number(width) || 3);
+    const a = Number(amp) || 0;
+    for (let m = 1; m <= 90; m++) {
+      const d = Math.abs(m - c);
+      if (d > w * 3.2) continue;
+      const gaussian = Math.exp(-(d * d) / (2 * w * w));
+      const ripple = 1 + 0.16 * Math.sin((m - c) * 2.4) + 0.08 * Math.cos((m + c) * 1.3);
+      rows[m - 1].signed += side * a * gaussian * ripple;
+    }
+  };
+
+  // Low-amplitude baseline: enough to reflect control, not enough to become a flat plateau.
+  for (let m = 1; m <= 90; m++) {
+    const organicNoise =
+      Math.sin(m / 2.7) * 1.7 +
+      Math.sin(m / 6.1) * 2.2 +
+      Math.cos(m / 11.5) * 1.4;
+    rows[m - 1].signed += statBias + organicNoise;
   }
+
+  const homeWaveCount = clamp(Math.round(3 + num(homeStats.shots) / 5 + num(homeStats.corners) / 4), 4, 14);
+  const awayWaveCount = clamp(Math.round(3 + num(awayStats.shots) / 5 + num(awayStats.corners) / 4), 3, 12);
+  const homeAmpBase = clamp(9 + homeShare * 18 + num(homeStats.shotsOn) * 0.9, 10, 28);
+  const awayAmpBase = clamp(9 + awayShare * 18 + num(awayStats.shotsOn) * 0.9, 10, 28);
+
+  const placeWaves = (count, side, ampBase, possession, shots) => {
+    for (let i = 0; i < count; i++) {
+      const bucket = 90 / (count + 1);
+      const center = bucket * (i + 1) + (rand() - 0.5) * bucket * 0.85;
+      const width = 1.8 + rand() * 3.4;
+      const amp = ampBase * (0.62 + rand() * 0.72) + (num(possession) - 50) * 0.04 + num(shots) * 0.04;
+      addWave(center, amp, width, side);
+    }
+  };
+
+  placeWaves(homeWaveCount, 1, homeAmpBase, homeStats.possession, homeStats.shots);
+  placeWaves(awayWaveCount, -1, awayAmpBase, awayStats.possession, awayStats.shots);
 
   const teamSide = name => normESPN(name || "") === homeTeam ? 1 : -1;
   const minuteOf = item => {
@@ -504,28 +549,23 @@ function parseMomentum(data, events=[], homeTeam="") {
   };
   const teamOf = item => normESPN(item.team?.displayName || item.team?.name || "");
 
-  const addImpulse = (minute, signedImpulse, radius=5, pre=2) => {
-    const m = Math.max(1, Math.min(90, Number(minute) || 1));
-    for (let d = 0; d <= radius; d++) {
-      const idx = m - 1 + d;
-      if (idx >= 0 && idx < rows.length) rows[idx].signed += signedImpulse * Math.pow(0.72, d);
-    }
-    for (let d = 1; d <= pre; d++) {
-      const idx = m - 1 - d;
-      if (idx >= 0) rows[idx].signed += signedImpulse * Math.pow(0.45, d);
-    }
+  const addImpulse = (minute, signedImpulse, width=3.5, pre=1.4) => {
+    const m = clamp(Number(minute) || 1, 1, 90);
+    // Immediate peak at the event, then quick falloff. Pre-event buildup is smaller.
+    addWave(m, Math.abs(signedImpulse), width, signedImpulse >= 0 ? 1 : -1);
+    if (pre > 0) addWave(m - 1.4, Math.abs(signedImpulse) * 0.38, Math.max(1.1, width * 0.45), signedImpulse >= 0 ? 1 : -1);
   };
 
   const classifyImpulse = item => {
-    const t = `${item.type?.text || ""} ${item.type?.type || ""} ${item.text || ""} ${item.shortText || ""}`.toLowerCase();
-    if (item.scoringPlay || t.includes("goal")) return { weight: 34, radius: 7, invert: false };
-    if (t.includes("red card")) return { weight: 30, radius: 8, invert: true };
-    if (t.includes("shot on") || t.includes("saved") || t.includes("woodwork") || t.includes("post")) return { weight: 13, radius: 4, invert: false };
-    if (t.includes("shot")) return { weight: 7.5, radius: 3, invert: false };
-    if (t.includes("corner")) return { weight: 9, radius: 3, invert: false };
-    if (t.includes("yellow")) return { weight: 6, radius: 2, invert: true };
-    if (t.includes("free kick") || t.includes("cross")) return { weight: 4.5, radius: 2, invert: false };
-    if (t.includes("substitut")) return { weight: 2.2, radius: 2, invert: false };
+    const t = `${item.type?.text || ""} ${item.type?.type || ""} ${item.type || ""} ${item.text || ""} ${item.shortText || ""} ${item.detail || ""}`.toLowerCase();
+    if (item.scoringPlay || t.includes("goal")) return { weight: 52, width: 2.6, invert: false };
+    if (t.includes("red card")) return { weight: 42, width: 3.8, invert: true };
+    if (t.includes("shot on") || t.includes("saved") || t.includes("woodwork") || t.includes("post")) return { weight: 20, width: 2.2, invert: false };
+    if (t.includes("shot")) return { weight: 11, width: 1.8, invert: false };
+    if (t.includes("corner")) return { weight: 15, width: 2.0, invert: false };
+    if (t.includes("yellow")) return { weight: 8, width: 1.3, invert: true };
+    if (t.includes("free kick") || t.includes("cross")) return { weight: 6, width: 1.6, invert: false };
+    if (t.includes("substitut")) return { weight: 3, width: 1.2, invert: false };
     return null;
   };
 
@@ -533,6 +573,7 @@ function parseMomentum(data, events=[], homeTeam="") {
   if (Array.isArray(data.commentary)) sources.push(...data.commentary);
   if (Array.isArray(data.plays)) sources.push(...data.plays);
   if (Array.isArray(data.keyEvents)) sources.push(...data.keyEvents);
+  if (Array.isArray(events)) sources.push(...events);
 
   sources.forEach(item => {
     const min = minuteOf(item);
@@ -540,33 +581,38 @@ function parseMomentum(data, events=[], homeTeam="") {
     const info = classifyImpulse(item);
     if (!min || !team || !info) return;
     const side = teamSide(team);
-    addImpulse(min, side * info.weight * (info.invert ? -1 : 1), info.radius);
+    const targetSide = info.invert ? -side : side;
+    addImpulse(min, targetSide * info.weight, info.width, 1.2);
+
+    // Goals often produce a tactical reset and a response from the conceding team.
+    const text = `${item.type?.text || ""} ${item.type || ""} ${item.detail || ""}`.toLowerCase();
+    if (item.scoringPlay || text.includes("goal")) {
+      addWave(Number(min) + 4.5, 15, 3.2, -side);
+    }
+    if (text.includes("red")) {
+      addWave(Number(min) + 6, 18, 6.5, -side);
+    }
   });
 
-  (Array.isArray(events) ? events : []).forEach(ev => {
-    const min = ev.time?.elapsed;
-    const side = teamSide(ev.team?.name);
-    let info = null;
-    if (ev.type === "Goal") info = { weight: 38, radius: 7, invert: false };
-    else if (ev.type === "Card" && ev.detail === "Red Card") info = { weight: 34, radius: 8, invert: true };
-    else if (ev.type === "Card") info = { weight: 7, radius: 3, invert: true };
-    else if (ev.type === "subst") info = { weight: 2.5, radius: 2, invert: false };
-    if (min && info) addImpulse(min, side * info.weight * (info.invert ? -1 : 1), info.radius);
-  });
+  // Gentle two-pass smoothing: keeps waves organic without creating plateaus.
+  for (let pass = 0; pass < 2; pass++) {
+    const copy = rows.map(r => r.signed);
+    for (let i = 0; i < rows.length; i++) {
+      const left = copy[Math.max(0, i - 1)];
+      const mid = copy[i];
+      const right = copy[Math.min(rows.length - 1, i + 1)];
+      rows[i].signed = left * 0.22 + mid * 0.56 + right * 0.22;
+    }
+  }
 
-  // Normalize to pleasant visual range and return both the signed value and
-  // home/away magnitude for backward compatibility with the existing UI.
-  const maxAbs = Math.max(8, ...rows.map(r => Math.abs(r.signed)));
-  return rows.map(r => {
-    const signed = Number(((r.signed / maxAbs) * 100).toFixed(3));
-    return {
-      minute: r.minute,
-      signed,
-      home: Number(Math.max(0, signed).toFixed(3)),
-      away: Number(Math.max(0, -signed).toFixed(3)),
-    };
-  });
+  // Normalize per match so every chart uses the visual range, but preserve sign.
+  const maxAbs = Math.max(12, ...rows.map(r => Math.abs(r.signed || 0)));
+  return rows.map(r => ({
+    minute: r.minute,
+    signed: Math.round(clamp((r.signed / maxAbs) * 82, -82, 82) * 10) / 10,
+  }));
 }
+
 
 // ── Scorers aggregator ────────────────────────────────────────────────────
 // Hardcoded events for matches that may have aged out of ESPN feed
