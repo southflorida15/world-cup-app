@@ -6168,17 +6168,10 @@ function MatchMomentum({ match, events=[], commentary=[], momentum=[], stats, C 
     return { ...b, home, away };
   });
 
-  const compact = smoothed.map((b, i) => {
-    // Mobile-friendly: group every 2 minutes visually while preserving
-    // marker positions by absolute minute.
-    if (i % 2 !== 0) return null;
-    const b2 = smoothed[i + 1];
-    return {
-      minute: b.minute,
-      home: Math.max(b.home, b2?.home || 0),
-      away: Math.max(b.away, b2?.away || 0),
-    };
-  }).filter(Boolean);
+  // Render every minute. Earlier versions visually grouped two-minute chunks,
+  // which made the signal feel closer to a 2–3 minute plot instead of ESPN's
+  // granular minute-by-minute momentum chart.
+  const compact = smoothed;
 
   const maxVal = Math.max(1, ...compact.flatMap(b => [b.home, b.away]));
   const goals = safeEvents.filter(e => e.type === "Goal");
@@ -6213,7 +6206,7 @@ function MatchMomentum({ match, events=[], commentary=[], momentum=[], stats, C 
               const h = Math.max(2, Math.round((b.home / maxVal) * 56));
               const a = Math.max(2, Math.round((b.away / maxVal) * 56));
               return (
-                <div key={i} title={`${b.minute}-${Math.min(90,b.minute+1)}'`} style={{flex:1,display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"stretch",gap:1,minWidth:0}}>
+                <div key={i} title={`${b.minute}'`} style={{flex:1,display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"stretch",gap:1,minWidth:0}}>
                   <div style={{height:62,display:"flex",alignItems:"flex-end"}}><div style={{width:"100%",height:h,background:C.green,borderRadius:"3px 3px 1px 1px",opacity:.82}} /></div>
                   <div style={{height:62,display:"flex",alignItems:"flex-start"}}><div style={{width:"100%",height:a,background:C.rival,borderRadius:"1px 1px 3px 3px",opacity:.82}} /></div>
                 </div>
@@ -6236,28 +6229,6 @@ function MatchMomentum({ match, events=[], commentary=[], momentum=[], stats, C 
         <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:C.dim,marginTop:5}}><span>1'</span><span>15'</span><span>30'</span><span>HT</span><span>60'</span><span>75'</span><span>90'</span></div>
       </div>
 
-      {statLine.length > 0 && (
-        <div style={{background:C.s1,border:`1px solid ${C.b1}`,borderRadius:12,padding:12,marginBottom:10}}>
-          <div style={{fontSize:12,fontWeight:900,color:C.green,letterSpacing:".08em",marginBottom:8}}>MATCH CONTROL</div>
-          {statLine.map(([label, h, a, unit]) => {
-            const total = (Number(h) || 0) + (Number(a) || 0) || 1;
-            const hp = Math.round((Number(h) / total) * 100);
-            return (
-              <div key={label} style={{marginBottom:8}}>
-                <div style={{display:"flex",justifyContent:"space-between",fontSize:11,marginBottom:3}}>
-                  <span style={{color:C.green,fontWeight:800}}>{h}{unit}</span>
-                  <span style={{color:C.dim}}>{label}</span>
-                  <span style={{color:C.rival,fontWeight:800}}>{a}{unit}</span>
-                </div>
-                <div style={{height:5,background:C.s2,borderRadius:999,overflow:"hidden",display:"flex"}}>
-                  <div style={{width:`${hp}%`,background:C.green}} />
-                  <div style={{flex:1,background:C.rival}} />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
 
       <div style={{background:C.s1,border:`1px solid ${C.b1}`,borderRadius:12,padding:12}}>
         <div style={{fontSize:12,fontWeight:900,color:C.green,letterSpacing:".08em",marginBottom:8}}>COMMENTARY</div>
