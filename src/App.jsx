@@ -903,9 +903,9 @@ function auditMatchSchedule() {
 const SCHEDULE_AUDIT_ISSUES = auditMatchSchedule();
 // ----------------------------------------------------------------------------
 
-const APP_VERSION = "3.0.0";
-const APP_RELEASE_NAME = "The Foundation";
-const APP_DATE = "2026-06-25";
+const APP_VERSION = "3.1.0";
+const APP_RELEASE_NAME = "Match OG Insights";
+const APP_DATE = "2026-06-26";
 
 function getDeviceType() {
   const ua = navigator.userAgent;
