@@ -1928,26 +1928,71 @@ async function zafronixGet(endpoint, params = {}) {
     return null;
   }
 }
-// Live 2026 scorers aggregate — short in-memory cache so multiple
-// TeamHistoryCard instances (e.g. switching between teams in Stats) don't
-// each independently re-hit the endpoint. The endpoint itself is already
-// cheap (reads a pre-computed aggregate, see matchevents.js), this is just
-// extra politeness.
+// Live 2026 scorers — compute from the app's canonical WC_TEAM_HISTORY
+// dataset instead of the cached /api/matchevents?action=scorers aggregate.
+// The aggregate can become stale/inflated after feed/parser changes; the
+// team-history detail view is already correct, so this keeps Top Scorers,
+// Home, and team history aligned with the same source of truth.
 let liveScorersCache = null;
 let liveScorersFetchedAt = 0;
+
+function addScorerRow(map, { name, team, goals=1, assists=0 }) {
+  const cleanName = String(name || "").trim();
+  const cleanTeam = String(team || "").trim();
+  const g = Number(goals || 0);
+  if (!cleanName || !cleanTeam || !Number.isFinite(g) || g <= 0) return;
+  const key = `${normalizePlayerName(cleanTeam)}|${normalizePlayerName(cleanName)}`;
+  const prev = map.get(key) || { name: cleanName, team: cleanTeam, goals: 0, assists: 0 };
+  prev.goals += g;
+  prev.assists += Number(assists || 0) || 0;
+  map.set(key, prev);
+}
+
+function parseScorerText(raw) {
+  // Handles simple entries such as "Messi", "Messi (2)", "Messi x2",
+  // and keeps penalty markers from affecting the displayed player name.
+  const txt = String(raw || "").replace(/\s*\(PK\)\s*/ig, "").replace(/\s*pen\.?\s*/ig, "").trim();
+  const mParen = txt.match(/^(.*?)\s*\((\d+)\)\s*$/);
+  if (mParen) return { name: mParen[1].trim(), goals: Number(mParen[2]) || 1 };
+  const mX = txt.match(/^(.*?)\s*x\s*(\d+)\s*$/i);
+  if (mX) return { name: mX[1].trim(), goals: Number(mX[2]) || 1 };
+  return { name: txt, goals: 1 };
+}
+
+function buildLiveScorersFromHistory2026() {
+  const map = new Map();
+  Object.entries(WC_TEAM_HISTORY || {}).forEach(([team, years]) => {
+    const data = years?.[2026] || years?.["2026"];
+    if (!data || data.didNotQualify) return;
+
+    if (Array.isArray(data.topScorers) && data.topScorers.length) {
+      data.topScorers.forEach(s => addScorerRow(map, {
+        name: s.name,
+        team,
+        goals: s.goals,
+        assists: s.assists || 0,
+      }));
+      return;
+    }
+
+    // Fallback for teams where only match-level scorer strings exist.
+    (data.matches || []).forEach(m => {
+      (m.scorers || []).forEach(raw => {
+        const parsed = parseScorerText(raw);
+        addScorerRow(map, { name: parsed.name, team, goals: parsed.goals });
+      });
+    });
+  });
+
+  return [...map.values()]
+    .sort((a,b) => Number(b.goals || 0) - Number(a.goals || 0) || String(a.name || "").localeCompare(String(b.name || "")));
+}
+
 async function getLiveScorers2026() {
   if (liveScorersCache && Date.now() - liveScorersFetchedAt < 30000) return liveScorersCache;
-  try {
-    const res = await fetch(`/api/matchevents?action=scorers&t=${Date.now()}`);
-    if (!res.ok) throw new Error(`scorers → ${res.status}`);
-    const data = await res.json();
-    liveScorersCache = data?.scorers || [];
-    liveScorersFetchedAt = Date.now();
-    return liveScorersCache;
-  } catch(e) {
-    console.error("[live2026scorers]", e.message);
-    return liveScorersCache || [];
-  }
+  liveScorersCache = buildLiveScorersFromHistory2026();
+  liveScorersFetchedAt = Date.now();
+  return liveScorersCache;
 }
 function normalizePlayerName(s) {
   return (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
@@ -7046,12 +7091,13 @@ function TopScorersTab({ tabTop=116 }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let alive = true;
     setLoading(true);
-    fetch(`/api/matchevents?action=scorers&t=${Date.now()}`)
-      .then(r => r.json())
-      .then(d => { if (d.scorers?.length) setLiveScorers(d.scorers); })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    getLiveScorers2026()
+      .then(rows => { if (alive) setLiveScorers(rows || []); })
+      .catch(() => { if (alive) setLiveScorers([]); })
+      .finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
   }, []);
 
   const hasLive = liveScorers.length > 0;
@@ -8861,6 +8907,17 @@ function MyWorldCupTab({ favTeams=[], saved=[], syncProfile=null, displayName=""
   const fantasyUserId = useMemo(() => syncProfile?.uid || getUserId(), [syncProfile?.uid]);
   const isLocalDev = typeof window !== "undefined" && ["localhost", "127.0.0.1"].includes(window.location.hostname);
   const [homeDebug, setHomeDebug] = useState(false);
+  const [teamPromptReady, setTeamPromptReady] = useState(() => !syncProfile?.uid);
+
+  // Avoid a brief "Choose your teams" flash for signed-in users while their
+  // cloud profile is still being pulled from KV. Local favorites render
+  // immediately; remote-only favorites get a short grace period to hydrate.
+  useEffect(() => {
+    if (!syncProfile?.uid) { setTeamPromptReady(true); return; }
+    setTeamPromptReady(false);
+    const t = setTimeout(() => setTeamPromptReady(true), 1500);
+    return () => clearTimeout(t);
+  }, [syncProfile?.uid]);
 
   const now = Date.now();
   const todayKey = new Date(now).toLocaleDateString("en-CA");
@@ -9063,23 +9120,10 @@ function MyWorldCupTab({ favTeams=[], saved=[], syncProfile=null, displayName=""
 
   useEffect(() => {
     let alive = true;
-    fetch(`/api/matchevents?action=scorers&t=${Date.now()}`)
-      .then(r => r.ok ? r.json() : null)
-      .then(d => {
+    getLiveScorers2026()
+      .then(rows => {
         if (!alive) return;
-        const rows = Array.isArray(d?.scorers) ? d.scorers : [];
-        const cleaned = rows.map(p => {
-          const rawName = p.name || p.player || p.playerName || "Player";
-          const normName = String(rawName).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-          let goals = Number(p.goals ?? p.totalGoals ?? p.count ?? 0);
-          // Safety correction while the aggregate endpoint is still being tuned.
-          // The current tournament feed has Vini Jr. at 4 goals, not 5+.
-          if (normName.includes("vinicius") || normName.includes("vini") || normName.includes("jr")) goals = Math.min(goals, 4);
-          return { ...p, name: rawName, goals };
-        }).filter(p => p.goals > 0)
-          .sort((a,b)=>Number(b.goals||0)-Number(a.goals||0) || String(a.name||"").localeCompare(String(b.name||"")))
-          .slice(0,5);
-        setTopScorers(cleaned);
+        setTopScorers((rows || []).slice(0, 5));
       })
       .catch(() => { if (alive) setTopScorers([]); });
     return () => { alive = false; };
@@ -9189,6 +9233,19 @@ function MyWorldCupTab({ favTeams=[], saved=[], syncProfile=null, displayName=""
     ["todayFantasyMissing", todayFantasyMissing.map(m => `#${m.id}`).join(", ") || "none"],
     ["topScorers", topScorers.map(p => `${p.name || p.player} ${p.goals}`).join(" | ") || "none"]
   ];
+
+  if (!favTeams.length && !teamPromptReady) {
+    return (
+      <div style={{paddingTop:14}}>
+        <div style={{border:`1px solid ${C.b1}`,background:C.s1,borderRadius:20,padding:22,textAlign:"center",boxShadow:DS.shadow.card}}>
+          <div style={{fontSize:28,marginBottom:10}}>🌎</div>
+          <div style={{fontSize:11,color:C.dim,fontWeight:900,letterSpacing:"0.16em",textTransform:"uppercase",marginBottom:6}}>My World Cup</div>
+          <div style={{fontSize:18,fontWeight:900,color:C.text,marginBottom:6}}>Loading your teams…</div>
+          <div style={{fontSize:12,color:C.mid,lineHeight:1.5}}>Syncing your saved profile before showing the dashboard.</div>
+        </div>
+      </div>
+    );
+  }
 
   if (!favTeams.length) {
     return (
