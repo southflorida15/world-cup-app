@@ -2925,14 +2925,53 @@ function ScorerLogModal({ team, scorer, color, onClose }) {
 }
 
 function TeamHistoryCard({ team, data, color }) {
+  const { isFinished, isLive } = useContext(LiveScoresCtx);
   const [expandedYear,setExpandedYear]=useState(null);
   const [selectedScorer,setSelectedScorer]=useState(null);
   const [liveScorers2026,setLiveScorers2026]=useState([]);
+
+  // Use the same match-by-match event source as the scorer detail modal.
+  // Do NOT use the global /api/matchevents?action=scorers aggregate here,
+  // because stale KV aggregates can preserve inflated totals after parser/feed
+  // changes. This keeps the visible +2026 number aligned with the detail log.
   useEffect(() => {
     let cancelled = false;
-    getLiveScorers2026().then(s => { if (!cancelled) setLiveScorers2026(s); });
+    (async () => {
+      const teamMatches = MATCHES.filter(m =>
+        (m.home === team || m.away === team) && (isFinished(m.home, m.away) || isLive(m.home, m.away))
+      );
+      const results = await Promise.all(teamMatches.map(async m => {
+        try {
+          const r = await fetch(`/api/matchevents?home=${encodeURIComponent(m.home)}&away=${encodeURIComponent(m.away)}`);
+          if (!r.ok) return null;
+          const data = await r.json();
+          return { match: m, events: data?.events || [] };
+        } catch(e) { return null; }
+      }));
+      if (cancelled) return;
+
+      const byPlayer = {};
+      const seen = new Set();
+      results.forEach(r => {
+        if (!r) return;
+        const { match: m, events } = r;
+        events.forEach(ev => {
+          if (ev.type !== "Goal" || ev.detail === "Own Goal") return;
+          if (normalizePlayerName(ev.team?.name) !== normalizePlayerName(team)) return;
+          const player = ev.player?.name || "Unknown";
+          const playerKey = normalizePlayerName(player);
+          const minute = `${ev.time?.elapsed ?? ""}+${ev.time?.extra ?? ""}`;
+          const dedupeKey = `${m.id}|${playerKey}|${minute}|${ev.detail || "Goal"}`;
+          if (seen.has(dedupeKey)) return;
+          seen.add(dedupeKey);
+          if (!byPlayer[playerKey]) byPlayer[playerKey] = { name: player, team, goals: 0 };
+          byPlayer[playerKey].goals += 1;
+        });
+      });
+      setLiveScorers2026(Object.values(byPlayer));
+    })();
     return () => { cancelled = true; };
-  }, []);
+  }, [team, isFinished, isLive]);
   const d = unwrapTeam(data);
   if (!d) return (
     <div style={{padding:"20px 10px",textAlign:"center"}}>
