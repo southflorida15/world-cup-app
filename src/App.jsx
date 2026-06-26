@@ -6251,7 +6251,7 @@ function MatchMomentum({ match, events=[], momentum=[], stats, C }) {
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,gap:8}}>
           <div>
             <div style={{fontSize:12,fontWeight:900,color:C.green,letterSpacing:".08em"}}>MATCH MOMENTUM</div>
-            <div style={{fontSize:11,color:C.dim}}>Balanced 1-minute signal · short pressure waves · events attached to peaks</div>
+            <div style={{fontSize:11,color:C.dim}}>Local pressure fingerprints · one team owns each minute</div>
           </div>
           <div style={{fontSize:11,color:C.mid,textAlign:"right"}}>{goals.length} ⚽ · {cards.length} cards · {subs.length} subs</div>
         </div>
