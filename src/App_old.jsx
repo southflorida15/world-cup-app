@@ -902,8 +902,9 @@ function auditMatchSchedule() {
 const SCHEDULE_AUDIT_ISSUES = auditMatchSchedule();
 // ----------------------------------------------------------------------------
 
-const APP_VERSION = "2.2.1";
-const APP_DATE = "Jun 17, 2026";
+const APP_VERSION = "3.0.0";
+const APP_RELEASE_NAME = "The Foundation";
+const APP_DATE = "2026-06-25";
 
 function getDeviceType() {
   const ua = navigator.userAgent;
@@ -4013,15 +4014,17 @@ function MyBracketTab({ tabTop=116 }) {
     const firstOf = (g) => groupStandings[g]?.[0]?.team || null;
     const secondOf = (g) => groupStandings[g]?.[1]?.team || null;
 
-    // Tags a "1X" (group-winner) slot as "clinched" or "provisional" so the
-    // UI can show confirmed group winners in color and still-live
-    // projections dimmed. Only "1X" slots are tagged — 2nd-place and
-    // third-place projections aren't part of this request and keep their
-    // existing default styling.
+    // Tags a "1X" or "2X" slot as "clinched" or "provisional" so the UI can
+    // show confirmed teams in color/locked and still-live projections
+    // dimmed. 1st place uses the mathematical clinch check above (can
+    // resolve before the group's last match is even played). 2nd place
+    // doesn't attempt that messier multi-team computation — it's tagged
+    // "clinched" only once the whole group has actually finished, and
+    // "provisional" the entire time before that.
     const slotTag = (slot) => {
-      if (typeof slot === "string" && slot[0] === "1") {
-        return clinchedFirst[slot[1]] ? "clinched" : "provisional";
-      }
+      if (typeof slot !== "string") return null;
+      if (slot[0] === "1") return clinchedFirst[slot[1]] ? "clinched" : "provisional";
+      if (slot[0] === "2") return groupComplete[slot[1]] ? "clinched" : "provisional";
       return null;
     };
 
@@ -4789,6 +4792,81 @@ function fantasyLockLabel(match) {
   return `Locks at ${fmtTime(iso, USER_TZ)}`;
 }
 
+function fantasyStageLabel(match) {
+  if (match?.group) return `Group ${match.group}`;
+  return match?.stage || "Knockout";
+}
+
+function fantasyConcreteTeam(team) {
+  if (!team) return false;
+  const t = String(team);
+  if (t === "TBD") return false;
+  if (/^(1|2)[A-L]$/.test(t)) return false;
+  if (/^3(rd)?/i.test(t)) return false;
+  if (/^(R16|QF|SF)\s*M/i.test(t)) return false;
+  if (t.includes("Final") || t.includes("🏆")) return false;
+  return true;
+}
+
+function fantasyTeamsKnown(match) {
+  return fantasyConcreteTeam(match?.home) && fantasyConcreteTeam(match?.away);
+}
+
+function fantasyHasProvisionalTeam(match) {
+  return match?.homeTag === "provisional" || match?.awayTag === "provisional";
+}
+
+function fantasyMatchConfirmed(match) {
+  return fantasyTeamsKnown(match) && !fantasyHasProvisionalTeam(match);
+}
+
+function fantasyVisibleMatch(match) {
+  // Show the full tournament fantasy slate (all 104 matches).
+  // Unknown knockout matchups remain visible but locked until teams are confirmed.
+  const id = Number(match?.id || 0);
+  return id >= 1 && id <= 104;
+}
+
+function fantasyKickoffMs(match) {
+  const iso = MATCH_UTC?.[match?.id];
+  const ms = iso ? new Date(iso).getTime() : NaN;
+  return Number.isFinite(ms) ? ms : 9999999999999;
+}
+
+function sortFantasyChronological(matches) {
+  return [...(matches || [])].sort((a, b) => fantasyKickoffMs(a) - fantasyKickoffMs(b) || Number(a.id || 0) - Number(b.id || 0));
+}
+
+function FantasyTeamSlot({ team, side="left", tag=null, winner=false, compact=false }) {
+  const concrete = fantasyConcreteTeam(team);
+  const isClinched = tag === "clinched";
+  const isProvisional = tag === "provisional";
+  const color = winner ? C.green : isClinched ? C.gold : isProvisional ? C.dim : concrete ? C.text : C.dim;
+  const align = side === "right" ? "flex-end" : "flex-start";
+  const textAlign = side === "right" ? "right" : "left";
+  const crestSize = compact ? 19 : 22;
+  const crest = <span style={{display:"inline-flex",opacity:isProvisional?0.42:1,filter:isProvisional?"grayscale(1)":"none",flexShrink:0}}><Crest team={team || "TBD"} size={crestSize}/></span>;
+  const name = (
+    <span style={{fontWeight:isClinched||winner?900:800,color,flex:1,fontSize:compact?12:13,textAlign,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontStyle:isProvisional?"italic":"normal",opacity:isProvisional?0.78:1,minWidth:0}}>
+      {team || "TBD"}
+    </span>
+  );
+  // On mobile, keep the visual cue (greyed flag/name) but remove the word
+  // "LEADING" so long team names have room to breathe.
+  const marker = isClinched
+    ? <span title="Confirmed / locked into this slot" style={{fontSize:compact?10:11,flexShrink:0}}>🔒</span>
+    : (!compact && isProvisional)
+      ? <span style={{fontSize:8,color:C.dim,fontWeight:900,letterSpacing:"0.04em",whiteSpace:"nowrap",flexShrink:0}}>LEADING</span>
+      : null;
+  return (
+    <div style={{display:"flex",alignItems:"center",gap:compact?5:7,justifyContent:align,minWidth:0,flex:1}}>
+      {side === "left" ? crest : marker}
+      {name}
+      {side === "left" ? marker : crest}
+    </div>
+  );
+}
+
 
 async function apiPred(action, params={}, body=null) {
   const qs = new URLSearchParams({ action, ...params }).toString();
@@ -5264,7 +5342,7 @@ function LeaguesPanel({ pin, fantasyUserId, syncProfile, userStats }) {
 
 
 function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, userAvatar=null }) {
-  const { getScore, isFinished } = useContext(LiveScoresCtx);
+  const { getScore, isFinished, allFixtures=[] } = useContext(LiveScoresCtx);
   const { favTeam, favTeams=[] } = useContext(FavCtx);
   const deviceUserId = useMemo(getUserId, []);
   const fantasyUserId = syncProfile?.uid || deviceUserId;
@@ -5306,6 +5384,177 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
     setViewingUser(null);
     document.body.style.overflow = "";
   };
+
+  // ── Fantasy match source ────────────────────────────────────────────────
+  // Group-stage fantasy uses the static schedule. Knockout fantasy now pulls
+  // actual teams from the same live/actual bracket model used by My Bracket,
+  // so Round-of-32 and later matches replace placeholders like "1E" or
+  // "3rd ABCDF" as teams clinch or winners advance.
+  const fantasyMatches = useMemo(() => {
+    const byId = Object.fromEntries(MATCHES.map(m => [Number(m.id), m]));
+
+    const groupResults = (letter) => MATCHES
+      .filter(m => m.group === letter)
+      .map(m => {
+        const s = getScore(m.home, m.away);
+        const finished = s && statusIsFinished(s.status);
+        return {
+          id: m.id,
+          home: m.home,
+          away: m.away,
+          hg: finished ? String(s.hg ?? "") : "",
+          ag: finished ? String(s.ag ?? "") : "",
+        };
+      });
+
+    const groupStandings = {};
+    const groupResultsByLetter = {};
+    const groupComplete = {};
+    Object.keys(GROUPS).forEach(g => {
+      const res = groupResults(g);
+      groupResultsByLetter[g] = res;
+      groupComplete[g] = res.length > 0 && res.every(r => r.hg !== "" && r.ag !== "");
+      groupStandings[g] = calcStandings(g, res);
+    });
+    const allGroupsComplete = Object.values(groupComplete).every(Boolean);
+
+    const headToHeadWinner = (g, teamA, teamB) => {
+      const m = (groupResultsByLetter[g] || []).find(r =>
+        (r.home === teamA && r.away === teamB) || (r.home === teamB && r.away === teamA)
+      );
+      if (!m || m.hg === "" || m.ag === "") return null;
+      const hg = parseInt(m.hg), ag = parseInt(m.ag);
+      if (isNaN(hg) || isNaN(ag)) return null;
+      if (hg === ag) return "draw";
+      const homeWon = hg > ag;
+      return (m.home === teamA) === homeWon ? teamA : teamB;
+    };
+
+    const clinchedFirst = {};
+    Object.keys(GROUPS).forEach(g => {
+      const table = groupStandings[g] || [];
+      const leader = table[0];
+      if (groupComplete[g]) {
+        clinchedFirst[g] = !!leader;
+        return;
+      }
+      clinchedFirst[g] = !!leader && table.slice(1).every(t => {
+        const maxPossible = t.pts + (3 - t.p) * 3;
+        if (maxPossible < leader.pts) return true;
+        if (maxPossible > leader.pts) return false;
+        return headToHeadWinner(g, leader.team, t.team) === leader.team;
+      });
+    });
+
+    const firstOf = (g) => groupStandings[g]?.[0]?.team || null;
+    const secondOf = (g) => groupStandings[g]?.[1]?.team || null;
+
+    const slotTag = (slot) => {
+      if (typeof slot !== "string") return null;
+      if (slot[0] === "1") return clinchedFirst[slot[1]] ? "clinched" : "provisional";
+      if (slot[0] === "2") return groupComplete[slot[1]] ? "clinched" : "provisional";
+      return null;
+    };
+
+    const qualifiedThirds = Object.keys(GROUPS)
+      .map(g => ({ group: g, ...(groupStandings[g]?.[2] || {}) }))
+      .filter(t => t.team)
+      .sort((a,b) => b.pts-a.pts || b.gd-a.gd || b.gf-a.gf)
+      .slice(0,8);
+
+    const thirdTeamByGroup = Object.fromEntries(qualifiedThirds.map(t => [t.group, t.team]));
+    let annexMapping = null;
+    try {
+      annexMapping = getAnnexCMapping(qualifiedThirds.map(t => ({ group:t.group, team:t.team })));
+    } catch {
+      annexMapping = null;
+    }
+
+    const resolveSlot = (slot, homeSlot) => {
+      if (!slot) return null;
+      if (slot === "3?") {
+        const assigned = annexMapping?.[homeSlot];
+        const grp = assigned ? assigned.replace(/^3/, "") : null;
+        return (grp && thirdTeamByGroup[grp]) || null;
+      }
+      if (slot.startsWith?.("1")) return firstOf(slot[1]);
+      if (slot.startsWith?.("2")) return secondOf(slot[1]);
+      return null;
+    };
+
+    const resolveSlotTag = (slot) => {
+      if (!slot) return null;
+      if (slot === "3?") return annexMapping ? (allGroupsComplete ? "clinched" : "provisional") : null;
+      return slotTag(slot);
+    };
+
+    const lookupRealWinner = (home, away) => {
+      if (!fantasyConcreteTeam(home) || !fantasyConcreteTeam(away)) return null;
+      let s = getScore(home, away), swapped = false;
+      if (!s) { s = getScore(away, home); swapped = true; }
+      if (!s || !statusIsFinished(s.status)) return null;
+      const hg = swapped ? s.ag : s.hg;
+      const ag = swapped ? s.hg : s.ag;
+      if (hg == null || ag == null || hg === ag) return null;
+      return hg > ag ? home : away;
+    };
+
+    const decorate = (matchId, home, away, extra={}) => {
+      const base = byId[Number(matchId)] || {};
+      const resolvedHome = fantasyConcreteTeam(home) ? home : (home || base.home || "TBD");
+      const resolvedAway = fantasyConcreteTeam(away) ? away : (away || base.away || "TBD");
+      return {
+        ...base,
+        ...extra,
+        id: Number(matchId),
+        home: resolvedHome,
+        away: resolvedAway,
+        originalHome: base.home,
+        originalAway: base.away,
+        fantasyResolved: fantasyConcreteTeam(resolvedHome) || fantasyConcreteTeam(resolvedAway),
+        fantasyConfirmed: fantasyConcreteTeam(resolvedHome) && fantasyConcreteTeam(resolvedAway) && extra.homeTag !== "provisional" && extra.awayTag !== "provisional",
+      };
+    };
+
+    const winnerMap = {};
+    const dynamicById = {};
+
+    R32_SLOT_TEMPLATE.forEach(t => {
+      const home = resolveSlot(t.home, t.home) || "TBD";
+      const away = resolveSlot(t.away, t.home) || "TBD";
+      const winner = lookupRealWinner(home, away);
+      if (winner) winnerMap[t.match] = winner;
+      dynamicById[t.match] = decorate(t.match, home, away, {
+        homeSlot:t.home,
+        awaySlot:t.away,
+        homeTag:resolveSlotTag(t.home),
+        awayTag:resolveSlotTag(t.away),
+      });
+    });
+
+    const resolveRef = (ref) => {
+      if (typeof ref === "string" && ref.startsWith("W")) return winnerMap[Number(ref.slice(1))] || "TBD";
+      return ref || "TBD";
+    };
+    const refTag = (ref) => (typeof ref === "string" && ref.startsWith("W") && winnerMap[Number(ref.slice(1))]) ? "clinched" : null;
+
+    const buildRound = (template=[]) => {
+      template.forEach(t => {
+        const home = resolveRef(t.home);
+        const away = resolveRef(t.away);
+        const winner = lookupRealWinner(home, away);
+        if (winner) winnerMap[t.match] = winner;
+        dynamicById[t.match] = decorate(t.match, home, away, { homeSlot:t.home, awaySlot:t.away, homeTag:refTag(t.home), awayTag:refTag(t.away) });
+      });
+    };
+
+    buildRound(ROUND_OF_16_TEMPLATE);
+    buildRound(QUARTER_FINAL_TEMPLATE);
+    buildRound(SEMI_FINAL_TEMPLATE);
+    buildRound(FINAL_TEMPLATE);
+
+    return MATCHES.map(m => dynamicById[m.id] || m);
+  }, [getScore, allFixtures]);
 
   // ── Load user + their predictions on mount ──────────────────────────────
   useEffect(() => {
@@ -5361,8 +5610,8 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
   // happening from other sources (other tabs, other users, retries).
   const scoredSubmittedRef = useRef(new Map()); // matchId -> "hg-ag" already submitted
   useEffect(() => {
-    const finishedWithScores = MATCHES
-      .filter(m => m.group && isFinished(m.home, m.away))
+    const finishedWithScores = fantasyMatches
+      .filter(m => fantasyTeamsKnown(m) && isFinished(m.home, m.away))
       .map(m => {
         const sc = getScore(m.home, m.away);
         if (!sc || sc.hg === null || sc.ag === null) return null;
@@ -5377,7 +5626,7 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ matches: finishedWithScores }),
     }).catch(e => console.warn("[score-matches]", e.message));
-  }, [getScore, isFinished]);
+  }, [getScore, isFinished, fantasyMatches]);
 
   // ── Load leaderboard when that tab is active ────────────────────────────
   // This used to fetch on EVERY filter change anywhere in the Fantasy tab
@@ -5444,8 +5693,9 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
   };
 
   // ── Score totals ────────────────────────────────────────────────────────
-  const upcoming  = MATCHES.filter(m => m.group && !isFinished(m.home, m.away));
-  const finished  = MATCHES.filter(m => m.group &&  isFinished(m.home, m.away)).sort((a,b) => b.id - a.id);
+  const fantasyVisibleMatches = sortFantasyChronological(fantasyMatches.filter(fantasyVisibleMatch));
+  const upcoming  = sortFantasyChronological(fantasyVisibleMatches.filter(m => !isFinished(m.home, m.away)));
+  const finished  = sortFantasyChronological(fantasyVisibleMatches.filter(m => fantasyTeamsKnown(m) && isFinished(m.home, m.away)));
   let totalPts = 0, totalPossible = 0, exact = 0, correct = 0;
   finished.forEach(m => {
     const sc = getScore(m.home, m.away);
@@ -5455,8 +5705,9 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
   });
 
   const shownMatches = filter==="fav"
-    ? MATCHES.filter(m=>m.group&&(favTeams?.includes(m.home)||favTeams?.includes(m.away)))
+    ? fantasyVisibleMatches.filter(m => favTeams?.includes(m.home) || favTeams?.includes(m.away))
     : filter==="finished" ? finished : upcoming;
+  const isMobileFantasy = typeof window !== "undefined" && window.innerWidth < 520;
 
   // ── Registration gate ───────────────────────────────────────────────────
   if (userLoading) return (
@@ -5674,26 +5925,40 @@ return (
               <div style={{fontSize:13}}>{filter==="upcoming"?"No pending Fantasy Picks right now — check back when fixtures are available!":"No finished matches yet."}</div>
             </div>
           )}
-          {shownMatches.map(m => {
-            const sc = getScore(m.home, m.away);
-            const done = isFinished(m.home, m.away);
-            const locked = done || fantasyMatchLocked(m);
+          {shownMatches.map((m, idx) => {
+            const prev = idx > 0 ? shownMatches[idx - 1] : null;
+            const enteringKnockout = !!m.stage && (!prev || prev.stage !== m.stage);
+            const teamsKnown = fantasyTeamsKnown(m);
+            const matchupConfirmed = fantasyMatchConfirmed(m);
+            const sc = teamsKnown ? getScore(m.home, m.away) : null;
+            const done = teamsKnown && isFinished(m.home, m.away);
+            const locked = done || fantasyMatchLocked(m) || !teamsKnown || !matchupConfirmed;
             const pred = preds[m.id] || {};
             const pts = done && sc ? scoreOnePred(pred, sc) : null;
             const ptColor = pts===3?C.green:pts===1?C.gold:pts===0?C.red:C.dim;
             const hasPred = pred.hg!==undefined && pred.ag!==undefined && pred.hg!=="" && pred.ag!=="";
             const saving = predSaving[m.id];
             return (
-              <Card key={m.id} style={{marginBottom:8,border:`1px solid ${pts===3?C.green:pts===1?C.gold:pts===0?C.red:hasPred?`${C.green}44`:C.b2}`,opacity:done?0.45:locked?0.72:1,background:done?C.s2:undefined}} >
+              <React.Fragment key={m.id}>
+                {enteringKnockout && (
+                  <div style={{display:"flex",alignItems:"center",gap:10,margin:"16px 0 10px"}}>
+                    <div style={{height:1,background:C.b2,flex:1}}/>
+                    <div style={{fontSize:10,color:C.gold,fontWeight:900,letterSpacing:"0.12em",textTransform:"uppercase",whiteSpace:"nowrap"}}>
+                      {m.stage}
+                    </div>
+                    <div style={{height:1,background:C.b2,flex:1}}/>
+                  </div>
+                )}
+              <Card style={{marginBottom:8,border:`1px solid ${pts===3?C.green:pts===1?C.gold:pts===0?C.red:hasPred?`${C.green}44`:C.b2}`,opacity:done?0.45:locked?0.72:1,background:done?C.s2:undefined}} >
                 <div style={{padding:"10px 13px"}}>
                   <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
-                    <Badge>Group {m.group} · {m.date}</Badge>
+                    <Badge>{fantasyStageLabel(m)} · {m.date}</Badge>
                     <div style={{display:"flex",alignItems:"center",gap:6}}>
                       {saving && <span style={{fontSize:10,color:C.dim}}>saving...</span>}
                       {!saving && hasPred && !done && !locked && <span style={{fontSize:10,color:C.green}}>✓ saved</span>}
                       {!done && (
   locked ? (
-    <span style={{fontSize:10,color:C.gold}}>🔒 locked</span>
+    <span style={{fontSize:10,color:C.gold}}>{!teamsKnown ? "⏳ teams TBD" : !matchupConfirmed ? (isMobileFantasy ? "⏳ pending" : "⏳ provisional") : "🔒 locked"}</span>
   ) : (
     <span style={{fontSize:10,color:C.dim}}>{fantasyLockLabel(m)}</span>
   )
@@ -5702,8 +5967,7 @@ return (
                     </div>
                   </div>
                   <div style={{display:"flex",alignItems:"center",gap:8}}>
-                    <Crest team={m.home} size={22}/>
-                    <span style={{fontWeight:800,color:C.text,flex:1,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.home}</span>
+                    <FantasyTeamSlot team={m.home} side="left" tag={m.homeTag} compact={isMobileFantasy}/>
                     <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
                       {done && sc && (
                         <div style={{textAlign:"center",minWidth:52,background:C.bg,borderRadius:8,padding:"5px 10px",border:`1px solid ${C.b2}`}}>
@@ -5727,11 +5991,11 @@ return (
                         </div>
                       )}
                     </div>
-                    <span style={{fontWeight:800,color:C.text,flex:1,fontSize:13,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.away}</span>
-                    <Crest team={m.away} size={22}/>
+                    <FantasyTeamSlot team={m.away} side="right" tag={m.awayTag} compact={isMobileFantasy}/>
                   </div>
                 </div>
               </Card>
+              </React.Fragment>
             );
           })}
         </>
@@ -5755,7 +6019,8 @@ return (
               {viewingLoading && <div style={{textAlign:"center",padding:"32px 0"}}><div style={{width:24,height:24,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto"}}/></div>}
 
               {!viewingLoading && viewingPreds && (() => {
-                const scoredMatches = MATCHES.filter(m => {
+                const scoredMatches = fantasyMatches.filter(m => {
+                  if (!fantasyTeamsKnown(m)) return false;
                   const sc = getScore(m.home, m.away);
                   return sc && statusIsFinished(sc.status) && viewingPreds[m.id];
                 }).sort((a,b) => b.id - a.id);
@@ -5770,7 +6035,7 @@ return (
                     <Card key={m.id} style={{marginBottom:8,border:`1px solid ${pts===3?C.green:pts===1?C.gold:pts===0?C.red:C.b2}`,opacity:0.45,background:C.s2}}>
                       <div style={{padding:"10px 13px"}}>
                         <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
-                          <Badge>Group {m.group} · {m.date}</Badge>
+                          <Badge>{fantasyStageLabel(m)} · {m.date}</Badge>
                           <div style={{fontWeight:700,color:ptColor,fontSize:12}}>{pts===3?"⚽⚽⚽ +3":pts===1?"⚽ +1":"❌ 0"}pts</div>
                         </div>
                         <div style={{display:"flex",alignItems:"center",gap:8}}>
@@ -6497,12 +6762,30 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
   const [avatarSearch, setAvatarSearch] = useState("");
   const [nameInput, setNameInput] = useState(displayName || "");
   const [nameEditing, setNameEditing] = useState(false);
+  const [appInfo, setAppInfo] = useState({ version: APP_VERSION, name: APP_RELEASE_NAME, released: APP_DATE });
 
   useEffect(() => { if (open) { setScreen("home"); setError(""); } }, [open]);
+  useEffect(() => {
+    let alive = true;
+    fetch("/version.json", { cache: "no-store" })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!alive || !data?.version) return;
+        setAppInfo({
+          version: String(data.version || APP_VERSION),
+          name: data.name || APP_RELEASE_NAME,
+          released: data.released || data.date || APP_DATE
+        });
+      })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
   if (!open) return null;
 
   const isDesktop = typeof window !== "undefined" && window.innerWidth >= 640;
   const isSynced = !!syncProfile;
+  const versionLabel = `v${appInfo.version}${appInfo.name ? ` · ${appInfo.name}` : ""}`;
+  const versionSubLabel = appInfo.released ? `Released ${appInfo.released}` : "";
   const persistProfile = (p) => { setSyncProfile(p); try { localStorage.setItem("wc2026_syncprofile", JSON.stringify(p)); } catch {} };
 
   const ALL_TEAMS_LIST = ALL_TEAMS;
@@ -6668,8 +6951,9 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
         {syncProfile?.pin && (
           <NotifyEnableBtn syncUid={syncUid} syncPin={syncProfile.pin}/>
         )}
-        <div style={{textAlign:"center",marginTop:10}}>
-          <span style={{fontSize:10,color:C.dim}}>v{APP_VERSION} · {APP_DATE}</span>
+        <div style={{textAlign:"center",marginTop:10,lineHeight:1.35}}>
+          <div style={{fontSize:10,color:C.dim}}>{versionLabel}</div>
+          {versionSubLabel && <div style={{fontSize:9,color:C.dim,opacity:0.75}}>{versionSubLabel}</div>}
         </div>
         </>
       )}
@@ -6796,6 +7080,21 @@ function timeAgo(isoStr) {
 
 function QuickFacts({ tabTop }) {
   const { getScore, isFinished } = useContext(LiveScoresCtx);
+  const [expandedFact, setExpandedFact] = useState(null);
+  const [fastestGoals, setFastestGoals] = useState([]);
+
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/matchevents?action=scorers")
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!alive) return;
+        const rows = Array.isArray(data?.fastestGoals) ? data.fastestGoals : [];
+        setFastestGoals(rows.filter(g => Number.isFinite(Number(g.minute))).slice(0, 3));
+      })
+      .catch(() => { if (alive) setFastestGoals([]); });
+    return () => { alive = false; };
+  }, []);
 
   const finishedMatches = MATCHES.filter(m => isFinished(m.home, m.away));
   const scores = finishedMatches.map(m => {
@@ -6810,46 +7109,130 @@ function QuickFacts({ tabTop }) {
     </div>
   );
 
-  // Compute facts from live data
-  const goalScorers = {};
+  const totalMatches = 104;
   const matchGoals = scores.map(m => ({ m, total: m.hg + m.ag }));
-  const highestScoring = matchGoals.sort((a,b)=>b.total-a.total)[0];
+  const highestScoring = [...matchGoals].sort((a,b)=>b.total-a.total)[0];
   const totalGoals = scores.reduce((s,m)=>s+m.hg+m.ag, 0);
   const avgGoals = (totalGoals / scores.length).toFixed(1);
 
-  // Biggest upset: finished match where group underdog won
-  // Use home/away position as proxy — away win = mild upset
-  const awayWins = scores.filter(m => m.ag > m.hg);
-  const biggestUpset = awayWins.length > 0 ? awayWins[awayWins.length - 1] : null;
+  const teamGoalMap = {};
+  scores.forEach(m => {
+    teamGoalMap[m.home] = (teamGoalMap[m.home] || 0) + (m.hg || 0);
+    teamGoalMap[m.away] = (teamGoalMap[m.away] || 0) + (m.ag || 0);
+  });
+  const topGoalTeams = Object.entries(teamGoalMap)
+    .map(([team, goals]) => ({ team, goals }))
+    .sort((a,b)=>b.goals-a.goals || a.team.localeCompare(b.team))
+    .slice(0, 3);
 
-  // Most one-sided match
+  const cleanSheetMap = {};
+  scores.forEach(m => {
+    if (m.ag === 0) cleanSheetMap[m.home] = (cleanSheetMap[m.home] || 0) + 1;
+    if (m.hg === 0) cleanSheetMap[m.away] = (cleanSheetMap[m.away] || 0) + 1;
+  });
+  const topCleanSheetTeams = Object.entries(cleanSheetMap)
+    .map(([team, cleanSheets]) => ({ team, cleanSheets }))
+    .sort((a,b)=>b.cleanSheets-a.cleanSheets || a.team.localeCompare(b.team))
+    .slice(0, 3);
+
+  const cleanSheets = scores.filter(m => m.hg === 0 || m.ag === 0).length;
   const mostOneSided = [...scores].sort((a,b)=>(Math.abs(b.hg-b.ag))-(Math.abs(a.hg-a.ag)))[0];
   const biggestMargin = mostOneSided ? Math.abs(mostOneSided.hg - mostOneSided.ag) : 0;
 
-  // Clean sheets
-  const cleanSheets = scores.filter(m => m.hg === 0 || m.ag === 0).length;
+  const detailRow = (rank, icon, main, sub, color=C.text) => (
+    <div key={`${rank}-${main}-${sub || ""}`} style={{display:"flex",alignItems:"center",gap:9,padding:"7px 0",borderTop:rank===1?"none":`1px solid ${C.b1}`}}>
+      <div style={{width:22,height:22,borderRadius:999,display:"flex",alignItems:"center",justifyContent:"center",background:`${color}18`,border:`1px solid ${color}33`,color,fontSize:11,fontWeight:900,flexShrink:0}}>{rank}</div>
+      <div style={{fontSize:16,flexShrink:0}}>{icon}</div>
+      <div style={{minWidth:0,flex:1}}>
+        <div style={{fontSize:12,color:C.text,fontWeight:800,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{main}</div>
+        {sub && <div style={{fontSize:10,color:C.dim,marginTop:1}}>{sub}</div>}
+      </div>
+    </div>
+  );
 
   const facts = [
-    { icon:"⚽", label:"Goals scored", value:`${totalGoals} (avg ${avgGoals}/match)` },
-    { icon:"🏟️", label:"Matches played", value:`${scores.length} of 72` },
-    { icon:"🎯", label:"Clean sheets", value:`${cleanSheets}` },
-    highestScoring && { icon:"🔥", label:"Highest-scoring match", value:`${highestScoring.m.home} ${highestScoring.m.hg}–${highestScoring.m.ag} ${highestScoring.m.away} (${highestScoring.total} goals)` },
-    biggestMargin > 2 && mostOneSided && { icon:"💥", label:"Biggest win", value:`${mostOneSided.hg > mostOneSided.ag ? mostOneSided.home : mostOneSided.away} won ${Math.max(mostOneSided.hg,mostOneSided.ag)}–${Math.min(mostOneSided.hg,mostOneSided.ag)}` },
-    biggestUpset && { icon:"😱", label:"Away win", value:`${biggestUpset.away} ${biggestUpset.ag}–${biggestUpset.hg} ${biggestUpset.home}` },
+    { key:"goals", icon:"⚽", label:"Goals scored", value:`${totalGoals} (avg ${avgGoals}/match)` },
+    { key:"played", icon:"🏟️", label:"Matches played", value:`${scores.length} of ${totalMatches}` },
+    topGoalTeams.length > 0 && {
+      key:"teamGoals",
+      icon:"📈",
+      label:"Most goals by team",
+      value:`${topGoalTeams[0].team} — ${topGoalTeams[0].goals}`,
+      hint:"Tap for top 3",
+      details: topGoalTeams.map((row,i)=>detailRow(i+1, getFlag(row.team), row.team, `${row.goals} goals`, C.green)),
+    },
+    { key:"cleanSheets", icon:"🎯", label:"Clean sheets", value:`${cleanSheets}` },
+    topCleanSheetTeams.length > 0 && {
+      key:"cleanSheetLeader",
+      icon:"🧤",
+      label:"Clean sheet leader",
+      value:`${topCleanSheetTeams[0].team} — ${topCleanSheetTeams[0].cleanSheets}`,
+      hint:"Tap for top 3",
+      details: topCleanSheetTeams.map((row,i)=>detailRow(i+1, getFlag(row.team), row.team, `${row.cleanSheets} clean sheets`, C.blue)),
+    },
+    fastestGoals.length > 0 && {
+      key:"fastestGoals",
+      icon:"⏱️",
+      label:"Fastest goal",
+      value:`${fastestGoals[0].minute}' · ${fastestGoals[0].player || fastestGoals[0].team}`,
+      hint:"Tap for top 3",
+      details: fastestGoals.slice(0,3).map((row,i)=>detailRow(
+        i+1,
+        getFlag(row.team),
+        row.player ? `${row.player} (${row.team})` : row.team,
+        `${row.minute}'${row.match ? ` · ${row.match}` : ""}`,
+        C.gold
+      )),
+    },
+    highestScoring && { key:"highestScoring", icon:"🔥", label:"Highest-scoring match", value:`${highestScoring.m.home} ${highestScoring.m.hg}–${highestScoring.m.ag} ${highestScoring.m.away} (${highestScoring.total} goals)` },
+    biggestMargin > 2 && mostOneSided && { key:"biggestWin", icon:"💥", label:"Biggest win", value:`${mostOneSided.hg > mostOneSided.ag ? mostOneSided.home : mostOneSided.away} won ${Math.max(mostOneSided.hg,mostOneSided.ag)}–${Math.min(mostOneSided.hg,mostOneSided.ag)}` },
   ].filter(Boolean);
 
   return (
     <div style={{background:C.s2,borderRadius:12,padding:16,marginBottom:16,border:`1px solid ${C.b1}`}}>
       <div style={{fontSize:12,fontWeight:700,color:C.mid,letterSpacing:"0.08em",marginBottom:12}}>⚡ TOURNAMENT FACTS SO FAR</div>
-      {facts.map((f,i) => (
-        <div key={i} style={{display:"flex",alignItems:"flex-start",gap:10,marginBottom:i<facts.length-1?10:0}}>
-          <span style={{fontSize:18,flexShrink:0}}>{f.icon}</span>
-          <div>
-            <div style={{fontSize:11,color:C.dim,fontWeight:600}}>{f.label}</div>
-            <div style={{fontSize:13,color:C.text,fontWeight:600,marginTop:1}}>{f.value}</div>
+      {facts.map((f,i) => {
+        const open = expandedFact === f.key;
+        const clickable = !!f.details;
+        return (
+          <div key={f.key || i} style={{marginBottom:i<facts.length-1?10:0}}>
+            <button
+              type="button"
+              onClick={()=>clickable && setExpandedFact(prev => prev === f.key ? null : f.key)}
+              aria-disabled={!clickable}
+              style={{
+                width:"100%",
+                display:"flex",
+                alignItems:"flex-start",
+                gap:10,
+                padding:0,
+                background:"transparent",
+                border:"none",
+                textAlign:"left",
+                cursor:clickable?"pointer":"default",
+                opacity:1,
+                WebkitAppearance:"none",
+                appearance:"none",
+              }}
+            >
+              <span style={{fontSize:18,flexShrink:0,opacity:1,filter:"none",color:C.text}}>{f.icon}</span>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{display:"flex",alignItems:"center",gap:6}}>
+                  <div style={{fontSize:11,color:C.dim,fontWeight:600}}>{f.label}</div>
+                  {f.hint && <div style={{fontSize:9,color:C.gold,fontWeight:800,background:`${C.gold}14`,border:`1px solid ${C.gold}33`,borderRadius:999,padding:"1px 6px"}}>{open?"Hide":"Top 3"}</div>}
+                </div>
+                <div style={{fontSize:13,color:C.text,fontWeight:600,marginTop:1,overflow:"hidden",textOverflow:"ellipsis"}}>{f.value}</div>
+              </div>
+              {clickable && <span style={{fontSize:12,color:C.dim,transform:open?"rotate(180deg)":"none",transition:"transform .15s"}}>▾</span>}
+            </button>
+            {open && f.details && (
+              <div style={{margin:"8px 0 0 28px",padding:"8px 10px",background:C.s1,border:`1px solid ${C.b1}`,borderRadius:10}}>
+                {f.details}
+              </div>
+            )}
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

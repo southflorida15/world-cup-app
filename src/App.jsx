@@ -159,38 +159,38 @@ const MATCHES = [
   {id:70, date:"Jun 27",time:"7:30PM ET",home:"DR Congo",      away:"Uzbekistan",     venue:"Atlanta Stadium, Atlanta",                     group:"K",tv:"FS1 · Peacock · Telemundo"},
   {id:71, date:"Jun 27",time:"10PM ET",  home:"Algeria",       away:"Austria",        venue:"Kansas City Stadium, Kansas City",              group:"J",tv:"FS1 · Peacock · Telemundo"},
   {id:72, date:"Jun 27",time:"10PM ET",  home:"Jordan",        away:"Argentina",      venue:"Dallas Stadium, Dallas",                       group:"J",tv:"FOX · Peacock · Telemundo"},
-  {id:73, date:"Jun 28",time:"3PM ET",   home:"2A",  away:"2B",venue:"SoFi Stadium, Los Angeles",             group:"",stage:"Round of 32",tv:"FS1"},
-  {id:74, date:"Jun 29",time:"4:30PM ET",home:"1E",  away:"3rd ABCDF",venue:"Boston Stadium, Boston",                group:"",stage:"Round of 32",tv:"FS1"},
-  {id:75, date:"Jun 29",time:"9PM ET",   home:"1F",  away:"2C",venue:"Estadio Monterrey, Guadalupe",          group:"",stage:"Round of 32",tv:"FS1"},
-  {id:76, date:"Jun 29",time:"1PM ET",   home:"1C",  away:"2F",venue:"Houston Stadium, Houston",              group:"",stage:"Round of 32",tv:"FS1"},
-  {id:77, date:"Jun 30",time:"5PM ET",   home:"1I",  away:"3rd CDFGH",venue:"New York New Jersey Stadium, East Rutherford",group:"",stage:"Round of 32",tv:"FS1"},
-  {id:78, date:"Jun 30",time:"1PM ET",   home:"2E",  away:"2I",venue:"Dallas Stadium, Dallas",                group:"",stage:"Round of 32",tv:"FS1"},
-  {id:79, date:"Jun 30",time:"9PM ET",   home:"1A",  away:"3rd CEFHI",venue:"Mexico City Stadium, Mexico City",      group:"",stage:"Round of 32",tv:"FS1"},
-  {id:80, date:"Jul 1", time:"12PM ET",  home:"1L",  away:"3rd EHIJK",venue:"Atlanta Stadium, Atlanta",              group:"",stage:"Round of 32",tv:"FS1"},
-  {id:81, date:"Jul 1", time:"8PM ET",   home:"1D", away:"3rd BEFIJ",venue:"San Francisco Bay Area Stadium, San Francisco",group:"",stage:"Round of 32",tv:"FS1"},
-  {id:82, date:"Jul 1", time:"4PM ET",   home:"1G",  away:"3rd AEHIJ",venue:"Seattle Stadium, Seattle",              group:"",stage:"Round of 32",tv:"FS1"},
-  {id:83, date:"Jul 2", time:"7PM ET",   home:"2K", away:"2L",venue:"Toronto Stadium, Toronto",              group:"",stage:"Round of 32",tv:"FS1"},
-  {id:84, date:"Jul 2", time:"3PM ET",   home:"1H", away:"2J",venue:"SoFi Stadium, Los Angeles",             group:"",stage:"Round of 32",tv:"FS1"},
-  {id:85, date:"Jul 2", time:"11PM ET",  home:"1B", away:"3rd EFGIJ",venue:"BC Place, Vancouver",                   group:"",stage:"Round of 32",tv:"FS1"},
-  {id:86, date:"Jul 3", time:"6PM ET",   home:"1J", away:"2H",venue:"Miami Stadium, Miami",                  group:"",stage:"Round of 32",tv:"FS1"},
-  {id:87, date:"Jul 3", time:"9:30PM ET",home:"1K",  away:"3rd DEIJL",venue:"Kansas City Stadium, Kansas City",      group:"",stage:"Round of 32",tv:"FS1"},
-  {id:88, date:"Jul 3", time:"2PM ET",   home:"2D", away:"2G",venue:"Dallas Stadium, Dallas",                group:"",stage:"Round of 32",tv:"FS1"},
-  {id:89, date:"Jul 4", time:"5PM ET",   home:"R16 M1",  away:"TBD",venue:"Philadelphia Stadium, Philadelphia",    group:"",stage:"Round of 16",tv:"FOX"},
-  {id:90, date:"Jul 4", time:"1PM ET",   home:"R16 M2",  away:"TBD",venue:"Houston Stadium, Houston",              group:"",stage:"Round of 16",tv:"FOX"},
-  {id:91, date:"Jul 5", time:"4PM ET",   home:"R16 M3",  away:"TBD",venue:"New York New Jersey Stadium, East Rutherford",group:"",stage:"Round of 16",tv:"FOX"},
-  {id:92, date:"Jul 5", time:"8PM ET",   home:"R16 M4",  away:"TBD",venue:"Mexico City Stadium, Mexico City",      group:"",stage:"Round of 16",tv:"FOX"},
-  {id:93, date:"Jul 6", time:"3PM ET",   home:"R16 M5",  away:"TBD",venue:"Dallas Stadium, Dallas",                group:"",stage:"Round of 16",tv:"FOX"},
-  {id:94, date:"Jul 6", time:"8PM ET",   home:"R16 M6",  away:"TBD",venue:"Seattle Stadium, Seattle",              group:"",stage:"Round of 16",tv:"FOX"},
-  {id:95, date:"Jul 7", time:"12PM ET",  home:"R16 M7",  away:"TBD",venue:"Atlanta Stadium, Atlanta",              group:"",stage:"Round of 16",tv:"FOX"},
-  {id:96, date:"Jul 7", time:"4PM ET",   home:"R16 M8",  away:"TBD",venue:"BC Place, Vancouver",                   group:"",stage:"Round of 16",tv:"FOX"},
-  {id:97, date:"Jul 9", time:"4PM ET",   home:"QF M1",   away:"TBD",venue:"Boston Stadium, Boston",                group:"",stage:"Quarter-final",tv:"FOX"},
-  {id:98, date:"Jul 10",time:"3PM ET",   home:"QF M2",   away:"TBD",venue:"SoFi Stadium, Los Angeles",             group:"",stage:"Quarter-final",tv:"FOX"},
-  {id:99, date:"Jul 11",time:"5PM ET",   home:"QF M3",   away:"TBD",venue:"Miami Stadium, Miami",                  group:"",stage:"Quarter-final",tv:"FOX"},
-  {id:100,date:"Jul 11",time:"9PM ET",   home:"QF M4",   away:"TBD",venue:"Kansas City Stadium, Kansas City",      group:"",stage:"Quarter-final",tv:"FOX"},
-  {id:101,date:"Jul 14",time:"3PM ET",   home:"SF M1",   away:"TBD",venue:"Dallas Stadium, Dallas",                group:"",stage:"Semi-final",tv:"FOX"},
-  {id:102,date:"Jul 15",time:"3PM ET",   home:"SF M2",   away:"TBD",venue:"Atlanta Stadium, Atlanta",              group:"",stage:"Semi-final",tv:"FOX"},
-  {id:103,date:"Jul 18",time:"5PM ET",   home:"3rd Place",away:"TBD",venue:"Miami Stadium, Miami",                  group:"",stage:"3rd Place",tv:"FOX"},
-  {id:104,date:"Jul 19",time:"3PM ET",   home:"🏆 Final", away:"TBD",venue:"New York New Jersey Stadium, East Rutherford",group:"",stage:"Final",tv:"FOX"},
+  {id:73, date:"Jun 28",time:"3PM ET",   home:"2A",  away:"2B",venue:"SoFi Stadium, Los Angeles",             group:"",stage:"Round of 32",tv:"FS1 · Peacock · Telemundo"},
+  {id:74, date:"Jun 29",time:"4:30PM ET",home:"1E",  away:"3rd ABCDF",venue:"Boston Stadium, Boston",                group:"",stage:"Round of 32",tv:"FS1 · Peacock · Telemundo"},
+  {id:75, date:"Jun 29",time:"9PM ET",   home:"1F",  away:"2C",venue:"Estadio Monterrey, Guadalupe",          group:"",stage:"Round of 32",tv:"FS1 · Peacock · Telemundo"},
+  {id:76, date:"Jun 29",time:"1PM ET",   home:"1C",  away:"2F",venue:"Houston Stadium, Houston",              group:"",stage:"Round of 32",tv:"FS1 · Peacock · Telemundo"},
+  {id:77, date:"Jun 30",time:"5PM ET",   home:"1I",  away:"3rd CDFGH",venue:"New York New Jersey Stadium, East Rutherford",group:"",stage:"Round of 32",tv:"FS1 · Peacock · Telemundo"},
+  {id:78, date:"Jun 30",time:"1PM ET",   home:"2E",  away:"2I",venue:"Dallas Stadium, Dallas",                group:"",stage:"Round of 32",tv:"FS1 · Peacock · Telemundo"},
+  {id:79, date:"Jun 30",time:"9PM ET",   home:"1A",  away:"3rd CEFHI",venue:"Mexico City Stadium, Mexico City",      group:"",stage:"Round of 32",tv:"FS1 · Peacock · Telemundo"},
+  {id:80, date:"Jul 1", time:"12PM ET",  home:"1L",  away:"3rd EHIJK",venue:"Atlanta Stadium, Atlanta",              group:"",stage:"Round of 32",tv:"FS1 · Peacock · Telemundo"},
+  {id:81, date:"Jul 1", time:"8PM ET",   home:"1D", away:"3rd BEFIJ",venue:"San Francisco Bay Area Stadium, San Francisco",group:"",stage:"Round of 32",tv:"FS1 · Peacock · Telemundo"},
+  {id:82, date:"Jul 1", time:"4PM ET",   home:"1G",  away:"3rd AEHIJ",venue:"Seattle Stadium, Seattle",              group:"",stage:"Round of 32",tv:"FS1 · Peacock · Telemundo"},
+  {id:83, date:"Jul 2", time:"7PM ET",   home:"2K", away:"2L",venue:"Toronto Stadium, Toronto",              group:"",stage:"Round of 32",tv:"FS1 · Peacock · Telemundo"},
+  {id:84, date:"Jul 2", time:"3PM ET",   home:"1H", away:"2J",venue:"SoFi Stadium, Los Angeles",             group:"",stage:"Round of 32",tv:"FS1 · Peacock · Telemundo"},
+  {id:85, date:"Jul 2", time:"11PM ET",  home:"1B", away:"3rd EFGIJ",venue:"BC Place, Vancouver",                   group:"",stage:"Round of 32",tv:"FS1 · Peacock · Telemundo"},
+  {id:86, date:"Jul 3", time:"6PM ET",   home:"1J", away:"2H",venue:"Miami Stadium, Miami",                  group:"",stage:"Round of 32",tv:"FS1 · Peacock · Telemundo"},
+  {id:87, date:"Jul 3", time:"9:30PM ET",home:"1K",  away:"3rd DEIJL",venue:"Kansas City Stadium, Kansas City",      group:"",stage:"Round of 32",tv:"FS1 · Peacock · Telemundo"},
+  {id:88, date:"Jul 3", time:"2PM ET",   home:"2D", away:"2G",venue:"Dallas Stadium, Dallas",                group:"",stage:"Round of 32",tv:"FS1 · Peacock · Telemundo"},
+  {id:89, date:"Jul 4", time:"5PM ET",   home:"R16 M1",  away:"TBD",venue:"Philadelphia Stadium, Philadelphia",    group:"",stage:"Round of 16",tv:"FOX · Peacock · Telemundo"},
+  {id:90, date:"Jul 4", time:"1PM ET",   home:"R16 M2",  away:"TBD",venue:"Houston Stadium, Houston",              group:"",stage:"Round of 16",tv:"FOX · Peacock · Telemundo"},
+  {id:91, date:"Jul 5", time:"4PM ET",   home:"R16 M3",  away:"TBD",venue:"New York New Jersey Stadium, East Rutherford",group:"",stage:"Round of 16",tv:"FOX · Peacock · Telemundo"},
+  {id:92, date:"Jul 5", time:"8PM ET",   home:"R16 M4",  away:"TBD",venue:"Mexico City Stadium, Mexico City",      group:"",stage:"Round of 16",tv:"FOX · Peacock · Telemundo"},
+  {id:93, date:"Jul 6", time:"3PM ET",   home:"R16 M5",  away:"TBD",venue:"Dallas Stadium, Dallas",                group:"",stage:"Round of 16",tv:"FOX · Peacock · Telemundo"},
+  {id:94, date:"Jul 6", time:"8PM ET",   home:"R16 M6",  away:"TBD",venue:"Seattle Stadium, Seattle",              group:"",stage:"Round of 16",tv:"FOX · Peacock · Telemundo"},
+  {id:95, date:"Jul 7", time:"12PM ET",  home:"R16 M7",  away:"TBD",venue:"Atlanta Stadium, Atlanta",              group:"",stage:"Round of 16",tv:"FOX · Peacock · Telemundo"},
+  {id:96, date:"Jul 7", time:"4PM ET",   home:"R16 M8",  away:"TBD",venue:"BC Place, Vancouver",                   group:"",stage:"Round of 16",tv:"FOX · Peacock · Telemundo"},
+  {id:97, date:"Jul 9", time:"4PM ET",   home:"QF M1",   away:"TBD",venue:"Boston Stadium, Boston",                group:"",stage:"Quarter-final",tv:"FOX · Peacock · Telemundo"},
+  {id:98, date:"Jul 10",time:"3PM ET",   home:"QF M2",   away:"TBD",venue:"SoFi Stadium, Los Angeles",             group:"",stage:"Quarter-final",tv:"FOX · Peacock · Telemundo"},
+  {id:99, date:"Jul 11",time:"5PM ET",   home:"QF M3",   away:"TBD",venue:"Miami Stadium, Miami",                  group:"",stage:"Quarter-final",tv:"FOX · Peacock · Telemundo"},
+  {id:100,date:"Jul 11",time:"9PM ET",   home:"QF M4",   away:"TBD",venue:"Kansas City Stadium, Kansas City",      group:"",stage:"Quarter-final",tv:"FOX · Peacock · Telemundo"},
+  {id:101,date:"Jul 14",time:"3PM ET",   home:"SF M1",   away:"TBD",venue:"Dallas Stadium, Dallas",                group:"",stage:"Semi-final",tv:"FOX · Peacock · Telemundo"},
+  {id:102,date:"Jul 15",time:"3PM ET",   home:"SF M2",   away:"TBD",venue:"Atlanta Stadium, Atlanta",              group:"",stage:"Semi-final",tv:"FOX · Peacock · Telemundo"},
+  {id:103,date:"Jul 18",time:"5PM ET",   home:"3rd Place",away:"TBD",venue:"Miami Stadium, Miami",                  group:"",stage:"3rd Place",tv:"FOX · Peacock · Telemundo"},
+  {id:104,date:"Jul 19",time:"3PM ET",   home:"🏆 Final", away:"TBD",venue:"New York New Jersey Stadium, East Rutherford",group:"",stage:"Final",tv:"FOX · Peacock · Telemundo"},
 ];
 
 // ── TEAM DATA ─────────────────────────────────────────────────────────────
@@ -3715,7 +3715,7 @@ function MyBracketTab({ tabTop=116 }) {
   const savedBracket = useMemo(() => readSavedMyBracket(), []);
   const isMobileBracket = typeof window !== "undefined" && window.innerWidth < 520;
   const { allFixtures, getScore, isFinished } = useContext(LiveScoresCtx);
-  const [bracketSource,setBracketSource]=useState("mine"); // "mine" | "actual"
+  const [bracketSource,setBracketSource]=useState("actual"); // "mine" | "actual"
   const [stage,setStage]=useState(()=>savedBracket.stage || (savedBracket.result ? "bracket" : "groups"));
   const [bracketMode,setBracketMode]=useState(()=>savedBracket.bracketMode || "simulation");
   const [playMode,setPlayMode]=useState(()=>savedBracket.playMode || "manual");
@@ -3731,6 +3731,13 @@ function MyBracketTab({ tabTop=116 }) {
   const allThirds=Object.entries(groups).map(([g,teams])=>({group:g,team:teams[2]}));
   const toggleThird=(t)=>{setThirds(p=>p.includes(t)?p.filter(x=>x!==t):[...p,t].slice(0,8));};
   const _mbhRef = useRef(null); const _mbhH = useElemHeight(_mbhRef);
+
+  // Default Bracket tab to the real tournament view. Fantasy/My Bracket remains
+  // available with one tap, but the first view should be the official bracket
+  // during live tournament use.
+  useEffect(() => {
+    setBracketSource("actual");
+  }, []);
 
   // Keep `thirds` (the explicit "qualified 3rd place" selection, tracked by
   // team name) in sync with `groups`. Reordering a group can move a team
