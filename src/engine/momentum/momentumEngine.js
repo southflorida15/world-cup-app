@@ -60,6 +60,67 @@ function smooth(arr, radius = 1) {
   });
 }
 
+function organicBlend(values) {
+  return values.map((v, i) => {
+    const prev = i > 0 ? values[i - 1] : v;
+    const next = i < values.length - 1 ? values[i + 1] : v;
+    // Preserve sign changes, but soften comb-like adjacent jumps when the
+    // same team owns neighboring minutes. This keeps the one-team-per-minute
+    // model while making the chart feel more like a continuous match wave.
+    const samePrev = Math.sign(prev || v) === Math.sign(v || prev);
+    const sameNext = Math.sign(next || v) === Math.sign(v || next);
+    const wp = samePrev ? 0.18 : 0.07;
+    const wn = sameNext ? 0.18 : 0.07;
+    const wc = 1 - wp - wn;
+    return prev * wp + v * wc + next * wn;
+  });
+}
+
+function deterministicVariance(values, seed) {
+  let s = seed >>> 0;
+  return values.map((v, i) => {
+    // Deterministic pseudo-noise, stable for the same match. Small enough to
+    // avoid fake randomness, large enough to prevent identical block heights.
+    s = (s * 1103515245 + 12345 + i) >>> 0;
+    const n = (s / 4294967296) - 0.5;
+    const mag = Math.abs(v);
+    if (mag < 3) return v;
+    const factor = 0.94 + n * 0.16;
+    return v * factor;
+  });
+}
+
+function preserveEventPeaks(values, events = [], match, normTeam) {
+  const out = values.slice();
+  events.forEach(ev => {
+    const min = clamp(safeNum(ev?.time?.elapsed) || 1, 1, 90);
+    const idx = min - 1;
+    const side = eventSide(ev, match, normTeam) === "home" ? 1 : -1;
+    const base = ev.type === "Goal" ? 34 : (ev.type === "Card" && ev.detail === "Red Card") ? 30 : ev.type === "Card" ? 10 : ev.type === "subst" ? 7 : 0;
+    if (!base) return;
+    // Ensure the event minute has a visible peak in the correct direction,
+    // then lightly shape the neighboring minutes so icons feel attached to
+    // the wave rather than pasted on top.
+    if (Math.abs(out[idx]) < base || Math.sign(out[idx]) !== side) out[idx] = side * base;
+    for (const [d, w] of [[-2,0.25],[-1,0.55],[1,0.45],[2,0.18]]) {
+      const j = idx + d;
+      if (j < 0 || j >= out.length) continue;
+      const target = side * base * w;
+      if (Math.abs(out[j]) < Math.abs(target) * 0.8) out[j] += target * 0.65;
+    }
+  });
+  return out;
+}
+
+function finalizeMomentum(values, options, context = {}) {
+  const seed = context.seed ?? 7;
+  let shaped = organicBlend(values);
+  shaped = deterministicVariance(shaped, seed);
+  shaped = preserveEventPeaks(shaped, context.events, context.match, context.normTeam);
+  shaped = organicBlend(shaped);
+  return normalizeSigned(shaped, options);
+}
+
 function rollingAverage(arr, radius = 4) {
   return arr.map((_, i) => {
     let sum = 0;
@@ -172,7 +233,7 @@ function buildRelativeThreatEngine({ match, events = [], stats = {}, normTeam })
   const avg = rollingAverage(direct, 4);
   const relative = direct.map((v, i) => v * 0.78 + (v - avg[i]) * 0.55);
 
-  return normalizeSigned(relative, { power: 0.56, maxOut: 84, floor: 0.8, dead: 0.01 });
+  return finalizeMomentum(relative, { power: 0.54, maxOut: 86, floor: 0.75, dead: 0.012 }, { seed: makeSeed(match, events), events, match, normTeam });
 }
 
 function buildSpikesEngine({ match, events = [], stats = {}, normTeam }) {
@@ -186,13 +247,13 @@ function buildSpikesEngine({ match, events = [], stats = {}, normTeam }) {
   const total = Math.max(1, hp + ap);
   const bias = ((hp - ap) / total) * 3.5;
   const direct = home.map((h, i) => h - away[i] + bias * (0.5 + 0.5 * Math.sin((i + 1) / 6)));
-  return normalizeSigned(smooth(direct, 1), { power: 0.48, maxOut: 86, floor: 0.55, dead: 0.015 });
+  return finalizeMomentum(smooth(direct, 1), { power: 0.48, maxOut: 86, floor: 0.55, dead: 0.018 }, { seed: makeSeed(match, events) ^ 0x51f15e, events, match, normTeam });
 }
 
 function buildBalancedEngine({ match, events = [], momentum = [], stats = {}, normTeam }) {
   if (Array.isArray(momentum) && momentum.length) {
     const rows = momentum.slice(0, 90).map((m, i) => safeNum(m.signed ?? (safeNum(m.home) - safeNum(m.away))));
-    return normalizeSigned(rows, { power: 0.68, maxOut: 78, floor: 0.8, dead: 0.012 });
+    return finalizeMomentum(rows, { power: 0.66, maxOut: 80, floor: 0.75, dead: 0.013 }, { seed: makeSeed(match, events) ^ 0xbadc0de, events, match, normTeam });
   }
 
   const rand = makeRand(makeSeed(match, events) ^ 0x9e3779b9);
@@ -201,7 +262,7 @@ function buildBalancedEngine({ match, events = [], momentum = [], stats = {}, no
   distributeSyntheticEpisodes({ home, away, stats, rand });
   addEventThreat({ home, away, match, events, normTeam });
   const direct = smooth(home, 2).map((h, i) => h - smooth(away, 2)[i]);
-  return normalizeSigned(direct, { power: 0.64, maxOut: 78, floor: 0.8, dead: 0.012 });
+  return finalizeMomentum(direct, { power: 0.62, maxOut: 80, floor: 0.75, dead: 0.013 }, { seed: makeSeed(match, events) ^ 0x9e3779b9, events, match, normTeam });
 }
 
 export function buildMomentumEngineRows({ match, events = [], momentum = [], stats = {}, normTeam }) {

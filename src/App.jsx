@@ -6329,6 +6329,19 @@ function MatchMomentum({ match, events=[], momentum=[], stats, C }) {
   })();
 
   const peak = compact.reduce((a,b)=>Math.abs(b.signed)>Math.abs(a.signed)?b:a,{minute:1,signed:0,side:"even"});
+  const strongestSpell = (() => {
+    const windowSize = 5;
+    let best = { side:"even", start:1, end:5, score:0 };
+    for (let i = 0; i <= Math.max(0, compact.length - windowSize); i++) {
+      const slice = compact.slice(i, i + windowSize);
+      const sum = slice.reduce((a,b)=>a + (b.signed || 0), 0);
+      const avg = sum / windowSize;
+      const side = avg >= 0 ? "home" : "away";
+      const score = Math.abs(avg);
+      if (score > best.score) best = { side, start:i + 1, end:i + windowSize, score };
+    }
+    return best;
+  })();
   const swing = compact.reduce((best, b, i, arr) => {
     if (i === 0) return best;
     const change = Math.abs((b.signed || 0) - (arr[i-1].signed || 0));
@@ -6412,9 +6425,9 @@ function MatchMomentum({ match, events=[], momentum=[], stats, C }) {
 
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
         <div style={{background:C.s1,border:`1px solid ${C.b1}`,borderRadius:10,padding:10}}>
-          <div style={{fontSize:10,color:C.dim,fontWeight:800}}>HIGHEST PRESSURE</div>
-          <div style={{fontSize:12,color:sideColor(peak.side),fontWeight:900}}>{sideName(peak.side)}</div>
-          <div style={{fontSize:11,color:C.mid}}>{peak.minute}'</div>
+          <div style={{fontSize:10,color:C.dim,fontWeight:800}}>STRONGEST SPELL</div>
+          <div style={{fontSize:12,color:sideColor(strongestSpell.side),fontWeight:900}}>{sideName(strongestSpell.side)}</div>
+          <div style={{fontSize:11,color:C.mid}}>{strongestSpell.start}'–{strongestSpell.end}'</div>
         </div>
         <div style={{background:C.s1,border:`1px solid ${C.b1}`,borderRadius:10,padding:10}}>
           <div style={{fontSize:10,color:C.dim,fontWeight:800}}>LONGEST RUN</div>
