@@ -85,7 +85,7 @@ function deterministicVariance(values, seed) {
     const n = (s / 4294967296) - 0.5;
     const mag = Math.abs(v);
     if (mag < 3) return v;
-    const factor = 0.94 + n * 0.16;
+    const factor = 0.86 + n * 0.32;
     return v * factor;
   });
 }
@@ -96,7 +96,7 @@ function preserveEventPeaks(values, events = [], match, normTeam) {
     const min = clamp(safeNum(ev?.time?.elapsed) || 1, 1, 90);
     const idx = min - 1;
     const side = eventSide(ev, match, normTeam) === "home" ? 1 : -1;
-    const base = ev.type === "Goal" ? 34 : (ev.type === "Card" && ev.detail === "Red Card") ? 30 : ev.type === "Card" ? 10 : ev.type === "subst" ? 7 : 0;
+    const base = ev.type === "Goal" ? 46 : (ev.type === "Card" && ev.detail === "Red Card") ? 42 : ev.type === "Card" ? 16 : ev.type === "subst" ? 7 : 0;
     if (!base) return;
     // Ensure the event minute has a visible peak in the correct direction,
     // then lightly shape the neighboring minutes so icons feel attached to
@@ -231,9 +231,15 @@ function buildRelativeThreatEngine({ match, events = [], stats = {}, normTeam })
   // dominance. This prevents possession-heavy teams from creating a permanent
   // wall above the baseline.
   const avg = rollingAverage(direct, 4);
-  const relative = direct.map((v, i) => v * 0.78 + (v - avg[i]) * 0.55);
+  const relative = direct.map((v, i) => {
+    const local = v - avg[i];
+    // Make the chart read like minute-by-minute relative threat, not a
+    // possession wall. The local component drives visible waves; the direct
+    // component preserves match ownership.
+    return v * 0.36 + local * 1.05;
+  });
 
-  return finalizeMomentum(relative, { power: 0.54, maxOut: 86, floor: 0.75, dead: 0.012 }, { seed: makeSeed(match, events), events, match, normTeam });
+  return finalizeMomentum(relative, { power: 0.76, maxOut: 88, floor: 0.45, dead: 0.022 }, { seed: makeSeed(match, events), events, match, normTeam });
 }
 
 function buildSpikesEngine({ match, events = [], stats = {}, normTeam }) {

@@ -6356,7 +6356,7 @@ function MatchMomentum({ match, events=[], momentum=[], stats, C }) {
   const engineMeta = {
     balanced: "Balanced wave · safest fallback",
     spikes: "Local spikes · no long memory",
-    hybrid: "Hybrid wave · current candidate",
+    hybrid: "Hybrid wave v2 · organic threat",
   };
 
   return (
