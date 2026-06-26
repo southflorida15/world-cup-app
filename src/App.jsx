@@ -6168,12 +6168,22 @@ function MatchMomentum({ match, events=[], commentary=[], momentum=[], stats, C 
     return { ...b, home, away };
   });
 
-  // Render every minute. Earlier versions visually grouped two-minute chunks,
-  // which made the signal feel closer to a 2–3 minute plot instead of ESPN's
-  // granular minute-by-minute momentum chart.
-  const compact = smoothed;
+  // Render every minute as ONE signed momentum value.
+  // Positive = home had the momentum. Negative = away had the momentum.
+  // This matches the professional match-control model: each minute belongs
+  // to one side, not both colors at the same time.
+  const compact = smoothed.map(b => {
+    const diff = (Number(b.home) || 0) - (Number(b.away) || 0);
+    const abs = Math.abs(diff);
+    return {
+      ...b,
+      signed: Math.abs(diff) < 0.18 ? 0 : diff,
+      side: Math.abs(diff) < 0.18 ? "even" : diff > 0 ? "home" : "away",
+      strength: abs,
+    };
+  });
 
-  const maxVal = Math.max(1, ...compact.flatMap(b => [b.home, b.away]));
+  const maxVal = Math.max(1, ...compact.map(b => Math.abs(b.signed || 0)));
   const goals = safeEvents.filter(e => e.type === "Goal");
   const cards = safeEvents.filter(e => e.type === "Card");
   const subs = safeEvents.filter(e => e.type === "subst");
@@ -6194,7 +6204,7 @@ function MatchMomentum({ match, events=[], commentary=[], momentum=[], stats, C 
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,gap:8}}>
           <div>
             <div style={{fontSize:12,fontWeight:900,color:C.green,letterSpacing:".08em"}}>MATCH MOMENTUM</div>
-            <div style={{fontSize:11,color:C.dim}}>ESPN stats-informed pressure · goals, cards and substitutions on the line</div>
+            <div style={{fontSize:11,color:C.dim}}>Signed one-team-per-minute pressure · events pinned to the center line</div>
           </div>
           <div style={{fontSize:11,color:C.mid,textAlign:"right"}}>{goals.length} ⚽ · {cards.length} cards · {subs.length} subs</div>
         </div>
@@ -6203,12 +6213,18 @@ function MatchMomentum({ match, events=[], commentary=[], momentum=[], stats, C 
           <div style={{position:"absolute",left:0,right:0,top:"50%",height:1,background:C.b2,opacity:.8}} />
           <div style={{height:126,display:"flex",alignItems:"stretch",gap:1}}>
             {compact.map((b, i) => {
-              const h = Math.max(2, Math.round((b.home / maxVal) * 56));
-              const a = Math.max(2, Math.round((b.away / maxVal) * 56));
+              const magnitude = Math.max(2, Math.round((Math.abs(b.signed || 0) / maxVal) * 56));
+              const isHomeMinute = b.side === "home";
+              const isAwayMinute = b.side === "away";
+              const title = b.side === "even" ? `${b.minute}' · balanced` : `${b.minute}' · ${isHomeMinute ? match.home : match.away} momentum`;
               return (
-                <div key={i} title={`${b.minute}'`} style={{flex:1,display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"stretch",gap:1,minWidth:0}}>
-                  <div style={{height:62,display:"flex",alignItems:"flex-end"}}><div style={{width:"100%",height:h,background:C.green,borderRadius:"3px 3px 1px 1px",opacity:.82}} /></div>
-                  <div style={{height:62,display:"flex",alignItems:"flex-start"}}><div style={{width:"100%",height:a,background:C.rival,borderRadius:"1px 1px 3px 3px",opacity:.82}} /></div>
+                <div key={i} title={title} style={{flex:1,display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"stretch",gap:1,minWidth:0}}>
+                  <div style={{height:62,display:"flex",alignItems:"flex-end"}}>
+                    {isHomeMinute ? <div style={{width:"100%",height:magnitude,background:C.green,borderRadius:"3px 3px 1px 1px",opacity:.86}} /> : <div style={{width:"100%",height:2,background:C.b2,opacity:.28,borderRadius:2}} />}
+                  </div>
+                  <div style={{height:62,display:"flex",alignItems:"flex-start"}}>
+                    {isAwayMinute ? <div style={{width:"100%",height:magnitude,background:C.rival,borderRadius:"1px 1px 3px 3px",opacity:.86}} /> : <div style={{width:"100%",height:2,background:C.b2,opacity:.28,borderRadius:2}} />}
+                  </div>
                 </div>
               );
             })}
@@ -6217,10 +6233,8 @@ function MatchMomentum({ match, events=[], commentary=[], momentum=[], stats, C 
           {safeEvents.filter(ev => ["Goal","Card","subst"].includes(ev.type)).map((ev, i) => {
             const min = Math.max(1, Math.min(90, Number(ev.time?.elapsed) || 1));
             const left = `${((min - 1) / 89) * 100}%`;
-            const isHome = normTeam(ev.team?.name || "") === match.home;
-            const marker = { ...ev, isHome, min };
             return (
-              <div key={i} title={`${min}' ${ev.team?.name || ""} · ${ev.detail || ev.type} · ${ev.player?.name || ""}`} style={{position:"absolute",left,top:markerTop(marker),transform:"translate(-50%,-50%)",fontSize:ev.type==="Goal"?17:13,lineHeight:1,filter:"drop-shadow(0 1px 2px rgba(0,0,0,.8))",zIndex:3}}>
+              <div key={i} title={`${min}' ${ev.team?.name || ""} · ${ev.detail || ev.type} · ${ev.player?.name || ""}`} style={{position:"absolute",left,top:"50%",transform:"translate(-50%,-50%)",fontSize:ev.type==="Goal"?17:13,lineHeight:1,filter:"drop-shadow(0 1px 2px rgba(0,0,0,.8))",zIndex:3}}>
                 {eventIcon(ev)}
               </div>
             );
