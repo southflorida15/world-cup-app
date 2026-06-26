@@ -57,9 +57,9 @@ async function loadFromKV(home, away) {
 
 const SCORERS_AGGREGATE_KEY = "wc2026:scorers_aggregate";
 
-async function saveToKV(home, away, events, stats, lineups=null) {
+async function saveToKV(home, away, events, stats, lineups=null, commentary=[]) {
   try {
-    await kv.set(kvKey(home, away), { events, stats, lineups, savedAt: Date.now() });
+    await kv.set(kvKey(home, away), { events, stats, lineups, commentary, savedAt: Date.now() });
     console.log(`[matchevents] Persisted ${events.length} events for ${home} vs ${away}`);
   } catch(e) {
     console.warn("[matchevents] KV save:", e.message);
@@ -377,6 +377,33 @@ function parseEvents(data, homeTeam) {
   });
 
   return deduped.sort((a, b) => (a.time?.elapsed || 0) - (b.time?.elapsed || 0));
+}
+
+function parseCommentary(data) {
+  const raw = data.commentary || data.commentaries || [];
+  if (!Array.isArray(raw)) return [];
+
+  return raw.map(item => {
+    const clock = item.clock || item.time || {};
+    const elapsed = clock.displayValue
+      ? parseInt(clock.displayValue, 10)
+      : clock.value ? Math.round(clock.value / 60)
+      : item.minute ?? item.time?.elapsed ?? null;
+
+    const typeText = item.type?.text || item.type?.type || item.type || "";
+    const text = item.text || item.commentary || item.description || item.shortText || "";
+    const team = normESPN(item.team?.displayName || item.team?.name || "");
+
+    return {
+      time: { elapsed: Number.isFinite(elapsed) ? elapsed : null, display: clock.displayValue || (elapsed ? `${elapsed}'` : "") },
+      type: typeText,
+      team: team || null,
+      text,
+    };
+  })
+  .filter(x => x.text)
+  .sort((a, b) => (b.time?.elapsed || 0) - (a.time?.elapsed || 0))
+  .slice(0, 80);
 }
 
 // ── Scorers aggregator ────────────────────────────────────────────────────
@@ -844,10 +871,11 @@ export default async function handler(req, res) {
         ? "public, max-age=3600, s-maxage=3600"
         : "public, max-age=15, s-maxage=20, stale-while-revalidate=30");
       return res.status(200).json({
-  events: memCached.events,
-  stats: memCached.stats,
-  lineups: memCached.lineups || null
-});
+        events: memCached.events,
+        stats: memCached.stats,
+        lineups: memCached.lineups || null,
+        commentary: memCached.commentary || []
+      });
     }
   }
 
@@ -859,7 +887,7 @@ export default async function handler(req, res) {
       memCache[cacheKey] = { ...persisted, isDone: true, ts: Date.now() };
       // Finished match — data is permanent, cache aggressively.
       res.setHeader("Cache-Control", "public, max-age=3600, s-maxage=3600");
-      return res.status(200).json({ events: persisted.events, stats: persisted.stats, lineups: persisted.lineups || null });
+      return res.status(200).json({ events: persisted.events, stats: persisted.stats, lineups: persisted.lineups || null, commentary: persisted.commentary || [] });
     }
   }
 
@@ -912,6 +940,7 @@ export default async function handler(req, res) {
     const events = parseEvents(data, home);
     const stats = parseStats(data.boxscore, home);
     const lineups = parseLineups(data, home);
+    const commentary = parseCommentary(data);
 
     console.log(`[matchevents] ${home} vs ${away}: ${events.length} events, stats=${!!stats}, lineups=${!!lineups}, status=${statusType}`);
 
@@ -920,7 +949,7 @@ export default async function handler(req, res) {
     // is done forever" and serves it with a 1-hour TTL, so live data must
     // never be written here).
     if (isDone && events.length > 0) {
-      await saveToKV(home, away, events, stats, lineups);
+      await saveToKV(home, away, events, stats, lineups, commentary);
     } else if (isLive && events.length > 0) {
       // Was: a goal scored mid-match never reached the Stats tab's live
       // scorers total until the match fully ended — even though this
@@ -934,11 +963,11 @@ export default async function handler(req, res) {
 
     // Cache lineups pre-match with short TTL (5min) so we pick them up when published
     const TTL_PREMATCH_LINEUPS = 5 * 60 * 1000;
-    memCache[cacheKey] = { events, stats, lineups, isDone, isLive, ts: Date.now(), ttlOverride: isPrematch && lineups ? TTL_PREMATCH_LINEUPS : null };
+    memCache[cacheKey] = { events, stats, lineups, commentary, isDone, isLive, ts: Date.now(), ttlOverride: isPrematch && lineups ? TTL_PREMATCH_LINEUPS : null };
     res.setHeader("Cache-Control", isDone
       ? "public, max-age=3600, s-maxage=3600"
       : "public, max-age=15, s-maxage=20, stale-while-revalidate=30");
-    return res.status(200).json({ events, stats, lineups });
+    return res.status(200).json({ events, stats, lineups, commentary });
 
   } catch(e) {
     console.error("[matchevents] Error:", e.message);

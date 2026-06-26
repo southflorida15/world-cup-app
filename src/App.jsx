@@ -6128,14 +6128,129 @@ function WeatherBadge({ lat, lon }) {
   );
 }
 
+
+function MatchMomentum({ match, events=[], commentary=[], stats, C }) {
+  const safeEvents = Array.isArray(events) ? events : [];
+  const safeCommentary = Array.isArray(commentary) ? commentary : [];
+  const buckets = Array.from({ length: 18 }, (_, i) => ({ start: i * 5 + 1, home: 0, away: 0, markers: [] }));
+
+  safeEvents.forEach(ev => {
+    const min = Math.max(1, Math.min(90, Number(ev.time?.elapsed) || 1));
+    const idx = Math.min(17, Math.floor((min - 1) / 5));
+    const isHome = normTeam(ev.team?.name || "") === match.home;
+    const weight = ev.type === "Goal" ? 5 : ev.type === "Card" ? (ev.detail === "Red Card" ? 4 : 2) : ev.type === "subst" ? 1 : 1;
+    buckets[idx][isHome ? "home" : "away"] += weight;
+    buckets[idx].markers.push({ ...ev, isHome, min });
+  });
+
+  // Smooth the sparse event feed into a lightweight momentum shape.
+  for (let i = 0; i < buckets.length; i++) {
+    const prev = buckets[i - 1];
+    const next = buckets[i + 1];
+    if (prev) { buckets[i].home += prev.home * 0.35; buckets[i].away += prev.away * 0.35; }
+    if (next) { buckets[i].home += next.home * 0.20; buckets[i].away += next.away * 0.20; }
+    buckets[i].home += 0.35;
+    buckets[i].away += 0.35;
+  }
+
+  const maxVal = Math.max(1, ...buckets.flatMap(b => [b.home, b.away]));
+  const goals = safeEvents.filter(e => e.type === "Goal");
+  const cards = safeEvents.filter(e => e.type === "Card");
+  const latest = safeCommentary.slice(0, 12);
+  const statLine = stats?.home && stats?.away ? [
+    ["Possession", stats.home.possession, stats.away.possession, "%"],
+    ["Shots", stats.home.shots, stats.away.shots, ""],
+    ["On Target", stats.home.shotsOn, stats.away.shotsOn, ""],
+    ["Corners", stats.home.corners, stats.away.corners, ""],
+  ].filter(([,h,a]) => h !== undefined && a !== undefined && h !== null && a !== null) : [];
+
+  const eventIcon = ev => ev.type === "Goal" ? "⚽" : ev.type === "Card" ? (ev.detail === "Red Card" ? "🟥" : "🟨") : ev.type === "subst" ? "🔄" : "•";
+
+  return (
+    <div style={{marginBottom:12}}>
+      <div style={{background:C.s1,border:`1px solid ${C.b1}`,borderRadius:12,padding:12,marginBottom:10}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,gap:8}}>
+          <div>
+            <div style={{fontSize:12,fontWeight:900,color:C.green,letterSpacing:".08em"}}>MATCH MOMENTUM</div>
+            <div style={{fontSize:11,color:C.dim}}>Event-driven pilot · goals, cards and substitutions</div>
+          </div>
+          <div style={{fontSize:11,color:C.mid,textAlign:"right"}}>{goals.length} goals · {cards.length} cards</div>
+        </div>
+
+        <div style={{height:126,display:"flex",alignItems:"stretch",gap:3,borderTop:`1px solid ${C.b1}`,borderBottom:`1px solid ${C.b1}`,padding:"8px 0",position:"relative"}}>
+          <div style={{position:"absolute",left:0,right:0,top:"50%",height:1,background:C.b2,opacity:.8}} />
+          {buckets.map((b, i) => {
+            const h = Math.max(4, Math.round((b.home / maxVal) * 50));
+            const a = Math.max(4, Math.round((b.away / maxVal) * 50));
+            return (
+              <div key={i} title={`${b.start}-${b.start+4}'`} style={{flex:1,display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"stretch",gap:1,minWidth:0}}>
+                <div style={{height:58,display:"flex",alignItems:"flex-end"}}><div style={{width:"100%",height:h,background:C.green,borderRadius:"4px 4px 1px 1px",opacity:.85}} /></div>
+                <div style={{height:58,display:"flex",alignItems:"flex-start"}}><div style={{width:"100%",height:a,background:C.rival,borderRadius:"1px 1px 4px 4px",opacity:.85}} /></div>
+              </div>
+            );
+          })}
+        </div>
+        <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:C.dim,marginTop:5}}><span>1'</span><span>HT</span><span>90'</span></div>
+
+        {safeEvents.length > 0 && (
+          <div style={{marginTop:10,display:"flex",flexWrap:"wrap",gap:6}}>
+            {safeEvents.filter(e => e.type === "Goal" || e.type === "Card").slice(0, 10).map((ev, i) => (
+              <div key={i} style={{fontSize:11,padding:"3px 7px",borderRadius:999,background:C.s2,border:`1px solid ${C.b1}`,color:C.text}}>
+                {eventIcon(ev)} {ev.time?.elapsed}' {ev.player?.name || ev.team?.name}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {statLine.length > 0 && (
+        <div style={{background:C.s1,border:`1px solid ${C.b1}`,borderRadius:12,padding:12,marginBottom:10}}>
+          <div style={{fontSize:12,fontWeight:900,color:C.green,letterSpacing:".08em",marginBottom:8}}>MATCH CONTROL</div>
+          {statLine.map(([label, h, a, unit]) => {
+            const total = (Number(h) || 0) + (Number(a) || 0) || 1;
+            const hp = Math.round((Number(h) / total) * 100);
+            return (
+              <div key={label} style={{marginBottom:8}}>
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:11,marginBottom:3}}>
+                  <span style={{color:C.green,fontWeight:800}}>{h}{unit}</span>
+                  <span style={{color:C.dim}}>{label}</span>
+                  <span style={{color:C.rival,fontWeight:800}}>{a}{unit}</span>
+                </div>
+                <div style={{height:5,background:C.s2,borderRadius:999,overflow:"hidden",display:"flex"}}>
+                  <div style={{width:`${hp}%`,background:C.green}} />
+                  <div style={{flex:1,background:C.rival}} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div style={{background:C.s1,border:`1px solid ${C.b1}`,borderRadius:12,padding:12}}>
+        <div style={{fontSize:12,fontWeight:900,color:C.green,letterSpacing:".08em",marginBottom:8}}>COMMENTARY</div>
+        {latest.length > 0 ? latest.map((c, i) => (
+          <div key={i} style={{display:"flex",gap:8,padding:"7px 0",borderBottom:i<latest.length-1?`1px solid ${C.b1}`:"none"}}>
+            <div style={{fontSize:11,color:C.gold,fontWeight:800,minWidth:38,textAlign:"right"}}>{c.time?.display || (c.time?.elapsed ? `${c.time.elapsed}'` : "—")}</div>
+            <div style={{fontSize:12,color:C.text,lineHeight:1.35,flex:1}}>{c.text}</div>
+          </div>
+        )) : (
+          <div style={{fontSize:12,color:C.dim,textAlign:"center",padding:"10px 0"}}>No ESPN commentary available for this match yet.</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), userPredHg, userPredAg }) {
   const [events, setEvents] = useState(null);
   const [matchStats, setMatchStats] = useState(null);
   const [lineups, setLineups] = useState(null);
+  const [commentary, setCommentary] = useState([]);
   const [loading, setLoading] = useState(false);
   const [evOpen, setEvOpen] = useState(true);
   const [lineupsOpen, setLineupsOpen] = useState(false);
   const [statsOpen, setStatsOpen] = useState(false);
+  const [momentumOpen, setMomentumOpen] = useState(false);
   const [evFilter, setEvFilter] = useState(["Goal","Card","subst"]);
   const modalRef = useRef(null);
   const { getScore } = useContext(LiveScoresCtx);
@@ -6160,12 +6275,13 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
 
   useEffect(() => {
     if (!open || !match) return;
-    setEvents(null); setLoading(true); setEvOpen(true); setEvFilter(["Goal","Card","subst"]); setLineups(null); setLineupsOpen(false); setStatsOpen(false);
+    setEvents(null); setLoading(true); setEvOpen(true); setEvFilter(["Goal","Card","subst"]); setLineups(null); setCommentary([]); setLineupsOpen(false); setStatsOpen(false); setMomentumOpen(false);
     fetchMatchEvents(`${match.home}|${match.away}`)
       .then(d => {
         setEvents(d?.events || []);
         setMatchStats(d?.stats || null);
         setLineups(d?.lineups || null);
+        setCommentary(d?.commentary || []);
         setLoading(false);
         // Auto-open most useful section
         const sc = getScore(match.home, match.away);
@@ -6428,13 +6544,15 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
             );
             return (
               <div style={{display:"flex",gap:8,marginBottom:14}}>
-                {["Lineups", timelineLabel, "Match Stats"].map((label, i) => {
+                {["Lineups", timelineLabel, "Match Stats", "Momentum"].map((label, i) => {
+                  const hasMomentum = isPlayed && ((events && events.length > 0) || (commentary && commentary.length > 0) || matchStats);
                   const [active, toggle, disabled] = [
-                    [lineupsOpen, ()=>setLineupsOpen(o=>!o), !hasLineups],
-                    [evOpen,      ()=>setEvOpen(o=>!o),      !hasTimeline],
-                    [statsOpen,   ()=>setStatsOpen(o=>!o),   !hasStats],
+                    [lineupsOpen,  ()=>setLineupsOpen(o=>!o),  !hasLineups],
+                    [evOpen,       ()=>setEvOpen(o=>!o),       !hasTimeline],
+                    [statsOpen,    ()=>setStatsOpen(o=>!o),    !hasStats],
+                    [momentumOpen, ()=>setMomentumOpen(o=>!o), !hasMomentum],
                   ][i];
-                  const flexes = [0.8, 2, 1];
+                  const flexes = [0.85, 1.55, 1.05, 1.05];
                   return (
                     <button key={label} onClick={disabled ? undefined : toggle} style={{flex:flexes[i],padding:"6px 4px",borderRadius:999,border:`1.5px solid ${active?C.green:disabled?C.b1:C.b2}`,background:active?`${C.green}18`:C.s2,color:active?C.green:disabled?C.dim:C.mid,fontSize:12,fontWeight:700,cursor:disabled?"default":"pointer",opacity:disabled?0.4:1,transition:"all .15s",textAlign:"center",whiteSpace:"nowrap"}}>
                       {label}
@@ -6515,6 +6633,11 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
                 );
               })}
             </div>
+          )}
+
+          {/* ── MOMENTUM + COMMENTARY ── */}
+          {isPlayed && momentumOpen && (
+            <MatchMomentum match={match} events={events || []} commentary={commentary || []} stats={matchStats} C={C} />
           )}
 
           {/* ── MATCH EVENTS ── */}
