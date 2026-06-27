@@ -6201,7 +6201,7 @@ function WeatherBadge({ lat, lon }) {
 }
 
 
-function MatchMomentum({ match, events=[], momentum=[], stats, C }) {
+function MatchMomentum({ match, events=[], momentum=[], stats, C, score=null }) {
   const safeEvents = Array.isArray(events) ? events : [];
   const safeMomentum = Array.isArray(momentum) ? momentum : [];
   const [engine, setEngine] = useState("hybrid");
@@ -6373,18 +6373,38 @@ function MatchMomentum({ match, events=[], momentum=[], stats, C }) {
   }), [safeEvents, safeMomentum, stats, match.home, match.away]);
 
   const rows = engineRows[engine] || engineRows.hybrid;
-  const compact = rows.map((b, i) => {
-    let signed = Number(b.signed) || 0;
-    return { minute: Number(b.minute) || i + 1, signed, side: signed >= 0 ? "home" : "away" };
+
+  // Live matches should never show future momentum or full-time insights.
+  // The engine can produce a full 90-minute synthetic shape, but during 1H/HT/2H
+  // we only reveal and calculate from the minutes that have actually happened.
+  const scoreStatus = score?.status || score?.fixture?.status?.short || "";
+  const isLiveMatch = statusIsLive(scoreStatus);
+  const isFinishedMatch = statusIsFinished(scoreStatus);
+  const eventMaxMinute = safeEvents.reduce((m, ev) => Math.max(m, Number(ev.time?.elapsed) || 0), 0);
+  const reportedElapsed = Number(score?.elapsed ?? score?.time?.elapsed ?? 0) || 0;
+  const liveCutoff = isFinishedMatch
+    ? 90
+    : isLiveMatch
+      ? clamp(reportedElapsed || (scoreStatus === "HT" ? 45 : eventMaxMinute || 1), 1, 90)
+      : 90;
+  const showSoFar = isLiveMatch && !isFinishedMatch;
+
+  const compactFull = rows.map((b, i) => {
+    const signed = Number(b.signed) || 0;
+    const side = Math.abs(signed) < 0.01 ? "even" : signed >= 0 ? "home" : "away";
+    return { minute: Number(b.minute) || i + 1, signed, side };
   });
+  const compact = compactFull.map(b => b.minute <= liveCutoff ? b : { ...b, signed:0, side:"even", future:true });
+  const visibleCompact = compactFull.filter(b => b.minute <= liveCutoff);
 
   const markersByMinute = Array.from({ length: 90 }, () => []);
   safeEvents.filter(ev => ["Goal","Card","subst"].includes(ev.type)).sort((a,b)=>eventWeight(b)-eventWeight(a)).forEach(ev => {
     const min = Math.max(1, Math.min(90, Number(ev.time?.elapsed) || 1));
+    if (min > liveCutoff) return;
     markersByMinute[min - 1].push({ ...ev, min, isHome: normTeam(ev.team?.name || "") === match.home });
   });
 
-  const maxVal = Math.max(12, ...compact.map(b => Math.abs(b.signed || 0)));
+  const maxVal = Math.max(12, ...visibleCompact.map(b => Math.abs(b.signed || 0)));
   const goals = safeEvents.filter(e => e.type === "Goal");
   const cards = safeEvents.filter(e => e.type === "Card");
   const yellowCards = cards.filter(e => e.detail !== "Red Card");
@@ -6394,7 +6414,7 @@ function MatchMomentum({ match, events=[], momentum=[], stats, C }) {
 
   const longestRun = (() => {
     let best = { side:"even", len:0, start:1 }, cur = { side:"even", len:0, start:1 };
-    compact.forEach((b, i) => {
+    visibleCompact.forEach((b, i) => {
       if (b.side !== "even" && b.side === cur.side) cur.len += 1;
       else cur = { side:b.side, len:b.side === "even" ? 0 : 1, start:i + 1 };
       if (cur.len > best.len) best = { ...cur };
@@ -6402,12 +6422,12 @@ function MatchMomentum({ match, events=[], momentum=[], stats, C }) {
     return best;
   })();
 
-  const peak = compact.reduce((a,b)=>Math.abs(b.signed)>Math.abs(a.signed)?b:a,{minute:1,signed:0,side:"even"});
+  const peak = visibleCompact.reduce((a,b)=>Math.abs(b.signed)>Math.abs(a.signed)?b:a,{minute:1,signed:0,side:"even"});
   const strongestSpell = (() => {
     const windowSize = 5;
     let best = { side:"even", start:1, end:5, score:0 };
-    for (let i = 0; i <= Math.max(0, compact.length - windowSize); i++) {
-      const slice = compact.slice(i, i + windowSize);
+    for (let i = 0; i <= Math.max(0, visibleCompact.length - windowSize); i++) {
+      const slice = visibleCompact.slice(i, i + windowSize);
       const sum = slice.reduce((a,b)=>a + (b.signed || 0), 0);
       const avg = sum / windowSize;
       const side = avg >= 0 ? "home" : "away";
@@ -6416,7 +6436,7 @@ function MatchMomentum({ match, events=[], momentum=[], stats, C }) {
     }
     return best;
   })();
-  const swing = compact.reduce((best, b, i, arr) => {
+  const swing = visibleCompact.reduce((best, b, i, arr) => {
     if (i === 0) return best;
     const change = Math.abs((b.signed || 0) - (arr[i-1].signed || 0));
     return change > best.change ? { minute:b.minute, change, from:arr[i-1], to:b } : best;
@@ -6499,17 +6519,17 @@ function MatchMomentum({ match, events=[], momentum=[], stats, C }) {
 
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
         <div style={{background:C.s1,border:`1px solid ${C.b1}`,borderRadius:10,padding:10}}>
-          <div style={{fontSize:10,color:C.dim,fontWeight:800}}>⚡ STRONGEST SPELL</div>
+          <div style={{fontSize:10,color:C.dim,fontWeight:800}}>{showSoFar ? "⚡ STRONGEST SPELL (SO FAR)" : "⚡ STRONGEST SPELL"}</div>
           <div style={{fontSize:12,color:sideColor(strongestSpell.side),fontWeight:900}}>{sideName(strongestSpell.side)}</div>
           <div style={{fontSize:11,color:C.mid}}>{strongestSpell.start}'–{strongestSpell.end}'</div>
         </div>
         <div style={{background:C.s1,border:`1px solid ${C.b1}`,borderRadius:10,padding:10}}>
-          <div style={{fontSize:10,color:C.dim,fontWeight:800}}>📈 LONGEST CONTROL</div>
+          <div style={{fontSize:10,color:C.dim,fontWeight:800}}>{showSoFar ? "📈 LONGEST CONTROL (SO FAR)" : "📈 LONGEST CONTROL"}</div>
           <div style={{fontSize:12,color:sideColor(longestRun.side),fontWeight:900}}>{sideName(longestRun.side)}</div>
           <div style={{fontSize:11,color:C.mid}}>{longestRun.len} min</div>
         </div>
         <div style={{background:C.s1,border:`1px solid ${C.b1}`,borderRadius:10,padding:10}}>
-          <div style={{fontSize:10,color:C.dim,fontWeight:800}}>🔥 BIGGEST SWING</div>
+          <div style={{fontSize:10,color:C.dim,fontWeight:800}}>{showSoFar ? "🔥 BIGGEST SWING (SO FAR)" : "🔥 BIGGEST SWING"}</div>
           <div style={{fontSize:12,color:C.text,fontWeight:900}}>{swing.minute}'</div>
           <div style={{fontSize:11,color:C.mid}}>{Math.round(swing.change)} pt swing</div>
         </div>
@@ -6974,7 +6994,7 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
 
           {/* ── INSIGHTS / MATCH FLOW ── */}
           {isPlayed && momentumOpen && (
-            <MatchMomentum match={match} events={events || []} momentum={momentumData || []} stats={matchStats} C={C} />
+            <MatchMomentum match={match} events={events || []} momentum={momentumData || []} stats={matchStats} C={C} score={sc} />
           )}
 
 
