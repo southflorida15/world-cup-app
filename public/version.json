@@ -1,6 +1,10 @@
 {
-  "version": "3.1.0",
-  "name": "Match OG Insights",
+  "appVersion": "3.2.0",
+  "version": "3.2.0",
+  "refreshVersion": "10",
+  "releaseName": "My World Cup",
+  "releaseDate": "2026-06-26",
   "released": "2026-06-26",
-  "summary": "Insights, Match Flow, dedicated Commentary, improved card indicators, and Match OG refinements."
+  "forceRefresh": true,
+  "message": "Updating your World Cup app with the latest personalized tournament dashboard and live stats fixes."
 }

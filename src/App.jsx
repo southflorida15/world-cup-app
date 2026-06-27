@@ -903,9 +903,75 @@ function auditMatchSchedule() {
 const SCHEDULE_AUDIT_ISSUES = auditMatchSchedule();
 // ----------------------------------------------------------------------------
 
-const APP_VERSION = "3.1.0";
-const APP_RELEASE_NAME = "Match OG Insights";
+const APP_VERSION = "3.2.0";
+const APP_RELEASE_NAME = "My World Cup";
 const APP_DATE = "2026-06-26";
+
+// Runtime release control.
+// APP_VERSION is visible to users. APP_REFRESH_VERSION is the cache/reload key.
+// Bump refreshVersion in public/version.json only when users should get a full app refresh.
+const APP_REFRESH_VERSION = "10";
+const APP_REFRESH_STORAGE_KEY = "wc2026_refresh_version";
+
+async function clearBrowserRuntimeCaches() {
+  try {
+    if (typeof caches !== "undefined" && caches?.keys) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
+  } catch (e) {
+    console.warn("[version] Cache cleanup failed", e);
+  }
+}
+
+function withRefreshParam(url, refreshVersion) {
+  try {
+    const u = new URL(url);
+    u.searchParams.set("refresh", String(refreshVersion || Date.now()));
+    return u.toString();
+  } catch {
+    return url;
+  }
+}
+
+async function checkForceRefreshVersion(onUpdateAvailable) {
+  try {
+    const res = await fetch(`/version.json?t=${Date.now()}`, { cache: "no-store" });
+    if (!res.ok) return;
+    const data = await res.json();
+    const remoteRefreshVersion = String(data.refreshVersion || data.forceRefreshVersion || data.version || data.appVersion || APP_REFRESH_VERSION);
+    if (!remoteRefreshVersion) return;
+
+    const savedRefreshVersion = localStorage.getItem(APP_REFRESH_STORAGE_KEY);
+
+    // First visit/device after this feature: store the current key but do not reload.
+    if (!savedRefreshVersion) {
+      localStorage.setItem(APP_REFRESH_STORAGE_KEY, remoteRefreshVersion);
+      return;
+    }
+
+    if (savedRefreshVersion !== remoteRefreshVersion) {
+      localStorage.setItem(APP_REFRESH_STORAGE_KEY, remoteRefreshVersion);
+
+      // You control this in public/version.json. If false, users are not auto-refreshed.
+      if (data.forceRefresh === false) return;
+
+      onUpdateAvailable?.({
+        appVersion: String(data.appVersion || data.version || APP_VERSION),
+        releaseName: data.releaseName || data.name || APP_RELEASE_NAME,
+        message: data.message || "Updating your World Cup app with the latest tournament experience.",
+        refreshVersion: remoteRefreshVersion
+      });
+
+      await clearBrowserRuntimeCaches();
+      setTimeout(() => {
+        window.location.replace(withRefreshParam(window.location.href, remoteRefreshVersion));
+      }, 1200);
+    }
+  } catch (e) {
+    console.warn("[version] Refresh check failed", e);
+  }
+}
 
 function getDeviceType() {
   const ua = navigator.userAgent;
@@ -7181,11 +7247,12 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
     fetch("/version.json", { cache: "no-store" })
       .then(r => r.ok ? r.json() : null)
       .then(data => {
-        if (!alive || !data?.version) return;
+        if (!alive || !(data?.version || data?.appVersion)) return;
         setAppInfo({
-          version: String(data.version || APP_VERSION),
-          name: data.name || APP_RELEASE_NAME,
-          released: data.released || data.date || APP_DATE
+          version: String(data.appVersion || data.version || APP_VERSION),
+          name: data.releaseName || data.name || APP_RELEASE_NAME,
+          released: data.released || data.releaseDate || data.date || APP_DATE,
+          refreshVersion: data.refreshVersion || APP_REFRESH_VERSION
         });
       })
       .catch(() => {});
@@ -9391,6 +9458,12 @@ function analyticsDisabled() {
 }
 
 export default function App() {
+  const [releaseUpdate, setReleaseUpdate] = useState(null);
+
+  useEffect(() => {
+    checkForceRefreshVersion(setReleaseUpdate);
+  }, []);
+
   const [onboardingDone, setOnboardingDone] = useState(() => {
     try { return localStorage.getItem("wc2026_onboarded") === "1"; } catch { return false; }
   });
@@ -9828,6 +9901,21 @@ export default function App() {
 
   return (
     <LiveScoresProvider>
+      {releaseUpdate && (
+        <div style={{position:"fixed",inset:0,zIndex:10000,background:"rgba(6,14,10,.94)",display:"flex",alignItems:"center",justifyContent:"center",padding:24}}>
+          <div style={{width:"100%",maxWidth:380,borderRadius:22,border:`1px solid ${C.green}55`,background:`linear-gradient(135deg,${C.s1},${C.s2})`,boxShadow:DS.shadow.modal,padding:26,textAlign:"center"}}>
+            <div style={{fontSize:42,marginBottom:12}}>🏆</div>
+            <div style={{fontSize:12,color:C.green,fontWeight:900,letterSpacing:".16em",textTransform:"uppercase",marginBottom:6}}>World Cup App Updated</div>
+            <div style={{fontSize:22,fontWeight:900,color:C.text,marginBottom:4}}>Version {releaseUpdate.appVersion}</div>
+            {releaseUpdate.releaseName && <div style={{fontSize:14,color:C.gold,fontWeight:800,marginBottom:12}}>“{releaseUpdate.releaseName}”</div>}
+            <div style={{fontSize:13,color:C.mid,lineHeight:1.55,marginBottom:18}}>{releaseUpdate.message}</div>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,color:C.green,fontSize:13,fontWeight:800}}>
+              <span style={{width:16,height:16,borderRadius:"50%",border:`2px solid ${C.green}55`,borderTopColor:C.green,display:"inline-block",animation:"spin .8s linear infinite"}}/>
+              Refreshing…
+            </div>
+          </div>
+        </div>
+      )}
       <CountryCtx.Provider value={country}>
       <ThemeCtx.Provider value={{dark, toggle:toggleDark, headerDark, cardDark}}>
       <FavCtx.Provider value={{favTeam, favTeams, setFavTeam: toggleFav}}>
