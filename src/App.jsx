@@ -9057,7 +9057,7 @@ function MyWorldCupTab({ favTeams=[], saved=[], syncProfile=null, displayName=""
     : [];
 
   const upcomingMatches = dashboardMatches
-    .filter(m => hasConcreteTeam(m.home) && hasConcreteTeam(m.away) && !matchDone(m) && getTs(m) && getTs(m) > now - 30*60*1000)
+    .filter(m => hasConcreteTeam(m.home) && hasConcreteTeam(m.away) && !matchDone(m) && !matchLive(m) && getTs(m) && getTs(m) > now)
     .sort((a,b)=>getTs(a)-getTs(b));
 
   const liveMatches = dashboardMatches
@@ -9067,7 +9067,7 @@ function MyWorldCupTab({ favTeams=[], saved=[], syncProfile=null, displayName=""
   const todayMatches = dashboardMatches.filter(isToday);
   const todayMyMatches = todayMatches.filter(isMyMatch);
   const todayUpcomingMatches = todayMatches
-    .filter(m => hasConcreteTeam(m.home) && hasConcreteTeam(m.away) && !matchDone(m) && getTs(m) && getTs(m) > now - 30*60*1000)
+    .filter(m => hasConcreteTeam(m.home) && hasConcreteTeam(m.away) && !matchDone(m) && !matchLive(m) && getTs(m) && getTs(m) > now)
     .sort((a,b)=>getTs(a)-getTs(b));
 
   const nextTournamentDay = todayUpcomingMatches.length
@@ -9084,8 +9084,6 @@ function MyWorldCupTab({ favTeams=[], saved=[], syncProfile=null, displayName=""
   const liveCardMatches = liveCardDay
     ? liveMatches.filter(m => dateKeyOf(m) === liveCardDay).slice(0, displayLimitForDay(liveMatches.filter(m => dateKeyOf(m) === liveCardDay)))
     : [];
-  const nextCardMatches = liveCardMatches.length ? liveCardMatches : nextTournamentMatches;
-  const nextCardIsLive = liveCardMatches.length > 0;
   const phaseForMatches = (matches) => matches?.length ? phaseLabel(matches[0]) : "";
 
   useEffect(() => {
@@ -9236,7 +9234,7 @@ function MyWorldCupTab({ favTeams=[], saved=[], syncProfile=null, displayName=""
     ["todayMatches", String(todayMatches.length)],
     ["todayMyMatches", todayMyMatches.map(m => `${m.home} vs ${m.away}`).join(" | ") || "none"],
     ["liveMatches", liveMatches.map(m => `${m.home} vs ${m.away}`).join(" | ") || "none"],
-    ["nextCardMode", nextCardIsLive ? "live matches" : "next match"],
+    ["middleCard", liveCardMatches.length ? "Live Matches" : "Today"],
     ["fantasyRank", fantasySummary.rank ? `#${fantasySummary.rank} of ${fantasySummary.totalPlayers || "?"}` : "none"],
     ["fantasyPoints", fantasySummary.points == null ? "unknown" : String(fantasySummary.points)],
     ["todayFantasyMissing", todayFantasyMissing.map(m => `#${m.id}`).join(", ") || "none"],
@@ -9273,11 +9271,28 @@ function MyWorldCupTab({ favTeams=[], saved=[], syncProfile=null, displayName=""
           {lastTournamentMatches.length ? lastTournamentMatches.map(m => <MatchRow key={m.id} match={m} showScore star={isMyMatch(m)} onClick={onMatchTap} />) : <div style={{fontSize:13,color:C.mid,lineHeight:1.5}}>No tournament results available yet.</div>}
         </CardShell>
 
-        <CardShell title={nextCardIsLive ? "Live matches" : (nextTournamentDay === todayKey ? "Today's matches" : "Next matchday")} icon={nextCardIsLive ? "🔴" : "⏭️"} tone={nextCardMatches.some(isMyMatch)?C.gold:(nextCardIsLive?C.red:C.green)} emphasis={nextCardMatches.some(isMyMatch) || nextCardIsLive} footer={nextCardMatches[0] ? (nextCardIsLive ? "Scores update from live feed" : new Date(getTs(nextCardMatches[0])).toLocaleDateString("en-US", { weekday:"short", month:"short", day:"numeric" })) : "No upcoming matches found"}>
-          <PhaseBadge matches={nextCardMatches} />
-          {nextCardMatches.length ? nextCardMatches.map(m => <MatchRow key={m.id} match={m} showScore={nextCardIsLive} star={isMyMatch(m)} onClick={onMatchTap} />) : <div style={{fontSize:13,color:C.mid,lineHeight:1.5}}>No upcoming tournament match found.</div>}
-          {!nextCardIsLive && nextCardMatches[0] && <CountdownBadge match={nextCardMatches[0]} />}
-          {nextCardMatches.some(isMyMatch) && <div style={{fontSize:11,color:C.gold,fontWeight:900,marginTop:8}}>⭐ One of your teams is involved</div>}
+        {liveCardMatches.length > 0 ? (
+          <CardShell title="Live matches" icon="🔴" tone={liveCardMatches.some(isMyMatch)?C.gold:C.red} emphasis footer="Scores update from live feed">
+            <PhaseBadge matches={liveCardMatches} />
+            {liveCardMatches.map(m => <MatchRow key={m.id} match={m} showScore star={isMyMatch(m)} onClick={onMatchTap} />)}
+            {liveCardMatches.some(isMyMatch) && <div style={{fontSize:11,color:C.gold,fontWeight:900,marginTop:8}}>⭐ One of your teams is involved</div>}
+          </CardShell>
+        ) : (
+          <CardShell title="Today" icon="📅" tone={C.gold} onClick={()=>setTab("schedule")} footer={nextTournamentMatches[0] ? `Next kickoff: ${fmtTimeOnly(nextTournamentMatches[0])}` : "No scheduled matches found"}>
+            <div style={{display:"flex",gap:10,alignItems:"baseline"}}>
+              <div style={{fontSize:28,fontWeight:900,color:C.text}}>{todayMatches.length}</div>
+              <div style={{fontSize:12,color:C.dim,fontWeight:800}}>matches today</div>
+            </div>
+            <div style={{fontSize:12,color:todayMyMatches.length?C.green:C.mid,marginTop:6,fontWeight:800}}>{todayMyMatches.length ? `${todayMyMatches.length} with your teams ⭐` : "No favorite teams today"}</div>
+            {nextTournamentMatches[0] && <CountdownBadge match={nextTournamentMatches[0]} />}
+          </CardShell>
+        )}
+
+        <CardShell title="Next matches" icon="⏭️" tone={nextTournamentMatches.some(isMyMatch)?C.gold:C.green} emphasis={nextTournamentMatches.some(isMyMatch)} footer={nextTournamentMatches[0] ? new Date(getTs(nextTournamentMatches[0])).toLocaleDateString("en-US", { weekday:"short", month:"short", day:"numeric" }) : "No upcoming matches found"}>
+          <PhaseBadge matches={nextTournamentMatches} />
+          {nextTournamentMatches.length ? nextTournamentMatches.map(m => <MatchRow key={m.id} match={m} showScore={false} star={isMyMatch(m)} onClick={onMatchTap} />) : <div style={{fontSize:13,color:C.mid,lineHeight:1.5}}>No upcoming tournament match found.</div>}
+          {nextTournamentMatches[0] && <CountdownBadge match={nextTournamentMatches[0]} />}
+          {nextTournamentMatches.some(isMyMatch) && <div style={{fontSize:11,color:C.gold,fontWeight:900,marginTop:8}}>⭐ One of your teams is involved</div>}
         </CardShell>
 
         <CardShell title="Fantasy rank" icon="🎯" tone={C.blue} onClick={()=>setTab("predictor")} footer={nextPickDeadline ? `Next deadline: ${fmtCountdown(nextPickDeadline)}` : "No open deadlines"}>
@@ -9299,15 +9314,6 @@ function MyWorldCupTab({ favTeams=[], saved=[], syncProfile=null, displayName=""
             {!(fantasySummary.top3 || []).length && <div style={{fontSize:11,color:C.dim}}>Leaderboard loading...</div>}
           </div>
           {fantasySummary.loading && <div style={{fontSize:11,color:C.dim,marginTop:6}}>Loading fantasy...</div>}
-        </CardShell>
-
-        <CardShell title="Today" icon="📅" tone={C.gold} onClick={()=>setTab("schedule")} footer={nextTournamentMatches[0] ? `Next kickoff: ${fmtTimeOnly(nextTournamentMatches[0])}` : "No scheduled matches found"}>
-          <div style={{display:"flex",gap:10,alignItems:"baseline"}}>
-            <div style={{fontSize:28,fontWeight:900,color:liveMatches.length?C.red:C.text}}>{liveMatches.length}</div>
-            <div style={{fontSize:12,color:C.dim,fontWeight:800}}>live</div>
-          </div>
-          <div style={{fontSize:22,fontWeight:900,color:C.text,lineHeight:1.1}}>{todayMatches.length} matches</div>
-          <div style={{fontSize:12,color:todayMyMatches.length?C.green:C.mid,marginTop:6,fontWeight:800}}>{todayMyMatches.length ? `${todayMyMatches.length} with your teams ⭐` : "No favorite teams today"}</div>
         </CardShell>
 
         <CardShell title="Top scorers" icon="⚽" tone={C.red} onClick={()=>setTab("stats")} footer={topScorers.length ? "Top 5 Golden Boot contenders" : "Loading live scorers"}>
