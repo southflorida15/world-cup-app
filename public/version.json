@@ -1,10 +1,10 @@
 {
-  "appVersion": "3.2.0",
-  "version": "3.2.0",
-  "refreshVersion": "10",
-  "releaseName": "My World Cup",
+  "appVersion": "3.2.1",
+  "version": "3.2.1",
+  "refreshVersion": "11",
+  "releaseName": "Status Board Polish",
   "releaseDate": "2026-06-26",
   "released": "2026-06-26",
   "forceRefresh": true,
-  "message": "Updating your World Cup app with the latest personalized tournament dashboard and live stats fixes."
+  "message": "Updating your World Cup app with matchday status-board fixes, clearer countdowns, and refreshed product documentation."
 }

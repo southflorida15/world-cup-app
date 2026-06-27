@@ -903,14 +903,14 @@ function auditMatchSchedule() {
 const SCHEDULE_AUDIT_ISSUES = auditMatchSchedule();
 // ----------------------------------------------------------------------------
 
-const APP_VERSION = "3.2.0";
-const APP_RELEASE_NAME = "My World Cup";
+const APP_VERSION = "3.2.1";
+const APP_RELEASE_NAME = "Status Board Polish";
 const APP_DATE = "2026-06-26";
 
 // Runtime release control.
 // APP_VERSION is visible to users. APP_REFRESH_VERSION is the cache/reload key.
 // Bump refreshVersion in public/version.json only when users should get a full app refresh.
-const APP_REFRESH_VERSION = "10";
+const APP_REFRESH_VERSION = "11";
 const APP_REFRESH_STORAGE_KEY = "wc2026_refresh_version";
 let appRefreshCheckInFlight = false;
 
@@ -8923,8 +8923,17 @@ function MyWorldCupTab({ favTeams=[], saved=[], syncProfile=null, displayName=""
   const getTs = (m) => MATCH_UTC[m.id] ? new Date(MATCH_UTC[m.id]).getTime() : 0;
   const hasConcreteTeam = (t) => t && !/^\d|^TBD|^R16|^QF|^SF|🏆|3rd|Winner/.test(String(t));
   const scoreFor = (m) => getScore(m.home, m.away);
+  const hasScore = (m) => {
+    const sc = scoreFor(m);
+    return sc && sc.hg != null && sc.ag != null && sc.hg !== "" && sc.ag !== "";
+  };
   const matchDone = (m) => isFinished(m.home, m.away) || ["FT","AET","PEN","FINAL","STATUS_FINAL"].includes(String(scoreFor(m)?.status || "").toUpperCase());
   const matchLive = (m) => isLive(m.home, m.away) || ["LIVE","IN_PROGRESS","1H","2H","HT","STATUS_IN_PROGRESS"].includes(String(scoreFor(m)?.status || "").toUpperCase());
+  // My WC should not wait for a stale feed status to flip to FT. If a match has
+  // a score and kickoff was more than ~105 minutes ago, treat it as complete
+  // for the status-board kickoff-window cards. This keeps Last Matches on the
+  // latest completed slot, such as Uruguay-Spain / Cape Verde-Saudi Arabia.
+  const matchCompleteForDashboard = (m) => matchDone(m) || (!!getTs(m) && hasScore(m) && now > getTs(m) + 105 * 60 * 1000);
   const isMyMatch = (m) => myTeamSet.has(m.home) || myTeamSet.has(m.away);
 
   const fmtShort = (m) => {
@@ -8945,13 +8954,13 @@ function MyWorldCupTab({ favTeams=[], saved=[], syncProfile=null, displayName=""
     if (!ts) return "";
     const diff = ts - now;
     if (diff <= 0) return matchLive(m) ? "Live now" : "Started";
-    const mins = Math.round(diff / 60000);
+    const mins = Math.max(1, Math.round(diff / 60000));
     const days = Math.floor(mins / 1440);
     const hrs = Math.floor((mins % 1440) / 60);
     const rem = mins % 60;
-    if (days > 0) return `${days}d ${hrs}h`;
-    if (hrs > 0) return `${hrs}h ${rem}m`;
-    return `${rem}m`;
+    if (days > 0) return `Kickoff in ${days} day${days === 1 ? "" : "s"}${hrs ? ` ${hrs} h` : ""}`;
+    if (hrs > 0) return `Kickoff in ${hrs} h${rem ? ` ${rem} min` : ""}`;
+    return `Kickoff in ${mins} min`;
   };
 
   const isToday = (m) => {
@@ -9046,18 +9055,21 @@ function MyWorldCupTab({ favTeams=[], saved=[], syncProfile=null, displayName=""
   });
 
   const completedMatches = dashboardMatches
-    .filter(m => hasConcreteTeam(m.home) && hasConcreteTeam(m.away) && matchDone(m) && getTs(m))
+    .filter(m => hasConcreteTeam(m.home) && hasConcreteTeam(m.away) && matchCompleteForDashboard(m) && getTs(m))
     .sort((a,b)=>getTs(b)-getTs(a));
-  const lastTournamentDay = completedMatches[0] ? dateKeyOf(completedMatches[0]) : "";
-  const lastTournamentMatches = lastTournamentDay
+
+  // Last Matches should mean the most recent completed kickoff window — not
+  // the whole day. This correctly handles simultaneous final group matches
+  // such as Uruguay-Spain and Cape Verde-Saudi Arabia.
+  const lastCompletedKickoff = completedMatches[0] ? getTs(completedMatches[0]) : 0;
+  const lastTournamentMatches = lastCompletedKickoff
     ? dashboardMatches
-        .filter(m => hasConcreteTeam(m.home) && hasConcreteTeam(m.away) && matchDone(m) && dateKeyOf(m) === lastTournamentDay)
-        .sort((a,b)=>getTs(a)-getTs(b))
-        .slice(0, displayLimitForDay(dashboardMatches.filter(m => dateKeyOf(m) === lastTournamentDay)))
+        .filter(m => hasConcreteTeam(m.home) && hasConcreteTeam(m.away) && matchCompleteForDashboard(m) && getTs(m) === lastCompletedKickoff)
+        .sort((a,b)=>getTs(a)-getTs(b) || Number(a.id)-Number(b.id))
     : [];
 
   const upcomingMatches = dashboardMatches
-    .filter(m => hasConcreteTeam(m.home) && hasConcreteTeam(m.away) && !matchDone(m) && !matchLive(m) && getTs(m) && getTs(m) > now)
+    .filter(m => hasConcreteTeam(m.home) && hasConcreteTeam(m.away) && !matchCompleteForDashboard(m) && !matchLive(m) && getTs(m) && getTs(m) > now)
     .sort((a,b)=>getTs(a)-getTs(b));
 
   const liveMatches = dashboardMatches
@@ -9066,24 +9078,19 @@ function MyWorldCupTab({ favTeams=[], saved=[], syncProfile=null, displayName=""
 
   const todayMatches = dashboardMatches.filter(isToday);
   const todayMyMatches = todayMatches.filter(isMyMatch);
-  const todayUpcomingMatches = todayMatches
-    .filter(m => hasConcreteTeam(m.home) && hasConcreteTeam(m.away) && !matchDone(m) && !matchLive(m) && getTs(m) && getTs(m) > now)
-    .sort((a,b)=>getTs(a)-getTs(b));
 
-  const nextTournamentDay = todayUpcomingMatches.length
-    ? todayKey
-    : (upcomingMatches[0] ? dateKeyOf(upcomingMatches[0]) : "");
-  const nextTournamentMatches = nextTournamentDay
+  // Next Matches should mean the next scheduled kickoff window. If two or
+  // three matches start together, show them together; don't pull in later
+  // matches from the same day.
+  const nextKickoff = upcomingMatches[0] ? getTs(upcomingMatches[0]) : 0;
+  const nextTournamentMatches = nextKickoff
     ? dashboardMatches
-        .filter(m => hasConcreteTeam(m.home) && hasConcreteTeam(m.away) && !matchDone(m) && dateKeyOf(m) === nextTournamentDay)
-        .sort((a,b)=>getTs(a)-getTs(b))
-        .slice(0, displayLimitForDay(dashboardMatches.filter(m => dateKeyOf(m) === nextTournamentDay)))
+        .filter(m => hasConcreteTeam(m.home) && hasConcreteTeam(m.away) && !matchCompleteForDashboard(m) && !matchLive(m) && getTs(m) === nextKickoff)
+        .sort((a,b)=>getTs(a)-getTs(b) || Number(a.id)-Number(b.id))
     : [];
 
-  const liveCardDay = liveMatches[0] ? dateKeyOf(liveMatches[0]) : "";
-  const liveCardMatches = liveCardDay
-    ? liveMatches.filter(m => dateKeyOf(m) === liveCardDay).slice(0, displayLimitForDay(liveMatches.filter(m => dateKeyOf(m) === liveCardDay)))
-    : [];
+  // Live Matches should show all live matches, regardless of kickoff window.
+  const liveCardMatches = liveMatches;
   const phaseForMatches = (matches) => matches?.length ? phaseLabel(matches[0]) : "";
 
   useEffect(() => {
@@ -9142,17 +9149,17 @@ function MyWorldCupTab({ favTeams=[], saved=[], syncProfile=null, displayName=""
   }).sort((a,b)=>getTs(a)-getTs(b));
 
   const todayFantasyMissing = todayMatches
-    .filter(m => hasConcreteTeam(m.home) && hasConcreteTeam(m.away) && !matchDone(m))
+    .filter(m => hasConcreteTeam(m.home) && hasConcreteTeam(m.away) && !matchCompleteForDashboard(m))
     .filter(m => !(fantasySummary.preds?.[m.id]?.hg !== undefined && fantasySummary.preds?.[m.id]?.ag !== undefined && fantasySummary.preds?.[m.id]?.hg !== "" && fantasySummary.preds?.[m.id]?.ag !== ""));
   const fantasyPredCount = Object.values(fantasySummary.preds || {}).filter(v => v && v.hg !== undefined && v.ag !== undefined && v.hg !== "" && v.ag !== "").length;
   const nextPickDeadline = upcomingFantasyMatches[0];
-  const allTodayPicked = todayMatches.filter(m => hasConcreteTeam(m.home) && hasConcreteTeam(m.away) && !matchDone(m)).length > 0 && todayFantasyMissing.length === 0;
+  const allTodayPicked = todayMatches.filter(m => hasConcreteTeam(m.home) && hasConcreteTeam(m.away) && !matchCompleteForDashboard(m)).length > 0 && todayFantasyMissing.length === 0;
 
   const teamWatch = favTeams.slice(0,2).map(team => {
     const matches = dashboardMatches.filter(m => m.home === team || m.away === team).sort((a,b)=>getTs(a)-getTs(b));
-    const finished = matches.filter(matchDone).sort((a,b)=>getTs(a)-getTs(b));
+    const finished = matches.filter(matchCompleteForDashboard).sort((a,b)=>getTs(a)-getTs(b));
     const last = [...finished].sort((a,b)=>getTs(b)-getTs(a))[0];
-    const next = matches.filter(m => !matchDone(m) && getTs(m) > now - 30*60*1000).sort((a,b)=>getTs(a)-getTs(b))[0];
+    const next = matches.filter(m => !matchCompleteForDashboard(m) && getTs(m) > now - 30*60*1000).sort((a,b)=>getTs(a)-getTs(b))[0];
     const campaign = finished.map(m => teamOutcomeIn(team, m)).filter(Boolean);
     const goals = finished.reduce((sum,m)=>sum + (teamGoalsIn(team, m) ?? 0), 0);
     return { team, finished, last, next, campaign, goals };
@@ -9266,7 +9273,7 @@ function MyWorldCupTab({ favTeams=[], saved=[], syncProfile=null, displayName=""
       </div>
 
       <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:12}}>
-        <CardShell title="Last matchday" icon="✅" tone={C.rival} footer={lastTournamentMatches[0] ? new Date(getTs(lastTournamentMatches[0])).toLocaleDateString("en-US", { weekday:"short", month:"short", day:"numeric" }) : "No completed matches yet"}>
+        <CardShell title="Last matches" icon="✅" tone={C.rival} footer={lastTournamentMatches[0] ? new Date(getTs(lastTournamentMatches[0])).toLocaleDateString("en-US", { weekday:"short", month:"short", day:"numeric" }) : "No completed matches yet"}>
           <PhaseBadge matches={lastTournamentMatches} />
           {lastTournamentMatches.length ? lastTournamentMatches.map(m => <MatchRow key={m.id} match={m} showScore star={isMyMatch(m)} onClick={onMatchTap} />) : <div style={{fontSize:13,color:C.mid,lineHeight:1.5}}>No tournament results available yet.</div>}
         </CardShell>

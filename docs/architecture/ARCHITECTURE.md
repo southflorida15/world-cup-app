@@ -1,37 +1,66 @@
 # Architecture
 
-The app is a Vite + React single-page application deployed on Vercel. It combines static tournament structure, live score data, fantasy predictions, historical statistics, and FIFA 2026 knockout logic.
+The World Cup App is a Vite + React app with Vercel serverless APIs.
 
-![App Architecture](../diagrams/APP_ARCHITECTURE.svg)
+## Main surfaces
 
-## Core layers
+- My WC: personalized status board.
+- Live: live match list and match access.
+- Schedule: full tournament schedule.
+- Groups: standings and qualification state.
+- Bracket: actual and simulated knockout paths.
+- Fantasy: user predictions and leaderboard.
+- Stats: team stats, head-to-head, scorers.
+- Match OG: match center with lineups, timeline, stats, insights and commentary.
 
-### 1. React UI
+## Key data flows
 
-The UI renders tabs such as schedule, groups, actual bracket, fantasy, stats, saved matches, and match detail views.
+### Live scores
 
-### 2. Tournament engine
+`/api/livescores` feeds match status, scores and elapsed minute.
 
-The engine owns tournament rules:
+### Match events
 
-- 12 groups, A-L
-- 72 group-stage matches
-- 8 best third-place teams
-- FIFA Annex C mapping
-- Round of 32 placement
-- Knockout propagation through Final
+`/api/matchevents` feeds Match OG, scorers, cards, lineups, stats, commentary and momentum inputs.
 
-### 3. Serverless API layer
+### Top scorers
 
-Vercel functions protect API keys, normalize provider responses, and reduce provider calls through caching.
+Top scorers must come from the corrected match-events scorer endpoint:
 
-### 4. Data providers
+`/api/matchevents?action=scorers`
 
-- football-data.org for live match schedules/scores.
-- Highlightly/RapidAPI as a fallback.
-- Zafronix for World Cup historical team data.
-- static local data for team metadata, flags, and engine tables.
+Do not maintain independent scorer calculations in UI cards.
 
-## Key principle
+### My World Cup
 
-External APIs update data, but they should not control tournament rules. FIFA format logic belongs inside the local engine.
+My WC combines:
+
+- saved favorite teams,
+- schedule data,
+- live score context,
+- fantasy leaderboard and picks,
+- scorer endpoint data.
+
+The three match-status cards use kickoff-window logic:
+
+- Last Matches: latest completed kickoff window.
+- Live Matches: all live matches.
+- Next Matches: next scheduled kickoff window.
+
+### Version refresh service
+
+`public/version.json` is the release control source.
+
+The app compares deployed `refreshVersion` with the locally stored refresh version.
+
+If changed and `forceRefresh` is true, the app shows an update message, stores the new refresh version and reloads.
+
+## Local storage
+
+Local storage is used for user preferences, saved teams, saved matches, fantasy identity and refresh metadata.
+
+Do not rely on local storage as a source of truth for live tournament facts.
+
+## Design direction
+
+The app should be modularized over time. New major features should move into dedicated components rather than further expanding `App.jsx`.

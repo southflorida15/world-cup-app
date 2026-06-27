@@ -2,31 +2,30 @@
 
 ## Completed foundations
 
-- React/Vite app
-- Vercel deployment
-- Live scores via serverless API
-- Upstash Redis cache
-- Fantasy predictions
-- Actual Bracket
-- My Bracket simulation
-- FIFA Annex C engine
-- Historical stats
-- Tournament stats cards
-- Documentation v3 start
+- My Bracket.
+- Match OG.
+- Insights / Match Flow.
+- Fantasy.
+- My WC status board.
+- Admin-controlled version refresh.
 
 ## Near-term priorities
 
-1. Complete historical continuity validation.
-2. Continue UI consistency cleanup.
-3. Extract Stats tab from `App.jsx`.
-4. Extract Fantasy tab from `App.jsx`.
-5. Add screenshots and diagrams to README.
+- Continue My WC polish during knockout rounds.
+- Improve knockout advancement visuals.
+- Tighten Fantasy rank and deadline behavior.
+- Keep Top Scorers consistent across Home and Stats.
+- Move new features out of the growing `App.jsx` file into components.
 
-## Later ideas
+## Future ideas
 
-- Team wiki pages
-- Player profile pages
-- Stadium pages
-- Advanced event analytics
-- Prediction league leaderboard
-- Public share pages
+- Match Story summaries.
+- Player of the Match.
+- Team ratings.
+- Qualification and advancement scenarios.
+- Tournament Pulse.
+- Power rankings.
+- AI match previews.
+- Stadium and weather context.
+- Referee assignments.
+- Friends/leagues/community features.

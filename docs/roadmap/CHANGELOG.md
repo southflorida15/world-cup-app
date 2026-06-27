@@ -1,16 +1,22 @@
 # Changelog
 
-## v3.0 Documentation Foundation
+## 3.2.1 — Status Board Polish
 
-- Added structured documentation package.
-- Added architecture, engine, live-score, fantasy, stats, design, deployment, and troubleshooting docs.
-- Added diagram assets for architecture and data flow.
+- Fixed My WC Last Matches to use the latest completed kickoff window even when feed status lags.
+- Standardized countdown copy to use `min` instead of `m`.
+- Added product documentation pack.
+- Preserved admin-controlled refresh behavior.
 
-## v2.x Feature Expansion
+## 3.2.0 — My World Cup
 
-- Added Fantasy Mode across all tournament phases.
-- Added Actual Bracket and official knockout propagation.
-- Added FIFA Annex C mapping.
-- Added live scores with serverless caching.
-- Added tournament-wide stats cards.
-- Added historical-country continuity patches.
+- Added personalized My WC status board.
+- Added Last Matches, Today/Live Matches, Next Matches, Fantasy Rank, Top Scorers and Team Watch cards.
+- Added admin-controlled version refresh.
+- Fixed Top Scorers aggregate inflation.
+- Improved mobile match card layouts.
+
+## 3.1.0 — Match OG Update
+
+- Added Insights and Match Flow.
+- Separated Commentary into its own tab.
+- Improved event pills and match analysis cards.
