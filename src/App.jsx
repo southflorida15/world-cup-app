@@ -912,6 +912,7 @@ const APP_DATE = "2026-06-26";
 // Bump refreshVersion in public/version.json only when users should get a full app refresh.
 const APP_REFRESH_VERSION = "10";
 const APP_REFRESH_STORAGE_KEY = "wc2026_refresh_version";
+let appRefreshCheckInFlight = false;
 
 async function clearBrowserRuntimeCaches() {
   try {
@@ -935,6 +936,8 @@ function withRefreshParam(url, refreshVersion) {
 }
 
 async function checkForceRefreshVersion(onUpdateAvailable) {
+  if (appRefreshCheckInFlight) return;
+  appRefreshCheckInFlight = true;
   try {
     const res = await fetch(`/version.json?t=${Date.now()}`, { cache: "no-store" });
     if (!res.ok) return;
@@ -970,6 +973,8 @@ async function checkForceRefreshVersion(onUpdateAvailable) {
     }
   } catch (e) {
     console.warn("[version] Refresh check failed", e);
+  } finally {
+    appRefreshCheckInFlight = false;
   }
 }
 
@@ -9461,7 +9466,29 @@ export default function App() {
   const [releaseUpdate, setReleaseUpdate] = useState(null);
 
   useEffect(() => {
-    checkForceRefreshVersion(setReleaseUpdate);
+    let cancelled = false;
+    const runVersionCheck = () => {
+      if (cancelled) return;
+      checkForceRefreshVersion(setReleaseUpdate);
+    };
+
+    // Check once on app startup.
+    runVersionCheck();
+
+    // Also check when the user returns to an already-open tab/app.
+    // This catches mobile users who leave the web app open in the background.
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") runVersionCheck();
+    };
+    const onFocus = () => runVersionCheck();
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("focus", onFocus);
+
+    return () => {
+      cancelled = true;
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("focus", onFocus);
+    };
   }, []);
 
   const [onboardingDone, setOnboardingDone] = useState(() => {
