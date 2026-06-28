@@ -3431,7 +3431,7 @@ function BracketMatchup({ match, t1, t2, winner, onPick, interactive=false, comp
     const isW = winner && team === winner;
     const disabled = !canPick || !team || team === "TBD";
     const isClinched = tag === "clinched";
-    const isProvisional = tag === "provisional";
+    const isProvisional = tag === "provisional" && interactive;
     const nameColor = isW ? C.green : isClinched ? C.gold : isProvisional ? C.dim : team ? C.text : C.dim;
     return (
       <button
@@ -5105,7 +5105,7 @@ function useResolvedTournamentMatches(getScore) {
 function FantasyTeamSlot({ team, side="left", tag=null, winner=false, compact=false }) {
   const concrete = fantasyConcreteTeam(team);
   const isClinched = tag === "clinched";
-  const isProvisional = tag === "provisional";
+  const isProvisional = tag === "provisional" && interactive;
   const color = winner ? C.green : isClinched ? C.gold : isProvisional ? C.dim : concrete ? C.text : C.dim;
   const align = side === "right" ? "flex-end" : "flex-start";
   const textAlign = side === "right" ? "right" : "left";
