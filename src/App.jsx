@@ -5642,9 +5642,18 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
   };
 
   // ── Fantasy match source ────────────────────────────────────────────────
-  // Uses the app-wide resolved tournament source so Fantasy, Live, Schedule,
-  // Home, and Actual Bracket all agree on knockout teams.
-  const fantasyMatches = resolvedMatches;
+  // Fantasy should use the same resolved teams as Live/Schedule/Home, but it
+  // must NOT inherit the live-bracket "provisional/leading" display state.
+  // That state is useful for Live/Schedule while group slots are still being
+  // projected, but in Fantasy it greys out confirmed-looking teams and locks
+  // picks as "provisional" even when the matchup is otherwise usable. Keep
+  // the resolved team names and all match metadata, then strip only the UI tags.
+  const fantasyMatches = useMemo(() => (resolvedMatches || MATCHES).map(m => ({
+    ...m,
+    homeTag: null,
+    awayTag: null,
+    fantasyConfirmed: fantasyTeamsKnown(m),
+  })), [resolvedMatches]);
 
   // ── Load user + their predictions on mount ──────────────────────────────
   useEffect(() => {
@@ -9046,7 +9055,7 @@ function analyticsDisabled() {
   }
 }
 
-function AppContent() {
+export default function App() {
   const [releaseUpdate, setReleaseUpdate] = useState(null);
 
   useEffect(() => {
@@ -9513,7 +9522,7 @@ function AppContent() {
   );
 
   return (
-    <>
+    <LiveScoresProvider>
       {releaseUpdate && (
         <div style={{position:"fixed",inset:0,zIndex:10000,background:"rgba(6,14,10,.94)",display:"flex",alignItems:"center",justifyContent:"center",padding:24}}>
           <div style={{width:"100%",maxWidth:380,borderRadius:22,border:`1px solid ${C.green}55`,background:`linear-gradient(135deg,${C.s1},${C.s2})`,boxShadow:DS.shadow.modal,padding:26,textAlign:"center"}}>
@@ -9746,15 +9755,6 @@ function AppContent() {
       </FavCtx.Provider>
       </ThemeCtx.Provider>
       </CountryCtx.Provider>
-    </>
-  );
-}
-
-
-export default function App() {
-  return (
-    <LiveScoresProvider>
-      <AppContent />
     </LiveScoresProvider>
   );
 }
