@@ -4151,12 +4151,21 @@ function MyBracketTab({ tabTop=116 }) {
     };
 
     const winnerMap = {};
+    const actualTeamTag = (slot, team) => {
+      // R32 is now fully set in reality. If a slot has resolved to a real team,
+      // render it as confirmed in the Actual Bracket even if a stale live-score
+      // status makes groupComplete look false locally. This removes the dimmed
+      // / LEADING treatment from the completed R32 field without changing the
+      // underlying bracket logic.
+      if (team && team !== "TBD") return "clinched";
+      return slotTag(slot);
+    };
     const r32 = R32_SLOT_TEMPLATE.map(m => {
       const home = resolveActualSlot(m.home, m.home) || "TBD";
       const away = resolveActualSlot(m.away, m.home) || "TBD";
       const played = lookupReal(home, away);
       if (played) winnerMap[m.match] = played.winner;
-      return { match:m.match, homeSlot:m.home, awaySlot:m.away, home, away, hg:played?.hg ?? null, ag:played?.ag ?? null, winner: played?.winner || null, homeTag: slotTag(m.home), awayTag: slotTag(m.away) };
+      return { match:m.match, homeSlot:m.home, awaySlot:m.away, home, away, hg:played?.hg ?? null, ag:played?.ag ?? null, winner: played?.winner || null, homeTag: actualTeamTag(m.home, home), awayTag: actualTeamTag(m.away, away) };
     });
 
     const resolveRef = (ref) => {
