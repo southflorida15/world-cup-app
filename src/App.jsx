@@ -1448,12 +1448,12 @@ function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="",
 }
 
 // ── LIVE TAB ──────────────────────────────────────────────────────────────
-function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=new Set() }) {
+function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=new Set(), matches=MATCHES }) {
   const { favTeams=[] } = useContext(FavCtx);
   const { scores, getScore, lastFetch } = useContext(LiveScoresCtx);
   const _lhRef = useRef(null); const _lhH = useElemHeight(_lhRef);
   const lastUpdate = lastFetch ? lastFetch.toLocaleTimeString() : null;
-  const liveMatches = MATCHES.filter(m => {
+  const liveMatches = matches.filter(m => {
     const s = getScore(m.home, m.away);
     if (s && statusIsLive(s.status)) return true;
     if (s && statusIsFinished(s.status)) return false;
@@ -1469,7 +1469,7 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=n
   // All upcoming matches today (local timezone)
   const _nowLive = new Date();
   const _todayLive = `${_nowLive.getFullYear()}-${String(_nowLive.getMonth()+1).padStart(2,'0')}-${String(_nowLive.getDate()).padStart(2,'0')}`;
-  const finishedToday = MATCHES.filter(m => {
+  const finishedToday = matches.filter(m => {
     const s = getScore(m.home, m.away);
     if (!s || !statusIsFinished(s.status)) return false;
     const iso = MATCH_UTC[m.id];
@@ -1480,7 +1480,7 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=n
     const dStrLocal = d.toLocaleDateString('en-CA'); // YYYY-MM-DD in local tz
     return dStr === _todayLive || dStrLocal === _todayLive;
   });
-  const upcomingToday = MATCHES.filter(m => {
+  const upcomingToday = matches.filter(m => {
     const iso = MATCH_UTC[m.id];
     if (!iso) return false;
     const d = new Date(iso);
@@ -1553,7 +1553,7 @@ const MATCH_DATES = (() => {
     .filter(Boolean);
 })();
 
-function SchedTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=new Set() }) {
+function SchedTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=new Set(), matches=MATCHES }) {
   const { favTeams=[] } = useContext(FavCtx);
   const { getScore } = useContext(LiveScoresCtx);
   const [filterMode, setFilterMode] = useState("none");
@@ -1655,9 +1655,9 @@ function SchedTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=
   }, [selDate]);
 
   const allTeams = ALL_TEAMS;
-  const allVenues = [...new Set(MATCHES.map(m=>m.venue))].sort();
+  const allVenues = [...new Set(matches.map(m=>m.venue))].sort();
 
-  const shown = MATCHES.filter(m => {
+  const shown = matches.filter(m => {
     // Date filter first
     if (selDate) {
       const iso = MATCH_UTC[m.id];
@@ -4917,6 +4917,182 @@ function sortFantasyChronological(matches) {
   return [...(matches || [])].sort((a, b) => fantasyKickoffMs(a) - fantasyKickoffMs(b) || Number(a.id || 0) - Number(b.id || 0));
 }
 
+
+// ── Shared resolved match source ──────────────────────────────────────────
+// Single source of truth for rendering actual tournament matchups anywhere
+// the app needs a match list. Starts from MATCHES, preserves schedule metadata,
+// and replaces knockout placeholders with teams from the same actual-bracket
+// model used by Fantasy / Actual Bracket whenever those teams are known.
+export function getResolvedTournamentMatches({ getScore=()=>null } = {}) {
+  const byId = Object.fromEntries(MATCHES.map(m => [Number(m.id), m]));
+
+  const groupResults = (letter) => MATCHES
+    .filter(m => m.group === letter)
+    .map(m => {
+      const s = getScore(m.home, m.away);
+      const finished = s && statusIsFinished(s.status);
+      return {
+        id: m.id,
+        home: m.home,
+        away: m.away,
+        hg: finished ? String(s.hg ?? "") : "",
+        ag: finished ? String(s.ag ?? "") : "",
+      };
+    });
+
+  const groupStandings = {};
+  const groupResultsByLetter = {};
+  const groupComplete = {};
+  Object.keys(GROUPS).forEach(g => {
+    const res = groupResults(g);
+    groupResultsByLetter[g] = res;
+    groupComplete[g] = res.length > 0 && res.every(r => r.hg !== "" && r.ag !== "");
+    groupStandings[g] = calcStandings(g, res);
+  });
+  const allGroupsComplete = Object.values(groupComplete).every(Boolean);
+
+  const headToHeadWinner = (g, teamA, teamB) => {
+    const m = (groupResultsByLetter[g] || []).find(r =>
+      (r.home === teamA && r.away === teamB) || (r.home === teamB && r.away === teamA)
+    );
+    if (!m || m.hg === "" || m.ag === "") return null;
+    const hg = parseInt(m.hg), ag = parseInt(m.ag);
+    if (isNaN(hg) || isNaN(ag)) return null;
+    if (hg === ag) return "draw";
+    const homeWon = hg > ag;
+    return (m.home === teamA) === homeWon ? teamA : teamB;
+  };
+
+  const clinchedFirst = {};
+  Object.keys(GROUPS).forEach(g => {
+    const table = groupStandings[g] || [];
+    const leader = table[0];
+    if (groupComplete[g]) {
+      clinchedFirst[g] = !!leader;
+      return;
+    }
+    clinchedFirst[g] = !!leader && table.slice(1).every(t => {
+      const maxPossible = t.pts + (3 - t.p) * 3;
+      if (maxPossible < leader.pts) return true;
+      if (maxPossible > leader.pts) return false;
+      return headToHeadWinner(g, leader.team, t.team) === leader.team;
+    });
+  });
+
+  const firstOf = (g) => groupStandings[g]?.[0]?.team || null;
+  const secondOf = (g) => groupStandings[g]?.[1]?.team || null;
+
+  const slotTag = (slot) => {
+    if (typeof slot !== "string") return null;
+    if (slot[0] === "1") return clinchedFirst[slot[1]] ? "clinched" : "provisional";
+    if (slot[0] === "2") return groupComplete[slot[1]] ? "clinched" : "provisional";
+    return null;
+  };
+
+  const qualifiedThirds = Object.keys(GROUPS)
+    .map(g => ({ group: g, ...(groupStandings[g]?.[2] || {}) }))
+    .filter(t => t.team)
+    .sort((a,b) => b.pts-a.pts || b.gd-a.gd || b.gf-a.gf)
+    .slice(0,8);
+
+  const thirdTeamByGroup = Object.fromEntries(qualifiedThirds.map(t => [t.group, t.team]));
+  let annexMapping = null;
+  try {
+    annexMapping = getAnnexCMapping(qualifiedThirds.map(t => ({ group:t.group, team:t.team })));
+  } catch {
+    annexMapping = null;
+  }
+
+  const resolveSlot = (slot, homeSlot) => {
+    if (!slot) return null;
+    if (slot === "3?") {
+      const assigned = annexMapping?.[homeSlot];
+      const grp = assigned ? assigned.replace(/^3/, "") : null;
+      return (grp && thirdTeamByGroup[grp]) || null;
+    }
+    if (slot.startsWith?.("1")) return firstOf(slot[1]);
+    if (slot.startsWith?.("2")) return secondOf(slot[1]);
+    return null;
+  };
+
+  const resolveSlotTag = (slot) => {
+    if (!slot) return null;
+    if (slot === "3?") return annexMapping ? (allGroupsComplete ? "clinched" : "provisional") : null;
+    return slotTag(slot);
+  };
+
+  const lookupRealWinner = (home, away) => {
+    if (!fantasyConcreteTeam(home) || !fantasyConcreteTeam(away)) return null;
+    let s = getScore(home, away), swapped = false;
+    if (!s) { s = getScore(away, home); swapped = true; }
+    if (!s || !statusIsFinished(s.status)) return null;
+    const hg = swapped ? s.ag : s.hg;
+    const ag = swapped ? s.hg : s.ag;
+    if (hg == null || ag == null || hg === ag) return null;
+    return hg > ag ? home : away;
+  };
+
+  const decorate = (matchId, home, away, extra={}) => {
+    const base = byId[Number(matchId)] || {};
+    const resolvedHome = fantasyConcreteTeam(home) ? home : (home || base.home || "TBD");
+    const resolvedAway = fantasyConcreteTeam(away) ? away : (away || base.away || "TBD");
+    return {
+      ...base,
+      ...extra,
+      id: Number(matchId),
+      home: resolvedHome,
+      away: resolvedAway,
+      originalHome: base.home,
+      originalAway: base.away,
+      fantasyResolved: fantasyConcreteTeam(resolvedHome) || fantasyConcreteTeam(resolvedAway),
+      fantasyConfirmed: fantasyConcreteTeam(resolvedHome) && fantasyConcreteTeam(resolvedAway) && extra.homeTag !== "provisional" && extra.awayTag !== "provisional",
+    };
+  };
+
+  const winnerMap = {};
+  const dynamicById = {};
+
+  R32_SLOT_TEMPLATE.forEach(t => {
+    const home = resolveSlot(t.home, t.home) || "TBD";
+    const away = resolveSlot(t.away, t.home) || "TBD";
+    const winner = lookupRealWinner(home, away);
+    if (winner) winnerMap[t.match] = winner;
+    dynamicById[t.match] = decorate(t.match, home, away, {
+      homeSlot:t.home,
+      awaySlot:t.away,
+      homeTag:resolveSlotTag(t.home),
+      awayTag:resolveSlotTag(t.away),
+    });
+  });
+
+  const resolveRef = (ref) => {
+    if (typeof ref === "string" && ref.startsWith("W")) return winnerMap[Number(ref.slice(1))] || "TBD";
+    return ref || "TBD";
+  };
+  const refTag = (ref) => (typeof ref === "string" && ref.startsWith("W") && winnerMap[Number(ref.slice(1))]) ? "clinched" : null;
+
+  const buildRound = (template=[]) => {
+    template.forEach(t => {
+      const home = resolveRef(t.home);
+      const away = resolveRef(t.away);
+      const winner = lookupRealWinner(home, away);
+      if (winner) winnerMap[t.match] = winner;
+      dynamicById[t.match] = decorate(t.match, home, away, { homeSlot:t.home, awaySlot:t.away, homeTag:refTag(t.home), awayTag:refTag(t.away) });
+    });
+  };
+
+  buildRound(ROUND_OF_16_TEMPLATE);
+  buildRound(QUARTER_FINAL_TEMPLATE);
+  buildRound(SEMI_FINAL_TEMPLATE);
+  buildRound(FINAL_TEMPLATE);
+
+  return MATCHES.map(m => dynamicById[m.id] || { ...m, originalHome:m.home, originalAway:m.away });
+}
+
+function useResolvedTournamentMatches(getScore) {
+  return useMemo(() => getResolvedTournamentMatches({ getScore }), [getScore]);
+}
+
 function FantasyTeamSlot({ team, side="left", tag=null, winner=false, compact=false }) {
   const concrete = fantasyConcreteTeam(team);
   const isClinched = tag === "clinched";
@@ -5421,7 +5597,7 @@ function LeaguesPanel({ pin, fantasyUserId, syncProfile, userStats }) {
 }
 
 
-function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, userAvatar=null }) {
+function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, userAvatar=null, resolvedMatches=MATCHES }) {
   const { getScore, isFinished, allFixtures=[] } = useContext(LiveScoresCtx);
   const { favTeam, favTeams=[] } = useContext(FavCtx);
   const deviceUserId = useMemo(getUserId, []);
@@ -5466,175 +5642,9 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
   };
 
   // ── Fantasy match source ────────────────────────────────────────────────
-  // Group-stage fantasy uses the static schedule. Knockout fantasy now pulls
-  // actual teams from the same live/actual bracket model used by My Bracket,
-  // so Round-of-32 and later matches replace placeholders like "1E" or
-  // "3rd ABCDF" as teams clinch or winners advance.
-  const fantasyMatches = useMemo(() => {
-    const byId = Object.fromEntries(MATCHES.map(m => [Number(m.id), m]));
-
-    const groupResults = (letter) => MATCHES
-      .filter(m => m.group === letter)
-      .map(m => {
-        const s = getScore(m.home, m.away);
-        const finished = s && statusIsFinished(s.status);
-        return {
-          id: m.id,
-          home: m.home,
-          away: m.away,
-          hg: finished ? String(s.hg ?? "") : "",
-          ag: finished ? String(s.ag ?? "") : "",
-        };
-      });
-
-    const groupStandings = {};
-    const groupResultsByLetter = {};
-    const groupComplete = {};
-    Object.keys(GROUPS).forEach(g => {
-      const res = groupResults(g);
-      groupResultsByLetter[g] = res;
-      groupComplete[g] = res.length > 0 && res.every(r => r.hg !== "" && r.ag !== "");
-      groupStandings[g] = calcStandings(g, res);
-    });
-    const allGroupsComplete = Object.values(groupComplete).every(Boolean);
-
-    const headToHeadWinner = (g, teamA, teamB) => {
-      const m = (groupResultsByLetter[g] || []).find(r =>
-        (r.home === teamA && r.away === teamB) || (r.home === teamB && r.away === teamA)
-      );
-      if (!m || m.hg === "" || m.ag === "") return null;
-      const hg = parseInt(m.hg), ag = parseInt(m.ag);
-      if (isNaN(hg) || isNaN(ag)) return null;
-      if (hg === ag) return "draw";
-      const homeWon = hg > ag;
-      return (m.home === teamA) === homeWon ? teamA : teamB;
-    };
-
-    const clinchedFirst = {};
-    Object.keys(GROUPS).forEach(g => {
-      const table = groupStandings[g] || [];
-      const leader = table[0];
-      if (groupComplete[g]) {
-        clinchedFirst[g] = !!leader;
-        return;
-      }
-      clinchedFirst[g] = !!leader && table.slice(1).every(t => {
-        const maxPossible = t.pts + (3 - t.p) * 3;
-        if (maxPossible < leader.pts) return true;
-        if (maxPossible > leader.pts) return false;
-        return headToHeadWinner(g, leader.team, t.team) === leader.team;
-      });
-    });
-
-    const firstOf = (g) => groupStandings[g]?.[0]?.team || null;
-    const secondOf = (g) => groupStandings[g]?.[1]?.team || null;
-
-    const slotTag = (slot) => {
-      if (typeof slot !== "string") return null;
-      if (slot[0] === "1") return clinchedFirst[slot[1]] ? "clinched" : "provisional";
-      if (slot[0] === "2") return groupComplete[slot[1]] ? "clinched" : "provisional";
-      return null;
-    };
-
-    const qualifiedThirds = Object.keys(GROUPS)
-      .map(g => ({ group: g, ...(groupStandings[g]?.[2] || {}) }))
-      .filter(t => t.team)
-      .sort((a,b) => b.pts-a.pts || b.gd-a.gd || b.gf-a.gf)
-      .slice(0,8);
-
-    const thirdTeamByGroup = Object.fromEntries(qualifiedThirds.map(t => [t.group, t.team]));
-    let annexMapping = null;
-    try {
-      annexMapping = getAnnexCMapping(qualifiedThirds.map(t => ({ group:t.group, team:t.team })));
-    } catch {
-      annexMapping = null;
-    }
-
-    const resolveSlot = (slot, homeSlot) => {
-      if (!slot) return null;
-      if (slot === "3?") {
-        const assigned = annexMapping?.[homeSlot];
-        const grp = assigned ? assigned.replace(/^3/, "") : null;
-        return (grp && thirdTeamByGroup[grp]) || null;
-      }
-      if (slot.startsWith?.("1")) return firstOf(slot[1]);
-      if (slot.startsWith?.("2")) return secondOf(slot[1]);
-      return null;
-    };
-
-    const resolveSlotTag = (slot) => {
-      if (!slot) return null;
-      if (slot === "3?") return annexMapping ? (allGroupsComplete ? "clinched" : "provisional") : null;
-      return slotTag(slot);
-    };
-
-    const lookupRealWinner = (home, away) => {
-      if (!fantasyConcreteTeam(home) || !fantasyConcreteTeam(away)) return null;
-      let s = getScore(home, away), swapped = false;
-      if (!s) { s = getScore(away, home); swapped = true; }
-      if (!s || !statusIsFinished(s.status)) return null;
-      const hg = swapped ? s.ag : s.hg;
-      const ag = swapped ? s.hg : s.ag;
-      if (hg == null || ag == null || hg === ag) return null;
-      return hg > ag ? home : away;
-    };
-
-    const decorate = (matchId, home, away, extra={}) => {
-      const base = byId[Number(matchId)] || {};
-      const resolvedHome = fantasyConcreteTeam(home) ? home : (home || base.home || "TBD");
-      const resolvedAway = fantasyConcreteTeam(away) ? away : (away || base.away || "TBD");
-      return {
-        ...base,
-        ...extra,
-        id: Number(matchId),
-        home: resolvedHome,
-        away: resolvedAway,
-        originalHome: base.home,
-        originalAway: base.away,
-        fantasyResolved: fantasyConcreteTeam(resolvedHome) || fantasyConcreteTeam(resolvedAway),
-        fantasyConfirmed: fantasyConcreteTeam(resolvedHome) && fantasyConcreteTeam(resolvedAway) && extra.homeTag !== "provisional" && extra.awayTag !== "provisional",
-      };
-    };
-
-    const winnerMap = {};
-    const dynamicById = {};
-
-    R32_SLOT_TEMPLATE.forEach(t => {
-      const home = resolveSlot(t.home, t.home) || "TBD";
-      const away = resolveSlot(t.away, t.home) || "TBD";
-      const winner = lookupRealWinner(home, away);
-      if (winner) winnerMap[t.match] = winner;
-      dynamicById[t.match] = decorate(t.match, home, away, {
-        homeSlot:t.home,
-        awaySlot:t.away,
-        homeTag:resolveSlotTag(t.home),
-        awayTag:resolveSlotTag(t.away),
-      });
-    });
-
-    const resolveRef = (ref) => {
-      if (typeof ref === "string" && ref.startsWith("W")) return winnerMap[Number(ref.slice(1))] || "TBD";
-      return ref || "TBD";
-    };
-    const refTag = (ref) => (typeof ref === "string" && ref.startsWith("W") && winnerMap[Number(ref.slice(1))]) ? "clinched" : null;
-
-    const buildRound = (template=[]) => {
-      template.forEach(t => {
-        const home = resolveRef(t.home);
-        const away = resolveRef(t.away);
-        const winner = lookupRealWinner(home, away);
-        if (winner) winnerMap[t.match] = winner;
-        dynamicById[t.match] = decorate(t.match, home, away, { homeSlot:t.home, awaySlot:t.away, homeTag:refTag(t.home), awayTag:refTag(t.away) });
-      });
-    };
-
-    buildRound(ROUND_OF_16_TEMPLATE);
-    buildRound(QUARTER_FINAL_TEMPLATE);
-    buildRound(SEMI_FINAL_TEMPLATE);
-    buildRound(FINAL_TEMPLATE);
-
-    return MATCHES.map(m => dynamicById[m.id] || m);
-  }, [getScore, allFixtures]);
+  // Uses the app-wide resolved tournament source so Fantasy, Live, Schedule,
+  // Home, and Actual Bracket all agree on knockout teams.
+  const fantasyMatches = resolvedMatches;
 
   // ── Load user + their predictions on mount ──────────────────────────────
   useEffect(() => {
@@ -9451,7 +9461,9 @@ export default function App() {
   const onTeam=(t)=>{setStatsTeam(t);setTab("stats");};
   const { isLive: isMatchLive, getScore: getScoreMain, refresh: refreshScores } = useContext(LiveScoresCtx);
 
-  const hasLiveMatches = MATCHES.some(m => {
+  const resolvedMatches = useResolvedTournamentMatches(getScoreMain);
+
+  const hasLiveMatches = resolvedMatches.some(m => {
     if (isMatchLive(m.home, m.away)) return true;
     const sc = getScoreMain(m.home, m.away);
     if (sc && statusIsFinished(sc.status)) return false;
@@ -9461,7 +9473,7 @@ export default function App() {
     const msSince = Date.now() - ko;
     return msSince > -60000 && msSince < 130 * 60 * 1000;
   });
-  const hasImminentKickoff = !hasLiveMatches && MATCHES.some(m => {
+  const hasImminentKickoff = !hasLiveMatches && resolvedMatches.some(m => {
     const iso = MATCH_UTC[m.id];
     if (!iso) return false;
     const msUntil = new Date(iso).getTime() - Date.now();
@@ -9570,13 +9582,13 @@ export default function App() {
         </div>
         <PullToRefresh onRefresh={async()=>{ if(refreshScores) await refreshScores(); }}>
         <div style={{padding:"0 13px 100px"}}>
-          {tab==="home"      && <MyWorldCupTab favTeams={favTeams} saved={saved} syncProfile={syncProfile} displayName={displayName} userAvatar={userAvatar} onMatchTap={onMatchTap} setTab={setTab} onPickTeams={()=>setShowSyncModal(true)} C={C} DS={DS} GROUPS={GROUPS} MATCHES={MATCHES} MATCH_UTC={MATCH_UTC} R32_SLOT_TEMPLATE={R32_SLOT_TEMPLATE} LiveScoresCtx={LiveScoresCtx} getFlag={getFlag} getUserId={getUserId} statusIsFinished={statusIsFinished} calcStandings={calcStandings} apiPred={apiPred} Crest={Crest}/>}
-          {tab==="live"      && <LiveTab onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} tabTop={tabBarBottom} savedIds={savedIds}/>}
-          {tab==="schedule"  && <SchedTab onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} tabTop={tabBarBottom} savedIds={savedIds}/>}
+          {tab==="home"      && <MyWorldCupTab favTeams={favTeams} saved={saved} syncProfile={syncProfile} displayName={displayName} userAvatar={userAvatar} onMatchTap={onMatchTap} setTab={setTab} onPickTeams={()=>setShowSyncModal(true)} C={C} DS={DS} GROUPS={GROUPS} MATCHES={MATCHES} resolvedMatches={resolvedMatches} MATCH_UTC={MATCH_UTC} R32_SLOT_TEMPLATE={R32_SLOT_TEMPLATE} LiveScoresCtx={LiveScoresCtx} getFlag={getFlag} getUserId={getUserId} statusIsFinished={statusIsFinished} calcStandings={calcStandings} apiPred={apiPred} Crest={Crest}/>}
+          {tab==="live"      && <LiveTab onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} tabTop={tabBarBottom} savedIds={savedIds} matches={resolvedMatches}/>}
+          {tab==="schedule"  && <SchedTab onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} tabTop={tabBarBottom} savedIds={savedIds} matches={resolvedMatches}/>}
           {tab==="groups"    && <GrpTab onTeam={onTeam} onMatchTap={onMatchTap} tabTop={tabBarBottom}/>}
           {tab==="stats"     && <StatsHubTab initial={statsTeam} tabTop={tabBarBottom}/>}
           {tab==="predict"   && <PredTab tabTop={tabBarBottom} geoData={geoData}/>}
-          {tab==="predictor" && <PredictorTab syncProfile={syncProfile} displayName={displayName} onShowSync={()=>setShowSyncModal(true)} userAvatar={userAvatar}/>}
+          {tab==="predictor" && <PredictorTab syncProfile={syncProfile} displayName={displayName} onShowSync={()=>setShowSyncModal(true)} userAvatar={userAvatar} resolvedMatches={resolvedMatches}/>}
           {tab==="shop"      && <ShopTab tabTop={tabBarBottom} geoData={geoData}/>}
           {tab==="sim"       && <SimTab tabTop={tabBarBottom}/>}
           {tab==="bracket"   && <MyBracketTab tabTop={tabBarBottom}/>}

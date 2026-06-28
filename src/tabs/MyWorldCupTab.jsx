@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useContext } from "react";
 import { getAnnexCMapping } from "../engine/annexC";
 
-// C, DS, GROUPS, MATCHES, MATCH_UTC, R32_SLOT_TEMPLATE, LiveScoresCtx,
+// C, DS, GROUPS, MATCHES/resolvedMatches, MATCH_UTC, R32_SLOT_TEMPLATE, LiveScoresCtx,
 // getFlag, getUserId, statusIsFinished, calcStandings, apiPred, and Crest
 // are passed in as props from App.jsx rather than imported directly.
 // Importing them from "../App.jsx" here would create a circular import
@@ -13,10 +13,11 @@ export default function MyWorldCupTab({
   favTeams=[], saved=[], syncProfile=null, displayName="", userAvatar=null,
   onMatchTap=()=>{}, setTab=()=>{}, onPickTeams=()=>{},
   // Shared App.jsx values, passed as props to avoid a circular import
-  C, DS, GROUPS, MATCHES, MATCH_UTC, R32_SLOT_TEMPLATE, LiveScoresCtx,
+  C, DS, GROUPS, MATCHES, resolvedMatches=null, MATCH_UTC, R32_SLOT_TEMPLATE, LiveScoresCtx,
   getFlag, getUserId, statusIsFinished, calcStandings, apiPred, Crest,
 }) {
   const { getScore, isLive, isFinished, scores={} } = useContext(LiveScoresCtx);
+  const tournamentMatches = resolvedMatches || MATCHES;
   const [fantasySummary, setFantasySummary] = useState({ loading:true, user:null, preds:{}, rank:0, totalPlayers:0, points:null, top3:[] });
   const [topScorers, setTopScorers] = useState([]);
   const fantasyUserId = useMemo(() => syncProfile?.uid || getUserId(), [syncProfile?.uid]);
@@ -120,7 +121,7 @@ export default function MyWorldCupTab({
   };
 
   const groupStandingsFor = (letter) => {
-    const rows = MATCHES.filter(m => m.group === letter).map(m => {
+    const rows = tournamentMatches.filter(m => m.group === letter).map(m => {
       const s = scoreFor(m);
       const finished = s && (matchDone(m) || statusIsFinished?.(s.status));
       return { id:m.id, home:m.home, away:m.away, hg:finished ? String(s.hg ?? "") : "", ag:finished ? String(s.ag ?? "") : "" };
@@ -154,7 +155,7 @@ export default function MyWorldCupTab({
     return null;
   };
   const r32ById = Object.fromEntries(R32_SLOT_TEMPLATE.map(t => [Number(t.match), t]));
-  const dashboardMatches = MATCHES.map(m => {
+  const dashboardMatches = tournamentMatches.map(m => {
     const tmpl = r32ById[Number(m.id)];
     if (!tmpl) return m;
     const home = resolveR32Slot(tmpl.home, tmpl.home) || m.home;
