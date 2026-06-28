@@ -2,6 +2,8 @@
 import FantasyScoringRules from "./components/FantasyScoringRules";
 import MyWorldCupTab from "./tabs/MyWorldCupTab.jsx";
 import SchedTab from "./tabs/SchedTab.jsx";
+import GrpTab from "./tabs/GrpTab.jsx";
+import MyBracketTab from "./tabs/Bracket.jsx";
 import FantasyStatsSummary from "./components/FantasyStatsSummary";
 import MatchHeader from "./components/MatchHeader";
 import MatchInfoSection from "./components/MatchInfoSection";
@@ -583,8 +585,8 @@ const PREDS = [
 ];
 
 // ── SIMULATOR ENGINE ──────────────────────────────────────────────────────
-const STR = {Spain:87,France:86,England:83,Brazil:82,Argentina:81,Germany:79,Portugal:77,Netherlands:76,Belgium:73,Uruguay:71,Colombia:70,Mexico:69,Morocco:68,"United States":67,Croatia:66,Japan:65,Senegal:64,Switzerland:63,Sweden:62,"South Korea":61,Ecuador:60,Norway:59,Australia:57,Austria:56,Czechia:55,"Bosnia & Herz.":54,"Ivory Coast":53,Paraguay:52,Ghana:51,Algeria:50,Iran:48,"DR Congo":46,Uzbekistan:41,"New Zealand":40,Jordan:39,Iraq:38,Panama:38,Curacao:37,Haiti:36,"South Africa":43,"Cape Verde":42,Qatar:44,Tunisia:50,Turkiye:60,Egypt:66,Scotland:58,"Saudi Arabia":49};
-const gs = (t) => STR[t] || 48;
+export const STR = {Spain:87,France:86,England:83,Brazil:82,Argentina:81,Germany:79,Portugal:77,Netherlands:76,Belgium:73,Uruguay:71,Colombia:70,Mexico:69,Morocco:68,"United States":67,Croatia:66,Japan:65,Senegal:64,Switzerland:63,Sweden:62,"South Korea":61,Ecuador:60,Norway:59,Australia:57,Austria:56,Czechia:55,"Bosnia & Herz.":54,"Ivory Coast":53,Paraguay:52,Ghana:51,Algeria:50,Iran:48,"DR Congo":46,Uzbekistan:41,"New Zealand":40,Jordan:39,Iraq:38,Panama:38,Curacao:37,Haiti:36,"South Africa":43,"Cape Verde":42,Qatar:44,Tunisia:50,Turkiye:60,Egypt:66,Scotland:58,"Saudi Arabia":49};
+export const gs = (t) => STR[t] || 48;
 const HOME_VENUES = {"United States":["SoFi Stadium, Los Angeles","New York New Jersey Stadium, East Rutherford","Dallas Stadium, Dallas","San Francisco Bay Area Stadium, San Francisco","Seattle Stadium, Seattle","Kansas City Stadium, Kansas City","Philadelphia Stadium, Philadelphia","Boston Stadium, Boston","Atlanta Stadium, Atlanta","Miami Stadium, Miami","Houston Stadium, Houston"],"Canada":["Toronto Stadium, Toronto","BC Place, Vancouver"],"Mexico":["Mexico City Stadium, Mexico City","Estadio Guadalajara, Zapopan","Estadio Monterrey, Guadalupe"]};
 const FORM_DATA = {"Spain":["D","D","D","W","W"],"France":["L","W","W","D","W"],"England":["L","D","W","W","W"],"Brazil":["W","W","L","W","W"],"Argentina":["W","W","D","W","W"],"Germany":["W","L","W","W","W"],"Portugal":["W","D","W","W","D"],"Netherlands":["L","D","W","W","W"],"Belgium":["W","W","D","W","D"],"Norway":["W","L","W","W","W"],"Mexico":["W","D","D","D","W"],"United States":["W","L","L","W","W"],"Morocco":["W","W","D","W","L"],"Uruguay":["D","D","W","W","L"],"Croatia":["L","L","L","W","D"],"Japan":["W","W","W","D","W"],"Senegal":["L","W","D","W","D"],"Colombia":["W","W","W","D","D"],"Switzerland":["W","L","W","D","W"],"Austria":["W","W","W","D","W"],"Sweden":["D","W","W","D","W"],"South Korea":["W","W","D","L","W"],"Egypt":["D","W","D","W","L"],"Ecuador":["D","W","W","L","W"],"Turkiye":["W","W","D","W","L"],"Ivory Coast":["W","W","D","W","L"],"Iran":["W","D","W","D","W"],"Algeria":["W","D","W","L","W"],"Ghana":["W","D","L","W","D"],"Paraguay":["D","W","L","D","W"],"Scotland":["L","D","W","W","D"],"Australia":["W","D","W","W","L"],"Czechia":["W","W","D","L","W"],"Tunisia":["W","D","L","W","D"],"Saudi Arabia":["D","W","L","W","D"],"Canada":["W","D","W","L","W"],"Bosnia & Herz.":["W","D","L","W","D"],"DR Congo":["W","W","D","L","W"],"Uzbekistan":["L","W","D","W","W"],"Cape Verde":["W","D","W","L","W"],"South Africa":["D","W","L","D","W"],"Qatar":["L","D","W","L","W"],"Haiti":["W","L","D","L","W"],"New Zealand":["W","D","L","W","D"],"Jordan":["D","W","L","D","W"],"Iraq":["D","W","D","L","W"],"Panama":["D","W","D","W","L"],"Curacao":["W","L","D","W","L"]};
 const formScore = (team) => { const form = FORM_DATA[team] || ["D","D","D","D","D"]; const pts = form.slice(-5).reduce((s,r) => s+(r==="W"?1:r==="D"?0.5:0), 0); return 0.9+(pts/5)*0.2; };
@@ -692,7 +694,7 @@ const runFullSim = () => {
 // ── LIVE SCORES CONTEXT ───────────────────────────────────────────────────
 export const LiveScoresCtx = createContext({scores:{},getScore:()=>null,isLive:()=>false,isFinished:()=>false,lastFetch:null});
 
-const statusIsLive = (s) => ["1H","HT","2H","ET","BT","P","LIVE","inprogress","first_half","halftime","second_half","extra_time","penalties"].includes(s);
+export const statusIsLive = (s) => ["1H","HT","2H","ET","BT","P","LIVE","inprogress","first_half","halftime","second_half","extra_time","penalties"].includes(s);
 export const statusIsFinished = (s) => ["FT","AET","PEN","finished","ended","after_extra_time","after_penalties"].includes(s);
 const statusLabel = (s,e,ex) => {
   if(!s||s==="NS"||s==="notstarted") return null;
@@ -751,7 +753,7 @@ const API_NAME_MAP = {
   "Trinidad & Tobago":"Trinidad & Tobago","Trinidad and Tobago":"Trinidad & Tobago",
   "Curacao":"Curacao",
 };
-const normTeam = (n) => API_NAME_MAP[n] || n;
+export const normTeam = (n) => API_NAME_MAP[n] || n;
 
 function LiveScoresProvider({ children }) {
   const [scores, setScores] = useState({});
@@ -1004,7 +1006,7 @@ export function Crest({ team, size=26 }) {
 
 // ── UI PRIMITIVES ─────────────────────────────────────────────────────────
 // Shared primitives: use these wherever possible so tabs feel like one product.
-const Card = ({children,style={},onClick}) => (
+export const Card = ({children,style={},onClick}) => (
   <div
     onClick={onClick}
     style={{
@@ -1035,7 +1037,7 @@ const Panel = ({children,style={}}) => (
   </Card>
 );
 
-const Badge = ({children,color=C.green,style={}}) => (
+export const Badge = ({children,color=C.green,style={}}) => (
   <span
     style={{
       display:"inline-flex",
@@ -1591,149 +1593,7 @@ function urlBase64ToUint8Array(base64String) {
 }
 
 // ── GROUPS TAB ─────────────────────────────────────────────────────────────
-function GrpTab({ onTeam, onMatchTap, tabTop=116 }) {
-  const [sel, setSel] = useState("A");
-  const [view, setView] = useState("standings");
-  const { allFixtures, lastFetch } = useContext(LiveScoresCtx);
-
-  // Manual score overrides (user-entered)
-  const [manualR, setManualR] = useState(() => {
-    const init={};
-    Object.keys(GROUPS).forEach(g=>{init[g]=MATCHES.filter(m=>m.group===g).map(m=>({id:m.id,home:m.home,away:m.away,date:m.date,hg:"",ag:""}));});
-    return init;
-  });
-
-  // Merge live API scores with manual overrides
-  // Live scores take precedence over blank manual entries; manual entries override live for editing.
-  // Was: only pulled a score from the live feed once a match was fully
-  // FINISHED, so the group table never reflected what was actually
-  // happening on the pitch during a live match — it'd jump straight from
-  // blank to final. Now also pulls in-progress scores, updating as the
-  // match continues (every live-score poll), same as finished ones.
-  const allR = useMemo(() => {
-    const merged = {};
-    Object.keys(GROUPS).forEach(g => {
-      merged[g] = (manualR[g] || []).map(r => {
-        // If user has entered a score manually, use that
-        if (r.hg !== "" || r.ag !== "") return r;
-        // Otherwise try to find a live or finished score from the live feed
-        const live = allFixtures.find(f => {
-          const h = normTeam(f?.teams?.home?.name || "");
-          const a = normTeam(f?.teams?.away?.name || "");
-          const status = f?.fixture?.status?.short || "";
-          return h === r.home && a === r.away && (statusIsFinished(status) || statusIsLive(status));
-        });
-        if (live) {
-          const status = live?.fixture?.status?.short || "";
-          return { ...r, hg: String(live.goals?.home ?? ""), ag: String(live.goals?.away ?? ""), fromLive: true, isLiveNow: statusIsLive(status) };
-        }
-        return r;
-      });
-    });
-    return merged;
-  }, [manualR, allFixtures]);
-
-  // Clears a manual override for one match, falling back to whatever the
-  // live/finished feed shows for it (or blank, if no live data exists yet).
-  const resetToActual = (id) => setManualR(p => ({...p, [sel]: p[sel].map(r => r.id===id ? {...r, hg:"", ag:""} : r)}));
-
-  const results = allR[sel] || [];
-  const standings = calcStandings(sel, results);
-  const upd = (id, f, v) => setManualR(p => ({...p, [sel]: p[sel].map(r => r.id===id ? {...r, [f]: v.replace(/\D/g,"")} : r)}));
-  const qc = (pos) => pos<=2 ? C.green : pos===3 ? C.gold : "transparent";
-  const liveCount = results.filter(r => r.fromLive).length;
-  const _ghRef = useRef(null); const _ghH = useElemHeight(_ghRef);
-  return (
-    <div>
-      {/* Fixed header */}
-      <div ref={_ghRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`2px solid ${C.b2}`,boxShadow:"none",padding:"8px 13px",marginBottom:0}}>
-        <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:6,scrollbarWidth:"none"}}>
-          {Object.keys(GROUPS).map(g=><Pill key={g} active={sel===g} onClick={()=>setSel(g)}>{g}</Pill>)}
-        </div>
-        <div style={{display:"flex",gap:8}}>
-          <Pill active={view==="standings"} onClick={()=>setView("standings")} color={C.gold}>📊 Standings</Pill>
-          <Pill active={view==="matches"} onClick={()=>setView("matches")} color={C.gold}>📋 Matches</Pill>
-        </div>
-      </div>
-      {/* Content follows the filters directly in normal document flow */}
-      <div style={{height:10}}/>
-      {view==="standings" && (
-        <div>
-          <Card style={{marginBottom:12}}>
-            <div style={{padding:"8px 13px",borderBottom:`1px solid ${C.b1}`,background:C.s1,display:"flex",justifyContent:"space-between"}}>
-              <span style={{fontWeight:700,color:C.green,fontSize:15}}>GROUP {sel}</span>
-              <div style={{display:"flex",alignItems:"center",gap:8}}>
-                {liveCount>0 && <Badge color={C.green}>🔴 Live</Badge>}
-                {lastFetch && <span style={{fontSize:10,color:C.dim}}>Updated {lastFetch.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}</span>}
-                <span style={{fontSize:10,color:C.dim}}>{"Tap for stats"}</span>
-              </div>
-            </div>
-            <div style={{display:"grid",gridTemplateColumns:"22px 1fr 28px 28px 28px 28px 32px 32px",padding:"4px 10px",borderBottom:`1px solid ${C.b1}`,background:C.bg}}>
-              {["#","Team","P","W","D","L","GD","Pts"].map((h,i)=><div key={i} style={{fontSize:11,color:C.dim,fontWeight:700,textAlign:i>=2?"center":"left"}}>{h}</div>)}
-            </div>
-            {standings.map((row,i)=>(
-              <div key={row.team} onClick={()=>onTeam(row.team)} style={{display:"grid",gridTemplateColumns:"22px 1fr 28px 28px 28px 28px 32px 32px",padding:"9px 10px",borderBottom:i<3?`1px solid ${C.b1}`:"none",cursor:"pointer",borderLeft:`3px solid ${qc(row.pos)}`,background:row.pos<=2?`${C.green}08`:row.pos===3?`${C.gold}08`:"transparent"}} onMouseEnter={e=>e.currentTarget.style.background=`${C.green}12`} onMouseLeave={e=>e.currentTarget.style.background=row.pos<=2?`${C.green}08`:row.pos===3?`${C.gold}08`:"transparent"}>
-                <div style={{fontSize:11,color:C.dim,display:"flex",alignItems:"center"}}>{row.pos}</div>
-                <div style={{display:"flex",alignItems:"center",gap:6}}>
-                  <Crest team={row.team} size={30}/>
-                  <span style={{fontSize:14,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{row.team}</span>
-                </div>
-                {[row.p,row.w,row.d,row.l].map((v,j)=><div key={j} style={{fontSize:14,color:C.mid,textAlign:"center",display:"flex",alignItems:"center",justifyContent:"center"}}>{v}</div>)}
-                <div style={{fontSize:14,color:row.gd>0?C.green:row.gd<0?C.red:C.mid,textAlign:"center",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:600}}>{row.gd>0?"+":""}{row.gd}</div>
-                <div style={{fontSize:17,fontWeight:800,color:C.text,textAlign:"center",display:"flex",alignItems:"center",justifyContent:"center"}}>{row.pts}</div>
-              </div>
-            ))}
-            <div style={{padding:"6px 12px",borderTop:`1px solid ${C.b1}`,display:"flex",gap:12}}>
-              <div style={{display:"flex",alignItems:"center",gap:4,fontSize:12,color:C.dim}}><div style={{width:9,height:9,background:C.green,borderRadius:2}}/>{"Top 2 Qualify"}</div>
-              <div style={{display:"flex",alignItems:"center",gap:4,fontSize:12,color:C.dim}}><div style={{width:9,height:9,background:C.gold,borderRadius:2}}/>{"Best 3rd"}</div>
-            </div>
-          </Card>
-          <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:4}}>ENTER SCORES</div>
-          <div style={{fontSize:11,color:C.dim,marginBottom:8,lineHeight:1.5}}>Scores fill in automatically as matches are played — live ones update in real time (🔴). Type your own score to play out a "what if", then tap <span style={{color:C.gold,fontWeight:700}}>↺ Reset</span> to go back to the actual result.</div>
-          {results.map(r=>{
-            const fullMatch = MATCHES.find(m=>m.id===r.id);
-            const manualEntry = (manualR[sel] || []).find(x => x.id === r.id);
-            const hasManualOverride = manualEntry && (manualEntry.hg !== "" || manualEntry.ag !== "");
-            return (
-            <div key={r.id} style={{display:"flex",alignItems:"center",gap:6,marginBottom:6,background:C.s1,border:`1px solid ${C.b1}`,borderRadius:10,padding:"7px 11px"}}>
-              <Crest team={r.home} size={30}/>
-              <span onClick={()=>fullMatch&&onMatchTap&&onMatchTap(fullMatch)} style={{fontSize:13,color:C.text,flex:1,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",cursor:onMatchTap?"pointer":"default"}}>{r.home}</span>
-              <input value={r.hg} onChange={e=>upd(r.id,"hg",e.target.value)} placeholder="-" maxLength={2} style={{width:28,textAlign:"center",background:C.s2,border:`1px solid ${r.isLiveNow&&!hasManualOverride?C.green:C.b2}`,borderRadius:6,color:C.text,fontSize:14,fontWeight:700,padding:"3px 0",outline:"none"}}/>
-              <span style={{color:C.dim,fontWeight:700}}>:</span>
-              <input value={r.ag} onChange={e=>upd(r.id,"ag",e.target.value)} placeholder="-" maxLength={2} style={{width:28,textAlign:"center",background:C.s2,border:`1px solid ${r.isLiveNow&&!hasManualOverride?C.green:C.b2}`,borderRadius:6,color:C.text,fontSize:14,fontWeight:700,padding:"3px 0",outline:"none"}}/>
-              {r.isLiveNow && !hasManualOverride && <span style={{fontSize:9,color:C.green,fontWeight:700,flexShrink:0}}>🔴</span>}
-              {hasManualOverride && (
-                <button onClick={()=>resetToActual(r.id)} title="Reset to actual score" style={{fontSize:10,color:C.gold,background:`${C.gold}18`,border:`1px solid ${C.gold}44`,borderRadius:6,padding:"3px 6px",cursor:"pointer",fontWeight:700,flexShrink:0,whiteSpace:"nowrap"}}>↺ Reset</button>
-              )}
-              <span onClick={()=>fullMatch&&onMatchTap&&onMatchTap(fullMatch)} style={{fontSize:13,color:C.text,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",cursor:onMatchTap?"pointer":"default"}}>{r.away}</span>
-              <Crest team={r.away} size={30}/>
-            </div>
-          );})}
-        </div>
-      )}
-      {view==="matches" && results.map(r=>{
-        const fullMatch = MATCHES.find(m=>m.id===r.id);
-        return (
-        <Card key={r.id} style={{marginBottom:8,cursor:"pointer"}} onClick={()=>fullMatch&&onMatchTap&&onMatchTap(fullMatch)}>
-          <div style={{padding:"11px 13px"}}>
-            <div style={{fontSize:10,color:C.dim,marginBottom:6}}>{r.date}</div>
-            <div style={{display:"flex",alignItems:"center",gap:8}}>
-              <Crest team={r.home} size={26}/>
-              <span style={{fontWeight:700,color:C.text,flex:1,fontSize:14}}>{r.home}</span>
-              <div style={{display:"flex",alignItems:"center",gap:4}} onClick={e=>e.stopPropagation()}>
-                <input value={r.hg} onChange={e=>upd(r.id,"hg",e.target.value)} placeholder="-" maxLength={2} style={{width:32,textAlign:"center",background:C.s2,border:`1px solid ${C.b2}`,borderRadius:8,color:C.text,fontSize:16,fontWeight:700,padding:"4px 0",outline:"none"}}/>
-                <span style={{color:C.dim}}>:</span>
-                <input value={r.ag} onChange={e=>upd(r.id,"ag",e.target.value)} placeholder="-" maxLength={2} style={{width:32,textAlign:"center",background:C.s2,border:`1px solid ${C.b2}`,borderRadius:8,color:C.text,fontSize:16,fontWeight:700,padding:"4px 0",outline:"none"}}/>
-              </div>
-              <span style={{fontWeight:700,color:C.text,flex:1,textAlign:"right",fontSize:14}}>{r.away}</span>
-              <Crest team={r.away} size={26}/>
-            </div>
-          </div>
-        </Card>
-      );})}
-    </div>
-  );
-}
+// GrpTab extracted to ./tabs/GrpTab.jsx (see import above).
 
 // ── ZAFRONIX DATA LAYER ───────────────────────────────────────────────────
 const zCache = {};
@@ -3085,7 +2945,7 @@ function H2HTab({ tabTop=116 }) {
 
 // ── DRAG-TO-REORDER LIST ──────────────────────────────────────────────────
 // Works on mobile (touch) and desktop (mouse) via unified Pointer Events API.
-function DragList({ items, onReorder, renderItem }) {
+export function DragList({ items, onReorder, renderItem }) {
   const [dragIdx, setDragIdx] = useState(null);
   const [overIdx, setOverIdx] = useState(null);
   const [dragging, setDragging] = useState(false);
@@ -3176,10 +3036,24 @@ function DragList({ items, onReorder, renderItem }) {
 }
 
 // ── MY BRACKET TAB ────────────────────────────────────────────────────────
-const defaultBracketGroups=()=>Object.fromEntries(Object.entries(GROUPS).map(([g,{teams}])=>[g,[...teams]]));
-function BracketMatchup({ match, t1, t2, winner, onPick, interactive=false, compact=false, t1Tag=null, t2Tag=null }) {
+export const defaultBracketGroups=()=>Object.fromEntries(Object.entries(GROUPS).map(([g,{teams}])=>[g,[...teams]]));
+function BracketMatchup({ match, t1, t2, winner, onPick, interactive=false, compact=false, t1Tag=null, t2Tag=null, onMatchTap=null }) {
+  const { getScore, isLive, isFinished } = useContext(LiveScoresCtx);
   const canPick = interactive && t1 && t2 && t1 !== "TBD" && t2 !== "TBD";
   const matchData = match ? MATCHES.find(m => m.id === match) : null;
+  // Live score + blinking indicator — uses t1/t2 (the already-resolved team
+  // names passed in), not matchData.home/away, since matchData comes from
+  // the static schedule and can still hold an unresolved slot placeholder
+  // ("1E"/"2C") for a match whose group hasn't finished yet.
+  const hasRealMatchup = t1 && t2 && t1 !== "TBD" && t2 !== "TBD";
+  const live = hasRealMatchup ? isLive(t1, t2) : false;
+  const finished = hasRealMatchup ? isFinished(t1, t2) : false;
+  // getScore returns a value (often 0-0) even for a match that's merely
+  // scheduled and hasn't kicked off yet — that's what caused tomorrow's
+  // matches to wrongly show a score. Only show it once the match has
+  // actually started.
+  const sc = hasRealMatchup && (live || finished) ? getScore(t1, t2) : null;
+  const canTapMatch = !!(matchData && onMatchTap);
   const teamRow = (team, i, tag) => {
     const isW = winner && team === winner;
     const rowUnavailable = !team || team === "TBD";
@@ -3215,29 +3089,39 @@ function BracketMatchup({ match, t1, t2, winner, onPick, interactive=false, comp
         <span style={{fontSize:compact?12:14,color:nameColor,fontWeight:isW||isClinched?800:600,fontStyle:isProvisional?"italic":"normal",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",flex:1,opacity:hasRealTeam?1:0.65}}>{team||"TBD"}</span>
         {isClinched && !isW && <span title="Clinched into this slot" style={{fontSize:11}}>🔒</span>}
         {isProvisional && <span style={{fontSize:8,color:C.dim,fontWeight:700,letterSpacing:"0.04em",whiteSpace:"nowrap"}}>LEADING</span>}
+        {sc && i===0 && <span style={{fontSize:compact?12:13,fontWeight:800,color:live?C.green:C.text,fontFamily:"monospace"}}>{sc.hg}</span>}
+        {sc && i===1 && <span style={{fontSize:compact?12:13,fontWeight:800,color:live?C.green:C.text,fontFamily:"monospace"}}>{sc.ag}</span>}
         {isW && <span style={{fontSize:12,color:C.green,fontWeight:900}}>✓</span>}
       </button>
     );
   };
   return (
     <div style={{position:"relative",background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${winner?C.greenS:C.b1}`,borderRadius:12,overflow:"hidden",width:"100%",boxShadow:winner?DS.shadow.panel:DS.shadow.card}}>
-      <div style={{padding:"5px 10px",borderBottom:`1px solid ${C.b1}`,background:`${C.bg}88`}}>
+      <button
+        onClick={() => canTapMatch && onMatchTap({...matchData, home: t1, away: t2})}
+        disabled={!canTapMatch}
+        title={canTapMatch ? "View match details" : undefined}
+        style={{width:"100%",display:"block",padding:"5px 10px",borderBottom:`1px solid ${C.b1}`,background:`${C.bg}88`,border:"none",borderBottomWidth:1,borderBottomStyle:"solid",borderBottomColor:C.b1,cursor:canTapMatch?"pointer":"default",textAlign:"left",WebkitAppearance:"none",appearance:"none"}}
+      >
         {matchData ? (
-          <>
-            <div style={{fontSize:10,fontWeight:700,color:C.gold,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{matchData.date} · {matchData.time}</div>
-            <div style={{fontSize:9,color:C.dim,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>📍 {matchData.venue.split(",")[0]}</div>
-          </>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:6}}>
+            <div style={{overflow:"hidden"}}>
+              <div style={{fontSize:10,fontWeight:700,color:C.gold,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{matchData.date} · {matchData.time}</div>
+              <div style={{fontSize:9,color:C.dim,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>📍 {matchData.venue.split(",")[0]}</div>
+            </div>
+            {live && <span style={{fontSize:9,color:C.red,fontWeight:800,flexShrink:0,animation:"pulse 1.2s infinite"}}>🔴 LIVE</span>}
+          </div>
         ) : (
           <div style={{fontSize:10,color:C.gold,fontWeight:900,letterSpacing:"0.08em"}}>M{match || "—"}</div>
         )}
-      </div>
+      </button>
       {teamRow(t1,0,t1Tag)}
       {teamRow(t2,1,t2Tag)}
     </div>
   );
 }
 
-function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick=()=>{}, completedCount=0 }) {
+function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick=()=>{}, completedCount=0, onMatchTap=null }) {
   const bracketScrollRef = useRef(null);
 
   useEffect(() => {
@@ -3315,7 +3199,7 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
             const m = matchesById[id]||{match:id,home:null,away:null,winner:null};
             return (
               <div key={id} style={{position:"absolute",top:tops[n],left:0,width:CW,opacity:!(m.home&&m.away)?0.55:1}}>
-                <BracketMatchup match={m.match} t1={m.home} t2={m.away} winner={m.winner} interactive={pickMode==="manual"} onPick={t=>onPick(m,t)} t1Tag={m.homeTag} t2Tag={m.awayTag}/>
+                <BracketMatchup match={m.match} t1={m.home} t2={m.away} winner={m.winner} interactive={pickMode==="manual"} onPick={t=>onPick(m,t)} t1Tag={m.homeTag} t2Tag={m.awayTag} onMatchTap={onMatchTap}/>
               </div>
             );
           })}
@@ -3378,7 +3262,7 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
               <div style={{position:"absolute",top:finalTop-22,left:0,width:190,textAlign:"center",fontSize:11,fontWeight:900,color:C.gold,letterSpacing:"0.12em"}}>FINAL</div>
               {/* Final card */}
               <div style={{position:"absolute",top:finalTop,left:0,width:190}}>
-                <BracketMatchup match={finalMatch.match} t1={finalMatch.home} t2={finalMatch.away} winner={finalMatch.winner} interactive={pickMode==="manual"} onPick={(team)=>onPick(finalMatch,team)}/>
+                <BracketMatchup match={finalMatch.match} t1={finalMatch.home} t2={finalMatch.away} winner={finalMatch.winner} interactive={pickMode==="manual"} onPick={(team)=>onPick(finalMatch,team)} onMatchTap={onMatchTap}/>
                 {finalMatch.winner && (
                   <div style={{marginTop:14,textAlign:"center",background:`${C.gold}16`,border:`1px solid ${C.gold}44`,borderRadius:14,padding:"10px 8px"}}>
                     <div style={{fontSize:10,color:C.dim,fontWeight:800,letterSpacing:"0.08em"}}>CHAMPION</div>
@@ -3397,7 +3281,7 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
   );
 }
 
-function VisualBracketTree({ bracket, pickMode="auto", onPick=()=>{}, view="compact" }) {
+export function VisualBracketTree({ bracket, pickMode="auto", onPick=()=>{}, view="compact", onMatchTap=null }) {
   const byId = (matches=[]) => Object.fromEntries((matches||[]).map(m => [Number(m.match), m]));
   const matchesById = {
     ...byId(bracket?.r32),
@@ -3419,7 +3303,7 @@ function VisualBracketTree({ bracket, pickMode="auto", onPick=()=>{}, view="comp
   const completedCount = Object.values(matchesById).filter(m => m?.winner).length;
 
   if (view === "tree") {
-    return <WideBracketView rounds={rounds} matchesById={matchesById} bracket={bracket} pickMode={pickMode} onPick={onPick} completedCount={completedCount}/>;
+    return <WideBracketView rounds={rounds} matchesById={matchesById} bracket={bracket} pickMode={pickMode} onPick={onPick} completedCount={completedCount} onMatchTap={onMatchTap}/>;
   }
 
   return (
@@ -3454,7 +3338,7 @@ function VisualBracketTree({ bracket, pickMode="auto", onPick=()=>{}, view="comp
                   const locked = !(m.home && m.away);
                   return (
                     <div key={m.match} style={{opacity:locked?0.55:1,position:"relative"}}>
-                      <BracketMatchup match={m.match} t1={m.home} t2={m.away} winner={m.winner} interactive={pickMode==="manual"} onPick={(team)=>onPick(m,team)} t1Tag={m.homeTag} t2Tag={m.awayTag}/>
+                      <BracketMatchup match={m.match} t1={m.home} t2={m.away} winner={m.winner} interactive={pickMode==="manual"} onPick={(team)=>onPick(m,team)} t1Tag={m.homeTag} t2Tag={m.awayTag} onMatchTap={onMatchTap}/>
                     </div>
                   );
                 })}
@@ -3485,7 +3369,7 @@ function VisualBracketTree({ bracket, pickMode="auto", onPick=()=>{}, view="comp
 const MY_BRACKET_STORAGE_KEY = "wc2026_my_bracket_v3";
 const MY_BRACKET_VERSION = "3.0"; // bump this to force reset groups/result for all users
 
-function readSavedMyBracket() {
+export function readSavedMyBracket() {
   try {
     const raw = localStorage.getItem(MY_BRACKET_STORAGE_KEY);
     const saved = raw ? JSON.parse(raw) : {};
@@ -3528,7 +3412,7 @@ function readSavedMyBracket() {
   }
 }
 
-function writeSavedMyBracket(state) {
+export function writeSavedMyBracket(state) {
   try {
     localStorage.setItem(MY_BRACKET_STORAGE_KEY, JSON.stringify({ ...state, _version: MY_BRACKET_VERSION }));
     window.dispatchEvent(new CustomEvent("wc2026_my_bracket_changed", { detail: state }));
@@ -3547,679 +3431,14 @@ function restoreSavedMyBracket(state) {
   } catch {}
 }
 
-function clearSavedMyBracket() {
+export function clearSavedMyBracket() {
   try {
     localStorage.removeItem(MY_BRACKET_STORAGE_KEY);
     window.dispatchEvent(new CustomEvent("wc2026_my_bracket_changed", { detail: {} }));
   } catch {}
 }
 
-function MyBracketTab({ tabTop=116 }) {
-  const savedBracket = useMemo(() => readSavedMyBracket(), []);
-  const isMobileBracket = typeof window !== "undefined" && window.innerWidth < 520;
-  const { allFixtures, getScore, isFinished } = useContext(LiveScoresCtx);
-  const [bracketSource,setBracketSource]=useState("actual"); // "mine" | "actual"
-  const [stage,setStage]=useState(()=>savedBracket.stage || (savedBracket.result ? "bracket" : "groups"));
-  const [bracketMode,setBracketMode]=useState(()=>savedBracket.bracketMode || "simulation");
-  const [playMode,setPlayMode]=useState(()=>savedBracket.playMode || "manual");
-  const [bracketView,setBracketView]=useState(()=>savedBracket.bracketView || "tree");
-  const [manualPicks,setManualPicks]=useState(()=>savedBracket.manualPicks || {});
-  const [groups,setGroups]=useState(()=>savedBracket.groups || defaultBracketGroups());
-  const [thirds,setThirds]=useState(()=>savedBracket.thirds || []);
-  const [result,setResult]=useState(()=>savedBracket.result || null);
-  const [running,setRunning]=useState(false);
-  const [sharing,setSharing]=useState(false);
-  const [showBracketActions,setShowBracketActions]=useState(false);
-  const annexStatus = {state:"ready",message:"FIFA Annex C ready (495 combinations)."};
-  const allThirds=Object.entries(groups).map(([g,teams])=>({group:g,team:teams[2]}));
-  const toggleThird=(t)=>{setThirds(p=>p.includes(t)?p.filter(x=>x!==t):[...p,t].slice(0,8));};
-  const _mbhRef = useRef(null); const _mbhH = useElemHeight(_mbhRef);
-
-  // Default Bracket tab to the real tournament view. Fantasy/My Bracket remains
-  // available with one tap, but the first view should be the official bracket
-  // during live tournament use.
-  useEffect(() => {
-    setBracketSource("actual");
-  }, []);
-
-  // Keep `thirds` (the explicit "qualified 3rd place" selection, tracked by
-  // team name) in sync with `groups`. Reordering a group can move a team
-  // that was previously in 3rd place up to 1st/2nd — if we don't drop it
-  // here, buildQualifiedThirdsFromSelectedTeams() silently filters it out
-  // later, leaving fewer than 8 valid teams. That breaks the Annex C
-  // assignment and can map the same team to two different R32 slots at
-  // once (an "impossible" matchup). Pruning here lets runBracket()'s
-  // existing "auto-select best 8" fallback kick back in correctly.
-  useEffect(() => {
-    setThirds(prev => {
-      if (!prev || !prev.length) return prev;
-      const validThirdNames = new Set(Object.values(groups).map(t => t?.[2]).filter(Boolean));
-      const next = prev.filter(t => validThirdNames.has(t));
-      return next.length === prev.length ? prev : next;
-    });
-  }, [groups]);
-
-  useEffect(()=>{
-    const applySyncedBracket = (ev) => {
-      const incoming = ev?.detail && Object.keys(ev.detail).length ? ev.detail : readSavedMyBracket();
-      setStage(incoming.stage || (incoming.result ? "bracket" : "groups"));
-      setBracketMode(incoming.bracketMode || "simulation");
-      setPlayMode(incoming.playMode || "manual");
-      setBracketView(incoming.bracketView || "tree");
-      setManualPicks(incoming.manualPicks || {});
-      setGroups(incoming.groups || defaultBracketGroups());
-      setThirds(incoming.thirds || []);
-      setResult(incoming.result || null);
-    };
-    window.addEventListener("wc2026_my_bracket_synced", applySyncedBracket);
-    return () => window.removeEventListener("wc2026_my_bracket_synced", applySyncedBracket);
-  },[]);
-
-  useEffect(()=>{
-    writeSavedMyBracket({
-      stage,
-      bracketMode,
-      playMode,
-      bracketView,
-      manualPicks,
-      groups,
-      thirds,
-      result
-    });
-  }, [stage, bracketMode, playMode, bracketView, manualPicks, groups, thirds, result]);
-
-  const resetMyBracket=()=>{
-    clearSavedMyBracket();
-    setStage("groups");
-    setBracketMode("simulation");
-    setPlayMode("manual");
-    setManualPicks({});
-    setGroups(defaultBracketGroups());
-    setThirds([]);
-    setResult(null);
-  };
-
-  const resetWinners=()=>{
-    setManualPicks({});
-  };
-
-  const runBracket=()=>{
-    setRunning(true);
-    setTimeout(()=>{
-      // Auto-select best 8 third-place teams if user hasn't picked them
-      // (takes the 3rd team from each group, sorted by simulator strength, top 8)
-      let activeThirds = thirds;
-      if (!activeThirds || activeThirds.length !== 8) {
-        const allThirds = Object.entries(groups)
-          .map(([g, teams]) => ({ group: g, team: teams[2] }))
-          .filter(x => x.team)
-          .sort((a, b) => (STR[b.team] || 0) - (STR[a.team] || 0))
-          .slice(0, 8)
-          .map(x => x.team);
-        activeThirds = allThirds;
-        setThirds(allThirds);
-      }
-
-      const qualifiedThirds = buildQualifiedThirdsFromSelectedTeams(groups, activeThirds);
-      let thirdGroupsKey = "";
-      try { thirdGroupsKey = buildThirdGroupsKey(groups, activeThirds); } catch(e) { thirdGroupsKey = ""; }
-
-      console.log("Qualified third-place teams:", qualifiedThirds);
-      console.log("Annex C group key:", thirdGroupsKey);
-
-      let r32=[];
-      let roundTemplates=null;
-      let fifaEngineStatus="fifa-fallback";
-      let fifaEngineMessage=annexStatus.state==="ready"
-        ? "Official FIFA bracket rules could not be resolved."
-        : "Official FIFA bracket rules are still loading.";
-
-      try {
-        // ── Build R32 from template, using the real engine's Annex C lookup ──
-        // (Previously avoided buildFifa2026Bracket/getAnnexCMapping because
-        // annexCStore was never populated — fixed: engine/annexC.js now
-        // bakes in the verified 495-row table and loads it eagerly at
-        // import time, so this call is reliable.)
-
-        const annexMapping = getAnnexCMapping(qualifiedThirds);
-        // annexMapping: { "1A": "3C", "1E": "3D", ... } — target col → third group
-
-        const thirdTeamByGroup = Object.fromEntries(
-          qualifiedThirds.map(t => [String(t.group).toUpperCase(), t.team])
-        );
-
-        const resolveSlot = (slot, homeSlot) => {
-          if (!slot || slot === "TBD") return "TBD";
-          if (slot === "3?") {
-            // homeSlot is the Annex C target column (e.g. "1E")
-            const assigned = annexMapping[homeSlot]; // e.g. "3D"
-            const grp = assigned ? assigned.replace(/^3/,"") : null;
-            return (grp && thirdTeamByGroup[grp]) || "TBD";
-          }
-          if (slot.startsWith("1")) return groups[slot[1]]?.[0] || slot;
-          if (slot.startsWith("2")) return groups[slot[1]]?.[1] || slot;
-          if (slot.startsWith("3")) return thirdTeamByGroup[slot.slice(1)] || slot;
-          return slot;
-        };
-
-        // Hardcoded R32 template (mirrors fifa2026Bracket.js ROUND_OF_32_TEMPLATE)
-        const R32 = R32_SLOT_TEMPLATE;
-
-        r32 = R32.map(m => ({
-          match: m.match,
-          homeSlot: m.home,
-          awaySlot: m.away,
-          home: resolveSlot(m.home, m.home),
-          away: resolveSlot(m.away, m.home),
-          winner: null,
-        }));
-
-        roundTemplates = {
-          r16: ROUND_OF_16_TEMPLATE,
-          qf:  QUARTER_FINAL_TEMPLATE,
-          sf:  SEMI_FINAL_TEMPLATE,
-          final: FINAL_TEMPLATE,
-        };
-        fifaEngineStatus="fifa-ready";
-        fifaEngineMessage="FIFA 2026 bracket generated.";
-      } catch(e) {
-        console.warn("FIFA bracket engine fallback:", e);
-        const qualifiers=[];
-        Object.entries(groups).forEach(([,teams])=>{
-          qualifiers.push(teams[0],teams[1]);
-        });
-        const teams=[...qualifiers,...qualifiedThirds.map(x=>x.team)];
-        r32=[];
-        for(let i=0;i<teams.length;i+=2){
-          r32.push({match:73+(i/2),home:teams[i],away:teams[i+1]||"TBD",winner:null});
-        }
-      }
-
-      setManualPicks({});
-      setPlayMode("manual");
-      setResult({
-        mode:bracketMode,
-        r32,
-        r16:[],
-        qf:[],
-        sf:[],
-        final:[],
-        champion:null,
-        runnerUp:null,
-        qualifiedThirds,
-        thirdGroupsKey,
-        roundTemplates,
-        fifaEngineStatus,
-        fifaEngineMessage,
-        annexStatus
-      });
-
-      setStage("bracket");
-      setRunning(false);
-    },80);
-  };
-
-  const displayedResult = useMemo(() => {
-    if (!result || playMode !== "manual" || result.fifaEngineStatus !== "fifa-ready" || !result.roundTemplates) return result;
-    const winnerMap = {};
-    const applyPick = (match) => {
-      const picked = manualPicks[match.match];
-      const winner = picked && (picked === match.home || picked === match.away) ? picked : null;
-      if (winner) winnerMap[match.match] = winner;
-      return {...match, winner};
-    };
-    const resolveRef = (ref) => {
-      if (typeof ref === "string" && ref.startsWith("W")) return winnerMap[Number(ref.slice(1))] || null;
-      return ref;
-    };
-    const buildRound = (template=[]) => template.map(t => applyPick({match:t.match,homeSlot:t.home,awaySlot:t.away,home:resolveRef(t.home),away:resolveRef(t.away)}));
-    const r32 = (result.r32||[]).map(m => applyPick({...m, winner:null}));
-    const r16 = buildRound(result.roundTemplates.r16);
-    const qf = buildRound(result.roundTemplates.qf);
-    const sf = buildRound(result.roundTemplates.sf);
-    const final = buildRound(result.roundTemplates.final);
-    const champion = final?.[0]?.winner || null;
-    const runnerUp = champion ? [final?.[0]?.home, final?.[0]?.away].find(t=>t&&t!==champion) : null;
-    return {...result, r32, r16, qf, sf, final, champion, runnerUp};
-  }, [result, manualPicks, playMode]);
-
-  // ── ACTUAL bracket — built entirely from real group-stage results and
-  // real knockout results as they're played. No manual picks involved;
-  // anything not yet determined in reality shows as "TBD". ─────────────────
-  const actualBracket = useMemo(() => {
-    const buildGroupResults = (letter) => MATCHES.filter(m => m.group === letter).map(m => {
-      const s = getScore(m.home, m.away);
-      const finished = s && statusIsFinished(s.status);
-      return { id:m.id, home:m.home, away:m.away, hg: finished ? String(s.hg ?? "") : "", ag: finished ? String(s.ag ?? "") : "" };
-    });
-
-    const groupStandings = {};
-    const groupResultsByLetter = {};
-    const groupComplete = {};
-    Object.keys(GROUPS).forEach(g => {
-      const res = buildGroupResults(g);
-      groupResultsByLetter[g] = res;
-      groupComplete[g] = res.length > 0 && res.every(r => r.hg !== "" && r.ag !== "");
-      groupStandings[g] = calcStandings(g, res);
-    });
-    const allGroupsComplete = Object.values(groupComplete).every(Boolean);
-
-    // Looks up the already-played head-to-head result between two teams in
-    // a group, using FIFA's actual first tiebreak criterion (head-to-head
-    // points). Returns the winning team's name, "draw", or null if they
-    // haven't played yet.
-    const headToHeadWinner = (g, teamA, teamB) => {
-      const m = (groupResultsByLetter[g] || []).find(r =>
-        (r.home === teamA && r.away === teamB) || (r.home === teamB && r.away === teamA)
-      );
-      if (!m || m.hg === "" || m.ag === "") return null;
-      const hg = parseInt(m.hg), ag = parseInt(m.ag);
-      if (isNaN(hg) || isNaN(ag)) return null;
-      if (hg === ag) return "draw";
-      const homeWon = hg > ag;
-      return (m.home === teamA) === homeWon ? teamA : teamB;
-    };
-
-    // Has this group's CURRENT leader mathematically clinched first place?
-    // FIFA changed the World Cup tiebreak order for 2026: head-to-head
-    // results among tied teams now come BEFORE overall goal difference (see
-    // calcStandings above for the full chain). So a leader can be clinched
-    // even when an exact points-tie is still reachable, as long as the
-    // leader has already beaten every team that could reach that tie
-    // head-to-head — beating everyone in a tied set guarantees winning that
-    // set's head-to-head mini-table regardless of how many teams end up
-    // level, so this is checked pairwise rather than needing to simulate
-    // every possible group of ties. If the head-to-head meeting hasn't been
-    // played yet, or was a draw, or the leader lost it, the tie genuinely
-    // isn't resolved yet and the leader stays "provisional". A team that
-    // could exceed the leader's points outright is obviously never safe.
-    // Each team plays exactly 3 group matches, so remaining = 3 - played.
-    const clinchedFirst = {};
-    Object.keys(GROUPS).forEach(g => {
-      const table = groupStandings[g] || [];
-      const leader = table[0];
-      // Once the group has actually finished, the table is final — trust
-      // it directly. The pairwise head-to-head check below is only a
-      // PROJECTION tool for a still-incomplete group; running it on a
-      // finished one can wrongly read a tie as "unresolved" if it was
-      // actually settled by goal difference/goals-for instead of a head-
-      // to-head meeting. This was the actual bug behind Brazil still
-      // showing as "Leading" after Group C had already finished.
-      if (groupComplete[g]) {
-        clinchedFirst[g] = !!leader;
-        return;
-      }
-      clinchedFirst[g] = !!leader && table.slice(1).every(t => {
-        const maxPossible = t.pts + (3 - t.p) * 3;
-        if (maxPossible < leader.pts) return true;
-        if (maxPossible > leader.pts) return false;
-        return headToHeadWinner(g, leader.team, t.team) === leader.team;
-      });
-    });
-
-    // Always resolve from the CURRENT table, not just once a group is
-    // mathematically finished — this is a live projection that updates as
-    // results come in, not a "wait until certain" view. It can still shift
-    // before a group's last match is played; that's expected and fine.
-    const firstOf = (g) => groupStandings[g]?.[0]?.team || null;
-    const secondOf = (g) => groupStandings[g]?.[1]?.team || null;
-
-    // Tags a "1X" or "2X" slot as "clinched" or "provisional" so the UI can
-    // show confirmed teams in color/locked and still-live projections
-    // dimmed. 1st place uses the mathematical clinch check above (can
-    // resolve before the group's last match is even played). 2nd place
-    // doesn't attempt that messier multi-team computation — it's tagged
-    // "clinched" only once the whole group has actually finished, and
-    // "provisional" the entire time before that.
-    const slotTag = (slot) => {
-      if (typeof slot !== "string") return null;
-      if (slot[0] === "1") return clinchedFirst[slot[1]] ? "clinched" : "provisional";
-      if (slot[0] === "2") return groupComplete[slot[1]] ? "clinched" : "provisional";
-      return null;
-    };
-
-    // Same idea for the "best 8 thirds" cross-group ranking — projected from
-    // the current table for every group's 3rd-place team. This is provisional
-    // until every group has actually finished (the relative ranking can change
-    // right up until the last group match), but there's always something to
-    // show rather than blanking the whole bracket out.
-    const qualifiedThirds = Object.keys(GROUPS)
-      .map(g => ({ group:g, ...groupStandings[g][2] }))
-      .sort((a,b) => b.pts-a.pts || b.gd-a.gd || b.gf-a.gf)
-      .slice(0,8);
-    const thirdTeamByGroup = Object.fromEntries(qualifiedThirds.map(t => [t.group, t.team]));
-    let annexMapping = null;
-    try { annexMapping = getAnnexCMapping(qualifiedThirds.map(t => ({group:t.group, team:t.team}))); }
-    catch { annexMapping = null; }
-
-    const resolveActualSlot = (slot, homeSlot) => {
-      if (!slot) return null;
-      if (slot === "3?") {
-        if (!annexMapping) return null;
-        const assigned = annexMapping[homeSlot];
-        const grp = assigned ? assigned.replace(/^3/,"") : null;
-        return (grp && thirdTeamByGroup[grp]) || null;
-      }
-      if (slot.startsWith("1")) return firstOf(slot[1]);
-      if (slot.startsWith("2")) return secondOf(slot[1]);
-      return null;
-    };
-
-    // Looks up a real finished result for two known teams, trying both
-    // home/away orderings since neutral-venue knockout fixtures don't
-    // always have the "home" slot match the broadcaster's designation.
-    // Draws (which shouldn't persist past penalties in a real knockout
-    // match) are left as TBD rather than guessed at.
-    const lookupReal = (home, away) => {
-      if (!home || !away || home === "TBD" || away === "TBD") return null;
-      let s = getScore(home, away), swapped = false;
-      if (!s) { s = getScore(away, home); swapped = true; }
-      if (!s || !statusIsFinished(s.status)) return null;
-      const hg = swapped ? s.ag : s.hg, ag = swapped ? s.hg : s.ag;
-      if (hg == null || ag == null || hg === ag) return null;
-      return { hg, ag, winner: hg > ag ? home : away };
-    };
-
-    const winnerMap = {};
-    const actualTeamTag = (slot, team) => {
-      // Actual Bracket R32 is now fully set. Once a slot resolves to a real
-      // team, do not tag it as provisional OR clinched. The tag was only a
-      // prediction-state cue, and it made confirmed R32 teams look visually
-      // locked/dimmed in the Actual Bracket. Leave unresolved slots tagged so
-      // TBD/projection states still have a safe fallback.
-      if (team && team !== "TBD") return null;
-      return slotTag(slot);
-    };
-    const r32 = R32_SLOT_TEMPLATE.map(m => {
-      const home = resolveActualSlot(m.home, m.home) || "TBD";
-      const away = resolveActualSlot(m.away, m.home) || "TBD";
-      const played = lookupReal(home, away);
-      if (played) winnerMap[m.match] = played.winner;
-      return { match:m.match, homeSlot:m.home, awaySlot:m.away, home, away, hg:played?.hg ?? null, ag:played?.ag ?? null, winner: played?.winner || null, homeTag: actualTeamTag(m.home, home), awayTag: actualTeamTag(m.away, away) };
-    });
-
-    const resolveRef = (ref) => {
-      if (typeof ref === "string" && ref.startsWith("W")) return winnerMap[Number(ref.slice(1))] || "TBD";
-      return ref || "TBD";
-    };
-    const buildActualRound = (template=[]) => (template||[]).map(t => {
-      const home = resolveRef(t.home), away = resolveRef(t.away);
-      const played = lookupReal(home, away);
-      if (played) winnerMap[t.match] = played.winner;
-      return { match:t.match, homeSlot:t.home, awaySlot:t.away, home, away, hg:played?.hg ?? null, ag:played?.ag ?? null, winner: played?.winner || null };
-    });
-
-    const r16 = buildActualRound(ROUND_OF_16_TEMPLATE);
-    const qf = buildActualRound(QUARTER_FINAL_TEMPLATE);
-    const sf = buildActualRound(SEMI_FINAL_TEMPLATE);
-    const final = buildActualRound(FINAL_TEMPLATE);
-    const champion = final?.[0]?.winner || null;
-    const runnerUp = champion ? [final?.[0]?.home, final?.[0]?.away].find(t => t && t !== champion && t !== "TBD") : null;
-
-    return { r32, r16, qf, sf, final, champion, runnerUp, allGroupsComplete };
-  }, [allFixtures]);
-
-  const handleManualPick = (match, team) => {
-    if (playMode !== "manual" || !match?.match || !team || team === "TBD") return;
-    setManualPicks(prev => {
-      const existing = prev[match.match];
-      const next = {...prev, [match.match]: team};
-      // Only clear downstream picks if we're CHANGING an existing pick (not filling a new slot)
-      if (existing && existing !== team) {
-        const m = Number(match.match);
-        const cutoff = m < 89 ? 89 : m < 97 ? 97 : m < 101 ? 101 : m < 104 ? 104 : 105;
-        Object.keys(next).forEach(k => { if (Number(k) >= cutoff) delete next[k]; });
-      }
-      return next;
-    });
-  };
-
-  const shareBracketCard = async () => {
-    const bracket = displayedResult;
-    if (!bracket?.champion) {
-      alert("Pick the Final winner before sharing your bracket card.");
-      return;
-    }
-    setSharing(true);
-    try {
-      const displayName = (localStorage.getItem("wc2026_displayname") || "").trim();
-      const owner = displayName || "My";
-      const semifinals = (bracket.sf || []).flatMap(m => [m.home, m.away]).filter(Boolean);
-      const finalists = (bracket.final || []).flatMap(m => [m.home, m.away]).filter(Boolean);
-      const snapshot = {
-        owner,
-        title: `${owner === "My" ? "My" : owner + "'s"} World Cup 2026 Bracket`,
-        champion: bracket.champion,
-        runnerUp: bracket.runnerUp || finalists.find(t => t && t !== bracket.champion) || "",
-        finalists,
-        semifinalists: Array.from(new Set(semifinals)),
-        thirdGroupsKey: bracket.thirdGroupsKey || "",
-        createdAt: Date.now(),
-        rounds: {
-          r32: bracket.r32 || [],
-          r16: bracket.r16 || [],
-          qf: bracket.qf || [],
-          sf: bracket.sf || [],
-          final: bracket.final || []
-        }
-      };
-
-      const res = await fetch("/api/bracket-share", {
-        method: "POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify(snapshot)
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data.ok) throw new Error(data.error || "Unable to create share card");
-      const url = data.url || `${window.location.origin}/api/bracket-share?id=${data.id}`;
-
-      if (navigator.share) {
-        await navigator.share({
-          title: snapshot.title,
-          text: `🏆 ${snapshot.title} — Champion: ${snapshot.champion}`,
-          url
-        });
-      } else if (navigator.clipboard) {
-        await navigator.clipboard.writeText(url);
-        alert("Share link copied. Send it by SMS or WhatsApp.");
-      } else {
-        window.open(url, "_blank", "noopener,noreferrer");
-      }
-    } catch (err) {
-      console.error("Share bracket card failed:", err);
-      alert(err.message || "Unable to share bracket card right now.");
-    } finally {
-      setSharing(false);
-    }
-  };
-
-  return (
-  <div>
-    <div
-      ref={_mbhRef}
-      style={{
-        position:"relative",
-        top:0,
-        left:"auto",
-        transform:"none",
-        width:"100%",
-        maxWidth:700,
-        zIndex:2,
-        background:C.bg,
-        borderBottom:`1px solid ${C.b2}`,
-        boxShadow:DS.shadow.sticky,
-        padding:isMobileBracket?"9px 10px 10px":"10px 13px 11px",
-        marginTop:8,
-        marginBottom:12,
-        borderRadius:"0 0 10px 10px"
-      }}
-    >
-      <div style={{display:"flex",gap:6,marginBottom:8}}>
-        <button onClick={()=>setBracketSource("mine")} style={{flex:1,padding:"7px 0",borderRadius:10,border:`1px solid ${bracketSource==="mine"?C.blue:C.b2}`,background:bracketSource==="mine"?`${C.blue}1c`:"transparent",color:bracketSource==="mine"?C.blue:C.mid,fontWeight:800,fontSize:12,cursor:"pointer"}}>
-          🎯 My Bracket
-        </button>
-        <button onClick={()=>setBracketSource("actual")} style={{flex:1,padding:"7px 0",borderRadius:10,border:`1px solid ${bracketSource==="actual"?C.green:C.b2}`,background:bracketSource==="actual"?`${C.green}1c`:"transparent",color:bracketSource==="actual"?C.green:C.mid,fontWeight:800,fontSize:12,cursor:"pointer"}}>
-          🌍 Actual Bracket
-        </button>
-      </div>
-      {bracketSource==="mine" && (
-      <div
-        style={{
-          display:"flex",
-          gap:6,
-          overflowX:"auto",
-          scrollbarWidth:"none",
-          WebkitOverflowScrolling:"touch",
-          paddingBottom:2,
-          marginBottom:0
-        }}
-      >
-        <Pill active={stage==="groups"} onClick={()=>setStage("groups")} color={C.green}>✓ Groups</Pill>
-        <Pill active={stage==="thirds"} onClick={()=>setStage("thirds")} color={C.gold}>✓ Best 3rds</Pill>
-        <Pill active={stage==="bracket"} onClick={()=>setStage("bracket")} color={C.blue}>● Bracket</Pill>
-      </div>
-      )}
-    </div>
-      {bracketSource==="mine" && stage==="groups" && (
-        <div>
-          <div style={{fontSize:12,color:C.mid,marginBottom:14,lineHeight:1.6}}>
-            <strong style={{color:C.green}}>Build Your Bracket:</strong> Press and drag ⠿ to reorder teams. Top 2 qualify automatically. Generate the bracket, then pick winners match by match.
-          </div>
-          {Object.entries(groups).map(([g,teams])=>(
-            <Card key={g} style={{marginBottom:10}}>
-              <div style={{padding:"8px 12px",borderBottom:`1px solid ${C.b1}`,background:C.s1}}>
-                <span style={{fontWeight:700,color:C.green,fontSize:14}}>GROUP {g}</span>
-              </div>
-              <div style={{padding:"6px 8px"}}>
-                <DragList
-                  items={teams}
-                  onReorder={next => setGroups(p => ({...p, [g]: next}))}
-                  renderItem={(team, displayIdx) => {
-                    const col = displayIdx===0?C.green:displayIdx===1?C.gold:displayIdx===2?"#94a3b8":C.dim;
-                    return (
-                      <>
-                        <span style={{fontSize:13,color:col,fontWeight:700,minWidth:18,textAlign:"center"}}>{displayIdx+1}</span>
-                        <Crest team={team} size={22}/>
-                        <span style={{fontSize:13,color:displayIdx<2?col:C.text,fontWeight:displayIdx<2?600:400,flex:1}}>{team}</span>
-                        {displayIdx<2 && <span style={{fontSize:9,color:col,fontWeight:700,background:`${col}22`,padding:"2px 6px",borderRadius:6,flexShrink:0}}>Q</span>}
-                        {displayIdx===2 && <span style={{fontSize:9,color:"#94a3b8",background:"#94a3b822",padding:"2px 6px",borderRadius:6,flexShrink:0}}>3rd</span>}
-                      </>
-                    );
-                  }}
-                />
-              </div>
-            </Card>
-          ))}
-          <button onClick={()=>setStage("thirds")} style={{width:"100%",padding:"12px 0",borderRadius:12,background:`linear-gradient(135deg,${C.gold},#f59e0b)`,border:"none",color:"#030a05",fontWeight:700,fontSize:15,cursor:"pointer",marginTop:4}}>Pick Best 3rd-Place Teams →</button>
-        </div>
-      )}
-      {bracketSource==="mine" && stage==="thirds" && (
-        <div>
-          <div style={{fontSize:12,color:C.mid,marginBottom:6,lineHeight:1.6}}>Select exactly <strong style={{color:C.gold}}>8 of 12</strong> third-place teams to advance.</div>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-            <span style={{fontSize:13,color:thirds.length===8?C.green:C.gold,fontWeight:700}}>{thirds.length}/8 selected</span>
-            <button onClick={()=>{const sorted=[...allThirds].sort((a,b)=>gs(b.team)-gs(a.team)).slice(0,8).map(x=>x.team);setThirds(sorted);}} style={{fontSize:11,padding:"4px 10px",borderRadius:10,background:`${C.gold}22`,border:`1px solid ${C.gold}55`,color:C.gold,cursor:"pointer",fontWeight:600}}>Auto-select best 8</button>
-          </div>
-          {allThirds.map(({group,team})=>{const sel=thirds.includes(team);return(<div key={team} onClick={()=>toggleThird(team)} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:10,marginBottom:6,cursor:"pointer",background:sel?`${C.green}18`:C.s1,border:`1px solid ${sel?C.green:C.b1}`}}><div style={{width:20,height:20,borderRadius:6,border:`2px solid ${sel?C.green:C.dim}`,background:sel?C.green:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{sel&&<span style={{color:"#030a05",fontSize:12,fontWeight:900}}>✓</span>}</div><Crest team={team} size={24}/><div style={{flex:1}}><div style={{fontSize:13,fontWeight:600,color:sel?C.green:C.text}}>{team}</div><div style={{fontSize:10,color:C.dim}}>3rd place Group {group} · STR {gs(team)}</div></div></div>);})}
-          <div style={{display:"flex",gap:8,marginTop:8}}>
-            <button onClick={()=>setStage("groups")} style={{flex:1,padding:"11px 0",borderRadius:12,background:"transparent",border:`1px solid ${C.b2}`,color:C.mid,fontWeight:600,fontSize:14,cursor:"pointer"}}>← Back</button>
-            <button onClick={runBracket} disabled={thirds.length!==8||running} style={{flex:2,padding:"11px 0",borderRadius:12,background:thirds.length===8?`linear-gradient(135deg,${C.green},#22c55e)`:C.b2,border:"none",color:thirds.length===8?"#030a05":C.dim,fontWeight:700,fontSize:14,cursor:thirds.length===8?"pointer":"default",opacity:running?0.6:1}}>{running?"Generating...":"🏆 Generate FIFA Bracket →"}</button>
-          </div>
-        </div>
-      )}
-    {bracketSource==="mine" && stage==="bracket" && result && (
-  <div>
-    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:8,flexWrap:"wrap"}}>
-      <div style={{fontSize:15,color:C.green,fontWeight:900,lineHeight:1.1}}>
-        🏆 Tournament Bracket
-        <span style={{marginLeft:6,fontSize:11,color:C.dim,fontWeight:600}}>
-          ({displayedResult?.completedCount || 0}/31)
-        </span>
-        {bracketView==="tree" && <span style={{marginLeft:8,fontSize:10,color:C.dim,fontWeight:400,fontStyle:"italic"}}>tap a team to pick the winner</span>}
-      </div>
-
-      <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
-        <div style={{display:"flex",gap:4,background:C.s1,border:`1px solid ${C.b1}`,borderRadius:999,padding:2}}>
-          <button onClick={()=>setBracketView("compact")} style={{border:"none",borderRadius:999,padding:"4px 8px",fontSize:10,fontWeight:800,cursor:"pointer",background:bracketView==="compact"?`${C.green}22`:"transparent",color:bracketView==="compact"?C.green:C.mid,lineHeight:1}}>
-            📱 Compact
-          </button>
-          <button onClick={()=>setBracketView("tree")} style={{border:"none",borderRadius:999,padding:"4px 8px",fontSize:10,fontWeight:800,cursor:"pointer",background:bracketView==="tree"?`${C.gold}22`:"transparent",color:bracketView==="tree"?C.gold:C.mid,lineHeight:1}}>
-            🌳 Tree
-          </button>
-        </div>
-
-        <button onClick={()=>setShowBracketActions(v=>!v)} style={{padding:"5px 9px",borderRadius:999,background:showBracketActions?`${C.green}18`:C.s1,border:`1px solid ${showBracketActions?C.green:C.b1}`,color:showBracketActions?C.green:C.mid,fontSize:10,fontWeight:800,cursor:"pointer",whiteSpace:"nowrap",lineHeight:1}}>
-          ⚙️ Actions
-        </button>
-      </div>
-    </div>
-
-    {showBracketActions && (
-      <Card style={{padding:8,marginBottom:8,background:C.s1,border:`1px solid ${C.b1}`}}>
-        <div style={{display:"grid",gridTemplateColumns:isMobileBracket?"1fr 1fr":"repeat(5,1fr)",gap:6}}>
-          <button onClick={shareBracketCard} disabled={!displayedResult?.champion || sharing} title={!displayedResult?.champion?"Pick the Final winner before sharing":undefined} style={{padding:"6px 8px",borderRadius:9,background:displayedResult?.champion?`${C.blue}22`:C.bg,border:`1px solid ${displayedResult?.champion?C.blue:C.b2}`,color:displayedResult?.champion?C.blue:C.dim,fontSize:11,fontWeight:700,cursor:displayedResult?.champion&&!sharing?"pointer":"not-allowed",opacity:sharing?0.65:1,lineHeight:1.1,minHeight:30}}>
-            {sharing?"Creating...":"📤 Share"}
-          </button>
-          <button onClick={()=>setStage("groups")} style={{padding:"6px 8px",borderRadius:9,background:"transparent",border:`1px solid ${C.b2}`,color:C.mid,fontSize:11,fontWeight:700,cursor:"pointer",lineHeight:1.1,minHeight:30}}>
-            ← Edit
-          </button>
-          <button onClick={()=>setPlayMode("manual")} disabled={result.fifaEngineStatus!=="fifa-ready"} style={{padding:"6px 8px",borderRadius:9,background:playMode==="manual"?`${C.blue}22`:C.bg,border:`1px solid ${playMode==="manual"?C.blue:C.b2}`,color:playMode==="manual"?C.blue:C.mid,fontSize:11,fontWeight:700,cursor:result.fifaEngineStatus==="fifa-ready"?"pointer":"not-allowed",opacity:result.fifaEngineStatus==="fifa-ready"?1:0.55,lineHeight:1.1,minHeight:30}}>
-            👆 Manual
-          </button>
-          <button onClick={resetWinners} style={{padding:"6px 8px",borderRadius:9,background:`${C.green}16`,border:`1px solid ${C.greenS}`,color:C.green,fontSize:11,fontWeight:700,cursor:"pointer",lineHeight:1.1,minHeight:30}}>
-            🔄 Reset
-          </button>
-          <button onClick={resetMyBracket} style={{padding:"6px 8px",borderRadius:9,background:`${C.gold}12`,border:`1px solid ${C.gold}44`,color:C.gold,fontSize:11,fontWeight:700,cursor:"pointer",lineHeight:1.1,minHeight:30}}>
-            🗑 Bracket
-          </button>
-        </div>
-      </Card>
-    )}
-
-    <VisualBracketTree
-      bracket={displayedResult}
-      pickMode={playMode}
-      onPick={handleManualPick}
-      view={bracketView}
-    />
-  </div>
-)}
-
-    {bracketSource==="actual" && (
-  <div>
-    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:8,flexWrap:"wrap"}}>
-      <div style={{fontSize:15,color:C.green,fontWeight:900,lineHeight:1.1}}>
-        🌍 Actual Tournament Bracket
-        <span style={{marginLeft:8,fontSize:10,color:C.dim,fontWeight:400,fontStyle:"italic"}}>real results — fills in as matches are played</span>
-      </div>
-      <div style={{display:"flex",gap:4,background:C.s1,border:`1px solid ${C.b1}`,borderRadius:999,padding:2}}>
-        <button onClick={()=>setBracketView("compact")} style={{border:"none",borderRadius:999,padding:"4px 8px",fontSize:10,fontWeight:800,cursor:"pointer",background:bracketView==="compact"?`${C.green}22`:"transparent",color:bracketView==="compact"?C.green:C.mid,lineHeight:1}}>
-          📱 Compact
-        </button>
-        <button onClick={()=>setBracketView("tree")} style={{border:"none",borderRadius:999,padding:"4px 8px",fontSize:10,fontWeight:800,cursor:"pointer",background:bracketView==="tree"?`${C.gold}22`:"transparent",color:bracketView==="tree"?C.gold:C.mid,lineHeight:1}}>
-          🌳 Tree
-        </button>
-      </div>
-    </div>
-
-    {!actualBracket.allGroupsComplete && (
-      <div style={{fontSize:11,color:C.dim,marginBottom:8,padding:"7px 10px",background:C.s1,border:`1px solid ${C.b1}`,borderRadius:9}}>
-        Group stage still in progress — this is a live projection based on current standings. Slots will keep updating as more matches finish, and may still shift before each group's final match.
-      </div>
-    )}
-
-    <VisualBracketTree
-      bracket={actualBracket}
-      pickMode="auto"
-      onPick={()=>{}}
-      view={bracketView}
-    />
-  </div>
-)}
-
-    </div>
-  );
-}
+// MyBracketTab extracted to ./tabs/Bracket.jsx (see import above).
 // ── SAVED TAB ──────────────────────────────────────────────────────────────
 function SavedMatchCard({ item, onRemove, onMatchTap, notifiedIds=new Set(), onNotified=()=>{}, syncUid="" }) {
   const isPWA = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
@@ -9373,13 +8592,13 @@ function AppContent() {
           {tab==="home"      && <MyWorldCupTab favTeams={favTeams} saved={saved} syncProfile={syncProfile} displayName={displayName} userAvatar={userAvatar} onMatchTap={onMatchTap} setTab={setTab} onPickTeams={()=>setShowSyncModal(true)} C={C} DS={DS} GROUPS={GROUPS} MATCHES={MATCHES} resolvedMatches={resolvedMatches} MATCH_UTC={MATCH_UTC} R32_SLOT_TEMPLATE={R32_SLOT_TEMPLATE} LiveScoresCtx={LiveScoresCtx} getFlag={getFlag} getUserId={getUserId} statusIsFinished={statusIsFinished} calcStandings={calcStandings} apiPred={apiPred} Crest={Crest}/>}
           {tab==="live"      && <LiveTab onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} tabTop={tabBarBottom} savedIds={savedIds} matches={resolvedMatches}/>}
           {tab==="schedule"  && <SchedTab onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} tabTop={tabBarBottom} savedIds={savedIds} matches={resolvedMatches} C={C} FavCtx={FavCtx} LiveScoresCtx={LiveScoresCtx} MATCHES={MATCHES} MATCH_DATES={MATCH_DATES} MATCH_UTC={MATCH_UTC} ALL_TEAMS={ALL_TEAMS} calcStandings={calcStandings} getFlag={getFlag} matchTimes={matchTimes} statusIsFinished={statusIsFinished} useElemHeight={useElemHeight} MatchCard={MatchCard} Pill={Pill}/>}
-          {tab==="groups"    && <GrpTab onTeam={onTeam} onMatchTap={onMatchTap} tabTop={tabBarBottom}/>}
+          {tab==="groups"    && <GrpTab onTeam={onTeam} onMatchTap={onMatchTap} tabTop={tabBarBottom} C={C} GROUPS={GROUPS} LiveScoresCtx={LiveScoresCtx} MATCHES={MATCHES} calcStandings={calcStandings} normTeam={normTeam} statusIsFinished={statusIsFinished} statusIsLive={statusIsLive} useElemHeight={useElemHeight} Badge={Badge} Card={Card} Crest={Crest} Pill={Pill}/>}
           {tab==="stats"     && <StatsHubTab initial={statsTeam} tabTop={tabBarBottom}/>}
           {tab==="predict"   && <PredTab tabTop={tabBarBottom} geoData={geoData}/>}
           {tab==="predictor" && <PredictorTab syncProfile={syncProfile} displayName={displayName} onShowSync={()=>setShowSyncModal(true)} userAvatar={userAvatar} resolvedMatches={resolvedMatches}/>}
           {tab==="shop"      && <ShopTab tabTop={tabBarBottom} geoData={geoData}/>}
           {tab==="sim"       && <SimTab tabTop={tabBarBottom}/>}
-          {tab==="bracket"   && <MyBracketTab tabTop={tabBarBottom}/>}
+          {tab==="bracket"   && <MyBracketTab tabTop={tabBarBottom} onMatchTap={onMatchTap} C={C} DS={DS} GROUPS={GROUPS} LiveScoresCtx={LiveScoresCtx} MATCHES={MATCHES} R32_SLOT_TEMPLATE={R32_SLOT_TEMPLATE} STR={STR} gs={gs} calcStandings={calcStandings} statusIsFinished={statusIsFinished} useElemHeight={useElemHeight} defaultBracketGroups={defaultBracketGroups} readSavedMyBracket={readSavedMyBracket} writeSavedMyBracket={writeSavedMyBracket} clearSavedMyBracket={clearSavedMyBracket} Card={Card} Crest={Crest} DragList={DragList} Pill={Pill} VisualBracketTree={VisualBracketTree}/>}
           {tab==="ask"       && <AskWorldCupTab tabTop={tabBarBottom}/>}
           {tab==="news"       && <WCNewsTab tabTop={tabBarBottom}/>}
           {tab==="saved"     && <div style={{paddingTop:14}}><SavedTab saved={saved} onRemove={onRemove} onMatchTap={onMatchTap} syncUid={syncUid} syncPin={syncProfile?.pin||""} onPushSubscribed={()=>setMasterPushSubscribed(true)}/></div>}
