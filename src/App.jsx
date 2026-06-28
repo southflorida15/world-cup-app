@@ -3431,19 +3431,31 @@ function BracketMatchup({ match, t1, t2, winner, onPick, interactive=false, comp
     const isW = winner && team === winner;
     const disabled = !canPick || !team || team === "TBD";
     const isClinched = tag === "clinched";
+    // Actual/auto bracket is not editable, so any resolved real team should
+    // render at full strength. Only manual interactive projections should be
+    // visually dimmed as provisional.
     const isProvisional = tag === "provisional" && interactive;
+    const hasRealTeam = !!team && team !== "TBD";
     const nameColor = isW ? C.green : isClinched ? C.gold : isProvisional ? C.dim : team ? C.text : C.dim;
+    const flagStyle = {
+      display:"inline-flex",
+      alignItems:"center",
+      justifyContent:"center",
+      flexShrink:0,
+      opacity: hasRealTeam ? 1 : 0.65,
+      filter: isProvisional ? "grayscale(1)" : "none"
+    };
     return (
       <button
         key={i}
         onClick={() => !disabled && onPick?.(team)}
         disabled={disabled}
         title={canPick ? `Pick ${team}` : isProvisional ? `${team} is currently leading their group — not yet mathematically confirmed for 1st place` : isClinched ? `${team} has clinched 1st place in their group` : undefined}
-        style={{width:"100%",display:"flex",alignItems:"center",gap:8,padding:compact?"7px 8px":"10px 10px",background:isW?`${C.green}24`:"transparent",border:"none",borderBottom:i===0?`1px solid ${C.b1}`:"none",cursor:canPick?"pointer":"default",textAlign:"left",opacity:team?(isProvisional?0.7:1):0.65}}
+        style={{width:"100%",display:"flex",alignItems:"center",gap:8,padding:compact?"7px 8px":"10px 10px",background:isW?`${C.green}24`:"transparent",border:"none",borderBottom:i===0?`1px solid ${C.b1}`:"none",cursor:canPick?"pointer":"default",textAlign:"left",opacity:hasRealTeam?1:0.65}}
       >
-        <Crest team={team||"TBD"} size={compact?16:22}/>
-        <span style={{fontSize:compact?12:14,color:nameColor,fontWeight:isW||isClinched?800:600,fontStyle:isProvisional?"italic":"normal",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",flex:1}}>{team||"TBD"}</span>
-        {isClinched && !isW && <span title="Clinched 1st place" style={{fontSize:11}}>🔒</span>}
+        <span style={flagStyle}><Crest team={team||"TBD"} size={compact?16:22}/></span>
+        <span style={{fontSize:compact?12:14,color:nameColor,fontWeight:isW||isClinched?800:600,fontStyle:isProvisional?"italic":"normal",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",flex:1,opacity:hasRealTeam?1:0.65}}>{team||"TBD"}</span>
+        {isClinched && !isW && <span title="Clinched into this slot" style={{fontSize:11}}>🔒</span>}
         {isProvisional && <span style={{fontSize:8,color:C.dim,fontWeight:700,letterSpacing:"0.04em",whiteSpace:"nowrap"}}>LEADING</span>}
         {isW && <span style={{fontSize:12,color:C.green,fontWeight:900}}>✓</span>}
       </button>
@@ -5105,7 +5117,7 @@ function useResolvedTournamentMatches(getScore) {
 function FantasyTeamSlot({ team, side="left", tag=null, winner=false, compact=false }) {
   const concrete = fantasyConcreteTeam(team);
   const isClinched = tag === "clinched";
-  const isProvisional = tag === "provisional" && interactive;
+  const isProvisional = tag === "provisional";
   const color = winner ? C.green : isClinched ? C.gold : isProvisional ? C.dim : concrete ? C.text : C.dim;
   const align = side === "right" ? "flex-end" : "flex-start";
   const textAlign = side === "right" ? "right" : "left";
