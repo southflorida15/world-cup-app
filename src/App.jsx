@@ -5642,9 +5642,18 @@ function PredictorTab({ syncProfile=null, displayName="", onShowSync=()=>{}, use
   };
 
   // ── Fantasy match source ────────────────────────────────────────────────
-  // Uses the app-wide resolved tournament source so Fantasy, Live, Schedule,
-  // Home, and Actual Bracket all agree on knockout teams.
-  const fantasyMatches = resolvedMatches;
+  // Fantasy should use the same resolved teams as Live/Schedule/Home, but it
+  // must NOT inherit the live-bracket "provisional/leading" display state.
+  // That state is useful for Live/Schedule while group slots are still being
+  // projected, but in Fantasy it greys out confirmed-looking teams and locks
+  // picks as "provisional" even when the matchup is otherwise usable. Keep
+  // the resolved team names and all match metadata, then strip only the UI tags.
+  const fantasyMatches = useMemo(() => (resolvedMatches || MATCHES).map(m => ({
+    ...m,
+    homeTag: null,
+    awayTag: null,
+    fantasyConfirmed: fantasyTeamsKnown(m),
+  })), [resolvedMatches]);
 
   // ── Load user + their predictions on mount ──────────────────────────────
   useEffect(() => {
@@ -9750,11 +9759,10 @@ function AppContent() {
   );
 }
 
-
 export default function App() {
   return (
     <LiveScoresProvider>
-      <AppContent />
+      <AppContent/>
     </LiveScoresProvider>
   );
 }
