@@ -3429,7 +3429,12 @@ function BracketMatchup({ match, t1, t2, winner, onPick, interactive=false, comp
   const matchData = match ? MATCHES.find(m => m.id === match) : null;
   const teamRow = (team, i, tag) => {
     const isW = winner && team === winner;
-    const disabled = !canPick || !team || team === "TBD";
+    const rowUnavailable = !team || team === "TBD";
+    // Do NOT disable resolved rows just because this is the Actual/auto bracket.
+    // Native disabled <button> styling dims the whole row in browsers, which made
+    // real R32 teams look faded even after the slot was confirmed. Only use the
+    // disabled attribute for missing/TBD rows while in manual pick mode.
+    const disabled = interactive && rowUnavailable;
     const isClinched = tag === "clinched";
     // Actual/auto bracket is not editable, so any resolved real team should
     // render at full strength. Only manual interactive projections should be
@@ -3448,10 +3453,10 @@ function BracketMatchup({ match, t1, t2, winner, onPick, interactive=false, comp
     return (
       <button
         key={i}
-        onClick={() => !disabled && onPick?.(team)}
+        onClick={() => canPick && !rowUnavailable && onPick?.(team)}
         disabled={disabled}
-        title={canPick ? `Pick ${team}` : isProvisional ? `${team} is currently leading their group — not yet mathematically confirmed for 1st place` : isClinched ? `${team} has clinched 1st place in their group` : undefined}
-        style={{width:"100%",display:"flex",alignItems:"center",gap:8,padding:compact?"7px 8px":"10px 10px",background:isW?`${C.green}24`:"transparent",border:"none",borderBottom:i===0?`1px solid ${C.b1}`:"none",cursor:canPick?"pointer":"default",textAlign:"left",opacity:hasRealTeam?1:0.65}}
+        title={canPick ? `Pick ${team}` : isProvisional ? `${team} is currently leading their group — not yet mathematically confirmed for 1st place` : isClinched ? `${team} has clinched this slot` : undefined}
+        style={{width:"100%",display:"flex",alignItems:"center",gap:8,padding:compact?"7px 8px":"10px 10px",background:isW?`${C.green}24`:"transparent",border:"none",borderBottom:i===0?`1px solid ${C.b1}`:"none",cursor:canPick?"pointer":"default",textAlign:"left",opacity:hasRealTeam?1:0.65,WebkitAppearance:"none",appearance:"none"}}
       >
         <span style={flagStyle}><Crest team={team||"TBD"} size={compact?16:22}/></span>
         <span style={{fontSize:compact?12:14,color:nameColor,fontWeight:isW||isClinched?800:600,fontStyle:isProvisional?"italic":"normal",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",flex:1,opacity:hasRealTeam?1:0.65}}>{team||"TBD"}</span>
@@ -4164,12 +4169,12 @@ function MyBracketTab({ tabTop=116 }) {
 
     const winnerMap = {};
     const actualTeamTag = (slot, team) => {
-      // R32 is now fully set in reality. If a slot has resolved to a real team,
-      // render it as confirmed in the Actual Bracket even if a stale live-score
-      // status makes groupComplete look false locally. This removes the dimmed
-      // / LEADING treatment from the completed R32 field without changing the
-      // underlying bracket logic.
-      if (team && team !== "TBD") return "clinched";
+      // Actual Bracket R32 is now fully set. Once a slot resolves to a real
+      // team, do not tag it as provisional OR clinched. The tag was only a
+      // prediction-state cue, and it made confirmed R32 teams look visually
+      // locked/dimmed in the Actual Bracket. Leave unresolved slots tagged so
+      // TBD/projection states still have a safe fallback.
+      if (team && team !== "TBD") return null;
       return slotTag(slot);
     };
     const r32 = R32_SLOT_TEMPLATE.map(m => {
