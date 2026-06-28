@@ -9046,7 +9046,7 @@ function analyticsDisabled() {
   }
 }
 
-export default function App() {
+function AppContent() {
   const [releaseUpdate, setReleaseUpdate] = useState(null);
 
   useEffect(() => {
@@ -9513,7 +9513,7 @@ export default function App() {
   );
 
   return (
-    <LiveScoresProvider>
+    <>
       {releaseUpdate && (
         <div style={{position:"fixed",inset:0,zIndex:10000,background:"rgba(6,14,10,.94)",display:"flex",alignItems:"center",justifyContent:"center",padding:24}}>
           <div style={{width:"100%",maxWidth:380,borderRadius:22,border:`1px solid ${C.green}55`,background:`linear-gradient(135deg,${C.s1},${C.s2})`,boxShadow:DS.shadow.modal,padding:26,textAlign:"center"}}>
@@ -9746,6 +9746,15 @@ export default function App() {
       </FavCtx.Provider>
       </ThemeCtx.Provider>
       </CountryCtx.Provider>
+    </>
+  );
+}
+
+
+export default function App() {
+  return (
+    <LiveScoresProvider>
+      <AppContent />
     </LiveScoresProvider>
   );
 }
