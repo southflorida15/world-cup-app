@@ -32,7 +32,7 @@ const KICKOFFS = [
   "2026-06-17T17:00:00Z","2026-06-17T20:00:00Z","2026-06-17T23:00:00Z","2026-06-18T02:00:00Z",
   "2026-06-18T16:00:00Z","2026-06-18T19:00:00Z","2026-06-18T22:00:00Z","2026-06-19T01:00:00Z",
   "2026-06-19T19:00:00Z","2026-06-19T22:00:00Z","2026-06-20T00:30:00Z","2026-06-20T03:00:00Z",
-  "2026-06-20T17:00:00Z","2026-06-20T20:00:00Z","2026-06-21T00:00:00Z","2026-06-21T01:00:00Z","2026-06-21T04:00:00Z",
+  "2026-06-20T17:00:00Z","2026-06-20T20:00:00Z","2026-06-21T01:00:00Z","2026-06-21T04:00:00Z",
   "2026-06-21T16:00:00Z","2026-06-21T19:00:00Z","2026-06-21T22:00:00Z","2026-06-22T01:00:00Z",
   "2026-06-22T17:00:00Z","2026-06-22T21:00:00Z","2026-06-23T00:00:00Z","2026-06-23T03:00:00Z",
   "2026-06-23T17:00:00Z","2026-06-23T20:00:00Z","2026-06-23T23:00:00Z","2026-06-24T02:00:00Z",
@@ -42,7 +42,7 @@ const KICKOFFS = [
   "2026-06-26T19:00:00Z","2026-06-26T19:00:00Z","2026-06-27T00:00:00Z","2026-06-27T00:00:00Z",
   "2026-06-27T03:00:00Z","2026-06-27T03:00:00Z","2026-06-27T21:00:00Z","2026-06-27T21:00:00Z",
   "2026-06-27T23:30:00Z","2026-06-27T23:30:00Z","2026-06-28T02:00:00Z","2026-06-28T02:00:00Z",
-  "2026-06-28T19:00:00Z","2026-06-28T23:00:00Z","2026-06-29T17:00:00Z","2026-06-29T20:30:00Z","2026-06-30T01:00:00Z",
+  "2026-06-28T23:00:00Z","2026-06-29T17:00:00Z","2026-06-29T20:30:00Z","2026-06-30T01:00:00Z",
   "2026-06-30T17:00:00Z","2026-06-30T21:00:00Z","2026-07-01T01:00:00Z","2026-07-01T16:00:00Z",
   "2026-07-01T20:00:00Z","2026-07-02T00:00:00Z","2026-07-02T19:00:00Z","2026-07-02T23:00:00Z",
   "2026-07-03T03:00:00Z","2026-07-03T18:00:00Z","2026-07-03T22:00:00Z","2026-07-04T01:30:00Z",
@@ -64,6 +64,42 @@ const WINDOW_MS = 150 * 60 * 1000;
 const MATCH_TEAMS = {1:{home:"Mexico",away:"South Africa"},2:{home:"South Korea",away:"Czechia"},3:{home:"Canada",away:"Bosnia & Herz."},4:{home:"United States",away:"Paraguay"},5:{home:"Qatar",away:"Switzerland"},6:{home:"Brazil",away:"Morocco"},7:{home:"Haiti",away:"Scotland"},8:{home:"Australia",away:"Turkiye"},9:{home:"Germany",away:"Curacao"},10:{home:"Netherlands",away:"Japan"},11:{home:"Ivory Coast",away:"Ecuador"},12:{home:"Sweden",away:"Tunisia"},13:{home:"Spain",away:"Cape Verde"},14:{home:"Belgium",away:"Egypt"},15:{home:"Saudi Arabia",away:"Uruguay"},16:{home:"Iran",away:"New Zealand"},17:{home:"France",away:"Senegal"},18:{home:"Iraq",away:"Norway"},19:{home:"Argentina",away:"Algeria"},20:{home:"Austria",away:"Jordan"},21:{home:"Portugal",away:"DR Congo"},22:{home:"England",away:"Croatia"},23:{home:"Ghana",away:"Panama"},24:{home:"Uzbekistan",away:"Colombia"}};
 
 // Hardcoded ESPN event IDs for group stage — used as fallback when scoreboard misses a match
+
+// Known real kickoff times for resolved knockout matches.
+// These are display/feed guards only: the app still resolves teams client-side,
+// but the scores API must not resurrect a bogus persisted FT result for a future match.
+const MATCH_KICKOFF_BY_KEY = {
+  "South Africa|Canada": "2026-06-28T19:00:00Z",
+  "Brazil|Japan": "2026-06-29T17:00:00Z",
+  "Germany|Paraguay": "2026-06-29T20:30:00Z",
+  "Netherlands|Morocco": "2026-06-30T01:00:00Z",
+  "Ivory Coast|Norway": "2026-06-30T17:00:00Z",
+  "France|Sweden": "2026-06-30T21:00:00Z",
+  "Mexico|Ecuador": "2026-07-01T01:00:00Z",
+  "England|DR Congo": "2026-07-01T16:00:00Z",
+  "Belgium|Senegal": "2026-07-01T20:00:00Z",
+  "United States|Bosnia & Herz.": "2026-07-02T00:00:00Z",
+  "Spain|Austria": "2026-07-02T19:00:00Z",
+  "Portugal|Croatia": "2026-07-02T23:00:00Z",
+  "Switzerland|Algeria": "2026-07-03T03:00:00Z",
+  "Australia|Egypt": "2026-07-03T18:00:00Z",
+  "Argentina|Cape Verde": "2026-07-03T22:00:00Z",
+  "Colombia|Ghana": "2026-07-04T01:30:00Z",
+};
+
+function scheduledKickoffForKey(key) {
+  if (MATCH_KICKOFF_BY_KEY[key]) return MATCH_KICKOFF_BY_KEY[key];
+  const [home, away] = String(key || "").split("|");
+  const reverse = `${away}|${home}`;
+  return MATCH_KICKOFF_BY_KEY[reverse] || null;
+}
+
+function isBeforeScheduledKickoff(key, bufferMs = 5 * 60 * 1000) {
+  const iso = scheduledKickoffForKey(key);
+  if (!iso) return false;
+  return Date.now() < new Date(iso).getTime() - bufferMs;
+}
+
 const FALLBACK_ESPN_IDS = {
   "Mexico|South Africa":"760415","South Korea|Czechia":"760414",
   "Canada|Bosnia & Herz.":"760416","United States|Paraguay":"760417",
@@ -132,6 +168,9 @@ async function persistFinishedResults(fixtures) {
       if (!h || !a) return;
       if (!FINISHED_STATUSES.includes(status)) return;
       const key = `${h}|${a}`;
+      // Never persist a finished score before the scheduled kickoff. This protects
+      // production from bad upstream/cached data marking future knockout games FT.
+      if (isBeforeScheduledKickoff(key)) return;
       // Use extra time score if available (counts for fantasy), but NOT penalties
       const hg = f?.score?.extratime?.home ?? f?.score?.fulltime?.home ?? f?.goals?.home;
       const ag = f?.score?.extratime?.away ?? f?.score?.fulltime?.away ?? f?.goals?.away;
@@ -161,6 +200,10 @@ function mergePersistedResults(fixtures, persisted) {
   const extra = [];
   Object.entries(persisted).forEach(([key, r]) => {
     if (seen.has(key)) return; // already in live feed
+    // If a future match somehow entered the permanent results store, do not
+    // surface it as FT before kickoff. The real live feed will take over once
+    // the match starts, and the result can be persisted after it truly ends.
+    if (isBeforeScheduledKickoff(key)) return;
     const [home, away] = key.split("|");
     extra.push({
       fixture: {
@@ -446,6 +489,25 @@ export default async function handler(req, res) {
       const merged = { ...known, ...existing }; // existing takes priority (don't overwrite newer data)
       await kv.set(RESULTS_KEY, merged);
       return res.status(200).json({ ok: true, seeded: Object.keys(known), total: Object.keys(merged).length });
+    } catch(e) {
+      return res.status(500).json({ error: e.message });
+    }
+  }
+
+  // Emergency cleanup: remove any persisted results for matches whose scheduled
+  // kickoff is still in the future. Useful after a bad upstream/cache result.
+  if (req.query.purgeFuture === "1") {
+    try {
+      const existing = await loadPersistedResults();
+      const kept = {};
+      const removed = [];
+      Object.entries(existing).forEach(([key, value]) => {
+        if (isBeforeScheduledKickoff(key)) removed.push(key);
+        else kept[key] = value;
+      });
+      await kv.set(RESULTS_KEY, kept);
+      await Promise.all([kv.del(CACHE_KEY), kv.del(CACHE_TS_KEY)]).catch(() => {});
+      return res.status(200).json({ ok: true, removed, total: Object.keys(kept).length });
     } catch(e) {
       return res.status(500).json({ error: e.message });
     }
