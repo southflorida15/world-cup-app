@@ -68,7 +68,15 @@ export default function AskWorldCupTab({
   };
 
   const timeKey = (value) => {
-    const text = norm(value).replace(/\s+/g, " ");
+    // Deliberately NOT using norm() here — it strips colons (and other
+    // punctuation) for natural-language question matching, which corrupts
+    // "4:30PM" into "4 30pm" before this regex ever sees it. That breaks
+    // both the minutes capture and the AM/PM detection (since "pm" ends up
+    // glued to "30" instead of adjacent to the hour), silently dropping the
+    // 12-to-24-hour conversion — "4:30PM" parsed as "04:00" instead of
+    // "16:30", which is what caused a 4:30pm match to sort ahead of an
+    // earlier 1pm match. This needs only lowercasing, not punctuation removal.
+    const text = String(value || "").toLowerCase().trim();
     if (!text) return "";
     if (text.includes("midnight")) return "00:00";
     const m = text.match(/\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b/);
