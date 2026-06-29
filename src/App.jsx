@@ -7,6 +7,9 @@ import MyBracketTab from "./tabs/Bracket.jsx";
 import PredictorTab from "./tabs/Fantasy.jsx";
 import AskWorldCupTab from "./tabs/Ask.jsx";
 import StatsTab from "./tabs/Stats.jsx";
+import SimTab from "./tabs/Simulator.jsx";
+import WCNewsTab from "./tabs/WCNews.jsx";
+import PredTab from "./tabs/Odds.jsx";
 import FantasyStatsSummary from "./components/FantasyStatsSummary";
 import MatchHeader from "./components/MatchHeader";
 import MatchInfoSection from "./components/MatchInfoSection";
@@ -685,7 +688,7 @@ export const calcStandings = (letter, results) => {
 
   return ordered.map((t,i)=>({...tbl[t],pos:i+1}));
 };
-const runFullSim = () => {
+export const runFullSim = () => {
   const gr={};
   Object.entries(GROUPS).forEach(([g,grp])=>{ const t=grp.teams,pts={},gd={},gf={}; t.forEach(x=>{pts[x]=0;gd[x]=0;gf[x]=0;}); [[0,1],[2,3],[0,2],[1,3],[0,3],[1,2]].forEach(([i,j])=>{ const r=simMatch(t[i],t[j]); gf[t[i]]+=r.hg;gf[t[j]]+=r.ag;gd[t[i]]+=r.hg-r.ag;gd[t[j]]+=r.ag-r.hg; if(r.res==="home")pts[t[i]]+=3;else if(r.res==="draw"){pts[t[i]]++;pts[t[j]]++;}else pts[t[j]]+=3; }); gr[g]=[...t].sort((a,b)=>pts[b]-pts[a]||gd[b]-gd[a]||gf[b]-gf[a]).map(x=>({team:x,pts:pts[x],gd:gd[x]})); });
   let r32=[...Object.values(gr).flatMap(s=>[s[0].team,s[1].team])]; r32=[...r32,...Object.values(gr).map(s=>s[2]).sort((a,b)=>b.pts-a.pts||b.gd-a.gd).slice(0,8).map(x=>x.team)];
@@ -1749,7 +1752,7 @@ const CHART_COLORS = {
   Germany: "#fb7185",
 };
 
-function OddsLineChart() {
+export function OddsLineChart() {
   const W = 320, H = 160, PL = 28, PR = 12, PT = 12, PB = 24;
   const chartW = W - PL - PR;
   const chartH = H - PT - PB;
@@ -1840,241 +1843,11 @@ function OddsLineChart() {
   );
 }
 
-function PredTab({ tabTop=140, geoData={} }) {
-  const top = PREDS.filter(p=>p.team!=="Others");
-  const others = PREDS.find(p=>p.team==="Others");
-  const max = top[0].poly;
-  const _phRef = useRef(null); const _phH = useElemHeight(_phRef);
-  return (
-    <div>
-      <div ref={_phRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:DS.shadow.sticky,padding:"8px 13px"}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-          <div>
-            <span style={{fontWeight:700,fontSize:15,color:C.green}}>🎯 POLYMARKET ODDS</span>
-            <span style={{fontSize:11,color:C.dim,marginLeft:8}}>Updated Jun 5, 2026</span>
-          </div>
-          <a href="https://polymarket.com" target="_blank" rel="noopener noreferrer" style={{fontSize:11,color:C.green,textDecoration:"none",border:`1px solid ${C.greenS}`,padding:"3px 9px",borderRadius:20}}>Live →</a>
-        </div>
-      </div>
-      <div style={{height:0}}/>
-      
-
-      {/* Line chart */}
-      <Card style={{marginBottom:14}}>
-        <div style={{padding:"10px 14px",borderBottom:`1px solid ${C.b1}`}}>
-          <span style={{fontWeight:700,color:C.green,fontSize:13}}>📈 ODDS EVOLUTION · TOP 6</span>
-          <span style={{fontSize:10,color:C.dim,marginLeft:8}}>Dec 2025 → Jun 5, 2026 · hover to inspect</span>
-        </div>
-        <div style={{padding:"12px 14px 8px"}}>
-          <OddsLineChart/>
-        </div>
-      </Card>
-
-      {/* Per-team rows — trend icon removed */}
-      {top.map((p,i)=>(
-        <Card key={p.team} style={{marginBottom:7}}>
-          <div style={{padding:"11px 13px"}}>
-            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:7}}>
-              <div style={{fontWeight:700,color:C.dim,minWidth:22,fontSize:14}}>#{i+1}</div>
-              <Crest team={p.team} size={26}/>
-              <span style={{fontWeight:700,color:C.text,flex:1,fontSize:14}}>{p.team}</span>
-              <div style={{textAlign:"right"}}>
-                <div style={{fontWeight:700,fontSize:20,color:p.poly>=15?C.green:p.poly>=8?C.gold:C.mid}}>{p.poly}%</div>
-                <div style={{fontSize:10,color:C.dim}}>{p.odds}</div>
-              </div>
-            </div>
-            <div style={{height:4,background:C.s2,borderRadius:2,overflow:"hidden"}}><div style={{height:4,borderRadius:2,width:`${(p.poly/max)*100}%`,background:`linear-gradient(90deg,#1a4a2a,${C.green})`}}/></div>
-            {TEAMS[p.team] && <div style={{display:"flex",gap:6,marginTop:7}}><Badge color={C.blue}>SS {TEAMS[p.team].ss}</Badge><Badge color={C.dim}>#{TEAMS[p.team].rank} FIFA</Badge></div>}
-          </div>
-        </Card>
-      ))}
-      <Card><div style={{padding:12,display:"flex",justifyContent:"space-between"}}><span style={{fontSize:13,color:C.mid}}>🌍 All others</span><span style={{fontWeight:700,color:C.dim,fontSize:18}}>{others.poly}%</span></div></Card>
-    </div>
-  );
-}
+// PredTab ("Odds" in the nav) extracted to ./tabs/Odds.jsx (see import above).
 
 // ── SIMULATOR TAB ──────────────────────────────────────────────────────────
 // Runs Monte Carlo on mount. Shows win probabilities + most-likely bracket.
-function SimTab({ tabTop=116 }) {
-  const [sims, setSims]       = useState(5000);
-  const [running, setRunning] = useState(false);
-  const [mc, setMc]           = useState(null);       // [{team, pct, wins}]
-  const [bracket, setBracket] = useState(null);       // most-likely bracket
-
-  const runMC = useCallback((n) => {
-    setRunning(true);
-    setTimeout(() => {
-      // Champion frequency
-      const champCount = {};
-      // Stage frequency — track how far each team goes
-      const r16Count  = {};
-      const qfCount   = {};
-      const sfCount   = {};
-      const finalCount = {};
-      const N = n || sims;
-
-      for (let i = 0; i < N; i++) {
-        const r = runFullSim();
-        champCount[r.champion] = (champCount[r.champion]||0) + 1;
-        r.r16.forEach(t  => { r16Count[t]   = (r16Count[t]  ||0)+1; });
-        r.qf.forEach(t   => { qfCount[t]    = (qfCount[t]   ||0)+1; });
-        r.sf.forEach(t   => { sfCount[t]    = (sfCount[t]   ||0)+1; });
-        [r.champion, r.runnerUp].forEach(t => { finalCount[t] = (finalCount[t]||0)+1; });
-      }
-
-      const sorted = Object.entries(champCount)
-        .sort((a,b)=>b[1]-a[1])
-        .map(([team, wins]) => ({
-          team,
-          pct: ((wins/N)*100).toFixed(1),
-          r16Pct:   (((r16Count[team]  ||0)/N)*100).toFixed(0),
-          qfPct:    (((qfCount[team]   ||0)/N)*100).toFixed(0),
-          sfPct:    (((sfCount[team]   ||0)/N)*100).toFixed(0),
-          finalPct: (((finalCount[team]||0)/N)*100).toFixed(0),
-        }));
-
-      // Most-likely bracket: pick winner of each KO matchup by highest champ%
-      const champPct = (t) => parseFloat(sorted.find(x=>x.team===t)?.pct||"0");
-      const likelyKO = (arr) => {
-        const out = [];
-        for(let i=0;i<arr.length;i+=2) {
-          out.push(champPct(arr[i]) >= champPct(arr[i+1]) ? arr[i] : arr[i+1]);
-        }
-        return out;
-      };
-      // Run one sim to get a realistic R32/R16 bracket structure, then override winners
-      const base = runFullSim();
-      const likelyR16 = likelyKO(base.r32);
-      const likelyQF  = likelyKO(likelyR16);
-      const likelySF  = likelyKO(likelyQF);
-      const likelyChamp = champPct(likelySF[0]) >= champPct(likelySF[1]) ? likelySF[0] : likelySF[1];
-      const likelyRunnerUp = likelySF.find(t=>t!==likelyChamp);
-
-      setMc(sorted);
-      setBracket({ r32:base.r32, r16:likelyR16, qf:likelyQF, sf:likelySF, champion:likelyChamp, runnerUp:likelyRunnerUp });
-      setRunning(false);
-    }, 50);
-  }, [sims]);
-
-  // Auto-run on mount
-  useEffect(() => { runMC(5000); }, []);
-
-  const [view, setView] = useState("odds"); // "odds" | "bracket"
-  const _simhRef = useRef(null); const _simhH = useElemHeight(_simhRef);
-
-  return (
-    <div>
-      <div ref={_simhRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:DS.shadow.sticky,padding:"8px 13px"}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-          <div>
-            <div style={{fontWeight:700,fontSize:15,color:C.green}}>{"🎲 WORLD CUP SIMULATOR"}</div>
-            <div style={{fontSize:10,color:C.dim}}>Poisson model · FIFA ratings · form · home advantage</div>
-          </div>
-          <button onClick={()=>runMC(sims)} disabled={running} style={{padding:"6px 12px",borderRadius:10,background:`${C.green}22`,border:`1px solid ${C.greenS}`,color:C.green,fontWeight:700,fontSize:12,cursor:"pointer",opacity:running?0.5:1,flexShrink:0}}>
-            {running ? "Running…" : "↻ Re-run"}
-          </button>
-        </div>
-        <div style={{display:"flex",gap:6,marginBottom:6}}>
-          {[1000,5000,10000,50000].map(n=>(
-            <Pill key={n} active={sims===n} onClick={()=>{setSims(n);runMC(n);}} color={C.gold}>{n.toLocaleString()}×</Pill>
-          ))}
-        </div>
-        <div style={{display:"flex",gap:6}}>
-          <Pill active={view==="odds"}    onClick={()=>setView("odds")}    color={C.green}>📊 Win Odds</Pill>
-          <Pill active={view==="bracket"} onClick={()=>setView("bracket")} color={C.gold}>🏆 Most Likely Bracket</Pill>
-        </div>
-      </div>
-      <div style={{height:0}}/>
-      
-
-      {running && (
-        <div style={{textAlign:"center",padding:"48px 0"}}>
-          <div style={{width:36,height:36,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto 12px"}}/>
-          <div style={{fontSize:13,color:C.mid}}>Simulating {sims.toLocaleString()} tournaments…</div>
-        </div>
-      )}
-
-      {/* ── WIN ODDS ── */}
-      {!running && mc && view==="odds" && (
-        <div>
-          <div style={{fontSize:11,color:C.dim,marginBottom:10,lineHeight:1.6}}>
-            Based on {sims.toLocaleString()} simulated tournaments. Each % = how often that team won.
-          </div>
-          {mc.slice(0,16).map((r,i)=>{
-            const maxPct = parseFloat(mc[0].pct);
-            const medal = i===0?"🥇":i===1?"🥈":i===2?"🥉":null;
-            return (
-              <Card key={r.team} style={{marginBottom:6}}>
-                <div style={{padding:"10px 13px"}}>
-                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-                    <div style={{fontWeight:700,color:C.dim,minWidth:26,fontSize:13,textAlign:"center"}}>{medal||`#${i+1}`}</div>
-                    <Crest team={r.team} size={22}/>
-                    <span style={{fontWeight:700,color:C.text,flex:1,fontSize:14}}>{r.team}</span>
-                    <div style={{fontWeight:900,fontSize:20,color:i===0?C.green:i<3?C.gold:C.mid,minWidth:48,textAlign:"right"}}>{r.pct}%</div>
-                  </div>
-                  {/* Win probability bar */}
-                  <div style={{height:4,background:C.s2,borderRadius:2,overflow:"hidden",marginBottom:6}}>
-                    <div style={{height:4,borderRadius:2,width:`${(parseFloat(r.pct)/maxPct)*100}%`,background:i===0?`linear-gradient(90deg,#1a4a2a,${C.green})`:i<3?`linear-gradient(90deg,#3a2800,${C.gold})`:`linear-gradient(90deg,#1a2a2a,${C.mid})`}}/>
-                  </div>
-                  {/* Stage reach % */}
-                  <div style={{display:"flex",gap:6}}>
-                    {[["R16",r.r16Pct],["QF",r.qfPct],["SF",r.sfPct],["Final",r.finalPct]].map(([lbl,pct])=>(
-                      <div key={lbl} style={{flex:1,textAlign:"center",background:C.s2,borderRadius:6,padding:"3px 0"}}>
-                        <div style={{fontSize:11,fontWeight:700,color:parseInt(pct)>50?C.green:parseInt(pct)>25?C.gold:C.dim}}>{pct}%</div>
-                        <div style={{fontSize:9,color:C.dim}}>{lbl}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </Card>
-            );
-          })}
-        </div>
-      )}
-
-      {/* ── MOST LIKELY BRACKET ── */}
-      {!running && bracket && view==="bracket" && (
-        <div>
-          <div style={{fontSize:11,color:C.dim,marginBottom:12,lineHeight:1.6}}>
-            Each round shows the team more likely to advance based on {sims.toLocaleString()} simulations.
-          </div>
-          <div style={{background:`linear-gradient(135deg,${C.green}22,${C.gold}18)`,border:`1px solid ${C.greenS}`,borderRadius:14,padding:16,marginBottom:16,textAlign:"center"}}>
-            <div style={{fontSize:11,color:C.dim,letterSpacing:"0.15em",fontWeight:700,marginBottom:8}}>🏆 MOST LIKELY CHAMPION</div>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:12,marginBottom:6}}>
-              <Crest team={bracket.champion} size={52}/>
-              <div>
-                <div style={{fontWeight:900,fontSize:26,color:C.green}}>{bracket.champion}</div>
-                <div style={{fontSize:12,color:C.gold}}>Win probability: {mc?.find(x=>x.team===bracket.champion)?.pct}%</div>
-              </div>
-            </div>
-            <div style={{fontSize:13,color:C.mid}}>Most likely runner-up: {getFlag(bracket.runnerUp)} {bracket.runnerUp} ({mc?.find(x=>x.team===bracket.runnerUp)?.finalPct}% reach final)</div>
-          </div>
-          {[
-            ["MOST LIKELY SEMI-FINALS", bracket.sf],
-            ["MOST LIKELY QUARTER-FINALS", bracket.qf],
-            ["MOST LIKELY ROUND OF 16", bracket.r16],
-          ].map(([label,teams])=>(
-            <div key={label} style={{marginBottom:14}}>
-              <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:7}}>{label}</div>
-              <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
-                {(teams||[]).map(t=>{
-                  const pct = mc?.find(x=>x.team===t);
-                  return (
-                    <div key={t} style={{display:"flex",alignItems:"center",gap:5,background:C.s2,border:`1px solid ${C.b1}`,borderRadius:8,padding:"5px 9px"}}>
-                      <Crest team={t} size={16}/>
-                      <span style={{fontSize:12,color:C.text}}>{t}</span>
-                      {pct && <span style={{fontSize:10,color:C.dim}}>·{pct.pct}%</span>}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
+// SimTab extracted to ./tabs/Simulator.jsx (see import above).
 
 // ── HEAD TO HEAD TAB ──────────────────────────────────────────────────────
 const GROUP_TEAMS = Object.values(GROUPS).flatMap(g => g.teams);
@@ -5841,7 +5614,7 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
 
 
 // ── WC NEWS TAB ────────────────────────────────────────────────────────────
-function timeAgo(isoStr) {
+export function timeAgo(isoStr) {
   const diff = (Date.now() - new Date(isoStr).getTime()) / 1000;
   if (diff < 60) return "just now";
   if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
@@ -6008,167 +5781,7 @@ export function QuickFacts({ tabTop }) {
   );
 }
 
-function WCNewsTab({ tabTop=116 }) {
-  const _ref = useRef(null);
-  const _h = useElemHeight(_ref);
-  const NEWS_LOCALES = [
-    { flag:"🇺🇸", label:"USA",       lang:"en", country:"us" },
-    { flag:"🇬🇧", label:"UK",        lang:"en", country:"gb" },
-    { flag:"🇧🇷", label:"Brazil",    lang:"pt", country:"br" },
-    { flag:"🇦🇷", label:"Argentina", lang:"es", country:"ar" },
-    { flag:"🇲🇽", label:"Mexico",    lang:"es", country:"mx" },
-    { flag:"🇪🇸", label:"Spain",     lang:"es", country:"es" },
-    { flag:"🇩🇪", label:"Germany",   lang:"de", country:"de" },
-    { flag:"🇫🇷", label:"France",    lang:"fr", country:"fr" },
-    { flag:"🇮🇹", label:"Italy",     lang:"it", country:"it" },
-    { flag:"🇯🇵", label:"Japan",     lang:"ja", country:"jp" },
-  ];
-
-  const [selectedLocales, setSelectedLocales] = useState(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem("wc2026_news_locales") || "null");
-      return Array.isArray(saved) && saved.length ? saved : ["us"];
-    } catch { return ["us"]; }
-  });
-  const [articles, setArticles] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [lastFetch, setLastFetch] = useState(null);
-
-  const fetchNews = async (countries = selectedLocales) => {
-    setLoading(true); setError(null);
-    try {
-      // Fetch all selected countries in parallel
-      const locales = NEWS_LOCALES.filter(l => countries.includes(l.country));
-      const results = await Promise.all(
-        locales.map(loc => fetch(`/api/news?lang=${loc.lang}&country=${loc.country}`)
-          .then(r => r.json())
-          .then(d => {
-            if (d._quota === "exhausted") return [];
-            return (d.articles || []).map(a => ({...a, _country: loc.country, _flag: loc.flag}));
-          })
-          .catch(() => [])
-        )
-      );
-      // Interleave: zip articles from all sources round-robin
-      const merged = [];
-      const maxLen = Math.max(...results.map(r => r.length));
-      for (let i = 0; i < maxLen; i++) {
-        results.forEach(r => { if (r[i]) merged.push(r[i]); });
-      }
-      // Dedupe by url
-      const seen = new Set();
-      const deduped = merged.filter(a => { if (seen.has(a.url)) return false; seen.add(a.url); return true; });
-      if (deduped.length) { setArticles(deduped); setLastFetch(Date.now()); }
-      else setError("No articles available — daily news quota may be reached. Cached articles refresh overnight.");
-    } catch(e) { setError("Couldn't load news. Try again."); }
-    setLoading(false);
-  };
-
-  const toggleLocale = (country) => {
-    setSelectedLocales(prev => {
-      const next = prev.includes(country)
-        ? prev.length > 1 ? prev.filter(c => c !== country) : prev // keep at least 1
-        : [...prev, country];
-      try { localStorage.setItem("wc2026_news_locales", JSON.stringify(next)); } catch {}
-      fetchNews(next);
-      return next;
-    });
-  };
-
-  useEffect(() => { fetchNews(); }, []);
-
-  return (
-    <div>
-      {/* Sticky header */}
-      <div ref={_ref} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:DS.shadow.sticky,padding:"8px 13px"}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
-          <span style={{fontSize:15,fontWeight:700,color:C.green}}>{"📰 World Cup 2026 News"}</span>
-          <div style={{display:"flex",alignItems:"center",gap:8}}>
-            {lastFetch && <span style={{fontSize:11,color:C.dim}}>Updated {timeAgo(new Date(lastFetch).toISOString())}</span>}
-            <button onClick={()=>fetchNews()} disabled={loading} style={{padding:"4px 10px",borderRadius:8,border:`1px solid ${C.b2}`,background:C.s2,color:C.mid,fontSize:11,cursor:"pointer",opacity:loading?0.5:1}}>↻ Refresh</button>
-          </div>
-        </div>
-        {/* Source country picker */}
-        <div style={{fontSize:10,color:C.dim,fontWeight:700,letterSpacing:"0.08em",marginBottom:5}}>NEWS SOURCE COUNTRY</div>
-        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-          {NEWS_LOCALES.map(loc=>{
-            const active = selectedLocales.includes(loc.country);
-            return (
-              <button key={loc.country} onClick={()=>toggleLocale(loc.country)} style={{padding:"4px 10px",borderRadius:999,border:`1px solid ${active?C.green:C.b2}`,background:active?`${C.green}18`:C.s2,color:active?C.green:C.mid,fontSize:11,fontWeight:600,cursor:"pointer",flexShrink:0}}>
-                {loc.flag} {loc.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-      
-
-      <div style={{height:0}}/>
-      <div style={{padding:"0 0 20px"}}>
-        {/* News articles below */}
-
-        {/* News feed */}
-        <div style={{fontSize:12,fontWeight:700,color:C.mid,letterSpacing:"0.08em",marginBottom:10}}>{"🗞️ LATEST HEADLINES"}</div>
-
-        {loading && (
-          <div>
-            {[1,2,3,4,5].map(i=><SkeletonNewsCard key={i}/>)}
-          </div>
-        )}
-
-        {!loading && error && (
-          <div style={{textAlign:"center",padding:"30px 0"}}>
-            <div style={{fontSize:13,color:C.dim,marginBottom:12}}>{error}</div>
-            <button onClick={fetchNews} style={{padding:"8px 20px",borderRadius:10,border:`1px solid ${C.green}`,background:`${C.green}15`,color:C.green,fontSize:13,cursor:"pointer"}}>Try again</button>
-          </div>
-        )}
-
-        {!loading && !error && articles.map((a, i) => (
-          <a key={i} href={a.url} target="_blank" rel="noopener noreferrer" style={{display:"block",textDecoration:"none",marginBottom:10}}>
-            <div style={{background:C.s2,border:`1px solid ${C.b1}`,borderRadius:12,overflow:"hidden",display:"flex",gap:0,transition:"border-color .15s"}}
-              onMouseEnter={e=>e.currentTarget.style.borderColor=C.green}
-              onMouseLeave={e=>e.currentTarget.style.borderColor=C.b1}>
-              {a.image && (
-                <img src={a.image} alt="" style={{width:90,height:90,objectFit:"cover",flexShrink:0}}
-                  onError={e=>{e.target.style.display="none";}}/>
-              )}
-              <div style={{padding:"10px 12px",flex:1,minWidth:0}}>
-                <div style={{fontSize:13,fontWeight:700,color:C.text,lineHeight:1.4,marginBottom:4,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{a.title}</div>
-                {a.description && <div style={{fontSize:11,color:C.dim,lineHeight:1.4,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden",marginBottom:6}}>{a.description}</div>}
-                <div style={{display:"flex",alignItems:"center",gap:6}}>
-                  {a._flag && selectedLocales.length > 1 && <span style={{fontSize:12}}>{a._flag}</span>}
-                  <span style={{fontSize:10,color:C.mid,fontWeight:600}}>{a.source}</span>
-                  <span style={{fontSize:10,color:C.dim}}>·</span>
-                  <span style={{fontSize:10,color:C.dim}}>{timeAgo(a.publishedAt)}</span>
-                </div>
-              </div>
-            </div>
-          </a>
-        ))}
-      </div>
-
-      {/* Fan Shop */}
-      <div style={{marginTop:24,borderTop:`1px solid ${C.b2}`,paddingTop:16}}>
-        <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:12}}>🛍️ Fan Shop</div>
-        <div style={{display:"flex",flexDirection:"column",gap:8}}>
-          {SHOP_CATEGORIES.map(cat => (
-            <a key={cat.id} href={AFFILIATE.amazon(cat.q)} target="_blank" rel="noopener noreferrer sponsored" style={{textDecoration:"none"}}>
-              <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:10,cursor:"pointer"}}>
-                <span style={{fontSize:20}}>{cat.icon}</span>
-                <span style={{fontSize:13,fontWeight:600,color:C.text,flex:1}}>{cat.label}</span>
-                <span style={{fontSize:11,color:C.gold}}>Shop →</span>
-              </div>
-            </a>
-          ))}
-        </div>
-        <div style={{fontSize:10,color:C.dim,marginTop:10,lineHeight:1.5}}>
-          Affiliate links — we earn a small commission at no cost to you.
-        </div>
-      </div>
-    </div>
-  );
-}
+// WCNewsTab extracted to ./tabs/WCNews.jsx (see import above).
 
 
 
@@ -6211,7 +5824,7 @@ function SkeletonMatchCard() {
   );
 }
 
-function SkeletonNewsCard() {
+export function SkeletonNewsCard() {
   return (
     <div style={{background:C.s1,border:`1px solid ${C.b1}`,borderRadius:12,padding:"13px",marginBottom:8,display:"flex",gap:12}}>
       <SkeletonBlock width={72} height={72} radius={8} style={{flexShrink:0}}/>
@@ -6575,7 +6188,7 @@ function StatsHubTab({ initial="", tabTop=116 }) {
 }
 
 // ── AFFILIATE CONFIG ─────────────────────────────────────────────────────────
-const AFFILIATE = {
+export const AFFILIATE = {
   amazon: (q) => `https://www.amazon.com/s?k=${encodeURIComponent(q)}&tag=worldcupapp-20`,
   fubo:   "PLACEHOLDER_FUBO_AFFILIATE_URL",
   nordvpn:"PLACEHOLDER_NORDVPN_AFFILIATE_URL",
@@ -6584,7 +6197,7 @@ const AFFILIATE = {
 
 const HRB_STATES = new Set(["AZ","CO","FL","IL","IN","MI","NJ","OH","TN","VA"]);
 
-const SHOP_CATEGORIES = [
+export const SHOP_CATEGORIES = [
   { id:"jerseys",  icon:"👕", label:"Jerseys",          q:"World Cup 2026 national team jersey" },
   { id:"balls",    icon:"⚽", label:"Soccer Balls",     q:"World Cup 2026 soccer ball official" },
   { id:"decor",    icon:"🎉", label:"Watch Party Decor",q:"World Cup 2026 party decorations flags banner" },
@@ -7386,13 +6999,13 @@ function AppContent() {
           {tab==="schedule"  && <SchedTab onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} tabTop={tabBarBottom} savedIds={savedIds} matches={resolvedMatches} C={C} FavCtx={FavCtx} LiveScoresCtx={LiveScoresCtx} MATCHES={MATCHES} MATCH_DATES={MATCH_DATES} MATCH_UTC={MATCH_UTC} ALL_TEAMS={ALL_TEAMS} calcStandings={calcStandings} getFlag={getFlag} matchTimes={matchTimes} statusIsFinished={statusIsFinished} useElemHeight={useElemHeight} MatchCard={MatchCard} Pill={Pill}/>}
           {tab==="groups"    && <GrpTab onTeam={onTeam} onMatchTap={onMatchTap} tabTop={tabBarBottom} C={C} GROUPS={GROUPS} LiveScoresCtx={LiveScoresCtx} MATCHES={MATCHES} calcStandings={calcStandings} normTeam={normTeam} statusIsFinished={statusIsFinished} statusIsLive={statusIsLive} useElemHeight={useElemHeight} Badge={Badge} Card={Card} Crest={Crest} Pill={Pill}/>}
           {tab==="stats"     && <StatsHubTab initial={statsTeam} tabTop={tabBarBottom}/>}
-          {tab==="predict"   && <PredTab tabTop={tabBarBottom} geoData={geoData}/>}
+          {tab==="predict"   && <PredTab tabTop={tabBarBottom} geoData={geoData} C={C} DS={DS} PREDS={PREDS} TEAMS={TEAMS} useElemHeight={useElemHeight} Badge={Badge} Card={Card} Crest={Crest} OddsLineChart={OddsLineChart}/>}
           {tab==="predictor" && <PredictorTab syncProfile={syncProfile} displayName={displayName} onShowSync={()=>setShowSyncModal(true)} userAvatar={userAvatar} resolvedMatches={resolvedMatches} C={C} FavCtx={FavCtx} LiveScoresCtx={LiveScoresCtx} MATCHES={MATCHES} FLAG_CODES_MAP={FLAG_CODES_MAP} FOOTBALL_ICONS={FOOTBALL_ICONS} apiPred={apiPred} fantasyLockLabel={fantasyLockLabel} fantasyMatchConfirmed={fantasyMatchConfirmed} fantasyMatchLocked={fantasyMatchLocked} fantasyStageLabel={fantasyStageLabel} fantasyTeamsKnown={fantasyTeamsKnown} fantasyVisibleMatch={fantasyVisibleMatch} getUserId={getUserId} scoreOnePred={scoreOnePred} sortFantasyChronological={sortFantasyChronological} statusIsFinished={statusIsFinished} Badge={Badge} Card={Card} Crest={Crest} FantasyTeamSlot={FantasyTeamSlot} LeaguesPanel={LeaguesPanel} Pill={Pill}/>}
           {tab==="shop"      && <ShopTab tabTop={tabBarBottom} geoData={geoData}/>}
-          {tab==="sim"       && <SimTab tabTop={tabBarBottom}/>}
+          {tab==="sim"       && <SimTab tabTop={tabBarBottom} C={C} DS={DS} getFlag={getFlag} runFullSim={runFullSim} useElemHeight={useElemHeight} Card={Card} Crest={Crest} Pill={Pill}/>}
           {tab==="bracket"   && <MyBracketTab tabTop={tabBarBottom} onMatchTap={onMatchTap} C={C} DS={DS} GROUPS={GROUPS} LiveScoresCtx={LiveScoresCtx} MATCHES={MATCHES} R32_SLOT_TEMPLATE={R32_SLOT_TEMPLATE} STR={STR} gs={gs} calcStandings={calcStandings} statusIsFinished={statusIsFinished} useElemHeight={useElemHeight} defaultBracketGroups={defaultBracketGroups} readSavedMyBracket={readSavedMyBracket} writeSavedMyBracket={writeSavedMyBracket} clearSavedMyBracket={clearSavedMyBracket} Card={Card} Crest={Crest} DragList={DragList} Pill={Pill} VisualBracketTree={VisualBracketTree}/>}
           {tab==="ask"       && <AskWorldCupTab tabTop={tabBarBottom} resolvedMatches={resolvedMatches} C={C} GROUPS={GROUPS} LiveScoresCtx={LiveScoresCtx} MATCHES={MATCHES} STR={STR} TEAMS={TEAMS} PREDS={PREDS} FORM_DATA={FORM_DATA} WC_TOP_SCORERS={WC_TOP_SCORERS} getFlag={getFlag} Card={Card}/>}
-          {tab==="news"       && <WCNewsTab tabTop={tabBarBottom}/>}
+          {tab==="news"       && <WCNewsTab tabTop={tabBarBottom} C={C} DS={DS} AFFILIATE={AFFILIATE} SHOP_CATEGORIES={SHOP_CATEGORIES} timeAgo={timeAgo} useElemHeight={useElemHeight} SkeletonNewsCard={SkeletonNewsCard}/>}
           {tab==="saved"     && <div style={{paddingTop:14}}><SavedTab saved={saved} onRemove={onRemove} onMatchTap={onMatchTap} syncUid={syncUid} syncPin={syncProfile?.pin||""} onPushSubscribed={()=>setMasterPushSubscribed(true)}/></div>}
         </div>
         </PullToRefresh>
