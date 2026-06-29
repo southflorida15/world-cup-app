@@ -263,12 +263,24 @@ const HARDCODED_ESPN_IDS = {
   "Ghana|Panama":"760436","Uzbekistan|Colombia":"760437",
 };
 
+
+const KNOWN_ESPN_EVENT_IDS = {
+  "Germany|Paraguay": "760489",
+  "Paraguay|Germany": "760489",
+};
+
 async function getESPNEventId(home, away, debugInfo = null) {
   home = normESPN(home);
   away = normESPN(away);
 
   const key = `${home}|${away}`;
   const reverseKey = `${away}|${home}`;
+  if (KNOWN_ESPN_EVENT_IDS[key] || KNOWN_ESPN_EVENT_IDS[reverseKey]) {
+    const eventId = KNOWN_ESPN_EVENT_IDS[key] || KNOWN_ESPN_EVENT_IDS[reverseKey];
+    if (debugInfo) debugInfo.knownFallback = { key, reverseKey, eventId };
+    await saveESPNId(home, away, eventId).catch(() => {});
+    return eventId;
+  }
 
   if (debugInfo) {
     debugInfo.requestedKey = key;

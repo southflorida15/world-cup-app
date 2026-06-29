@@ -701,19 +701,29 @@ export const runFullSim = () => {
 // ── LIVE SCORES CONTEXT ───────────────────────────────────────────────────
 export const LiveScoresCtx = createContext({scores:{},getScore:()=>null,isLive:()=>false,isFinished:()=>false,lastFetch:null});
 
-export const statusIsLive = (s) => ["1H","HT","2H","ET","BT","P","LIVE","inprogress","first_half","halftime","second_half","extra_time","penalties"].includes(s);
-export const statusIsFinished = (s) => ["FT","AET","PEN","finished","ended","after_extra_time","after_penalties"].includes(s);
+const normStatus = (s) => String(s || "").trim();
+const upperStatus = (s) => normStatus(s).toUpperCase();
+export const statusIsLive = (s) => {
+  const u = upperStatus(s);
+  return ["1H","HT","2H","ET","BT","P","LIVE","INPROGRESS","FIRST_HALF","HALFTIME","SECOND_HALF","EXTRA_TIME","PENALTIES","STATUS_IN_PROGRESS","STATUS_HALFTIME","STATUS_EXTRA_TIME","STATUS_PENALTY","STATUS_PENALTY_SHOOTOUT"].includes(u);
+};
+export const statusIsFinished = (s) => {
+  const u = upperStatus(s);
+  return ["FT","AET","PEN","FINISHED","ENDED","AFTER_EXTRA_TIME","AFTER_PENALTIES","STATUS_FINAL","STATUS_FULL_TIME","STATUS_FINAL_PEN","STATUS_FINAL_PENALTY","STATUS_FINAL_PENALTIES","STATUS_FINAL_AET"].includes(u);
+};
 const statusLabel = (s,e,ex) => {
-  if(!s||s==="NS"||s==="notstarted") return null;
+  s = normStatus(s);
+  const u = upperStatus(s);
+  if(!s||u==="NS"||s==="notstarted") return null;
   if(s==="1H"||s==="first_half"||s==="inprogress"||s==="LIVE") return e?(ex?`${e}+${ex}'`:`${e}'`):"LIVE";
   if(s==="HT"||s==="halftime") return "HT";
   if(s==="2H"||s==="second_half") return e?(ex?`${e}+${ex}' (${e-45}' H2)`:`${e}' (${e-45}' H2)`):"LIVE";
   if(s==="ET"||s==="extra_time") return e?(ex?`ET ${e}+${ex}'`:`ET ${e}'`):"ET";
   if(s==="BT") return "BT";
-  if(s==="P"||s==="penalties") return "Pens";
-  if(s==="FT"||s==="finished"||s==="ended") return "FT";
-  if(s==="AET"||s==="after_extra_time") return "AET";
-  if(s==="PEN"||s==="after_penalties") return "Pens";
+  if(u==="P"||u==="PENALTIES"||u==="STATUS_PENALTY"||u==="STATUS_PENALTY_SHOOTOUT") return "Pens";
+  if(u==="FT"||u==="FINISHED"||u==="ENDED"||u==="STATUS_FINAL"||u==="STATUS_FULL_TIME") return "FT";
+  if(u==="AET"||u==="AFTER_EXTRA_TIME"||u==="STATUS_FINAL_AET") return "AET";
+  if(u==="PEN"||u==="AFTER_PENALTIES"||u==="STATUS_FINAL_PEN"||u==="STATUS_FINAL_PENALTY"||u==="STATUS_FINAL_PENALTIES") return "Pens";
   return s;
 };
 
@@ -784,7 +794,18 @@ function LiveScoresProvider({ children }) {
         const elapsedExtra = f?.fixture?.status?.elapsedExtra || null;
         const hg = f?.goals?.home ?? null;
         const ag = f?.goals?.away ?? null;
-        if(h && a) map[`${h}|${a}`] = { hg, ag, status, elapsed, elapsedExtra };
+        const pHome = f?.score?.penalty?.home ?? f?.score?.penalties?.home ?? f?.score?.shootout?.home ?? f?.penalty?.home ?? null;
+        const pAway = f?.score?.penalty?.away ?? f?.score?.penalties?.away ?? f?.score?.shootout?.away ?? f?.penalty?.away ?? null;
+        let winner = null;
+        if (statusIsFinished(status)) {
+          if (hg != null && ag != null && Number(hg) !== Number(ag)) winner = Number(hg) > Number(ag) ? h : a;
+          else if (pHome != null && pAway != null && Number(pHome) !== Number(pAway)) winner = Number(pHome) > Number(pAway) ? h : a;
+        }
+        if(h && a) {
+          map[`${h}|${a}`] = { hg, ag, status, elapsed, elapsedExtra, pHome, pAway, winner };
+          // Some app surfaces ask in reverse orientation. Keep a safe swapped lookup too.
+          map[`${a}|${h}`] = { hg: ag, ag: hg, status, elapsed, elapsedExtra, pHome: pAway, pAway: pHome, winner };
+        }
       });
       setScores(map);
       setLastFetch(new Date());
@@ -1309,7 +1330,12 @@ export function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favT
   const hasScore = sc && sc.hg !== null && sc.ag !== null && (live || finished);
   const isKO = !m.group;
   let winner = null;
-  if(isKO && finished && hasScore) { if(sc.hg>sc.ag) winner=m.home; else if(sc.ag>sc.hg) winner=m.away; }
+  if(isKO && finished && hasScore) {
+    if (sc.winner) winner = sc.winner;
+    else if(sc.hg>sc.ag) winner=m.home;
+    else if(sc.ag>sc.hg) winner=m.away;
+    else if(sc.pHome != null && sc.pAway != null && Number(sc.pHome) !== Number(sc.pAway)) winner = Number(sc.pHome) > Number(sc.pAway) ? m.home : m.away;
+  }
   const isFav = favTeams?.length && (favTeams.includes(m.home) || favTeams.includes(m.away));
   const [scoreFlash, setScoreFlash] = useState(false);
   const prevScore = useRef(null);
@@ -1382,7 +1408,7 @@ export function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favT
             {homeProvisional && <span style={{fontStyle:"italic",fontSize:10,color:C.dim,marginLeft:4}}>{tx("provisional", "provisório")}</span>}
           </span>
           <div style={{textAlign:"center",minWidth:60,flexShrink:0}}>
-            <div style={{fontWeight:900,fontSize:22,color:C.mid,fontFamily:"monospace",lineHeight:1}}>{sc.hg} – {sc.ag}</div>
+            <div style={{fontWeight:900,fontSize:22,color:C.mid,fontFamily:"monospace",lineHeight:1}}>{sc.hg} – {sc.ag}</div>{sc.pHome != null && sc.pAway != null && <div style={{fontSize:10,color:C.gold,fontWeight:800,marginTop:2}}>{sc.pHome}–{sc.pAway} pens</div>}
           </div>
           <span style={{flex:1,fontSize:14,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
             {awayProvisional && <span style={{fontStyle:"italic",fontSize:10,color:C.dim,marginRight:4}}>{tx("provisional", "provisório")}</span>}
@@ -1432,7 +1458,7 @@ export function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favT
           </div>
         ) : hasScore ? (
           <div style={{textAlign:"center",minWidth:60,flexShrink:0}}>
-            <div style={{fontWeight:900,fontSize:22,color:live?C.green:finished?C.mid:C.text,fontFamily:"monospace",lineHeight:1,animation:scoreFlash?"scoreFlash .6s ease":undefined,borderRadius:6,padding:"1px 4px",background:scoreFlash?`${C.green}30`:"transparent",transition:"background .3s"}}>{sc.hg} – {sc.ag}</div>
+            <div style={{fontWeight:900,fontSize:22,color:live?C.green:finished?C.mid:C.text,fontFamily:"monospace",lineHeight:1,animation:scoreFlash?"scoreFlash .6s ease":undefined,borderRadius:6,padding:"1px 4px",background:scoreFlash?`${C.green}30`:"transparent",transition:"background .3s"}}>{sc.hg} – {sc.ag}</div>{sc.pHome != null && sc.pAway != null && <div style={{fontSize:10,color:C.gold,fontWeight:800,marginTop:2}}>{sc.pHome}–{sc.pAway} pens</div>}
           </div>
         ) : (
           <div style={{textAlign:"center",minWidth:60,flexShrink:0}}>
@@ -3633,10 +3659,15 @@ export function getResolvedTournamentMatches({ getScore=()=>null } = {}) {
     let s = getScore(home, away), swapped = false;
     if (!s) { s = getScore(away, home); swapped = true; }
     if (!s || !statusIsFinished(s.status)) return null;
+    if (s.winner) return s.winner;
     const hg = swapped ? s.ag : s.hg;
     const ag = swapped ? s.hg : s.ag;
-    if (hg == null || ag == null || hg === ag) return null;
-    return hg > ag ? home : away;
+    const pHome = swapped ? s.pAway : s.pHome;
+    const pAway = swapped ? s.pHome : s.pAway;
+    if (hg == null || ag == null) return null;
+    if (Number(hg) !== Number(ag)) return Number(hg) > Number(ag) ? home : away;
+    if (pHome != null && pAway != null && Number(pHome) !== Number(pAway)) return Number(pHome) > Number(pAway) ? home : away;
+    return null;
   };
 
   const decorate = (matchId, home, away, extra={}) => {

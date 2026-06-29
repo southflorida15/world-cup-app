@@ -21,7 +21,7 @@ const CACHE_TS_KEY     = "wc2026:livescores:ts";
 const RESULTS_KEY      = "wc2026:results"; // permanent finished scores
 
 const LIVE_STATUSES     = ["LIVE","1H","HT","2H","ET","BT","P","INT","IN_PLAY","PAUSED"];
-const FINISHED_STATUSES = ["FT","AET","PEN","AWD","WO","FINISHED","AWARDED"];
+const FINISHED_STATUSES = ["FT","AET","PEN","AWD","WO","FINISHED","AWARDED","STATUS_FINAL","STATUS_FULL_TIME","STATUS_FINAL_PEN","STATUS_FINAL_PENALTY","STATUS_FINAL_PENALTIES","STATUS_FINAL_AET"];
 
 const KICKOFFS = [
   "2026-06-11T19:00:00Z","2026-06-12T02:00:00Z","2026-06-12T19:00:00Z","2026-06-13T01:00:00Z",
@@ -177,7 +177,9 @@ async function persistFinishedResults(fixtures) {
       if (hg === null || ag === null) return;
       // Only persist if we have actual scores and it's an improvement
       if (!existing[key] || existing[key].hg !== hg || existing[key].ag !== ag) {
-        existing[key] = { hg, ag, status, elapsed: f?.fixture?.status?.elapsed || 90 };
+        const pHome = f?.score?.penalty?.home ?? f?.score?.penalties?.home ?? f?.score?.shootout?.home ?? f?.penalty?.home ?? null;
+        const pAway = f?.score?.penalty?.away ?? f?.score?.penalties?.away ?? f?.score?.shootout?.away ?? f?.penalty?.away ?? null;
+        existing[key] = { hg, ag, status, elapsed: f?.fixture?.status?.elapsed || 90, pHome, pAway };
         changed = true;
       }
     });
@@ -215,7 +217,7 @@ function mergePersistedResults(fixtures, persisted) {
       league: { id: 1635, season: 2026 },
       teams: { home: { name: home }, away: { name: away } },
       goals: { home: r.hg, away: r.ag },
-      score: { fulltime: { home: r.hg, away: r.ag } },
+      score: { fulltime: { home: r.hg, away: r.ag }, penalty: { home: r.pHome ?? null, away: r.pAway ?? null } },
       events: [],
       _source: "persisted",
     });
@@ -230,8 +232,13 @@ const ESPN_STATUS_MAP = {
   "STATUS_HALFTIME": "HT",
   "STATUS_FINAL": "FT",
   "STATUS_FULL_TIME": "FT",
+  "STATUS_FINAL_AET": "AET",
+  "STATUS_FINAL_PEN": "PEN",
+  "STATUS_FINAL_PENALTY": "PEN",
+  "STATUS_FINAL_PENALTIES": "PEN",
   "STATUS_EXTRA_TIME": "ET",
   "STATUS_PENALTY": "P",
+  "STATUS_PENALTY_SHOOTOUT": "P",
   "STATUS_POSTPONED": "TBD",
   "STATUS_CANCELED": "CANC",
   "STATUS_SUSPENDED": "TBD",
@@ -250,6 +257,27 @@ const ESPN_NAME_MAP = {
   "Czech Republic": "Czechia",
 };
 const normESPN = n => ESPN_NAME_MAP[n] || n;
+
+
+function pickPenaltyScore(competitor) {
+  const candidates = [
+    competitor?.shootoutScore,
+    competitor?.penaltyScore,
+    competitor?.penalties,
+    competitor?.score?.penalty,
+    competitor?.score?.penalties,
+    competitor?.linescore?.penalty,
+  ];
+  for (const c of candidates) {
+    if (c !== undefined && c !== null && c !== "") {
+      const n = parseInt(c, 10);
+      if (!Number.isNaN(n)) return n;
+    }
+  }
+  const text = JSON.stringify(competitor || {});
+  const m = text.match(/(?:shootoutScore|penaltyScore|penalties)\"?\s*:?\s*\"?(\d+)/i);
+  return m ? parseInt(m[1], 10) : null;
+}
 
 function mapESPNEvent(event) {
   const comp = event.competitions?.[0];
@@ -302,6 +330,9 @@ function mapESPNEvent(event) {
   }
   const hg = home.score !== undefined && home.score !== "" ? parseInt(home.score) : null;
   const ag = away.score !== undefined && away.score !== "" ? parseInt(away.score) : null;
+  const pHome = pickPenaltyScore(home);
+  const pAway = pickPenaltyScore(away);
+  if ((pHome != null || pAway != null) && (short === "FT" || short === "AET")) short = "PEN";
 
   return {
     fixture: {
@@ -316,7 +347,7 @@ function mapESPNEvent(event) {
       away: { id: away.team?.id, name: normESPN(away.team?.displayName || away.team?.name || "") },
     },
     goals: { home: hg, away: ag },
-    score: { fulltime: { home: hg, away: ag } },
+    score: { fulltime: { home: hg, away: ag }, penalty: { home: pHome, away: pAway } },
     events: [],
     _source: "espn",
   };
@@ -349,7 +380,7 @@ function mapHLMatch(m) {
     "FT":"FT","AET":"AET","NS":"NS","TBD":"NS","PST":"TBD","CANC":"CANC",
     "finished":"FT","inprogress":"LIVE","first_half":"1H","halftime":"HT",
     "second_half":"2H","extra_time":"ET","penalties":"P",
-    "ended":"FT","after_extra_time":"AET","after_penalties":"PEN",
+    "ended":"FT","after_extra_time":"AET","after_penalties":"PEN","STATUS_FINAL":"FT","STATUS_FULL_TIME":"FT","STATUS_FINAL_PEN":"PEN","STATUS_FINAL_PENALTY":"PEN","STATUS_FINAL_PENALTIES":"PEN",
   };
   const short = statusMap[statusRaw] || statusRaw;
   const hg = m.homeScore ?? m.homeGoals ?? m.score?.home ?? null;
