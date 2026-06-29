@@ -1,4 +1,5 @@
 import React, { Fragment, useState, useEffect, useRef, useContext } from "react";
+import { displayTeamName, displayStageName, displayVenueName } from "../i18n/display";
 
 // Shared App.jsx values, passed in as props rather than imported directly
 // to avoid a circular import (App.jsx -> SchedTab.jsx -> App.jsx), since
@@ -8,12 +9,16 @@ import React, { Fragment, useState, useEffect, useRef, useContext } from "react"
 // MatchCard, Pill
 
 export default function SchedTab({
+  language="en", t=(key, fallback)=>fallback,
   onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=new Set(), matches,
   // Shared App.jsx values, passed as props to avoid a circular import
   C, FavCtx, LiveScoresCtx, MATCHES, MATCH_DATES, MATCH_UTC, ALL_TEAMS,
   calcStandings, getFlag, matchTimes, statusIsFinished, useElemHeight,
   MatchCard, Pill,
 }) {
+  const isPtBR = language === "pt-BR";
+  const tx = (en, pt) => isPtBR ? pt : en;
+
   matches = matches || MATCHES;
   const { favTeams=[] } = useContext(FavCtx);
   const { getScore } = useContext(LiveScoresCtx);
@@ -171,7 +176,7 @@ export default function SchedTab({
         {/* Date strip */}
         <div ref={stripRef} style={{display:"flex",overflowX:"auto",scrollbarWidth:"none",marginBottom:8,gap:4}}>
           <div onClick={()=>setSelDate(null)} style={{display:"flex",flexDirection:"column",alignItems:"center",minWidth:36,cursor:"pointer",padding:"4px 2px",borderRadius:8,background:selDate===null?`${C.green}22`:"transparent",border:`1px solid ${selDate===null?C.green:"transparent"}`}}>
-            <span style={{fontSize:9,color:selDate===null?C.green:C.dim,fontWeight:700}}>ALL</span>
+            <span style={{fontSize:9,color:selDate===null?C.green:C.dim,fontWeight:700}}>{tx("ALL", "TODOS")}</span>
             <span style={{fontSize:14,fontWeight:900,color:selDate===null?C.green:C.dim}}>⚽</span>
           </div>
           {MATCH_DATES.map((d, idx) => {
@@ -204,42 +209,42 @@ export default function SchedTab({
 
         {/* Filter mode buttons */}
         <div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none",marginBottom:8,alignItems:"center"}}>
-          {favTeams?.length > 0 && <button style={ss(filterMode==="fav",C.gold)} onClick={()=>setFilterMode("fav")}>⭐ My Teams</button>}
-          <button style={ss(filterMode==="group")} onClick={()=>setFilterMode(f=>f==="group"?"none":"group")}>🗂 Group</button>
-          <button style={ss(filterMode==="team")} onClick={()=>setFilterMode(f=>f==="team"?"none":"team")}>👥 Team</button>
-          <button style={ss(filterMode==="venue")} onClick={()=>setFilterMode(f=>f==="venue"?"none":"venue")}>📍 Venue</button>
-          <button style={ss(filterMode==="round")} onClick={()=>setFilterMode(f=>f==="round"?"none":"round")}>🏆 Round</button>
+          {favTeams?.length > 0 && <button style={ss(filterMode==="fav",C.gold)} onClick={()=>setFilterMode("fav")}>{tx("⭐ My Teams", "⭐ Meus times")}</button>}
+          <button style={ss(filterMode==="group")} onClick={()=>setFilterMode(f=>f==="group"?"none":"group")}>{tx("🗂 Group", "🗂 Grupo")}</button>
+          <button style={ss(filterMode==="team")} onClick={()=>setFilterMode(f=>f==="team"?"none":"team")}>{tx("👥 Team", "👥 Time")}</button>
+          <button style={ss(filterMode==="venue")} onClick={()=>setFilterMode(f=>f==="venue"?"none":"venue")}>{tx("📍 Venue", "📍 Estádio")}</button>
+          <button style={ss(filterMode==="round")} onClick={()=>setFilterMode(f=>f==="round"?"none":"round")}>{tx("🏆 Round", "🏆 Fase")}</button>
         </div>
         {filterMode==="group" && (
           <div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none"}}>
-            {["All","A","B","C","D","E","F","G","H","I","J","K","L","Knockout"].map(g=><Pill key={g} active={groupF===g} onClick={()=>setGroupF(g)} color={g==="Knockout"?C.gold:C.green}>{g==="All"?"All":g==="Knockout"?"🏆 KO":g}</Pill>)}
+            {["All","A","B","C","D","E","F","G","H","I","J","K","L","Knockout"].map(g=><Pill key={g} active={groupF===g} onClick={()=>setGroupF(g)} color={g==="Knockout"?C.gold:C.green}>{g==="All"?tx("All", "Todos"):g==="Knockout"?tx("🏆 KO", "🏆 Mata-mata"):g}</Pill>)}
           </div>
         )}
         {filterMode==="team" && (
           <select value={teamF} onChange={e=>setTeamF(e.target.value)} style={{width:"100%",padding:"8px 14px",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:10,color:C.text,fontSize:14,outline:"none"}}>
-            <option value="">{"All teams"}</option>
-            {allTeams.map(t=><option key={t} value={t}>{getFlag(t)} {t}</option>)}
+            <option value="">{tx("All teams", "Todos os times")}</option>
+            {allTeams.map(t=><option key={t} value={t}>{getFlag(t)} {displayTeamName(t, language)}</option>)}
           </select>
         )}
         {filterMode==="venue" && (
           <select value={venueF} onChange={e=>setVenueF(e.target.value)} style={{width:"100%",padding:"8px 14px",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:10,color:C.text,fontSize:14,outline:"none"}}>
-            <option value="">{"All venues"}</option>
-            {allVenues.map(v=><option key={v} value={v}>{v}</option>)}
+            <option value="">{tx("All venues", "Todos os estádios")}</option>
+            {allVenues.map(v=><option key={v} value={v}>{displayVenueName(v, language)}</option>)}
           </select>
         )}
         {filterMode==="round" && (
           <div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none"}}>
-            {[{id:"",label:"All"},{id:"group",label:"Group Stage"},{id:"r32",label:"Round of 32"},{id:"r16",label:"Round of 16"},{id:"qf",label:"Quarter-Finals"},{id:"sf",label:"Semi-Finals"},{id:"3rd",label:"3rd Place"},{id:"final",label:"Final"}].map(r=>
+            {[{id:"",label:tx("All", "Todos")},{id:"group",label:tx("Group Stage", "Fase de grupos")},{id:"r32",label:tx("Round of 32", "16 avos de final")},{id:"r16",label:tx("Round of 16", "Oitavas de final")},{id:"qf",label:tx("Quarter-Finals", "Quartas de final")},{id:"sf",label:tx("Semi-Finals", "Semifinais")},{id:"3rd",label:tx("3rd Place", "Disputa do 3º lugar")},{id:"final",label:tx("Final", "Final")}].map(r=>
               <Pill key={r.id} active={roundF===r.id} onClick={()=>setRoundF(r.id)} color={r.id===""?C.mid:C.gold}>{r.label}</Pill>
             )}
           </div>
         )}
         {/* Time zone toggle + counter */}
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:6}}>
-          <span style={{fontSize:13,color:C.mid,fontWeight:700,alignSelf:"flex-end",paddingBottom:3}}>Displaying {shown.length} matches</span>
+          <span style={{fontSize:13,color:C.mid,fontWeight:700,alignSelf:"flex-end",paddingBottom:3}}>{isPtBR ? `Exibindo ${shown.length} jogos` : `Displaying ${shown.length} matches`}</span>
           <div style={{display:"flex",background:C.s2,borderRadius:20,border:`1px solid ${C.b2}`,padding:2,gap:2}}>
-            <button onClick={()=>setTimeMode("local")} style={{padding:"3px 10px",borderRadius:18,border:"none",cursor:"pointer",fontSize:10,fontWeight:700,background:timeMode==="local"?C.green:"transparent",color:timeMode==="local"?"#030a05":C.dim,transition:"all .15s"}}>My Time</button>
-            <button onClick={()=>setTimeMode("venue")} style={{padding:"3px 10px",borderRadius:18,border:"none",cursor:"pointer",fontSize:10,fontWeight:700,background:timeMode==="venue"?C.gold:"transparent",color:timeMode==="venue"?"#030a05":C.dim,transition:"all .15s"}}>Venue</button>
+            <button onClick={()=>setTimeMode("local")} style={{padding:"3px 10px",borderRadius:18,border:"none",cursor:"pointer",fontSize:10,fontWeight:700,background:timeMode==="local"?C.green:"transparent",color:timeMode==="local"?"#030a05":C.dim,transition:"all .15s"}}>{tx("My Time", "Meu horário")}</button>
+            <button onClick={()=>setTimeMode("venue")} style={{padding:"3px 10px",borderRadius:18,border:"none",cursor:"pointer",fontSize:10,fontWeight:700,background:timeMode==="venue"?C.gold:"transparent",color:timeMode==="venue"?"#030a05":C.dim,transition:"all .15s"}}>{tx("Venue", "Estádio")}</button>
           </div>
         </div>
       </div>
@@ -248,7 +253,7 @@ export default function SchedTab({
       <div style={{height:8}}/>
 
       {/* Match list */}
-      {shown.length===0 ? <div style={{textAlign:"center",padding:"32px",color:C.dim}}>{"No matches found"}</div> : Object.entries(byDate).map(([date,ms],idx)=>(
+      {shown.length===0 ? <div style={{textAlign:"center",padding:"32px",color:C.dim}}>{tx("No matches found", "Nenhum jogo encontrado")}</div> : Object.entries(byDate).map(([date,ms],idx)=>(
         <div key={date} style={{marginBottom:14}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:5,marginTop:10}}>
             <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>{date}</div>

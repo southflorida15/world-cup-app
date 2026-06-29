@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { displayTeamName } from "../i18n/display";
 
 // Shared App.jsx values, passed in as props rather than imported directly
 // to avoid a circular import (App.jsx -> Stats.jsx -> App.jsx), since
@@ -8,17 +9,50 @@ import React, { useState, useEffect, useRef } from "react";
 // Badge, Card, Crest, Pill, QuickFacts, RC, RecentForm, TeamHistoryCard
 
 export default function StatsTab({
+  language="en", t=(key, fallback)=>fallback,
   initial="", tabTop=116,
   // Shared App.jsx values, passed as props to avoid a circular import
   C, DS, GROUPS, PREDS, RECENT4, TEAMS, getFlag, isCaptain, parseName,
   posColor, posLabel, posSort, useElemHeight, zafronixGet,
   Badge, Card, Crest, Pill, QuickFacts, RC, RecentForm, TeamHistoryCard,
 }) {
+  const isPtBR = language === "pt-BR";
+  const tx = (en, pt) => isPtBR ? pt : en;
+
   const [sel, setSel] = useState(initial);
   const [squad, setSquad] = useState(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState(false);
   const [posFilter, setPosFilter] = useState("All");
+  const posFilterLabel = (pos) => {
+    if (!isPtBR) return pos === "All" ? "All" : pos;
+    return ({ All:"Todos", GK:"GOL", DEF:"DEF", MID:"MEI", FWD:"ATA" })[pos] || pos;
+  };
+  const playerPositionLabel = (pos) => {
+    const label = posLabel(pos);
+    if (!isPtBR) return label;
+    return ({ GK:"GOL", DEF:"DEF", MID:"MEI", FWD:"ATA" })[label] || label;
+  };
+  const translatedTeamNote = (team, note) => {
+    if (!isPtBR) return note;
+    const ptNotes = {
+      "Brazil":"O Brasil chega com enorme expectativa e talento ofensivo. A equipe combina estrelas de elite com tradição de cinco títulos mundiais.",
+      "France":"A França tem um dos elencos mais fortes do torneio e segue como candidata ao título.",
+      "Argentina":"Atual campeã mundial, a Argentina tenta manter o ciclo vencedor com uma mistura de experiência e nova geração.",
+      "Spain":"A Espanha aposta em posse de bola, juventude e talento técnico para buscar mais um título mundial.",
+      "England":"A Inglaterra chega com elenco forte e grandes nomes no meio e no ataque.",
+      "Germany":"A Alemanha tenta voltar ao topo com uma geração talentosa e forte tradição em Copas.",
+      "Portugal":"Portugal combina experiência, talento ofensivo e uma das gerações mais fortes de sua história.",
+      "Netherlands":"A Holanda chega equilibrada, com defesa forte e tradição de grandes campanhas.",
+      "Belgium":"A Bélgica ainda conta com nomes experientes e talento suficiente para incomodar qualquer rival.",
+      "Mexico":"O México joga em casa e conta com apoio forte da torcida para tentar ir longe.",
+      "United States":"Os Estados Unidos têm vantagem de jogar em casa e uma geração competitiva.",
+      "Japan":"O Japão chega em ótima fase, com intensidade, organização e jogadores cada vez mais experientes.",
+      "Morocco":"Marrocos mantém a base competitiva que surpreendeu o mundo e segue difícil de ser batido.",
+    };
+    return ptNotes[team] || note;
+  };
+  const playerCountLabel = (n) => isPtBR ? `${n} jogador${Number(n)===1?"":"es"}` : `${n} player${Number(n)===1?"":"s"}`;
   const [squadExpanded, setSquadExpanded] = useState(false);
   const [wcHistory, setWcHistory] = useState(null);
   const [wcHistoryLoading, setWcHistoryLoading] = useState(false);
@@ -63,13 +97,13 @@ export default function StatsTab({
       <QuickFacts tabTop={tabTop}/>
       <div ref={_shRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:DS.shadow.sticky,padding:"8px 13px"}}>
         <select value={sel} onChange={e=>setSel(e.target.value)} style={{width:"100%",padding:"10px 14px",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:10,color:C.text,fontSize:14,outline:"none"}}>
-          <option value="">Select a team</option>
-          {Object.keys(GROUPS).map(g=><optgroup key={g} label={`Group ${g}`}>{GROUPS[g].teams.map(t=><option key={t} value={t}>{getFlag(t)} {t}</option>)}</optgroup>)}
+          <option value="">{tx("Select a team", "Selecione um time")}</option>
+          {Object.keys(GROUPS).map(g=><optgroup key={g} label={`${tx("Group", "Grupo")} ${g}`}>{GROUPS[g].teams.map(t=><option key={t} value={t}>{getFlag(t)} {displayTeamName(t, language)}</option>)}</optgroup>)}
         </select>
       </div>
       <div style={{height:0}}/>
       
-      {!sel && <div style={{textAlign:"center",padding:"44px 20px",color:C.dim,fontSize:13}}>Select any of the 48 teams to view their squad</div>}
+      {!sel && <div style={{textAlign:"center",padding:"44px 20px",color:C.dim,fontSize:13}}>{tx("Select any of the 48 teams to view their squad", "Selecione uma das 48 seleções para ver o elenco")}</div>}
       {sel && d && (
         <div>
           <Card style={{marginBottom:12}}>
@@ -78,19 +112,19 @@ export default function StatsTab({
                 <Crest team={sel} size={52}/>
                 <div style={{flex:1}}>
                   <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:8}}>
-                    <div style={{fontWeight:700,fontSize:20,color:C.text}}>{sel}</div>
+                    <div style={{fontWeight:700,fontSize:20,color:C.text}}>{displayTeamName(sel, language)}</div>
                     <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
                       {(() => { const p=PREDS.find(x=>x.team===sel); return p ? (
                         <a href="https://polymarket.com/event/world-cup-winner" target="_blank" rel="noopener noreferrer" style={{textDecoration:"none",flexShrink:0}}>
                           <div style={{textAlign:"center",background:`${C.green}18`,border:`1px solid ${C.green}44`,borderRadius:10,padding:"5px 10px",cursor:"pointer"}}>
                             <div style={{fontSize:16,fontWeight:900,color:C.green,lineHeight:1}}>{p.poly}%</div>
-                            <div style={{fontSize:9,color:C.dim,marginTop:2}}>to win</div>
+                            <div style={{fontSize:9,color:C.dim,marginTop:2}}>{tx("to win", "chance de título")}</div>
                           </div>
                         </a>
                       ) : null; })()}
                     </div>
                   </div>
-                  <div style={{fontSize:12,color:C.mid,marginTop:3}}>{d.conf} · Coach: {d.coach}</div>
+                  <div style={{fontSize:12,color:C.mid,marginTop:3}}>{d.conf} · {tx("Coach", "Técnico")}: {d.coach}</div>
                   <div style={{display:"flex",gap:6,marginTop:6,flexWrap:"wrap"}}>
                     <Badge color={C.blue}>#{d.rank} FIFA</Badge>
                     <Badge color={C.gold}>{d.titles} 🏆</Badge>
@@ -98,7 +132,7 @@ export default function StatsTab({
                   </div>
                 </div>
               </div>
-              <div style={{fontSize:10,color:C.dim,fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:7}}>Sofascore Attributes</div>
+              <div style={{fontSize:10,color:C.dim,fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:7}}>{tx("Sofascore Attributes", "Atributos Sofascore")}</div>
               <div style={{display:"flex",justifyContent:"space-between",gap:4}}>
                 {Object.entries(d.stats).map(([k,v])=>(
                   <div key={k} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
@@ -112,30 +146,30 @@ export default function StatsTab({
 
           <Card style={{marginBottom:12}}>
             <div style={{padding:13}}>
-              <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:7}}>2026 Analysis</div>
-              <p style={{fontSize:13,color:C.mid,lineHeight:1.7,margin:0}}>{d.note}</p>
+              <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:7}}>{tx("2026 Analysis", "Análise 2026")}</div>
+              <p style={{fontSize:13,color:C.mid,lineHeight:1.7,margin:0}}>{translatedTeamNote(sel, d.note)}</p>
             </div>
           </Card>
           <Card style={{marginBottom:12}}>
             <button onClick={()=>setSquadExpanded(e=>!e)} style={{width:"100%",padding:"10px 14px",borderBottom:squadExpanded?`1px solid ${C.b1}`:"none",display:"flex",justifyContent:"space-between",alignItems:"center",background:"none",border:"none",borderBottomWidth:squadExpanded?1:0,borderBottomStyle:"solid",borderBottomColor:C.b1,cursor:"pointer",textAlign:"left"}}>
-              <span style={{fontWeight:700,color:C.green,fontSize:13}}>SQUAD</span>
+              <span style={{fontWeight:700,color:C.green,fontSize:13}}>{tx("SQUAD", "ELENCO")}</span>
               <div style={{display:"flex",alignItems:"center",gap:8}}>
-                {squad && <span style={{fontSize:11,color:C.dim}}>{squad.length} players{avgAge!==null?` · avg age ${avgAge.toFixed(1)}`:""}</span>}
+                {squad && <span style={{fontSize:11,color:C.dim}}>{playerCountLabel(squad.length)}{avgAge!==null ? (isPtBR ? ` · idade média ${avgAge.toFixed(1)}` : ` · avg age ${avgAge.toFixed(1)}`) : ""}</span>}
                 <span style={{fontSize:11,color:C.dim,transform:squadExpanded?"rotate(180deg)":"none",transition:"transform .15s"}}>▾</span>
               </div>
             </button>
             {loading && (
               <div style={{padding:"32px 0",textAlign:"center"}}>
                 <div style={{width:28,height:28,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto 10px"}}/>
-                <div style={{fontSize:12,color:C.mid}}>Fetching squad...</div>
+                <div style={{fontSize:12,color:C.mid}}>{tx("Fetching squad...", "Buscando elenco...")}</div>
               </div>
             )}
             {squadExpanded && err && (
               <div style={{padding:14}}>
-                <div style={{fontSize:12,color:C.dim,marginBottom:10}}>Predicted squad — showing key players</div>
+                <div style={{fontSize:12,color:C.dim,marginBottom:10}}>{tx("Predicted squad — showing key players", "Elenco previsto — mostrando jogadores-chave")}</div>
                 {d.players.map((p,i)=>(
                   <div key={p.name} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 0",borderBottom:i<d.players.length-1?`1px solid ${C.b1}`:"none"}}>
-                    <span style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:8,background:`${posColor(p.pos)}22`,color:posColor(p.pos)}}>{p.pos}</span>
+                    <span style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:8,background:`${posColor(p.pos)}22`,color:posColor(p.pos)}}>{playerPositionLabel(p.pos)}</span>
                     <span style={{fontWeight:600,color:C.text,flex:1,fontSize:13}}>{p.name}</span>
                     <span style={{fontSize:11,color:C.dim}}>{p.club}</span>
                     <RC v={p.ss} sz={28}/>
@@ -148,7 +182,7 @@ export default function StatsTab({
                 <div style={{display:"flex",gap:6,padding:"10px 12px",borderBottom:`1px solid ${C.b1}`,overflowX:"auto",scrollbarWidth:"none"}}>
                   {["All","GK","DEF","MID","FWD"].map(pos=>(
                     <Pill key={pos} active={posFilter===pos} onClick={()=>setPosFilter(pos)} color={pos==="GK"?C.blue:pos==="DEF"?C.green:pos==="MID"?C.gold:pos==="FWD"?C.red:C.green}>
-                      {pos}{posCounts[pos]!==undefined?` (${posCounts[pos]})`:""}
+                      {posFilterLabel(pos)}{posCounts[pos]!==undefined?` (${posCounts[pos]})`:""}
                     </Pill>
                   ))}
                 </div>
@@ -163,14 +197,14 @@ export default function StatsTab({
                           <span style={{fontWeight:600,color:C.text,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</span>
                           {p.captain && <span style={{fontSize:9,background:`${C.gold}33`,color:C.gold,padding:"1px 5px",borderRadius:6,fontWeight:700,flexShrink:0}}>C</span>}
                         </div>
-                        <div style={{fontSize:10,color:C.dim,marginTop:1}}>{p.club}{p.clubCountry?` · ${p.clubCountry}`:""}{p.age?` · Age ${p.age}`:""}</div>
+                        <div style={{fontSize:10,color:C.dim,marginTop:1}}>{p.club}{p.clubCountry?` · ${p.clubCountry}`:""}{p.age ? (isPtBR ? ` · Idade ${p.age}` : ` · Age ${p.age}`) : ""}</div>
                       </div>
-                      <span style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:8,background:`${pc}22`,color:pc,flexShrink:0}}>{posLabel(p.pos)}</span>
+                      <span style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:8,background:`${pc}22`,color:pc,flexShrink:0}}>{playerPositionLabel(p.pos)}</span>
                     </div>
                   );
                 })}
                 <div style={{padding:"8px 14px",borderTop:`1px solid ${C.b1}`}}>
-                  <span style={{fontSize:10,color:C.dim}}>Squad data sourced from official records</span>
+                  <span style={{fontSize:10,color:C.dim}}>{tx("Squad data sourced from official records", "Dados do elenco obtidos de registros oficiais")}</span>
                 </div>
               </div>
             )}
@@ -178,13 +212,13 @@ export default function StatsTab({
 
           <Card style={{marginBottom:12}}>
             <div style={{padding:"10px 14px",borderBottom:`1px solid ${C.b1}`}}>
-              <span style={{fontWeight:700,color:C.green,fontSize:13}}>🏆 WORLD CUP HISTORY</span>
+              <span style={{fontWeight:700,color:C.green,fontSize:13}}>🏆 {tx("WORLD CUP HISTORY", "HISTÓRICO EM COPAS")}</span>
             </div>
             <div style={{padding:13}}>
               {wcHistoryLoading && (
                 <div style={{padding:"24px 0",textAlign:"center"}}>
                   <div style={{width:24,height:24,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto 10px"}}/>
-                  <div style={{fontSize:12,color:C.mid}}>Fetching World Cup history…</div>
+                  <div style={{fontSize:12,color:C.mid}}>{tx("Fetching World Cup history…", "Buscando histórico em Copas…")}</div>
                 </div>
               )}
               {!wcHistoryLoading && <TeamHistoryCard team={sel} data={wcHistory} color={C.green}/>}

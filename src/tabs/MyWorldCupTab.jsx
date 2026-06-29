@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useContext } from "react";
+import { displayTeamName, displayStageName, displayVenueName } from "../i18n/display";
 import { getAnnexCMapping } from "../engine/annexC";
 
 // C, DS, GROUPS, MATCHES/resolvedMatches, MATCH_UTC, R32_SLOT_TEMPLATE, LiveScoresCtx,
@@ -10,6 +11,7 @@ import { getAnnexCMapping } from "../engine/annexC";
 // the single source of truth with no cycle.
 
 export default function MyWorldCupTab({
+  language="en",
   favTeams=[], saved=[], syncProfile=null, displayName="", userAvatar=null,
   onMatchTap=()=>{}, setTab=()=>{}, onPickTeams=()=>{},
   // Shared App.jsx values, passed as props to avoid a circular import
@@ -18,6 +20,10 @@ export default function MyWorldCupTab({
 }) {
   const { getScore, isLive, isFinished, scores={} } = useContext(LiveScoresCtx);
   const tournamentMatches = resolvedMatches || MATCHES;
+  const isPtBR = language === "pt-BR";
+  const tx = (en, pt) => isPtBR ? pt : en;
+  const plural = (n, singular, pluralForm) => Number(n) === 1 ? singular : pluralForm;
+
   const [fantasySummary, setFantasySummary] = useState({ loading:true, user:null, preds:{}, rank:0, totalPlayers:0, points:null, top3:[] });
   const [topScorers, setTopScorers] = useState([]);
   const fantasyUserId = useMemo(() => syncProfile?.uid || getUserId(), [syncProfile?.uid]);
@@ -62,14 +68,14 @@ export default function MyWorldCupTab({
     const ts = getTs(m);
     if (!ts) return "";
     const diff = ts - now;
-    if (diff <= 0) return matchLive(m) ? "Live now" : "Started";
+    if (diff <= 0) return matchLive(m) ? tx("Live now", "Ao vivo agora") : tx("Started", "Iniciado");
     const mins = Math.max(1, Math.round(diff / 60000));
     const days = Math.floor(mins / 1440);
     const hrs = Math.floor((mins % 1440) / 60);
     const rem = mins % 60;
-    if (days > 0) return `Kickoff in ${days} day${days === 1 ? "" : "s"}${hrs ? ` ${hrs} h` : ""}`;
-    if (hrs > 0) return `Kickoff in ${hrs} h${rem ? ` ${rem} min` : ""}`;
-    return `Kickoff in ${mins} min`;
+    if (days > 0) return isPtBR ? `Começa em ${days} dia${days === 1 ? "" : "s"}${hrs ? ` ${hrs} h` : ""}` : `Kickoff in ${days} day${days === 1 ? "" : "s"}${hrs ? ` ${hrs} h` : ""}`;
+    if (hrs > 0) return isPtBR ? `Começa em ${hrs} h${rem ? ` ${rem} min` : ""}` : `Kickoff in ${hrs} h${rem ? ` ${rem} min` : ""}`;
+    return isPtBR ? `Começa em ${mins} min` : `Kickoff in ${mins} min`;
   };
 
   const isToday = (m) => {
@@ -80,8 +86,8 @@ export default function MyWorldCupTab({
 
   const resultLine = (m) => {
     const sc = scoreFor(m);
-    if (!sc || sc.hg == null || sc.ag == null) return "Score unavailable";
-    return `${m.home} ${sc.hg} - ${sc.ag} ${m.away}`;
+    if (!sc || sc.hg == null || sc.ag == null) return tx("Score unavailable", "Placar indisponível");
+    return `${displayTeamName(m.home, language)} ${sc.hg} - ${sc.ag} ${displayTeamName(m.away, language)}`;
   };
 
   const teamGoalsIn = (team, m) => {
@@ -109,15 +115,8 @@ export default function MyWorldCupTab({
   const sameDayGroup = (matches, key) => matches.filter(m => dateKeyOf(m) === key).slice(0, displayLimitForDay(matches.filter(m => dateKeyOf(m) === key)));
 
   const phaseLabel = (m) => {
-    if (!m?.stage) return "Group phase";
-    const st = String(m.stage).toLowerCase();
-    if (st.includes("round of 32")) return "R32";
-    if (st.includes("round of 16")) return "R16";
-    if (st.includes("quarter")) return "QF";
-    if (st.includes("semi")) return "SF";
-    if (st.includes("3rd")) return "3rd Place";
-    if (st.includes("final")) return "Final";
-    return m.stage;
+    if (!m?.stage) return tx("Group phase", "Fase de grupos");
+    return displayStageName(m.stage, language);
   };
 
   const groupStandingsFor = (letter) => {
@@ -304,14 +303,14 @@ export default function MyWorldCupTab({
     const TeamName = ({ side, won }) => (
       compactMatchCards ? null : (
         <span style={{fontSize:13,fontWeight:900,color:ko && won ? C.green : C.text,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",textAlign:side==="away"?"right":"left"}}>
-          {ko && won ? "✓ " : ""}{side === "home" ? match.home : match.away}
+          {ko && won ? "✓ " : ""}{displayTeamName(side === "home" ? match.home : match.away, language)}
         </span>
       )
     );
     return (
       <button onClick={(e)=>{ e.stopPropagation(); onClick?.(match); }} style={{width:"100%",display:"block",background:ko && (homeWon || awayWon) ? `${C.green}08` : "transparent",border:`1px solid ${ko && (homeWon || awayWon) ? C.green+"33" : "transparent"}`,borderRadius:11,padding:"6px 4px",margin:"3px 0",cursor:onClick?"pointer":"default",color:C.text}}>
         {star && <div style={{display:"flex",alignItems:"center",justifyContent:"flex-end",gap:8,marginBottom:4}}>
-          <span style={{fontSize:11,color:C.gold,fontWeight:900}}>⭐ My team</span>
+          <span style={{fontSize:11,color:C.gold,fontWeight:900}}>⭐ {tx("My team", "Meu time")}</span>
         </div>}
         <div style={{display:"grid",gridTemplateColumns:compactMatchCards?"46px auto 46px":"1fr auto 1fr",alignItems:"center",gap:6}}>
           <div style={{display:"flex",alignItems:"center",gap:5,minWidth:0,justifyContent:compactMatchCards?"center":"flex-start"}}><Crest team={match.home} size={compactMatchCards?28:22}/><TeamName side="home" won={homeWon}/></div>
@@ -326,7 +325,7 @@ export default function MyWorldCupTab({
     <div style={{display:"flex",gap:4,alignItems:"center",flexWrap:"wrap"}}>
       {campaign.length ? campaign.map((r,i) => (
         <span key={`${r}-${i}`} style={{width:18,height:18,borderRadius:999,display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:900,color:r==="W"?"#052e16":r==="D"?"#3b2500":"#3f0707",background:r==="W"?C.green:r==="D"?C.gold:C.red}}>{r}</span>
-      )) : <span style={{fontSize:11,color:C.dim}}>No results yet</span>}
+      )) : <span style={{fontSize:11,color:C.dim}}>{tx("No results yet", "Sem resultados ainda")}</span>}
     </div>
   );
 
@@ -346,10 +345,10 @@ export default function MyWorldCupTab({
   const debugRows = [
     ["favoriteTeams", favTeams.length ? favTeams.join(", ") : "none selected"],
     ["lastTournamentMatches", lastTournamentMatches.map(m => `#${m.id}: ${resultLine(m)}`).join(" | ") || "none"],
-    ["nextTournamentMatches", nextTournamentMatches.map(m => `#${m.id}: ${m.home} vs ${m.away} · ${fmtShort(m)}`).join(" | ") || "none"],
+    ["nextTournamentMatches", nextTournamentMatches.map(m => `#${m.id}: ${displayTeamName(m.home, language)} vs ${displayTeamName(m.away, language)} · ${fmtShort(m)}`).join(" | ") || "none"],
     ["todayMatches", String(todayMatches.length)],
-    ["todayMyMatches", todayMyMatches.map(m => `${m.home} vs ${m.away}`).join(" | ") || "none"],
-    ["liveMatches", liveMatches.map(m => `${m.home} vs ${m.away}`).join(" | ") || "none"],
+    ["todayMyMatches", todayMyMatches.map(m => `${displayTeamName(m.home, language)} vs ${displayTeamName(m.away, language)}`).join(" | ") || "none"],
+    ["liveMatches", liveMatches.map(m => `${displayTeamName(m.home, language)} vs ${displayTeamName(m.away, language)}`).join(" | ") || "none"],
     ["middleCard", liveCardMatches.length ? "Live Matches" : "Today"],
     ["fantasyRank", fantasySummary.rank ? `#${fantasySummary.rank} of ${fantasySummary.totalPlayers || "?"}` : "none"],
     ["fantasyPoints", fantasySummary.points == null ? "unknown" : String(fantasySummary.points)],
@@ -362,10 +361,10 @@ export default function MyWorldCupTab({
       <div style={{paddingTop:14}}>
         <div style={{border:`1px solid ${C.green}55`,background:`linear-gradient(135deg,${C.green}14,${C.s1})`,borderRadius:20,padding:22,textAlign:"center",boxShadow:DS.shadow.card}}>
           <div style={{fontSize:42,marginBottom:10}}>🌎</div>
-          <div style={{fontSize:11,color:C.dim,fontWeight:900,letterSpacing:"0.16em",textTransform:"uppercase",marginBottom:6}}>My World Cup</div>
-          <div style={{fontSize:22,fontWeight:900,color:C.text,marginBottom:8}}>Choose your teams</div>
-          <div style={{fontSize:13,color:C.mid,lineHeight:1.55,maxWidth:360,margin:"0 auto 16px"}}>Select your favorite national teams to unlock Last Match, Next Match, Team Watch and personalized alerts.</div>
-          <button onClick={onPickTeams} style={{border:`1px solid ${C.green}88`,background:`linear-gradient(135deg,${C.green},#22c55e)`,color:"#031108",borderRadius:999,padding:"11px 18px",fontWeight:900,cursor:"pointer"}}>⭐ Choose My Teams</button>
+          <div style={{fontSize:11,color:C.dim,fontWeight:900,letterSpacing:"0.16em",textTransform:"uppercase",marginBottom:6}}>{tx("My World Cup", "Meu Mundial")}</div>
+          <div style={{fontSize:22,fontWeight:900,color:C.text,marginBottom:8}}>{tx("Choose your teams", "Escolha seus times")}</div>
+          <div style={{fontSize:13,color:C.mid,lineHeight:1.55,maxWidth:360,margin:"0 auto 16px"}}>{tx("Select your favorite national teams to unlock Last Match, Next Match, Team Watch and personalized alerts.", "Selecione suas seleções favoritas para liberar Últimos Jogos, Próximos Jogos, Times Favoritos e alertas personalizados.")}</div>
+          <button onClick={onPickTeams} style={{border:`1px solid ${C.green}88`,background:`linear-gradient(135deg,${C.green},#22c55e)`,color:"#031108",borderRadius:999,padding:"11px 18px",fontWeight:900,cursor:"pointer"}}>{tx("⭐ Choose My Teams", "⭐ Escolher meus times")}</button>
         </div>
       </div>
     );
@@ -375,84 +374,84 @@ export default function MyWorldCupTab({
     <div style={{paddingTop:10}}>
       <div style={{marginBottom:14,display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:12}}>
         <div>
-          <div style={{fontSize:11,color:C.dim,fontWeight:800,letterSpacing:"0.16em",textTransform:"uppercase"}}>My World Cup</div>
-          <div style={{fontSize:24,fontWeight:900,color:C.text,lineHeight:1.05}}>Status board</div>
+          <div style={{fontSize:11,color:C.dim,fontWeight:800,letterSpacing:"0.16em",textTransform:"uppercase"}}>{tx("My World Cup", "Meu Mundial")}</div>
+          <div style={{fontSize:24,fontWeight:900,color:C.text,lineHeight:1.05}}>{tx("Status board", "Painel de status")}</div>
         </div>
-        <button onClick={onPickTeams} style={{border:`1px solid ${C.b2}`,background:C.s1,color:C.text,borderRadius:999,padding:"8px 11px",fontSize:12,fontWeight:800,cursor:"pointer",whiteSpace:"nowrap",alignSelf:"flex-start"}}>Edit teams</button>
+        <button onClick={onPickTeams} style={{border:`1px solid ${C.b2}`,background:C.s1,color:C.text,borderRadius:999,padding:"8px 11px",fontSize:12,fontWeight:800,cursor:"pointer",whiteSpace:"nowrap",alignSelf:"flex-start"}}>{tx("Edit teams", "Editar times")}</button>
       </div>
 
       <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:12}}>
-        <CardShell title="Last matches" icon="✅" tone={C.rival} footer={lastTournamentMatches[0] ? new Date(getTs(lastTournamentMatches[0])).toLocaleDateString("en-US", { weekday:"short", month:"short", day:"numeric" }) : "No completed matches yet"}>
+        <CardShell title={tx("Last matches", "Últimos jogos")} icon="✅" tone={C.rival} footer={lastTournamentMatches[0] ? new Date(getTs(lastTournamentMatches[0])).toLocaleDateString("en-US", { weekday:"short", month:"short", day:"numeric" }) : tx("No completed matches yet", "Nenhum jogo finalizado ainda")}>
           <PhaseBadge matches={lastTournamentMatches} />
-          {lastTournamentMatches.length ? lastTournamentMatches.map(m => <MatchRow key={m.id} match={m} showScore star={isMyMatch(m)} onClick={onMatchTap} />) : <div style={{fontSize:13,color:C.mid,lineHeight:1.5}}>No tournament results available yet.</div>}
+          {lastTournamentMatches.length ? lastTournamentMatches.map(m => <MatchRow key={m.id} match={m} showScore star={isMyMatch(m)} onClick={onMatchTap} />) : <div style={{fontSize:13,color:C.mid,lineHeight:1.5}}>{tx("No tournament results available yet.", "Nenhum resultado do torneio disponível ainda.")}</div>}
         </CardShell>
 
         {liveCardMatches.length > 0 ? (
-          <CardShell title="Live matches" icon="🔴" tone={liveCardMatches.some(isMyMatch)?C.gold:C.red} emphasis footer="Scores update from live feed">
+          <CardShell title={tx("Live matches", "Jogos ao vivo")} icon="🔴" tone={liveCardMatches.some(isMyMatch)?C.gold:C.red} emphasis footer={tx("Scores update from live feed", "Placares atualizados pelo feed ao vivo")}>
             <PhaseBadge matches={liveCardMatches} />
             {liveCardMatches.map(m => <MatchRow key={m.id} match={m} showScore star={isMyMatch(m)} onClick={onMatchTap} />)}
-            {liveCardMatches.some(isMyMatch) && <div style={{fontSize:11,color:C.gold,fontWeight:900,marginTop:8}}>⭐ One of your teams is involved</div>}
+            {liveCardMatches.some(isMyMatch) && <div style={{fontSize:11,color:C.gold,fontWeight:900,marginTop:8}}>{tx("⭐ One of your teams is involved", "⭐ Um dos seus times está envolvido")}</div>}
           </CardShell>
         ) : (
-          <CardShell title="Today" icon="📅" tone={C.gold} onClick={()=>setTab("schedule")} footer={nextTournamentMatches[0] ? `Next kickoff: ${fmtTimeOnly(nextTournamentMatches[0])}` : "No scheduled matches found"}>
+          <CardShell title={tx("Today", "Hoje")} icon="📅" tone={C.gold} onClick={()=>setTab("schedule")} footer={nextTournamentMatches[0] ? `${tx("Next kickoff", "Próximo jogo")}: ${fmtTimeOnly(nextTournamentMatches[0])}` : tx("No scheduled matches found", "Nenhum jogo programado encontrado")}>
             <div style={{display:"flex",gap:10,alignItems:"baseline"}}>
               <div style={{fontSize:28,fontWeight:900,color:C.text}}>{todayMatches.length}</div>
-              <div style={{fontSize:12,color:C.dim,fontWeight:800}}>matches today</div>
+              <div style={{fontSize:12,color:C.dim,fontWeight:800}}>{tx("matches today", "jogos hoje")}</div>
             </div>
-            <div style={{fontSize:12,color:todayMyMatches.length?C.green:C.mid,marginTop:6,fontWeight:800}}>{todayMyMatches.length ? `${todayMyMatches.length} with your teams ⭐` : "No favorite teams today"}</div>
+            <div style={{fontSize:12,color:todayMyMatches.length?C.green:C.mid,marginTop:6,fontWeight:800}}>{todayMyMatches.length ? `${todayMyMatches.length} ${tx("with your teams", "com seus times")} ⭐` : tx("No favorite teams today", "Nenhum time favorito hoje")}</div>
             {nextTournamentMatches[0] && <CountdownBadge match={nextTournamentMatches[0]} />}
           </CardShell>
         )}
 
-        <CardShell title="Next matches" icon="⏭️" tone={nextTournamentMatches.some(isMyMatch)?C.gold:C.green} emphasis={nextTournamentMatches.some(isMyMatch)} footer={nextTournamentMatches[0] ? new Date(getTs(nextTournamentMatches[0])).toLocaleDateString("en-US", { weekday:"short", month:"short", day:"numeric" }) : "No upcoming matches found"}>
+        <CardShell title={tx("Next matches", "Próximos jogos")} icon="⏭️" tone={nextTournamentMatches.some(isMyMatch)?C.gold:C.green} emphasis={nextTournamentMatches.some(isMyMatch)} footer={nextTournamentMatches[0] ? new Date(getTs(nextTournamentMatches[0])).toLocaleDateString("en-US", { weekday:"short", month:"short", day:"numeric" }) : tx("No upcoming matches found", "Nenhum próximo jogo encontrado")}>
           <PhaseBadge matches={nextTournamentMatches} />
-          {nextTournamentMatches.length ? nextTournamentMatches.map(m => <MatchRow key={m.id} match={m} showScore={false} star={isMyMatch(m)} onClick={onMatchTap} />) : <div style={{fontSize:13,color:C.mid,lineHeight:1.5}}>No upcoming tournament match found.</div>}
+          {nextTournamentMatches.length ? nextTournamentMatches.map(m => <MatchRow key={m.id} match={m} showScore={false} star={isMyMatch(m)} onClick={onMatchTap} />) : <div style={{fontSize:13,color:C.mid,lineHeight:1.5}}>{tx("No upcoming tournament match found.", "Nenhum próximo jogo do torneio encontrado.")}</div>}
           {nextTournamentMatches[0] && <CountdownBadge match={nextTournamentMatches[0]} />}
-          {nextTournamentMatches.some(isMyMatch) && <div style={{fontSize:11,color:C.gold,fontWeight:900,marginTop:8}}>⭐ One of your teams is involved</div>}
+          {nextTournamentMatches.some(isMyMatch) && <div style={{fontSize:11,color:C.gold,fontWeight:900,marginTop:8}}>{tx("⭐ One of your teams is involved", "⭐ Um dos seus times está envolvido")}</div>}
         </CardShell>
 
-        <CardShell title="Fantasy rank" icon="🎯" tone={C.blue} onClick={()=>setTab("predictor")} footer={nextPickDeadline ? `Next deadline: ${fmtCountdown(nextPickDeadline)}` : "No open deadlines"}>
+        <CardShell title={tx("Fantasy rank", "Ranking Fantasy")} icon="🎯" tone={C.blue} onClick={()=>setTab("predictor")} footer={nextPickDeadline ? `${tx("Next deadline", "Próximo prazo")}: ${fmtCountdown(nextPickDeadline)}` : tx("No open deadlines", "Nenhum prazo aberto")}>
           <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:8,marginBottom:6}}>
             <div>
-              <div style={{fontSize:10,color:C.dim,fontWeight:900,textTransform:"uppercase",letterSpacing:"0.08em"}}>Your rank</div>
+              <div style={{fontSize:10,color:C.dim,fontWeight:900,textTransform:"uppercase",letterSpacing:"0.08em"}}>{tx("Your rank", "Sua posição")}</div>
               <div style={{fontSize:26,fontWeight:900,color:C.text,lineHeight:1}}>{fantasySummary.rank ? `#${fantasySummary.rank}` : "—"}</div>
             </div>
             <div style={{textAlign:"right"}}>
-              <div style={{fontSize:10,color:C.dim,fontWeight:900,textTransform:"uppercase",letterSpacing:"0.08em"}}>Points</div>
+              <div style={{fontSize:10,color:C.dim,fontWeight:900,textTransform:"uppercase",letterSpacing:"0.08em"}}>{tx("Points", "Pontos")}</div>
               <div style={{fontSize:18,color:C.gold,fontWeight:900,lineHeight:1}}>{fantasySummary.points == null ? "—" : fantasySummary.points}</div>
             </div>
           </div>
           <div style={{fontSize:12,color:allTodayPicked?C.green:(todayFantasyMissing.length?C.gold:C.mid),fontWeight:900,marginBottom:7}}>
-            {allTodayPicked ? "✅ All today's matches picked" : todayFantasyMissing.length ? `⚠ ${todayFantasyMissing.length} picks missing today` : `${fantasyPredCount} picks made`}
+            {allTodayPicked ? tx("✅ All today\'s matches picked", "✅ Todos os jogos de hoje preenchidos") : todayFantasyMissing.length ? `${tx("⚠", "⚠")} ${todayFantasyMissing.length} ${tx("picks missing today", "palpites faltando hoje")}` : `${fantasyPredCount} ${tx("picks made", "palpites feitos")}`}
           </div>
           <div style={{borderTop:`1px solid ${C.b1}`,paddingTop:7}}>
             {(fantasySummary.top3 || []).slice(0,3).map(p => <div key={`${p.rank}-${p.name}`} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,fontSize:11,marginBottom:3}}><span style={{color:C.text,fontWeight:800,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>#{p.rank} {p.name}</span><span style={{color:C.gold,fontWeight:900}}>{p.points}</span></div>)}
-            {!(fantasySummary.top3 || []).length && <div style={{fontSize:11,color:C.dim}}>Leaderboard loading...</div>}
+            {!(fantasySummary.top3 || []).length && <div style={{fontSize:11,color:C.dim}}>{tx("Leaderboard loading...", "Carregando ranking...")}</div>}
           </div>
-          {fantasySummary.loading && <div style={{fontSize:11,color:C.dim,marginTop:6}}>Loading fantasy...</div>}
+          {fantasySummary.loading && <div style={{fontSize:11,color:C.dim,marginTop:6}}>{tx("Loading fantasy...", "Carregando Fantasy...")}</div>}
         </CardShell>
 
-        <CardShell title="Top scorers" icon="⚽" tone={C.red} onClick={()=>setTab("stats")} footer={topScorers.length ? "Top 5 Golden Boot contenders" : "Loading live scorers"}>
+        <CardShell title={tx("Top scorers", "Artilheiros")} icon="⚽" tone={C.red} onClick={()=>setTab("stats")} footer={topScorers.length ? tx("Top 5 Golden Boot contenders", "Top 5 candidatos à Chuteira de Ouro") : tx("Loading live scorers", "Carregando artilheiros ao vivo")}>
           {topScorers.length ? topScorers.slice(0,5).map((p,i)=>{
             const name = p.name || p.player || p.playerName || "Player";
             const team = p.team || p.teamName || "";
             const goals = p.goals ?? p.totalGoals ?? p.count ?? "";
             return <div key={`${name}-${i}`} style={{display:"flex",alignItems:"center",gap:7,marginBottom:5,minWidth:0}}><span style={{fontSize:11,color:C.dim,fontWeight:900,width:18}}>#{i+1}</span><span style={{fontSize:15}}>{team ? getFlag(team) : "⚽"}</span><span style={{fontSize:12,color:C.text,fontWeight:900,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1}}>{name}</span><span style={{fontSize:12,color:C.gold,fontWeight:900}}>{goals}</span></div>
-          }) : <div style={{fontSize:13,color:C.mid,lineHeight:1.5}}>Scorers will appear once the live feed responds.</div>}
+          }) : <div style={{fontSize:13,color:C.mid,lineHeight:1.5}}>{tx("Scorers will appear once the live feed responds.", "Os artilheiros aparecerão assim que o feed ao vivo responder.")}</div>}
         </CardShell>
 
-        <CardShell title="Team watch" icon="⭐" tone={C.rival} onClick={onPickTeams} footer="Goals · campaign · latest and next">
+        <CardShell title={tx("Team watch", "Times favoritos")} icon="⭐" tone={C.rival} onClick={onPickTeams} footer={tx("Goals · campaign · latest and next", "Gols · campanha · último e próximo")}>
           {teamWatch.length ? teamWatch.map(({team,last,next,campaign,goals}) => (
             <div key={team} style={{borderBottom:`1px solid ${C.b1}77`,paddingBottom:8,marginBottom:8}}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:5}}>
-                <div style={{display:"flex",alignItems:"center",gap:7,minWidth:0}}><span style={{fontSize:18}}>{getFlag(team)}</span><span style={{fontSize:12,color:C.text,fontWeight:900,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{team}</span></div>
-                <div style={{fontSize:11,color:C.gold,fontWeight:900,whiteSpace:"nowrap"}}>{goals} goals</div>
+                <div style={{display:"flex",alignItems:"center",gap:7,minWidth:0}}><span style={{fontSize:18}}>{getFlag(team)}</span><span style={{fontSize:12,color:C.text,fontWeight:900,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{displayTeamName(team, language)}</span></div>
+                <div style={{fontSize:11,color:C.gold,fontWeight:900,whiteSpace:"nowrap"}}>{goals} {tx(plural(goals, "goal", "goals"), plural(goals, "gol", "gols"))}</div>
               </div>
               <div style={{marginBottom:5}}><OutcomePills campaign={campaign}/></div>
-              <div style={{fontSize:compactMatchCards?14:13,color:C.mid,fontWeight:900,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>Latest: {last ? (compactMatchCards ? matchLabelMobile(last, true) : resultLine(last)) : "—"}</div>
-              <div style={{fontSize:compactMatchCards?14:13,color:next?C.green:C.mid,fontWeight:950,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>Next: {next ? (compactMatchCards ? `${matchLabelMobile(next, false)} · ${fmtShort(next)}` : `${next.home===team?next.away:next.home} · ${fmtShort(next)}`) : "—"}</div>
+              <div style={{fontSize:compactMatchCards?14:13,color:C.mid,fontWeight:900,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{tx("Latest", "Último")}: {last ? (compactMatchCards ? matchLabelMobile(last, true) : resultLine(last)) : "—"}</div>
+              <div style={{fontSize:compactMatchCards?14:13,color:next?C.green:C.mid,fontWeight:950,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{tx("Next", "Próximo")}: {next ? (compactMatchCards ? `${matchLabelMobile(next, false)} · ${fmtShort(next)}` : `${displayTeamName(next.home===team?next.away:next.home, language)} · ${fmtShort(next)}`) : "—"}</div>
             </div>
-          )) : <div style={{fontSize:13,color:C.mid,lineHeight:1.5}}>Choose favorite teams to unlock this card.</div>}
+          )) : <div style={{fontSize:13,color:C.mid,lineHeight:1.5}}>{tx("Choose favorite teams to unlock this card.", "Escolha times favoritos para liberar este card.")}</div>}
         </CardShell>
       </div>
 

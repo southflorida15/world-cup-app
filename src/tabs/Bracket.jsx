@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useContext } from "react";
+import { displayTeamName, displayStageName } from "../i18n/display";
 import {
   buildQualifiedThirdsFromSelectedTeams,
   buildThirdGroupsKey,
@@ -18,6 +19,7 @@ import { getAnnexCMapping } from "../engine/annexC";
 // Card, Crest, DragList, Pill, VisualBracketTree
 
 export default function MyBracketTab({
+  language="en", t=(key, fallback)=>fallback,
   tabTop=116, onMatchTap=null,
   // Shared App.jsx values, passed as props to avoid a circular import
   C, DS, GROUPS, LiveScoresCtx, MATCHES, R32_SLOT_TEMPLATE, STR, gs,
@@ -25,6 +27,9 @@ export default function MyBracketTab({
   readSavedMyBracket, writeSavedMyBracket, clearSavedMyBracket,
   Card, Crest, DragList, Pill, VisualBracketTree,
 }) {
+  const isPtBR = language === "pt-BR";
+  const tx = (en, pt) => isPtBR ? pt : en;
+
   const savedBracket = useMemo(() => readSavedMyBracket(), []);
   const isMobileBracket = typeof window !== "undefined" && window.innerWidth < 520;
   const { allFixtures, getScore, isFinished } = useContext(LiveScoresCtx);
@@ -116,7 +121,7 @@ export default function MyBracketTab({
   const runBracket=()=>{
     setRunning(true);
     setTimeout(()=>{
-      // Auto-select best 8 third-place teams if user hasn't picked them
+      // {tx("Auto-select best 8", "Selecionar melhores 8")} third-place teams if user hasn't picked them
       // (takes the 3rd team from each group, sorted by simulator strength, top 8)
       let activeThirds = thirds;
       if (!activeThirds || activeThirds.length !== 8) {
@@ -526,10 +531,10 @@ export default function MyBracketTab({
     >
       <div style={{display:"flex",gap:6,marginBottom:8}}>
         <button onClick={()=>setBracketSource("mine")} style={{flex:1,padding:"7px 0",borderRadius:10,border:`1px solid ${bracketSource==="mine"?C.blue:C.b2}`,background:bracketSource==="mine"?`${C.blue}1c`:"transparent",color:bracketSource==="mine"?C.blue:C.mid,fontWeight:800,fontSize:12,cursor:"pointer"}}>
-          🎯 My Bracket
+          {tx("🎯 My Bracket", "🎯 Meu Chaveamento")}
         </button>
         <button onClick={()=>setBracketSource("actual")} style={{flex:1,padding:"7px 0",borderRadius:10,border:`1px solid ${bracketSource==="actual"?C.green:C.b2}`,background:bracketSource==="actual"?`${C.green}1c`:"transparent",color:bracketSource==="actual"?C.green:C.mid,fontWeight:800,fontSize:12,cursor:"pointer"}}>
-          🌍 Actual Bracket
+          {tx("🌍 Actual Bracket", "🌍 Chaveamento Oficial")}
         </button>
       </div>
       {bracketSource==="mine" && (
@@ -546,14 +551,14 @@ export default function MyBracketTab({
       >
         <Pill active={stage==="groups"} onClick={()=>setStage("groups")} color={C.green}>✓ Groups</Pill>
         <Pill active={stage==="thirds"} onClick={()=>setStage("thirds")} color={C.gold}>✓ Best 3rds</Pill>
-        <Pill active={stage==="bracket"} onClick={()=>setStage("bracket")} color={C.blue}>● Bracket</Pill>
+        <Pill active={stage==="bracket"} onClick={()=>setStage("bracket")} color={C.blue}>{tx("● Bracket", "● Chaveamento")}</Pill>
       </div>
       )}
     </div>
       {bracketSource==="mine" && stage==="groups" && (
         <div>
           <div style={{fontSize:12,color:C.mid,marginBottom:14,lineHeight:1.6}}>
-            <strong style={{color:C.green}}>Build Your Bracket:</strong> Press and drag ⠿ to reorder teams. Top 2 qualify automatically. Generate the bracket, then pick winners match by match.
+            <strong style={{color:C.green}}>{tx("Build Your Bracket:", "Monte seu chaveamento:")}</strong> {tx("Press and drag ⠿ to reorder teams. Top 2 qualify automatically. Generate the bracket, then pick winners match by match.", "Pressione e arraste ⠿ para reordenar os times. Os 2 primeiros se classificam automaticamente. Gere o chaveamento e escolha os vencedores jogo a jogo.")}
           </div>
           {Object.entries(groups).map(([g,teams])=>(
             <Card key={g} style={{marginBottom:10}}>
@@ -570,7 +575,7 @@ export default function MyBracketTab({
                       <>
                         <span style={{fontSize:13,color:col,fontWeight:700,minWidth:18,textAlign:"center"}}>{displayIdx+1}</span>
                         <Crest team={team} size={22}/>
-                        <span style={{fontSize:13,color:displayIdx<2?col:C.text,fontWeight:displayIdx<2?600:400,flex:1}}>{team}</span>
+                        <span style={{fontSize:13,color:displayIdx<2?col:C.text,fontWeight:displayIdx<2?600:400,flex:1}}>{displayTeamName(team, language)}</span>
                         {displayIdx<2 && <span style={{fontSize:9,color:col,fontWeight:700,background:`${col}22`,padding:"2px 6px",borderRadius:6,flexShrink:0}}>Q</span>}
                         {displayIdx===2 && <span style={{fontSize:9,color:"#94a3b8",background:"#94a3b822",padding:"2px 6px",borderRadius:6,flexShrink:0}}>3rd</span>}
                       </>
@@ -580,20 +585,20 @@ export default function MyBracketTab({
               </div>
             </Card>
           ))}
-          <button onClick={()=>setStage("thirds")} style={{width:"100%",padding:"12px 0",borderRadius:12,background:`linear-gradient(135deg,${C.gold},#f59e0b)`,border:"none",color:"#030a05",fontWeight:700,fontSize:15,cursor:"pointer",marginTop:4}}>Pick Best 3rd-Place Teams →</button>
+          <button onClick={()=>setStage("thirds")} style={{width:"100%",padding:"12px 0",borderRadius:12,background:`linear-gradient(135deg,${C.gold},#f59e0b)`,border:"none",color:"#030a05",fontWeight:700,fontSize:15,cursor:"pointer",marginTop:4}}>{tx("Pick Best 3rd-Place Teams →", "Escolher melhores 3º colocados →")}</button>
         </div>
       )}
       {bracketSource==="mine" && stage==="thirds" && (
         <div>
-          <div style={{fontSize:12,color:C.mid,marginBottom:6,lineHeight:1.6}}>Select exactly <strong style={{color:C.gold}}>8 of 12</strong> third-place teams to advance.</div>
+          <div style={{fontSize:12,color:C.mid,marginBottom:6,lineHeight:1.6}}>{tx("Select exactly", "Selecione exatamente")} <strong style={{color:C.gold}}>8 {tx("of", "de")} 12</strong> {tx("third-place teams to advance.", "terceiros colocados para avançar.")}</div>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-            <span style={{fontSize:13,color:thirds.length===8?C.green:C.gold,fontWeight:700}}>{thirds.length}/8 selected</span>
-            <button onClick={()=>{const sorted=[...allThirds].sort((a,b)=>gs(b.team)-gs(a.team)).slice(0,8).map(x=>x.team);setThirds(sorted);}} style={{fontSize:11,padding:"4px 10px",borderRadius:10,background:`${C.gold}22`,border:`1px solid ${C.gold}55`,color:C.gold,cursor:"pointer",fontWeight:600}}>Auto-select best 8</button>
+            <span style={{fontSize:13,color:thirds.length===8?C.green:C.gold,fontWeight:700}}>{thirds.length}/8 {tx("selected", "selecionados")}</span>
+            <button onClick={()=>{const sorted=[...allThirds].sort((a,b)=>gs(b.team)-gs(a.team)).slice(0,8).map(x=>x.team);setThirds(sorted);}} style={{fontSize:11,padding:"4px 10px",borderRadius:10,background:`${C.gold}22`,border:`1px solid ${C.gold}55`,color:C.gold,cursor:"pointer",fontWeight:600}}>{tx("Auto-select best 8", "Selecionar melhores 8")}</button>
           </div>
-          {allThirds.map(({group,team})=>{const sel=thirds.includes(team);return(<div key={team} onClick={()=>toggleThird(team)} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:10,marginBottom:6,cursor:"pointer",background:sel?`${C.green}18`:C.s1,border:`1px solid ${sel?C.green:C.b1}`}}><div style={{width:20,height:20,borderRadius:6,border:`2px solid ${sel?C.green:C.dim}`,background:sel?C.green:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{sel&&<span style={{color:"#030a05",fontSize:12,fontWeight:900}}>✓</span>}</div><Crest team={team} size={24}/><div style={{flex:1}}><div style={{fontSize:13,fontWeight:600,color:sel?C.green:C.text}}>{team}</div><div style={{fontSize:10,color:C.dim}}>3rd place Group {group} · STR {gs(team)}</div></div></div>);})}
+          {allThirds.map(({group,team})=>{const sel=thirds.includes(team);return(<div key={team} onClick={()=>toggleThird(team)} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:10,marginBottom:6,cursor:"pointer",background:sel?`${C.green}18`:C.s1,border:`1px solid ${sel?C.green:C.b1}`}}><div style={{width:20,height:20,borderRadius:6,border:`2px solid ${sel?C.green:C.dim}`,background:sel?C.green:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{sel&&<span style={{color:"#030a05",fontSize:12,fontWeight:900}}>✓</span>}</div><Crest team={team} size={24}/><div style={{flex:1}}><div style={{fontSize:13,fontWeight:600,color:sel?C.green:C.text}}>{displayTeamName(team, language)}</div><div style={{fontSize:10,color:C.dim}}>{tx("3rd place Group", "3º lugar Grupo")} {group} · STR {gs(team)}</div></div></div>);})}
           <div style={{display:"flex",gap:8,marginTop:8}}>
-            <button onClick={()=>setStage("groups")} style={{flex:1,padding:"11px 0",borderRadius:12,background:"transparent",border:`1px solid ${C.b2}`,color:C.mid,fontWeight:600,fontSize:14,cursor:"pointer"}}>← Back</button>
-            <button onClick={runBracket} disabled={thirds.length!==8||running} style={{flex:2,padding:"11px 0",borderRadius:12,background:thirds.length===8?`linear-gradient(135deg,${C.green},#22c55e)`:C.b2,border:"none",color:thirds.length===8?"#030a05":C.dim,fontWeight:700,fontSize:14,cursor:thirds.length===8?"pointer":"default",opacity:running?0.6:1}}>{running?"Generating...":"🏆 Generate FIFA Bracket →"}</button>
+            <button onClick={()=>setStage("groups")} style={{flex:1,padding:"11px 0",borderRadius:12,background:"transparent",border:`1px solid ${C.b2}`,color:C.mid,fontWeight:600,fontSize:14,cursor:"pointer"}}>← {tx("Back", "Voltar")}</button>
+            <button onClick={runBracket} disabled={thirds.length!==8||running} style={{flex:2,padding:"11px 0",borderRadius:12,background:thirds.length===8?`linear-gradient(135deg,${C.green},#22c55e)`:C.b2,border:"none",color:thirds.length===8?"#030a05":C.dim,fontWeight:700,fontSize:14,cursor:thirds.length===8?"pointer":"default",opacity:running?0.6:1}}>{running ? tx("Generating...", "Gerando...") : tx("🏆 Generate FIFA Bracket →", "🏆 Gerar chaveamento FIFA →")}</button>
           </div>
         </div>
       )}
@@ -601,25 +606,25 @@ export default function MyBracketTab({
   <div>
     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:8,flexWrap:"wrap"}}>
       <div style={{fontSize:15,color:C.green,fontWeight:900,lineHeight:1.1}}>
-        🏆 Tournament Bracket
+        {tx("🏆 Tournament Bracket", "🏆 Chaveamento do Torneio")}
         <span style={{marginLeft:6,fontSize:11,color:C.dim,fontWeight:600}}>
           ({displayedResult?.completedCount || 0}/31)
         </span>
-        {bracketView==="tree" && <span style={{marginLeft:8,fontSize:10,color:C.dim,fontWeight:400,fontStyle:"italic"}}>tap a team to pick the winner</span>}
+        {bracketView==="tree" && <span style={{marginLeft:8,fontSize:10,color:C.dim,fontWeight:400,fontStyle:"italic"}}>{tx("tap a team to pick the winner", "toque em um time para escolher o vencedor")}</span>}
       </div>
 
       <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
         <div style={{display:"flex",gap:4,background:C.s1,border:`1px solid ${C.b1}`,borderRadius:999,padding:2}}>
           <button onClick={()=>setBracketView("compact")} style={{border:"none",borderRadius:999,padding:"4px 8px",fontSize:10,fontWeight:800,cursor:"pointer",background:bracketView==="compact"?`${C.green}22`:"transparent",color:bracketView==="compact"?C.green:C.mid,lineHeight:1}}>
-            📱 Compact
+            {tx("📱 Compact", "📱 Compacto")}
           </button>
           <button onClick={()=>setBracketView("tree")} style={{border:"none",borderRadius:999,padding:"4px 8px",fontSize:10,fontWeight:800,cursor:"pointer",background:bracketView==="tree"?`${C.gold}22`:"transparent",color:bracketView==="tree"?C.gold:C.mid,lineHeight:1}}>
-            🌳 Tree
+            {tx("🌳 Tree", "🌳 Árvore")}
           </button>
         </div>
 
         <button onClick={()=>setShowBracketActions(v=>!v)} style={{padding:"5px 9px",borderRadius:999,background:showBracketActions?`${C.green}18`:C.s1,border:`1px solid ${showBracketActions?C.green:C.b1}`,color:showBracketActions?C.green:C.mid,fontSize:10,fontWeight:800,cursor:"pointer",whiteSpace:"nowrap",lineHeight:1}}>
-          ⚙️ Actions
+          {tx("⚙️ Actions", "⚙️ Ações")}
         </button>
       </div>
     </div>
@@ -627,20 +632,20 @@ export default function MyBracketTab({
     {showBracketActions && (
       <Card style={{padding:8,marginBottom:8,background:C.s1,border:`1px solid ${C.b1}`}}>
         <div style={{display:"grid",gridTemplateColumns:isMobileBracket?"1fr 1fr":"repeat(5,1fr)",gap:6}}>
-          <button onClick={shareBracketCard} disabled={!displayedResult?.champion || sharing} title={!displayedResult?.champion?"Pick the Final winner before sharing":undefined} style={{padding:"6px 8px",borderRadius:9,background:displayedResult?.champion?`${C.blue}22`:C.bg,border:`1px solid ${displayedResult?.champion?C.blue:C.b2}`,color:displayedResult?.champion?C.blue:C.dim,fontSize:11,fontWeight:700,cursor:displayedResult?.champion&&!sharing?"pointer":"not-allowed",opacity:sharing?0.65:1,lineHeight:1.1,minHeight:30}}>
-            {sharing?"Creating...":"📤 Share"}
+          <button onClick={shareBracketCard} disabled={!displayedResult?.champion || sharing} title={!displayedResult?.champion?tx("Pick the Final winner before sharing", "Escolha o vencedor da final antes de compartilhar"):undefined} style={{padding:"6px 8px",borderRadius:9,background:displayedResult?.champion?`${C.blue}22`:C.bg,border:`1px solid ${displayedResult?.champion?C.blue:C.b2}`,color:displayedResult?.champion?C.blue:C.dim,fontSize:11,fontWeight:700,cursor:displayedResult?.champion&&!sharing?"pointer":"not-allowed",opacity:sharing?0.65:1,lineHeight:1.1,minHeight:30}}>
+            {sharing ? tx("Creating...", "Criando...") : tx("📤 Share", "📤 Compartilhar")}
           </button>
           <button onClick={()=>setStage("groups")} style={{padding:"6px 8px",borderRadius:9,background:"transparent",border:`1px solid ${C.b2}`,color:C.mid,fontSize:11,fontWeight:700,cursor:"pointer",lineHeight:1.1,minHeight:30}}>
-            ← Edit
+            ← {tx("Edit", "Editar")}
           </button>
           <button onClick={()=>setPlayMode("manual")} disabled={result.fifaEngineStatus!=="fifa-ready"} style={{padding:"6px 8px",borderRadius:9,background:playMode==="manual"?`${C.blue}22`:C.bg,border:`1px solid ${playMode==="manual"?C.blue:C.b2}`,color:playMode==="manual"?C.blue:C.mid,fontSize:11,fontWeight:700,cursor:result.fifaEngineStatus==="fifa-ready"?"pointer":"not-allowed",opacity:result.fifaEngineStatus==="fifa-ready"?1:0.55,lineHeight:1.1,minHeight:30}}>
-            👆 Manual
+            {tx("👆 Manual", "👆 Manual")}
           </button>
           <button onClick={resetWinners} style={{padding:"6px 8px",borderRadius:9,background:`${C.green}16`,border:`1px solid ${C.greenS}`,color:C.green,fontSize:11,fontWeight:700,cursor:"pointer",lineHeight:1.1,minHeight:30}}>
-            🔄 Reset
+            {tx("🔄 Reset", "🔄 Reiniciar")}
           </button>
           <button onClick={resetMyBracket} style={{padding:"6px 8px",borderRadius:9,background:`${C.gold}12`,border:`1px solid ${C.gold}44`,color:C.gold,fontSize:11,fontWeight:700,cursor:"pointer",lineHeight:1.1,minHeight:30}}>
-            🗑 Bracket
+            {tx("🗑 Bracket", "🗑 Chaveamento")}
           </button>
         </div>
       </Card>
@@ -652,6 +657,7 @@ export default function MyBracketTab({
       onPick={handleManualPick}
       view={bracketView}
       onMatchTap={onMatchTap}
+      language={language}
     />
   </div>
 )}
@@ -660,22 +666,22 @@ export default function MyBracketTab({
   <div>
     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:8,flexWrap:"wrap"}}>
       <div style={{fontSize:15,color:C.green,fontWeight:900,lineHeight:1.1}}>
-        🌍 Actual Tournament Bracket
-        <span style={{marginLeft:8,fontSize:10,color:C.dim,fontWeight:400,fontStyle:"italic"}}>real results — fills in as matches are played</span>
+        {tx("🌍 Actual Tournament Bracket", "🌍 Chaveamento Oficial do Torneio")}
+        <span style={{marginLeft:8,fontSize:10,color:C.dim,fontWeight:400,fontStyle:"italic"}}>{tx("real results — fills in as matches are played", "resultados reais — preenche conforme os jogos acontecem")}</span>
       </div>
       <div style={{display:"flex",gap:4,background:C.s1,border:`1px solid ${C.b1}`,borderRadius:999,padding:2}}>
         <button onClick={()=>setBracketView("compact")} style={{border:"none",borderRadius:999,padding:"4px 8px",fontSize:10,fontWeight:800,cursor:"pointer",background:bracketView==="compact"?`${C.green}22`:"transparent",color:bracketView==="compact"?C.green:C.mid,lineHeight:1}}>
-          📱 Compact
+          {tx("📱 Compact", "📱 Compacto")}
         </button>
         <button onClick={()=>setBracketView("tree")} style={{border:"none",borderRadius:999,padding:"4px 8px",fontSize:10,fontWeight:800,cursor:"pointer",background:bracketView==="tree"?`${C.gold}22`:"transparent",color:bracketView==="tree"?C.gold:C.mid,lineHeight:1}}>
-          🌳 Tree
+          {tx("🌳 Tree", "🌳 Árvore")}
         </button>
       </div>
     </div>
 
     {!actualBracket.allGroupsComplete && (
       <div style={{fontSize:11,color:C.dim,marginBottom:8,padding:"7px 10px",background:C.s1,border:`1px solid ${C.b1}`,borderRadius:9}}>
-        Group stage still in progress — this is a live projection based on current standings. Slots will keep updating as more matches finish, and may still shift before each group's final match.
+        {tx("Group stage still in progress — this is a live projection based on current standings. Slots will keep updating as more matches finish, and may still shift before each group's final match.", "A fase de grupos ainda está em andamento — esta é uma projeção ao vivo baseada na classificação atual. As vagas continuarão atualizando conforme mais jogos terminarem e ainda podem mudar antes do último jogo de cada grupo.")}
       </div>
     )}
 
@@ -685,6 +691,7 @@ export default function MyBracketTab({
       onPick={()=>{}}
       view={bracketView}
       onMatchTap={onMatchTap}
+      language={language}
     />
   </div>
 )}

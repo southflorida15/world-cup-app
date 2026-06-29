@@ -15,6 +15,7 @@ import MatchHeader from "./components/MatchHeader";
 import MatchInfoSection from "./components/MatchInfoSection";
 import { buildMomentumEngineRows } from "./engine/momentum/momentumEngine";
 import React, { useState, useEffect, useContext, createContext, useCallback, useMemo, useRef } from "react";
+import { displayTeamName, displayStageName, displayVenueName } from "./i18n/display";
 import { buildQualifiedThirdsFromSelectedTeams, buildThirdGroupsKey, ROUND_OF_16_TEMPLATE, QUARTER_FINAL_TEMPLATE, SEMI_FINAL_TEMPLATE, FINAL_TEMPLATE } from "./engine/fifa2026Bracket";
 import { getAnnexCMapping } from "./engine/annexC";
 import { WC_TEAM_HISTORY, getPlayerScoringLog } from "./data/wcTeamHistory";
@@ -1288,6 +1289,13 @@ export function useElemHeight(ref) {
 
 // ── MATCH CARD ─────────────────────────────────────────────────────────────
 export function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favTeam="", savedIds=new Set(), homeProvisional=false, awayProvisional=false }) {
+  const { language } = useI18n();
+  const isPtBR = language === "pt-BR";
+  const tx = (en, pt) => isPtBR ? pt : en;
+  const roundLabel = (stage) => displayStageName(stage, language);
+  const dHome = displayTeamName(m.home, language);
+  const dAway = displayTeamName(m.away, language);
+  const dVenue = displayVenueName(m.venue, language);
   const { dark } = useContext(ThemeCtx);
   const countdownBg = dark
     ? "linear-gradient(135deg,#1a3d22,#1f4a28)"   // clearly lighter green in dark
@@ -1354,11 +1362,11 @@ export function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favT
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 13px",borderBottom:`1px solid ${C.b1}`,background:C.s2}}>
           <div style={{display:"flex",alignItems:"center",gap:6,minWidth:0,flex:1}}>
             {m.group
-              ? <span style={{fontSize:11,fontWeight:700,color:C.green,background:`${C.green}18`,padding:"2px 7px",borderRadius:10,flexShrink:0}}>Group {m.group}</span>
-              : <span style={{fontSize:11,fontWeight:700,color:C.gold,background:`${C.gold}18`,padding:"2px 7px",borderRadius:10,flexShrink:0}}>{m.stage||"Knockout"}</span>
+              ? <span style={{fontSize:11,fontWeight:700,color:C.green,background:`${C.green}18`,padding:"2px 7px",borderRadius:10,flexShrink:0}}>{tx("Group", "Grupo")} {m.group}</span>
+              : <span style={{fontSize:11,fontWeight:700,color:C.gold,background:`${C.gold}18`,padding:"2px 7px",borderRadius:10,flexShrink:0}}>{roundLabel(m.stage)}</span>
             }
             <span style={{fontSize:10,color:C.dim,flexShrink:0}}>#{m.id}</span>
-            <span style={{fontSize:11,color:C.dim,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>📍 {m.venue.split(",")[0]}</span>
+            <span style={{fontSize:11,color:C.dim,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>📍 {String(dVenue || m.venue).split(",")[0]}</span>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
             <span style={{fontSize:12,fontWeight:600,color:C.text}}>{displayTime}</span>
@@ -1370,15 +1378,15 @@ export function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favT
         <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 13px"}}>
           <div style={{opacity:homeProvisional?0.45:1}}><Crest team={m.home} size={32}/></div>
           <span style={{flex:1,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-            <span style={{fontWeight:winner===m.home?800:700,color:homeProvisional?C.dim:(winner===m.home?C.text:C.dim)}}>{m.home}</span>
-            {homeProvisional && <span style={{fontStyle:"italic",fontSize:10,color:C.dim,marginLeft:4}}>provisional</span>}
+            <span style={{fontWeight:winner===m.home?800:700,color:homeProvisional?C.dim:(winner===m.home?C.text:C.dim)}}>{dHome}</span>
+            {homeProvisional && <span style={{fontStyle:"italic",fontSize:10,color:C.dim,marginLeft:4}}>{tx("provisional", "provisório")}</span>}
           </span>
           <div style={{textAlign:"center",minWidth:60,flexShrink:0}}>
             <div style={{fontWeight:900,fontSize:22,color:C.mid,fontFamily:"monospace",lineHeight:1}}>{sc.hg} – {sc.ag}</div>
           </div>
           <span style={{flex:1,fontSize:14,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-            {awayProvisional && <span style={{fontStyle:"italic",fontSize:10,color:C.dim,marginRight:4}}>provisional</span>}
-            <span style={{fontWeight:winner===m.away?800:700,color:awayProvisional?C.dim:(winner===m.away?C.text:C.dim)}}>{m.away}</span>
+            {awayProvisional && <span style={{fontStyle:"italic",fontSize:10,color:C.dim,marginRight:4}}>{tx("provisional", "provisório")}</span>}
+            <span style={{fontWeight:winner===m.away?800:700,color:awayProvisional?C.dim:(winner===m.away?C.text:C.dim)}}>{dAway}</span>
           </span>
           <div style={{opacity:awayProvisional?0.45:1}}><Crest team={m.away} size={32}/></div>
         </div>
@@ -1392,12 +1400,12 @@ export function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favT
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 13px",borderBottom:`1px solid ${C.b1}`,background:C.s2}}>
         <div style={{display:"flex",alignItems:"center",gap:6,minWidth:0,flex:1}}>
           {m.group
-            ? <span style={{fontSize:11,fontWeight:700,color:C.green,background:`${C.green}18`,padding:"2px 7px",borderRadius:10,flexShrink:0}}>Group {m.group}</span>
-            : <span style={{fontSize:11,fontWeight:700,color:C.gold,background:`${C.gold}18`,padding:"2px 7px",borderRadius:10,flexShrink:0}}>{m.stage||"Knockout"}</span>
+            ? <span style={{fontSize:11,fontWeight:700,color:C.green,background:`${C.green}18`,padding:"2px 7px",borderRadius:10,flexShrink:0}}>{tx("Group", "Grupo")} {m.group}</span>
+            : <span style={{fontSize:11,fontWeight:700,color:C.gold,background:`${C.gold}18`,padding:"2px 7px",borderRadius:10,flexShrink:0}}>{roundLabel(m.stage)}</span>
           }
           <span style={{fontSize:10,color:C.dim,flexShrink:0}}>#{m.id}</span>
           <span onClick={(e)=>{e.stopPropagation();openMaps(m.venue);}} style={{fontSize:11,color:finished?C.dim:C.mid,cursor:"pointer",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-            📍 {m.venue.split(",")[0]}
+            📍 {String(dVenue || m.venue).split(",")[0]}
           </span>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
@@ -1412,14 +1420,14 @@ export function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favT
       <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 13px"}}>
         <div style={{opacity:homeProvisional?0.45:1}}><Crest team={m.home} size={32}/></div>
         <span style={{flex:1,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-          <span style={{fontWeight:winner===m.home?800:700,color:homeProvisional?C.dim:(finished?(winner===m.home?C.text:C.dim):favTeams?.includes(m.home)?C.gold:C.text)}}>{m.home}</span>
-          {homeProvisional && <span style={{fontStyle:"italic",fontSize:10,color:C.dim,marginLeft:4}}>provisional</span>}
+          <span style={{fontWeight:winner===m.home?800:700,color:homeProvisional?C.dim:(finished?(winner===m.home?C.text:C.dim):favTeams?.includes(m.home)?C.gold:C.text)}}>{dHome}</span>
+          {homeProvisional && <span style={{fontStyle:"italic",fontSize:10,color:C.dim,marginLeft:4}}>{tx("provisional", "provisório")}</span>}
         </span>
         {isKickingOff ? (
           <div style={{textAlign:"center",minWidth:60,flexShrink:0}}>
             {countdown
               ? <div style={{fontSize:13,fontWeight:800,color:C.gold,fontFamily:"monospace",animation:"pulse 1s infinite",lineHeight:1}}>⏱ {countdown}</div>
-              : <div style={{fontSize:11,fontWeight:700,color:C.green,animation:"pulse 1s infinite"}}>🔴 Starting...</div>
+              : <div style={{fontSize:11,fontWeight:700,color:C.green,animation:"pulse 1s infinite"}}>{tx("🔴 Starting...", "🔴 Começando...")}</div>
             }
           </div>
         ) : hasScore ? (
@@ -1428,12 +1436,12 @@ export function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favT
           </div>
         ) : (
           <div style={{textAlign:"center",minWidth:60,flexShrink:0}}>
-            <span style={{fontSize:11,color:C.dim,fontWeight:700}}>VS</span>
+            <span style={{fontSize:11,color:C.dim,fontWeight:700}}>{tx("VS", "x")}</span>
           </div>
         )}
         <span style={{flex:1,fontSize:14,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-          {awayProvisional && <span style={{fontStyle:"italic",fontSize:10,color:C.dim,marginRight:4}}>provisional</span>}
-          <span style={{fontWeight:winner===m.away?800:700,color:awayProvisional?C.dim:(finished?(winner===m.away?C.text:C.dim):favTeams?.includes(m.away)?C.gold:C.text)}}>{m.away}</span>
+          {awayProvisional && <span style={{fontStyle:"italic",fontSize:10,color:C.dim,marginRight:4}}>{tx("provisional", "provisório")}</span>}
+          <span style={{fontWeight:winner===m.away?800:700,color:awayProvisional?C.dim:(finished?(winner===m.away?C.text:C.dim):favTeams?.includes(m.away)?C.gold:C.text)}}>{dAway}</span>
         </span>
         <div style={{opacity:awayProvisional?0.45:1}}><Crest team={m.away} size={32}/></div>
       </div>
@@ -1444,10 +1452,10 @@ export function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favT
           {m.tv && <>📺 {isUS ? m.tv : bc.primary}</>}
         </div>
         <div style={{display:"flex",gap:5,alignItems:"center",flexShrink:0}}>
-          {onMatchTap && (live||finished||(MATCH_UTC[m.id]&&Date.now()>new Date(MATCH_UTC[m.id]).getTime())) && <button onClick={()=>onMatchTap(m)} style={{background:`${C.blue}18`,border:`1px solid ${C.blue}33`,color:C.blue,padding:"3px 8px",borderRadius:20,fontSize:11,fontWeight:600,cursor:"pointer"}}>Match Events</button>}
+          {onMatchTap && (live||finished||(MATCH_UTC[m.id]&&Date.now()>new Date(MATCH_UTC[m.id]).getTime())) && <button onClick={()=>onMatchTap(m)} style={{background:`${C.blue}18`,border:`1px solid ${C.blue}33`,color:C.blue,padding:"3px 8px",borderRadius:20,fontSize:11,fontWeight:600,cursor:"pointer"}}>{tx("Match Events", "Lances")}</button>}
           {!finished && !live && (()=>{ const isSaved=savedIds.has(m.id); return (
             <button onClick={()=>onAction(m)} style={{background:isSaved?`${C.gold}22`:`${C.green}22`,border:`1px solid ${isSaved?C.gold:C.greenS}`,color:isSaved?C.gold:C.green,padding:"3px 9px",borderRadius:20,fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
-              <StarIcon filled={isSaved} size={12}/>{isSaved?"Saved":"Add"}
+              <StarIcon filled={isSaved} size={12}/>{isSaved?tx("Saved", "Salvo"):tx("Add", "Adicionar")}
             </button>
           ); })()}
         </div>
@@ -1458,6 +1466,9 @@ export function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favT
 
 // ── LIVE TAB ──────────────────────────────────────────────────────────────
 function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=new Set(), matches=MATCHES }) {
+  const { language } = useI18n();
+  const isPtBR = language === "pt-BR";
+  const tx = (en, pt) => isPtBR ? pt : en;
   const { favTeams=[] } = useContext(FavCtx);
   const { scores, getScore, lastFetch } = useContext(LiveScoresCtx);
   const _lhRef = useRef(null); const _lhH = useElemHeight(_lhRef);
@@ -1475,28 +1486,23 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=n
   });
 
 
-  // All upcoming matches today (local timezone)
-  const _nowLive = new Date();
-  const _todayLive = `${_nowLive.getFullYear()}-${String(_nowLive.getMonth()+1).padStart(2,'0')}-${String(_nowLive.getDate()).padStart(2,'0')}`;
+  // All upcoming/finished matches today by tournament time (ET), not browser timezone.
+  // This keeps late ET matches like Germany-Paraguay on the correct Live day.
+  const _todayLive = new Date().toLocaleDateString("en-CA", { timeZone:"America/New_York" });
+  const _etDate = (iso) => new Date(iso).toLocaleDateString("en-CA", { timeZone:"America/New_York" });
   const finishedToday = matches.filter(m => {
     const s = getScore(m.home, m.away);
     if (!s || !statusIsFinished(s.status)) return false;
     const iso = MATCH_UTC[m.id];
     if (!iso) return false;
-    const d = new Date(iso);
-    // Use local date so midnight matches (e.g. 12AM ET = next day UTC) show correctly
-    const dStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    const dStrLocal = d.toLocaleDateString('en-CA'); // YYYY-MM-DD in local tz
-    return dStr === _todayLive || dStrLocal === _todayLive;
+    return _etDate(iso) === _todayLive;
   });
   const upcomingToday = matches.filter(m => {
     const iso = MATCH_UTC[m.id];
     if (!iso) return false;
     const d = new Date(iso);
     if (Date.now() > d.getTime() - 60000) return false; // remove 1min before kickoff
-    const dStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    const dStrLocal = d.toLocaleDateString('en-CA');
-    if (dStr !== _todayLive && dStrLocal !== _todayLive) return false;
+    if (_etDate(iso) !== _todayLive) return false;
     const s = getScore(m.home, m.away);
     return !s || s.status === "NS";
   });
@@ -1507,19 +1513,19 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=n
     <div>
       <div ref={_lhRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:"none",padding:"8px 13px",marginBottom:0}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-          <div style={{fontWeight:700,fontSize:15,color:C.green}}>{"LIVE SCORES"}</div>
+          <div style={{fontWeight:700,fontSize:15,color:C.green}}>{tx("LIVE SCORES", "PLACARES AO VIVO")}</div>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
-            {lastUpdate && <span style={{fontSize:11,color:C.dim}}>Updated {lastUpdate}</span>}
+            {lastUpdate && <span style={{fontSize:11,color:C.dim}}>{tx("Updated", "Atualizado")} {lastUpdate}</span>}
           </div>
         </div>
       </div>
       
       <div style={{height:10}}/>
-      {liveMatches.length>0 && <div style={{marginBottom:16}}><div style={{fontSize:11,color:C.green,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>{"LIVE — TODAY"}</div>{sortByKickoff(liveMatches).map(m=><MatchCard key={m.id} m={m} onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} savedIds={savedIds}/> )}</div>}
+      {liveMatches.length>0 && <div style={{marginBottom:16}}><div style={{fontSize:11,color:C.green,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>{tx("LIVE — TODAY", "AO VIVO — HOJE")}</div>{sortByKickoff(liveMatches).map(m=><MatchCard key={m.id} m={m} onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} savedIds={savedIds}/> )}</div>}
       {upcomingToday.length > 0 && (
         <div style={{marginBottom:16}}>
           <div style={{fontSize:11,color:C.blue,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>
-            TODAY — UPCOMING
+            {tx("TODAY — UPCOMING", "HOJE — PRÓXIMOS")}
           </div>
           {sortByKickoff(upcomingToday).map(m => (
             <div key={m.id}>
@@ -1528,7 +1534,7 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=n
           ))}
         </div>
       )}
-      {finishedToday.length>0 && <div style={{marginTop:liveMatches.length?16:0}}><div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>{"TODAY'S RESULTS"}</div>{sortByKickoff(finishedToday).map(m=><MatchCard key={m.id} m={m} onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} savedIds={savedIds}/> )}</div>}
+      {finishedToday.length>0 && <div style={{marginTop:liveMatches.length?16:0}}><div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>{tx("TODAY'S RESULTS", "RESULTADOS DE HOJE")}</div>{sortByKickoff(finishedToday).map(m=><MatchCard key={m.id} m={m} onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} savedIds={savedIds}/> )}</div>}
       {liveMatches.length===0 && finishedToday.length===0 && upcomingToday.length===0 && !lastFetch && (
         <div style={{marginTop:8}}>
           {[1,2,3].map(i=><SkeletonMatchCard key={i}/>)}
@@ -1537,9 +1543,9 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=n
       {liveMatches.length===0 && finishedToday.length===0 && upcomingToday.length===0 && lastFetch && (
         <div style={{textAlign:"center",padding:"28px 20px"}}>
           <div style={{fontSize:"2.5rem",marginBottom:10}}>⚽</div>
-          <div style={{fontWeight:700,fontSize:16,color:C.mid,marginBottom:6}}>{"No matches today"}</div>
-          <div style={{fontSize:13,color:C.dim}}>{"Live scores appear here on match days."}</div>
-          <div style={{fontSize:12,color:C.dim,marginTop:12}}>{"Tournament starts Jun 11, 2026"}</div>
+          <div style={{fontWeight:700,fontSize:16,color:C.mid,marginBottom:6}}>{tx("No matches today", "Nenhum jogo hoje")}</div>
+          <div style={{fontSize:13,color:C.dim}}>{tx("Live scores appear here on match days.", "Os placares ao vivo aparecem aqui nos dias de jogos.")}</div>
+          <div style={{fontSize:12,color:C.dim,marginTop:12}}>{tx("Tournament starts Jun 11, 2026", "O torneio começa em 11 de junho de 2026")}</div>
         </div>
       )}
     </div>
@@ -1658,6 +1664,9 @@ function PlayerPhoto({ src, name, size=32 }) {
 
 // ── RECENT FORM — dynamic, auto-upgrades to live WC data after Jun 11 ─────
 export function RecentForm({ team, staticData }) {
+  const { language } = useI18n();
+  const isPtBR = language === "pt-BR";
+  const tx = (en, pt) => isPtBR ? pt : en;
   const { getScore } = useContext(LiveScoresCtx);
 
   // Build form from actual WC 2026 MATCHES data using live scores — most accurate source
@@ -1678,7 +1687,7 @@ export function RecentForm({ team, staticData }) {
         const dateStr = matchUTC
           ? new Date(matchUTC).toLocaleDateString("en-US",{month:"short",day:"numeric"})
           : m.date;
-        return { date: dateStr, opp, score: `${teamGoals}-${oppGoals}`, loc: m.venue?.split(",")[0]||"", comp: "World Cup 2026", res, id: m.id };
+        return { date: dateStr, opp, score: `${teamGoals}-${oppGoals}`, loc: m.venue?.split(",")[0]||"", comp: tx("World Cup 2026", "Copa do Mundo 2026"), res, id: m.id };
       })
       .filter(Boolean)
       .sort((a,b) => (MATCH_UTC[b.id]||0) > (MATCH_UTC[a.id]||0) ? 1 : -1)
@@ -1692,10 +1701,10 @@ export function RecentForm({ team, staticData }) {
   return (
     <Card>
       <div style={{padding:"10px 14px",borderBottom:`1px solid ${C.b1}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-        <span style={{fontWeight:700,color:C.green,fontSize:13}}>LAST 4 MATCHES</span>
+        <span style={{fontWeight:700,color:C.green,fontSize:13}}>{tx("LAST 4 MATCHES", "ÚLTIMOS 4 JOGOS")}</span>
         {isLiveData
-          ? <Badge color={C.green}>🔴 Live World Cup data</Badge>
-          : <Badge color={C.dim}>Pre-tournament</Badge>
+          ? <Badge color={C.green}>{tx("🔴 Live World Cup data", "🔴 Dados ao vivo da Copa")}</Badge>
+          : <Badge color={C.dim}>{tx("Pre-tournament", "Pré-torneio")}</Badge>
         }
       </div>
       {display.map((g,i) => {
@@ -1706,14 +1715,14 @@ export function RecentForm({ team, staticData }) {
               <div style={{width:26,height:26,borderRadius:"50%",background:`${rc}22`,border:`2px solid ${rc}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,color:rc,flexShrink:0}}>{g.res}</div>
               <div style={{flex:1}}>
                 <div style={{display:"flex",alignItems:"center",gap:8}}>
-                  <span style={{fontWeight:700,color:C.text,fontSize:13}}>vs {g.opp}</span>
+                  <span style={{fontWeight:700,color:C.text,fontSize:13}}>{tx("vs", "x")} {g.opp}</span>
                   <span style={{fontWeight:700,color:rc,fontSize:13}}>{g.score}</span>
                 </div>
                 <div style={{fontSize:11,color:C.dim,marginTop:2}}>{g.date}{g.loc ? ` · ${g.loc}` : ""}</div>
               </div>
               <span style={{fontSize:10,padding:"2px 7px",borderRadius:10,
-                background:g.comp==="World Cup 2026"?`${C.green}22`:g.comp==="Friendly"?`${C.dim}22`:`${C.blue}18`,
-                color:g.comp==="World Cup 2026"?C.green:g.comp==="Friendly"?C.mid:C.blue,
+                background:(g.comp==="World Cup 2026" || g.comp==="Copa do Mundo 2026")?`${C.green}22`:g.comp==="Friendly"?`${C.dim}22`:`${C.blue}18`,
+                color:(g.comp==="World Cup 2026" || g.comp==="Copa do Mundo 2026")?C.green:g.comp==="Friendly"?C.mid:C.blue,
                 fontWeight:600,flexShrink:0}}>{g.comp}</span>
             </div>
           </div>
@@ -2629,7 +2638,7 @@ export function DragList({ items, onReorder, renderItem }) {
 
 // ── MY BRACKET TAB ────────────────────────────────────────────────────────
 export const defaultBracketGroups=()=>Object.fromEntries(Object.entries(GROUPS).map(([g,{teams}])=>[g,[...teams]]));
-function BracketMatchup({ match, t1, t2, winner, onPick, interactive=false, compact=false, t1Tag=null, t2Tag=null, onMatchTap=null }) {
+function BracketMatchup({ match, t1, t2, winner, onPick, interactive=false, compact=false, t1Tag=null, t2Tag=null, onMatchTap=null, language="en" }) {
   const { getScore, isLive, isFinished } = useContext(LiveScoresCtx);
   const canPick = interactive && t1 && t2 && t1 !== "TBD" && t2 !== "TBD";
   const matchData = match ? MATCHES.find(m => m.id === match) : null;
@@ -2660,6 +2669,7 @@ function BracketMatchup({ match, t1, t2, winner, onPick, interactive=false, comp
     // visually dimmed as provisional.
     const isProvisional = tag === "provisional" && interactive;
     const hasRealTeam = !!team && team !== "TBD";
+    const shownTeam = hasRealTeam ? displayTeamName(team, language) : (team || "TBD");
     const nameColor = isW ? C.green : isClinched ? C.gold : isProvisional ? C.dim : team ? C.text : C.dim;
     const flagStyle = {
       display:"inline-flex",
@@ -2674,13 +2684,13 @@ function BracketMatchup({ match, t1, t2, winner, onPick, interactive=false, comp
         key={i}
         onClick={() => canPick && !rowUnavailable && onPick?.(team)}
         disabled={disabled}
-        title={canPick ? `Pick ${team}` : isProvisional ? `${team} is currently leading their group — not yet mathematically confirmed for 1st place` : isClinched ? `${team} has clinched this slot` : undefined}
+        title={canPick ? `${language === "pt-BR" ? "Escolher" : "Pick"} ${shownTeam}` : isProvisional ? `${shownTeam} ${language === "pt-BR" ? "está liderando o grupo — ainda não confirmado matematicamente" : "is currently leading their group — not yet mathematically confirmed for 1st place"}` : isClinched ? `${shownTeam} ${language === "pt-BR" ? "garantiu esta vaga" : "has clinched this slot"}` : undefined}
         style={{width:"100%",display:"flex",alignItems:"center",gap:8,padding:compact?"7px 8px":"10px 10px",background:isW?`${C.green}24`:"transparent",border:"none",borderBottom:i===0?`1px solid ${C.b1}`:"none",cursor:canPick?"pointer":"default",textAlign:"left",opacity:hasRealTeam?1:0.65,WebkitAppearance:"none",appearance:"none"}}
       >
         <span style={flagStyle}><Crest team={team||"TBD"} size={compact?16:22}/></span>
-        <span style={{fontSize:compact?12:14,color:nameColor,fontWeight:isW||isClinched?800:600,fontStyle:isProvisional?"italic":"normal",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",flex:1,opacity:hasRealTeam?1:0.65}}>{team||"TBD"}</span>
+        <span style={{fontSize:compact?12:14,color:nameColor,fontWeight:isW||isClinched?800:600,fontStyle:isProvisional?"italic":"normal",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",flex:1,opacity:hasRealTeam?1:0.65}}>{shownTeam}</span>
         {isClinched && !isW && <span title="Clinched into this slot" style={{fontSize:11}}>🔒</span>}
-        {isProvisional && <span style={{fontSize:8,color:C.dim,fontWeight:700,letterSpacing:"0.04em",whiteSpace:"nowrap"}}>LEADING</span>}
+        {isProvisional && <span style={{fontSize:8,color:C.dim,fontWeight:700,letterSpacing:"0.04em",whiteSpace:"nowrap"}}>{language === "pt-BR" ? "LIDERANDO" : "LEADING"}</span>}
         {sc && i===0 && <span style={{fontSize:compact?12:13,fontWeight:800,color:live?C.green:C.text,fontFamily:"monospace"}}>{sc.hg}</span>}
         {sc && i===1 && <span style={{fontSize:compact?12:13,fontWeight:800,color:live?C.green:C.text,fontFamily:"monospace"}}>{sc.ag}</span>}
         {isW && <span style={{fontSize:12,color:C.green,fontWeight:900}}>✓</span>}
@@ -2699,9 +2709,9 @@ function BracketMatchup({ match, t1, t2, winner, onPick, interactive=false, comp
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:6}}>
             <div style={{overflow:"hidden"}}>
               <div style={{fontSize:10,fontWeight:700,color:C.gold,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{matchData.date} · {matchData.time}</div>
-              <div style={{fontSize:9,color:C.dim,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>📍 {matchData.venue.split(",")[0]}</div>
+              <div style={{fontSize:9,color:C.dim,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>📍 {displayVenueName(matchData.venue, language).split(",")[0]}</div>
             </div>
-            {live && <span style={{fontSize:9,color:C.red,fontWeight:800,flexShrink:0,animation:"pulse 1.2s infinite"}}>🔴 LIVE</span>}
+            {live && <span style={{fontSize:9,color:C.red,fontWeight:800,flexShrink:0,animation:"pulse 1.2s infinite"}}>{language === "pt-BR" ? "🔴 AO VIVO" : "🔴 LIVE"}</span>}
           </div>
         ) : (
           <div style={{fontSize:10,color:C.gold,fontWeight:900,letterSpacing:"0.08em"}}>M{match || "—"}</div>
@@ -2713,7 +2723,7 @@ function BracketMatchup({ match, t1, t2, winner, onPick, interactive=false, comp
   );
 }
 
-function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick=()=>{}, completedCount=0, onMatchTap=null }) {
+function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick=()=>{}, completedCount=0, onMatchTap=null, language="en" }) {
   const bracketScrollRef = useRef(null);
 
   useEffect(() => {
@@ -2782,7 +2792,7 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
         {/* Round label */}
         <div style={{textAlign:"center",marginBottom:8,background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b1}`,borderRadius:999,padding:"5px 8px"}}>
           <div style={{fontSize:10,fontWeight:900,color:C.green,letterSpacing:"0.08em"}}>{ROUND_LABELS[round.key]}</div>
-          <div style={{fontSize:9,color:C.dim}}>{ROUND_FULL[round.key]}</div>
+          <div style={{fontSize:9,color:C.dim}}>{displayStageName(ROUND_FULL[round.key], language)}</div>
         </div>
 
         <div style={{position:"relative",height:totalHeight}}>
@@ -2791,7 +2801,7 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
             const m = matchesById[id]||{match:id,home:null,away:null,winner:null};
             return (
               <div key={id} style={{position:"absolute",top:tops[n],left:0,width:CW,opacity:!(m.home&&m.away)?0.55:1}}>
-                <BracketMatchup match={m.match} t1={m.home} t2={m.away} winner={m.winner} interactive={pickMode==="manual"} onPick={t=>onPick(m,t)} t1Tag={m.homeTag} t2Tag={m.awayTag} onMatchTap={onMatchTap}/>
+                <BracketMatchup match={m.match} t1={m.home} t2={m.away} winner={m.winner} interactive={pickMode==="manual"} onPick={t=>onPick(m,t)} t1Tag={m.homeTag} t2Tag={m.awayTag} onMatchTap={onMatchTap} language={language}/>
               </div>
             );
           })}
@@ -2854,10 +2864,10 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
               <div style={{position:"absolute",top:finalTop-22,left:0,width:190,textAlign:"center",fontSize:11,fontWeight:900,color:C.gold,letterSpacing:"0.12em"}}>FINAL</div>
               {/* Final card */}
               <div style={{position:"absolute",top:finalTop,left:0,width:190}}>
-                <BracketMatchup match={finalMatch.match} t1={finalMatch.home} t2={finalMatch.away} winner={finalMatch.winner} interactive={pickMode==="manual"} onPick={(team)=>onPick(finalMatch,team)} onMatchTap={onMatchTap}/>
+                <BracketMatchup match={finalMatch.match} t1={finalMatch.home} t2={finalMatch.away} winner={finalMatch.winner} interactive={pickMode==="manual"} onPick={(team)=>onPick(finalMatch,team)} onMatchTap={onMatchTap} language={language}/>
                 {finalMatch.winner && (
                   <div style={{marginTop:14,textAlign:"center",background:`${C.gold}16`,border:`1px solid ${C.gold}44`,borderRadius:14,padding:"10px 8px"}}>
-                    <div style={{fontSize:10,color:C.dim,fontWeight:800,letterSpacing:"0.08em"}}>CHAMPION</div>
+                    <div style={{fontSize:10,color:C.dim,fontWeight:800,letterSpacing:"0.08em"}}>{language === "pt-BR" ? "CAMPEÃO" : "CHAMPION"}</div>
                     <div style={{fontSize:28,marginTop:4}}><Crest team={finalMatch.winner} size={34}/></div>
                     <div style={{fontSize:14,color:C.gold,fontWeight:900,marginTop:4}}>{finalMatch.winner}</div>
                   </div>
@@ -2873,7 +2883,7 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
   );
 }
 
-export function VisualBracketTree({ bracket, pickMode="auto", onPick=()=>{}, view="compact", onMatchTap=null }) {
+export function VisualBracketTree({ bracket, pickMode="auto", onPick=()=>{}, view="compact", onMatchTap=null, language="en" }) {
   const byId = (matches=[]) => Object.fromEntries((matches||[]).map(m => [Number(m.match), m]));
   const matchesById = {
     ...byId(bracket?.r32),
@@ -2884,31 +2894,31 @@ export function VisualBracketTree({ bracket, pickMode="auto", onPick=()=>{}, vie
   };
 
   const rounds = [
-    {key:"r32", short:"R32", label:"Round of 32", ids:[73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88]},
-    {key:"r16", short:"R16", label:"Round of 16", ids:[89,90,91,92,93,94,95,96]},
-    {key:"qf", short:"QF", label:"Quarterfinals", ids:[97,98,99,100]},
-    {key:"sf", short:"SF", label:"Semifinals", ids:[101,102]},
-    {key:"final", short:"FINAL", label:"Final", ids:[104]},
+    {key:"r32", short:"R32", label:displayStageName("Round of 32", language), ids:[73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88]},
+    {key:"r16", short:"R16", label:displayStageName("Round of 16", language), ids:[89,90,91,92,93,94,95,96]},
+    {key:"qf", short:"QF", label:displayStageName("Quarterfinals", language), ids:[97,98,99,100]},
+    {key:"sf", short:"SF", label:displayStageName("Semifinals", language), ids:[101,102]},
+    {key:"final", short:"FINAL", label:displayStageName("Final", language), ids:[104]},
   ];
 
   const finalMatch = matchesById[104] || (bracket?.final || [])[0] || {match:104,home:null,away:null,winner:null};
   const completedCount = Object.values(matchesById).filter(m => m?.winner).length;
 
   if (view === "tree") {
-    return <WideBracketView rounds={rounds} matchesById={matchesById} bracket={bracket} pickMode={pickMode} onPick={onPick} completedCount={completedCount} onMatchTap={onMatchTap}/>;
+    return <WideBracketView rounds={rounds} matchesById={matchesById} bracket={bracket} pickMode={pickMode} onPick={onPick} completedCount={completedCount} onMatchTap={onMatchTap} language={language}/>;
   }
 
   return (
     <div style={{width:"100%",maxWidth:"100%",overflow:"hidden"}}>
       <div style={{textAlign:"center",marginBottom:14,background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b1}`,borderRadius:16,padding:14}}>
         <div style={{fontSize:34,lineHeight:1,filter:"drop-shadow(0 8px 14px rgba(0,0,0,0.35))"}}>🏆</div>
-        <div style={{fontSize:10,color:C.gold,fontWeight:900,letterSpacing:"0.14em",marginTop:6}}>WORLD CUP PATH</div>
+        <div style={{fontSize:10,color:C.gold,fontWeight:900,letterSpacing:"0.14em",marginTop:6}}>{language === "pt-BR" ? "CAMINHO ATÉ A TAÇA" : "WORLD CUP PATH"}</div>
         <div style={{fontSize:12,color:C.mid,marginTop:5,lineHeight:1.45}}>
           {bracket?.champion
-            ? <>Champion selected: <strong style={{color:C.green}}>{getFlag(bracket.champion)} {bracket.champion}</strong></>
-            : <>Select winners round by round. New matchups unlock automatically.</>}
+            ? <>{language === "pt-BR" ? "Campeão escolhido:" : "Champion selected:"} <strong style={{color:C.green}}>{getFlag(bracket.champion)} {displayTeamName(bracket.champion, language)}</strong></>
+            : <>{language === "pt-BR" ? "Escolha os vencedores rodada por rodada. Novos confrontos são liberados automaticamente." : "Select winners round by round. New matchups unlock automatically."}</>}
         </div>
-        <div style={{fontSize:10,color:C.dim,marginTop:8}}>{completedCount} of 31 knockout winners selected</div>
+        <div style={{fontSize:10,color:C.dim,marginTop:8}}>{completedCount} {language === "pt-BR" ? "de 31 vencedores do mata-mata escolhidos" : "of 31 knockout winners selected"}</div>
       </div>
 
       <div style={{display:"flex",flexDirection:"column",gap:18}}>
@@ -2922,7 +2932,7 @@ export function VisualBracketTree({ bracket, pickMode="auto", onPick=()=>{}, vie
                   <div style={{fontSize:11,fontWeight:900,color:round.key==="final"?C.gold:C.green,letterSpacing:"0.12em"}}>{round.short}</div>
                   <div style={{fontSize:16,fontWeight:900,color:C.text}}>{round.label}</div>
                 </div>
-                <div style={{fontSize:10,color:C.dim,background:C.s2,border:`1px solid ${C.b1}`,borderRadius:999,padding:"4px 8px",whiteSpace:"nowrap"}}>{unlocked}/{matches.length} unlocked</div>
+                <div style={{fontSize:10,color:C.dim,background:C.s2,border:`1px solid ${C.b1}`,borderRadius:999,padding:"4px 8px",whiteSpace:"nowrap"}}>{unlocked}/{matches.length} {language === "pt-BR" ? "liberados" : "unlocked"}</div>
               </div>
 
               <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(220px, 1fr))",gap:10}}>
@@ -2930,7 +2940,7 @@ export function VisualBracketTree({ bracket, pickMode="auto", onPick=()=>{}, vie
                   const locked = !(m.home && m.away);
                   return (
                     <div key={m.match} style={{opacity:locked?0.55:1,position:"relative"}}>
-                      <BracketMatchup match={m.match} t1={m.home} t2={m.away} winner={m.winner} interactive={pickMode==="manual"} onPick={(team)=>onPick(m,team)} t1Tag={m.homeTag} t2Tag={m.awayTag} onMatchTap={onMatchTap}/>
+                      <BracketMatchup match={m.match} t1={m.home} t2={m.away} winner={m.winner} interactive={pickMode==="manual"} onPick={(team)=>onPick(m,team)} t1Tag={m.homeTag} t2Tag={m.awayTag} onMatchTap={onMatchTap} language={language}/>
                     </div>
                   );
                 })}
@@ -2941,17 +2951,17 @@ export function VisualBracketTree({ bracket, pickMode="auto", onPick=()=>{}, vie
       </div>
 
       <div style={{marginTop:16,background:`linear-gradient(135deg,${C.green}22,${C.gold}18)`,border:`1px solid ${bracket?.champion?C.greenS:C.gold}66`,borderRadius:18,padding:16,textAlign:"center",boxShadow:DS.shadow.panel}}>
-        <div style={{fontSize:9,color:C.dim,fontWeight:900,letterSpacing:"0.15em",marginBottom:8}}>CHAMPION</div>
+        <div style={{fontSize:9,color:C.dim,fontWeight:900,letterSpacing:"0.15em",marginBottom:8}}>{language === "pt-BR" ? "CAMPEÃO" : "CHAMPION"}</div>
         {bracket?.champion ? (
           <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:12}}>
             <Crest team={bracket.champion} size={46}/>
             <div style={{textAlign:"left"}}>
-              <div style={{fontWeight:900,fontSize:22,color:C.green}}>{bracket.champion}</div>
-              <div style={{fontSize:12,color:C.mid}}>Your World Cup winner</div>
+              <div style={{fontWeight:900,fontSize:22,color:C.green}}>{displayTeamName(bracket.champion, language)}</div>
+              <div style={{fontSize:12,color:C.mid}}>{language === "pt-BR" ? "Seu campeão da Copa" : "Your World Cup winner"}</div>
             </div>
           </div>
         ) : (
-          <div style={{fontSize:13,color:C.mid,lineHeight:1.5}}>Pick the Final winner to crown your champion.</div>
+          <div style={{fontSize:13,color:C.mid,lineHeight:1.5}}>{language === "pt-BR" ? "Escolha o vencedor da Final para coroar seu campeão." : "Pick the Final winner to crown your champion."}</div>
         )}
       </div>
     </div>
@@ -3333,6 +3343,13 @@ function useWeather(lat, lon, enabled) {
 }
 
 function MatchdayCard({ m, onAction, favTeam }) {
+  const { language } = useI18n();
+  const isPtBR = language === "pt-BR";
+  const tx = (en, pt) => isPtBR ? pt : en;
+  const roundLabel = (stage) => displayStageName(stage, language);
+  const dHome = displayTeamName(m.home, language);
+  const dAway = displayTeamName(m.away, language);
+  const dVenue = displayVenueName(m.venue, language);
   const { favTeams=[] } = useContext(FavCtx);
   const { getScore } = useContext(LiveScoresCtx);
   const sc = getScore(m.home, m.away);
@@ -3379,7 +3396,7 @@ function MatchdayCard({ m, onAction, favTeam }) {
         )}
         {/* Header row */}
         <div style={{display:"flex",justifyContent:"space-between",marginBottom:7}}>
-          {m.group ? <Badge>Group {m.group}</Badge> : <Badge color={C.gold}>{m.stage||"Knockout"}</Badge>}
+          {m.group ? <Badge>{tx("Group", "Grupo")} {m.group}</Badge> : <Badge color={C.gold}>{roundLabel(m.stage)}</Badge>}
           <div style={{display:"flex",alignItems:"center",gap:6}}>
             {isMatchday && countdown && !live && <span style={{fontSize:11,fontWeight:700,color:C.gold}}>⏱ {countdown}</span>}
             {wx && <span style={{fontSize:11,color:C.mid}}>{wx.icon} {wx.temp}°F / {wx.tempC}°C</span>}
@@ -3389,24 +3406,24 @@ function MatchdayCard({ m, onAction, favTeam }) {
         {/* Teams + score */}
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:7}}>
           <Crest team={m.home} size={24}/>
-          <span style={{fontWeight:700,color:favTeams?.includes(m.home)?C.gold:C.text,flex:1,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.home}</span>
+          <span style={{fontWeight:700,color:favTeams?.includes(m.home)?C.gold:C.text,flex:1,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{dHome}</span>
           {hasScore ? (
             <div style={{textAlign:"center",minWidth:64}}>
               <div style={{fontWeight:900,fontSize:22,color:live?C.green:C.text,fontFamily:"monospace",lineHeight:1}}>{sc.hg} – {sc.ag}</div>
               {statusLabel(sc.status,sc.elapsed,sc.elapsedExtra) && <div style={{fontSize:10,fontWeight:700,marginTop:2,color:live?C.green:C.dim}}>{live?"🔴 ":""}{statusLabel(sc.status,sc.elapsed,sc.elapsedExtra)}</div>}
             </div>
           ) : (
-            <span style={{fontSize:11,color:C.dim,fontWeight:700,minWidth:40,textAlign:"center"}}>VS</span>
+            <span style={{fontSize:11,color:C.dim,fontWeight:700,minWidth:40,textAlign:"center"}}>{tx("VS", "x")}</span>
           )}
-          <span style={{fontWeight:700,color:favTeams?.includes(m.away)?C.gold:C.text,flex:1,fontSize:14,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.away}</span>
+          <span style={{fontWeight:700,color:favTeams?.includes(m.away)?C.gold:C.text,flex:1,fontSize:14,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{dAway}</span>
           <Crest team={m.away} size={24}/>
         </div>
         {/* Venue */}
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:m.tv?4:0}}>
-          <span onClick={()=>openMaps(m.venue)} style={{fontSize:11,color:C.blue,cursor:"pointer"}}>📍 <span style={{textDecoration:"underline",textDecorationStyle:"dotted"}}>{m.venue}</span></span>
+          <span onClick={()=>openMaps(m.venue)} style={{fontSize:11,color:C.blue,cursor:"pointer"}}>📍 <span style={{textDecoration:"underline",textDecorationStyle:"dotted"}}>{dVenue}</span></span>
           {!finished && (()=>{ const isSaved=savedIds.has(m.id); return (
             <button onClick={()=>onAction(m)} style={{background:isSaved?`${C.gold}22`:`${C.green}22`,border:`1px solid ${isSaved?C.gold:C.greenS}`,color:isSaved?C.gold:C.green,padding:"3px 9px",borderRadius:20,fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
-              <StarIcon filled={isSaved} size={12}/>{isSaved?"Saved":"Add"}
+              <StarIcon filled={isSaved} size={12}/>{isSaved?tx("Saved", "Salvo"):tx("Add", "Adicionar")}
             </button>
           ); })()}
           {finished && <span style={{fontSize:10,color:C.dim,fontStyle:"italic"}}>Final</span>}
@@ -3702,7 +3719,7 @@ export function FantasyTeamSlot({ team, side="left", tag=null, winner=false, com
   const marker = isClinched
     ? <span title="Confirmed / locked into this slot" style={{fontSize:compact?10:11,flexShrink:0}}>🔒</span>
     : (!compact && isProvisional)
-      ? <span style={{fontSize:8,color:C.dim,fontWeight:900,letterSpacing:"0.04em",whiteSpace:"nowrap",flexShrink:0}}>LEADING</span>
+      ? <span style={{fontSize:8,color:C.dim,fontWeight:900,letterSpacing:"0.04em",whiteSpace:"nowrap",flexShrink:0}}>{language === "pt-BR" ? "LIDERANDO" : "LEADING"}</span>
       : null;
   return (
     <div style={{display:"flex",alignItems:"center",gap:compact?5:7,justifyContent:align,minWidth:0,flex:1}}>
@@ -5623,6 +5640,12 @@ export function timeAgo(isoStr) {
 }
 
 export function QuickFacts({ tabTop }) {
+  const { language } = useI18n();
+  const isPtBR = language === "pt-BR";
+  const tx = (en, pt) => isPtBR ? pt : en;
+  const goalWord = (n) => isPtBR ? `gol${Number(n)===1?"":"s"}` : `goal${Number(n)===1?"":"s"}`;
+  const teamDisplay = (team) => displayTeamName(team, language);
+  const matchDisplay = (m) => `${teamDisplay(m.home)} ${m.hg}–${m.ag} ${teamDisplay(m.away)}`;
   const { getScore, isFinished } = useContext(LiveScoresCtx);
   const [expandedFact, setExpandedFact] = useState(null);
   const [fastestGoals, setFastestGoals] = useState([]);
@@ -5648,8 +5671,8 @@ export function QuickFacts({ tabTop }) {
 
   if (scores.length === 0) return (
     <div style={{background:C.s2,borderRadius:12,padding:16,marginBottom:16,border:`1px solid ${C.b1}`}}>
-      <div style={{fontSize:12,fontWeight:700,color:C.mid,letterSpacing:"0.08em",marginBottom:8}}>{"⚡ TOURNAMENT FACTS"}</div>
-      <div style={{fontSize:13,color:C.dim,textAlign:"center",padding:"12px 0"}}>{"Facts will appear here as matches are played."}</div>
+      <div style={{fontSize:12,fontWeight:700,color:C.mid,letterSpacing:"0.08em",marginBottom:8}}>{tx("⚡ TOURNAMENT FACTS", "⚡ FATOS DO TORNEIO")}</div>
+      <div style={{fontSize:13,color:C.dim,textAlign:"center",padding:"12px 0"}}>{tx("Facts will appear here as matches are played.", "Os fatos aparecerão aqui conforme os jogos forem disputados.")}</div>
     </div>
   );
 
@@ -5695,46 +5718,46 @@ export function QuickFacts({ tabTop }) {
   );
 
   const facts = [
-    { key:"goals", icon:"⚽", label:"Goals scored", value:`${totalGoals} (avg ${avgGoals}/match)` },
-    { key:"played", icon:"🏟️", label:"Matches played", value:`${scores.length} of ${totalMatches}` },
+    { key:"goals", icon:"⚽", label:tx("Goals scored", "Gols marcados"), value:isPtBR ? `${totalGoals} (média ${avgGoals}/jogo)` : `${totalGoals} (avg ${avgGoals}/match)` },
+    { key:"played", icon:"🏟️", label:tx("Matches played", "Jogos disputados"), value:isPtBR ? `${scores.length} de ${totalMatches}` : `${scores.length} of ${totalMatches}` },
     topGoalTeams.length > 0 && {
       key:"teamGoals",
       icon:"📈",
-      label:"Most goals by team",
-      value:`${topGoalTeams[0].team} — ${topGoalTeams[0].goals}`,
-      hint:"Tap for top 3",
-      details: topGoalTeams.map((row,i)=>detailRow(i+1, getFlag(row.team), row.team, `${row.goals} goals`, C.green)),
+      label:tx("Most goals by team", "Time com mais gols"),
+      value:`${teamDisplay(topGoalTeams[0].team)} — ${topGoalTeams[0].goals}`,
+      hint:tx("Tap for top 3", "Toque para top 3"),
+      details: topGoalTeams.map((row,i)=>detailRow(i+1, getFlag(row.team), teamDisplay(row.team), `${row.goals} ${goalWord(row.goals)}`, C.green)),
     },
-    { key:"cleanSheets", icon:"🎯", label:"Clean sheets", value:`${cleanSheets}` },
+    { key:"cleanSheets", icon:"🎯", label:tx("Clean sheets", "Jogos sem sofrer gols"), value:`${cleanSheets}` },
     topCleanSheetTeams.length > 0 && {
       key:"cleanSheetLeader",
       icon:"🧤",
-      label:"Clean sheet leader",
-      value:`${topCleanSheetTeams[0].team} — ${topCleanSheetTeams[0].cleanSheets}`,
-      hint:"Tap for top 3",
-      details: topCleanSheetTeams.map((row,i)=>detailRow(i+1, getFlag(row.team), row.team, `${row.cleanSheets} clean sheets`, C.blue)),
+      label:tx("Clean sheet leader", "Líder em jogos sem sofrer gols"),
+      value:`${teamDisplay(topCleanSheetTeams[0].team)} — ${topCleanSheetTeams[0].cleanSheets}`,
+      hint:tx("Tap for top 3", "Toque para top 3"),
+      details: topCleanSheetTeams.map((row,i)=>detailRow(i+1, getFlag(row.team), teamDisplay(row.team), isPtBR ? `${row.cleanSheets} jogo${Number(row.cleanSheets)===1?"":"s"} sem sofrer gols` : `${row.cleanSheets} clean sheets`, C.blue)),
     },
     fastestGoals.length > 0 && {
       key:"fastestGoals",
       icon:"⏱️",
-      label:"Fastest goal",
-      value:`${fastestGoals[0].minute}' · ${fastestGoals[0].player || fastestGoals[0].team}`,
-      hint:"Tap for top 3",
+      label:tx("Fastest goal", "Gol mais rápido"),
+      value:`${fastestGoals[0].minute}' · ${fastestGoals[0].player || teamDisplay(fastestGoals[0].team)}`,
+      hint:tx("Tap for top 3", "Toque para top 3"),
       details: fastestGoals.slice(0,3).map((row,i)=>detailRow(
         i+1,
         getFlag(row.team),
-        row.player ? `${row.player} (${row.team})` : row.team,
+        row.player ? `${row.player} (${teamDisplay(row.team)})` : teamDisplay(row.team),
         `${row.minute}'${row.match ? ` · ${row.match}` : ""}`,
         C.gold
       )),
     },
-    highestScoring && { key:"highestScoring", icon:"🔥", label:"Highest-scoring match", value:`${highestScoring.m.home} ${highestScoring.m.hg}–${highestScoring.m.ag} ${highestScoring.m.away} (${highestScoring.total} goals)` },
-    biggestMargin > 2 && mostOneSided && { key:"biggestWin", icon:"💥", label:"Biggest win", value:`${mostOneSided.hg > mostOneSided.ag ? mostOneSided.home : mostOneSided.away} won ${Math.max(mostOneSided.hg,mostOneSided.ag)}–${Math.min(mostOneSided.hg,mostOneSided.ag)}` },
+    highestScoring && { key:"highestScoring", icon:"🔥", label:tx("Highest-scoring match", "Jogo com mais gols"), value:`${matchDisplay(highestScoring.m)} (${highestScoring.total} ${goalWord(highestScoring.total)})` },
+    biggestMargin > 2 && mostOneSided && { key:"biggestWin", icon:"💥", label:tx("Biggest win", "Maior goleada"), value:isPtBR ? `${teamDisplay(mostOneSided.hg > mostOneSided.ag ? mostOneSided.home : mostOneSided.away)} venceu por ${Math.max(mostOneSided.hg,mostOneSided.ag)}–${Math.min(mostOneSided.hg,mostOneSided.ag)}` : `${mostOneSided.hg > mostOneSided.ag ? mostOneSided.home : mostOneSided.away} won ${Math.max(mostOneSided.hg,mostOneSided.ag)}–${Math.min(mostOneSided.hg,mostOneSided.ag)}` },
   ].filter(Boolean);
 
   return (
     <div style={{background:C.s2,borderRadius:12,padding:16,marginBottom:16,border:`1px solid ${C.b1}`}}>
-      <div style={{fontSize:12,fontWeight:700,color:C.mid,letterSpacing:"0.08em",marginBottom:12}}>⚡ TOURNAMENT FACTS SO FAR</div>
+      <div style={{fontSize:12,fontWeight:700,color:C.mid,letterSpacing:"0.08em",marginBottom:12}}>{tx("⚡ TOURNAMENT FACTS SO FAR", "⚡ FATOS DO TORNEIO ATÉ AGORA")}</div>
       {facts.map((f,i) => {
         const open = expandedFact === f.key;
         const clickable = !!f.details;
@@ -5763,7 +5786,7 @@ export function QuickFacts({ tabTop }) {
               <div style={{flex:1,minWidth:0}}>
                 <div style={{display:"flex",alignItems:"center",gap:6}}>
                   <div style={{fontSize:11,color:C.dim,fontWeight:600}}>{f.label}</div>
-                  {f.hint && <div style={{fontSize:9,color:C.gold,fontWeight:800,background:`${C.gold}14`,border:`1px solid ${C.gold}33`,borderRadius:999,padding:"1px 6px"}}>{open?"Hide":"Top 3"}</div>}
+                  {f.hint && <div style={{fontSize:9,color:C.gold,fontWeight:800,background:`${C.gold}14`,border:`1px solid ${C.gold}33`,borderRadius:999,padding:"1px 6px"}}>{open?tx("Hide", "Ocultar"):tx("Top 3", "Top 3")}</div>}
                 </div>
                 <div style={{fontSize:13,color:C.text,fontWeight:600,marginTop:1,overflow:"hidden",textOverflow:"ellipsis"}}>{f.value}</div>
               </div>
@@ -6165,6 +6188,9 @@ function Onboarding({ onDone }) {
 // ── APP ────────────────────────────────────────────────────────────────────
 
 function StatsHubTab({ initial="", tabTop=116 }) {
+  const { language, t } = useI18n();
+  const isPtBR = language === "pt-BR";
+  const tx = (en, pt) => isPtBR ? pt : en;
   const [mode, setMode] = useState("team");
   const _statsHubRef = useRef(null);
   const _statsHubH = useElemHeight(_statsHubRef);
@@ -6174,13 +6200,13 @@ function StatsHubTab({ initial="", tabTop=116 }) {
     <div>
       <div ref={_statsHubRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:DS.shadow.sticky,padding:"8px 13px"}}>
         <div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none"}}>
-          <Pill active={mode==="team"} onClick={()=>setMode("team")} color={C.green}>📊 Team Stats</Pill>
-          <Pill active={mode==="h2h"} onClick={()=>setMode("h2h")} color={C.rival}>⚔️ Head to Head</Pill>
-          <Pill active={mode==="scorers"} onClick={()=>setMode("scorers")} color={C.gold}>⚽ Scorers</Pill>
+          <Pill active={mode==="team"} onClick={()=>setMode("team")} color={C.green}>{tx("📊 Team Stats", "📊 Seleções")}</Pill>
+          <Pill active={mode==="h2h"} onClick={()=>setMode("h2h")} color={C.rival}>{tx("⚔️ Head to Head", "⚔️ Confrontos")}</Pill>
+          <Pill active={mode==="scorers"} onClick={()=>setMode("scorers")} color={C.gold}>{tx("⚽ Scorers", "⚽ Artilheiros")}</Pill>
         </div>
       </div>
       <div style={{height:10}}/>
-      {mode==="team" && <StatsTab initial={initial} tabTop={childTop} C={C} DS={DS} GROUPS={GROUPS} PREDS={PREDS} RECENT4={RECENT4} TEAMS={TEAMS} getFlag={getFlag} isCaptain={isCaptain} parseName={parseName} posColor={posColor} posLabel={posLabel} posSort={posSort} useElemHeight={useElemHeight} zafronixGet={zafronixGet} Badge={Badge} Card={Card} Crest={Crest} Pill={Pill} QuickFacts={QuickFacts} RC={RC} RecentForm={RecentForm} TeamHistoryCard={TeamHistoryCard}/>}      
+      {mode==="team" && <StatsTab language={language} t={t} initial={initial} tabTop={childTop} C={C} DS={DS} GROUPS={GROUPS} PREDS={PREDS} RECENT4={RECENT4} TEAMS={TEAMS} getFlag={getFlag} isCaptain={isCaptain} parseName={parseName} posColor={posColor} posLabel={posLabel} posSort={posSort} useElemHeight={useElemHeight} zafronixGet={zafronixGet} Badge={Badge} Card={Card} Crest={Crest} Pill={Pill} QuickFacts={QuickFacts} RC={RC} RecentForm={RecentForm} TeamHistoryCard={TeamHistoryCard}/>}      
       {mode==="h2h" && <H2HTab tabTop={childTop}/>}      
       {mode==="scorers" && <TopScorersTab tabTop={childTop}/>}      
     </div>
@@ -6218,6 +6244,9 @@ function AmazonBtn({ q, label }) {
 }
 
 function ShopTab({ tabTop=116, geoData=null }) {
+  const { language } = useI18n();
+  const isPtBR = language === "pt-BR";
+  const tx = (en, pt) => isPtBR ? pt : en;
   const userState = geoData?.region || "";
   const showHRB = HRB_STATES.has(userState);
   const [amazonOpen, setAmazonOpen] = useState(false);
@@ -6227,23 +6256,23 @@ function ShopTab({ tabTop=116, geoData=null }) {
 
       {/* Header */}
       <div style={{padding:"16px 16px 8px"}}>
-        <div style={{fontWeight:800,fontSize:18,color:C.green,marginBottom:4}}>⚽ Fan Shop</div>
-        <div style={{fontSize:12,color:C.dim}}>Support the app — we earn a small commission at no cost to you.</div>
+        <div style={{fontWeight:800,fontSize:18,color:C.green,marginBottom:4}}>⚽ {tx("Fan Shop", "Loja do Torcedor")}</div>
+        <div style={{fontSize:12,color:C.dim}}>{tx("Support the app — we earn a small commission at no cost to you.", "Apoie o app — podemos receber uma pequena comissão sem custo adicional para você.")}</div>
       </div>
 
       {/* Watch Live — Fubo */}
       <div style={{padding:"0 16px",marginTop:8}}>
-        <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10}}>📡 Watch Live</div>
+        <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10}}>📡 {tx("Watch Live", "Assista ao vivo")}</div>
         <a href={AFFILIATE.fubo} target="_blank" rel="noopener noreferrer sponsored" style={{textDecoration:"none"}}>
           <div style={{display:"flex",alignItems:"center",gap:12,padding:"14px",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:12,cursor:"pointer"}}>
             <span style={{fontSize:28,flexShrink:0}}>📺</span>
             <div style={{flex:1}}>
-              <div style={{fontWeight:700,fontSize:14,color:C.text}}>Watch on Fubo</div>
-              <div style={{fontSize:11,color:C.mid,marginTop:2}}>Stream every World Cup match live</div>
+              <div style={{fontWeight:700,fontSize:14,color:C.text}}>{tx("Watch on Fubo", "Assista no Fubo")}</div>
+              <div style={{fontSize:11,color:C.mid,marginTop:2}}>{tx("Stream every World Cup match live", "Transmita todos os jogos da Copa ao vivo")}</div>
               <div style={{fontSize:10,color:C.dim,marginTop:2}}>FOX · FS1 · Telemundo · Peacock</div>
             </div>
             <div style={{background:`${C.green}22`,border:`1px solid ${C.green}44`,borderRadius:8,padding:"4px 10px"}}>
-              <div style={{fontSize:11,fontWeight:700,color:C.green}}>Try Free →</div>
+              <div style={{fontSize:11,fontWeight:700,color:C.green}}>{tx("Try Free →", "Teste grátis →")}</div>
             </div>
           </div>
         </a>
@@ -6251,17 +6280,17 @@ function ShopTab({ tabTop=116, geoData=null }) {
 
       {/* Watch Abroad — NordVPN */}
       <div style={{padding:"0 16px",marginTop:12}}>
-        <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10}}>🌍 Watch Abroad</div>
+        <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10}}>🌍 {tx("Watch Abroad", "Assista fora do país")}</div>
         <a href={AFFILIATE.nordvpn} target="_blank" rel="noopener noreferrer sponsored" style={{textDecoration:"none"}}>
           <div style={{display:"flex",alignItems:"center",gap:12,padding:"14px",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:12,cursor:"pointer"}}>
             <span style={{fontSize:28,flexShrink:0}}>🔒</span>
             <div style={{flex:1}}>
               <div style={{fontWeight:700,fontSize:14,color:C.text}}>NordVPN</div>
-              <div style={{fontSize:11,color:C.mid,marginTop:2}}>Watch WC from anywhere in the world</div>
-              <div style={{fontSize:10,color:C.dim,marginTop:2}}>Unblock regional streams · 30-day guarantee</div>
+              <div style={{fontSize:11,color:C.mid,marginTop:2}}>{tx("Watch WC from anywhere in the world", "Assista à Copa de qualquer lugar do mundo")}</div>
+              <div style={{fontSize:10,color:C.dim,marginTop:2}}>{tx("Unblock regional streams · 30-day guarantee", "Desbloqueie transmissões regionais · garantia de 30 dias")}</div>
             </div>
             <div style={{background:`${C.blue}22`,border:`1px solid ${C.blue}44`,borderRadius:8,padding:"4px 10px"}}>
-              <div style={{fontSize:11,fontWeight:700,color:C.blue}}>Get Deal →</div>
+              <div style={{fontSize:11,fontWeight:700,color:C.blue}}>{tx("Get Deal →", "Ver oferta →")}</div>
             </div>
           </div>
         </a>
@@ -6270,17 +6299,17 @@ function ShopTab({ tabTop=116, geoData=null }) {
       {/* Hard Rock Bet — geo-gated */}
       {showHRB && (
         <div style={{padding:"0 16px",marginTop:12}}>
-          <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10}}>🎰 Bet on It</div>
+          <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10}}>🎰 {tx("Bet on It", "Aposte")}</div>
           <a href={AFFILIATE.hrb} target="_blank" rel="noopener noreferrer sponsored" style={{textDecoration:"none"}}>
             <div style={{display:"flex",alignItems:"center",gap:12,padding:"14px",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:12,cursor:"pointer"}}>
               <span style={{fontSize:28,flexShrink:0}}>🎯</span>
               <div style={{flex:1}}>
                 <div style={{fontWeight:700,fontSize:14,color:C.text}}>Hard Rock Bet</div>
-                <div style={{fontSize:11,color:C.mid,marginTop:2}}>Bet on every World Cup match</div>
+                <div style={{fontSize:11,color:C.mid,marginTop:2}}>{tx("Bet on every World Cup match", "Aposte em todos os jogos da Copa")}</div>
                 <div style={{fontSize:10,color:C.dim,marginTop:2}}>21+ · Gambling problem? Call 1-800-GAMBLER</div>
               </div>
               <div style={{background:`${C.red}22`,border:`1px solid ${C.red}44`,borderRadius:8,padding:"4px 10px"}}>
-                <div style={{fontSize:11,fontWeight:700,color:C.red}}>Bet Now →</div>
+                <div style={{fontSize:11,fontWeight:700,color:C.red}}>{tx("Bet Now →", "Aposte agora →")}</div>
               </div>
             </div>
           </a>
@@ -6289,13 +6318,13 @@ function ShopTab({ tabTop=116, geoData=null }) {
 
       {/* Amazon — collapsible */}
       <div style={{padding:"0 16px",marginTop:16}}>
-        <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10}}>🛍️ Buy World Cup Merchandise</div>
+        <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10}}>🛍️ {tx("Buy World Cup Merchandise", "Produtos da Copa")}</div>
         <button onClick={()=>setAmazonOpen(v=>!v)} style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 14px",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:amazonOpen?"12px 12px 0 0":12,cursor:"pointer",color:C.text}}>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             <span style={{fontSize:20}}>🛒</span>
             <div style={{textAlign:"left"}}>
-              <div style={{fontWeight:700,fontSize:14,color:C.text}}>Shop on Amazon</div>
-              <div style={{fontSize:11,color:C.dim,marginTop:1}}>Jerseys, balls, decor & more</div>
+              <div style={{fontWeight:700,fontSize:14,color:C.text}}>{tx("Shop on Amazon", "Comprar na Amazon")}</div>
+              <div style={{fontSize:11,color:C.dim,marginTop:1}}>{tx("Jerseys, balls, decor & more", "Camisas, bolas, decoração e mais")}</div>
             </div>
           </div>
           <span style={{fontSize:16,color:C.gold,transform:amazonOpen?"rotate(90deg)":"none",transition:"transform .2s"}}>›</span>
@@ -6307,7 +6336,7 @@ function ShopTab({ tabTop=116, geoData=null }) {
                 <div style={{display:"flex",alignItems:"center",gap:12,padding:"11px 14px",background:C.s1,borderTop:i>0?`1px solid ${C.b1}`:"none",cursor:"pointer"}}>
                   <span style={{fontSize:20,flexShrink:0}}>{cat.icon}</span>
                   <span style={{fontSize:13,fontWeight:600,color:C.text,flex:1}}>{cat.label}</span>
-                  <span style={{fontSize:11,color:C.gold}}>Shop →</span>
+                  <span style={{fontSize:11,color:C.gold}}>{tx("Shop →", "Comprar →")}</span>
                 </div>
               </a>
             ))}
@@ -6333,19 +6362,130 @@ function ShopTab({ tabTop=116, geoData=null }) {
 // MyWorldCupTab moved to ./tabs/MyWorldCupTab.jsx (extracted for maintainability).
 
 const TABS = [
-  {id:"home",      icon:"🏠", label:"My WC"},
-  {id:"live",      icon:"🔴", label:"Live"},
-  {id:"schedule",  icon:"📋", label:"Schedule"},
-  {id:"groups",    icon:"🗂️", label:"Groups"},
-  {id:"bracket",   icon:"🏆", label:"Bracket"},
-  {id:"predictor", icon:"🎯", label:"Fantasy"},
-  {id:"shop",      icon:"🏪", label:"Shop"},
-  {id:"ask",       icon:"🔎", label:"Ask"},
-  {id:"stats",     icon:"📊", label:"Stats"},
-  {id:"news",      icon:"📰", label:"WC News"},
-  {id:"predict",   icon:"📈", label:"Odds"},
-  {id:"sim",       icon:"🎮", label:"Simulator"},
+  {id:"home",      icon:"🏠", labelKey:"tabs.home",      label:"My WC"},
+  {id:"live",      icon:"🔴", labelKey:"tabs.live",      label:"Live"},
+  {id:"schedule",  icon:"📋", labelKey:"tabs.schedule",  label:"Schedule"},
+  {id:"groups",    icon:"🗂️", labelKey:"tabs.groups",    label:"Groups"},
+  {id:"bracket",   icon:"🏆", labelKey:"tabs.bracket",   label:"Bracket"},
+  {id:"predictor", icon:"🎯", labelKey:"tabs.predictor", label:"Fantasy"},
+  {id:"shop",      icon:"🏪", labelKey:"tabs.shop",      label:"Shop"},
+  {id:"ask",       icon:"🔎", labelKey:"tabs.ask",       label:"Ask"},
+  {id:"stats",     icon:"📊", labelKey:"tabs.stats",     label:"Stats"},
+  {id:"news",      icon:"📰", labelKey:"tabs.news",      label:"WC News"},
+  {id:"predict",   icon:"📈", labelKey:"tabs.predict",   label:"Odds"},
+  {id:"sim",       icon:"🎮", labelKey:"tabs.sim",       label:"Simulator"},
 ];
+
+// ── DEV i18n experiment ──────────────────────────────────────────────────
+// Lightweight, dependency-free first pass. This lets us prioritize Brazilian
+// Portuguese without touching bracket, fantasy, live score, or API logic.
+const LANGUAGES = [
+  { code:"en", label:"English", short:"EN", flag:"🇺🇸" },
+  { code:"pt-BR", label:"Português do Brasil", short:"PT-BR", flag:"🇧🇷" },
+];
+
+const I18N = {
+  en: {
+    "language.label":"Language",
+    "header.notifications":"Notifications",
+    "header.myAccount":"My Account",
+    "header.switchToLight":"Switch to light mode",
+    "header.switchToDark":"Switch to dark mode",
+    "tabs.home":"My WC",
+    "tabs.live":"Live",
+    "tabs.schedule":"Schedule",
+    "tabs.groups":"Groups",
+    "tabs.bracket":"Bracket",
+    "tabs.predictor":"Bolão",
+    "tabs.shop":"Shop",
+    "tabs.ask":"Ask",
+    "tabs.stats":"Estatísticas",
+    "tabs.news":"WC News",
+    "tabs.predict":"Odds",
+    "tabs.sim":"Simulator",
+    "setup.notifications":"Set up notifications →",
+    "setup.finish":"Finish setup →",
+  },
+  "pt-BR": {
+    "language.label":"Idioma",
+    "header.notifications":"Notificações",
+    "header.myAccount":"Minha conta",
+    "header.switchToLight":"Mudar para modo claro",
+    "header.switchToDark":"Mudar para modo escuro",
+    "tabs.home":"Meu Mundial",
+    "tabs.live":"Ao vivo",
+    "tabs.schedule":"Tabela",
+    "tabs.groups":"Grupos",
+    "tabs.bracket":"Chaveamento",
+    "tabs.predictor":"Bolão",
+    "tabs.shop":"Loja",
+    "tabs.ask":"Perguntar",
+    "tabs.stats":"Estatísticas",
+    "tabs.news":"Notícias",
+    "tabs.predict":"Odds",
+    "tabs.sim":"Simulador",
+    "setup.notifications":"Ativar notificações →",
+    "setup.finish":"Concluir configuração →",
+  },
+};
+
+function detectPreferredLanguage() {
+  // Use the user's OS/browser language only on first launch.
+  // Portuguese variants (pt, pt-BR, pt-PT, etc.) default to Brazilian
+  // Portuguese for now; everything else defaults to English. Manual
+  // selection still wins and is stored in localStorage.
+  try {
+    const saved = localStorage.getItem("wc2026_language");
+    if (I18N[saved]) return saved;
+  } catch {}
+
+  try {
+    const langs = Array.isArray(navigator.languages) && navigator.languages.length
+      ? navigator.languages
+      : [navigator.language || ""];
+    const hasPortuguese = langs.some(l => String(l || "").toLowerCase().startsWith("pt"));
+    return hasPortuguese ? "pt-BR" : "en";
+  } catch {
+    return "en";
+  }
+}
+
+function useI18n() {
+  const [language, setLanguageState] = useState(() => detectPreferredLanguage());
+  const setLanguage = useCallback((next) => {
+    const safe = I18N[next] ? next : "en";
+    setLanguageState(safe);
+    try { localStorage.setItem("wc2026_language", safe); } catch {}
+  }, []);
+  const t = useCallback((key, fallback="") => I18N[language]?.[key] || I18N.en?.[key] || fallback || key, [language]);
+  return { language, setLanguage, t };
+}
+
+function LanguageSelector({ language, setLanguage, C }) {
+  return (
+    <select
+      value={language}
+      onChange={(e)=>setLanguage(e.target.value)}
+      title={I18N[language]?.["language.label"] || "Language"}
+      aria-label={I18N[language]?.["language.label"] || "Language"}
+      style={{
+        height:36,
+        maxWidth:86,
+        borderRadius:18,
+        border:`2px solid ${C.b1}`,
+        background:C.s1,
+        color:C.text,
+        fontSize:11,
+        fontWeight:800,
+        padding:"0 6px",
+        cursor:"pointer",
+        flexShrink:0,
+      }}
+    >
+      {LANGUAGES.map(l => <option key={l.code} value={l.code}>{l.flag} {l.short}</option>)}
+    </select>
+  );
+}
 
 // ── PWA INSTALL BANNER ────────────────────────────────────────────────────
 function InstallBanner() {
@@ -6507,6 +6647,7 @@ function AppContent() {
     return () => clearTimeout(t);
   }, []);
   const [tab, setTab] = useState("home");
+  const { language, setLanguage, t } = useI18n();
   const [masterPushSubscribed, setMasterPushSubscribed] = useState(false);
 
   // Detect league invite from URL ?join=CODE
@@ -6956,19 +7097,20 @@ function AppContent() {
               </div>
             </div>
             <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <LanguageSelector language={language} setLanguage={setLanguage} C={C} />
               {/* Dark/light toggle */}
-              <button onClick={toggleDark} title={dark?"Switch to light mode":"Switch to dark mode"} style={{position:"relative",width:56,height:28,borderRadius:14,border:"none",background:dark?"#4ade80":"#1a3828",cursor:"pointer",flexShrink:0,padding:0,transition:"background .25s"}}>
+              <button onClick={toggleDark} title={dark?t("header.switchToLight","Switch to light mode"):t("header.switchToDark","Switch to dark mode")} style={{position:"relative",width:56,height:28,borderRadius:14,border:"none",background:dark?"#4ade80":"#1a3828",cursor:"pointer",flexShrink:0,padding:0,transition:"background .25s"}}>
                 <span style={{position:"absolute",top:4,left:dark?32:4,width:20,height:20,borderRadius:"50%",background:"#e5e5ea",boxShadow:"0 1px 4px rgba(0,0,0,.35)",transition:"left .22s cubic-bezier(.4,0,.2,1)",display:"block"}}/>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(5,50,20,0.8)" strokeWidth="2.5" strokeLinecap="round" style={{position:"absolute",left:7,top:7,opacity:dark?1:0,transition:"opacity .2s",pointerEvents:"none"}}><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.22" y1="19.78" x2="6.34" y2="17.66"/><line x1="17.66" y1="6.34" x2="19.78" y2="4.22"/></svg>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="rgba(255,255,255,0.9)" stroke="none" style={{position:"absolute",right:7,top:8,opacity:dark?0:1,transition:"opacity .2s",pointerEvents:"none"}}><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
               </button>
               {/* Notification inbox bell */}
-              <button onClick={()=>setShowInbox(true)} title="Notifications" style={{position:"relative",width:36,height:36,borderRadius:"50%",border:`2px solid ${unreadCount>0?C.gold:dark?"#2a4f38":"#1a3828"}`,background:unreadCount>0?`${C.gold}18`:dark?"#0c1a12":"#1a3828",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,flexShrink:0,padding:0}}>
+              <button onClick={()=>setShowInbox(true)} title={t("header.notifications","Notifications")} style={{position:"relative",width:36,height:36,borderRadius:"50%",border:`2px solid ${unreadCount>0?C.gold:dark?"#2a4f38":"#1a3828"}`,background:unreadCount>0?`${C.gold}18`:dark?"#0c1a12":"#1a3828",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,flexShrink:0,padding:0}}>
                 🔔
                 {unreadCount>0 && <span style={{position:"absolute",top:-2,right:-2,width:16,height:16,borderRadius:"50%",background:C.red,border:`2px solid ${C.bg}`,fontSize:9,fontWeight:900,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",zIndex:2}}>{unreadCount}</span>}
               </button>
               {/* Profile / sync avatar */}
-              <button onClick={()=>setShowSyncModal(true)} title={"My Account"} style={{position:"relative",width:36,height:36,borderRadius:"50%",border:`2px solid ${syncProfile?C.green:dark?"#2a4f38":"#1a3828"}`,background:syncProfile?`${C.green}18`:dark?"#0c1a12":"#1a3828",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,flexShrink:0,overflow:"hidden",padding:0}}>
+              <button onClick={()=>setShowSyncModal(true)} title={t("header.myAccount","My Account")} style={{position:"relative",width:36,height:36,borderRadius:"50%",border:`2px solid ${syncProfile?C.green:dark?"#2a4f38":"#1a3828"}`,background:syncProfile?`${C.green}18`:dark?"#0c1a12":"#1a3828",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,flexShrink:0,overflow:"hidden",padding:0}}>
                 {userAvatar?.startsWith("data:") ? <img src={userAvatar} style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:"50%"}} alt="avatar"/>
                 : userAvatar?.startsWith("icon:") ? (()=>{const ic=FOOTBALL_ICONS?.find(i=>i.id===userAvatar);return ic?ic.el(22):"⚽";})()
                 : userAvatar?.startsWith("flag:") ? <img src={`https://flagcdn.com/w80/${FLAG_CODES_MAP[userAvatar.slice(5)]}.png`} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="avatar"/>
@@ -6981,10 +7123,10 @@ function AppContent() {
 
           <div style={{position:"relative"}}>
             <div style={{display:"flex",overflowX:"auto",scrollbarWidth:"none",marginBottom:-1}}>
-              {TABS.map(t=>(
-                <button key={t.id} onClick={()=>setTab(t.id)} style={{flex:"0 0 auto",padding:"8px 8px",background:"none",border:"none",borderBottom:`2px solid ${tab===t.id?C.green:"transparent"}`,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,color:tab===t.id?C.green:C.dim,position:"relative"}}>
-                  <span style={{fontSize:14,animation:t.id==="live"&&(hasLiveMatches||hasImminentKickoff)?(hasImminentKickoff?"pulse 0.5s infinite":"pulse 1.5s infinite"):undefined}}>{t.icon}</span>
-                  <span style={{fontSize:9,fontWeight:600,whiteSpace:"nowrap"}}>{t.label}</span>
+              {TABS.map(tabItem=>(
+                <button key={tabItem.id} onClick={()=>setTab(tabItem.id)} style={{flex:"0 0 auto",padding:"8px 8px",background:"none",border:"none",borderBottom:`2px solid ${tab===tabItem.id?C.green:"transparent"}`,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,color:tab===tabItem.id?C.green:C.dim,position:"relative"}}>
+                  <span style={{fontSize:14,animation:tabItem.id==="live"&&(hasLiveMatches||hasImminentKickoff)?(hasImminentKickoff?"pulse 0.5s infinite":"pulse 1.5s infinite"):undefined}}>{tabItem.icon}</span>
+                  <span style={{fontSize:9,fontWeight:600,whiteSpace:"nowrap"}}>{t(tabItem.labelKey, tabItem.label)}</span>
                 </button>
               ))}
             </div>
@@ -6994,18 +7136,18 @@ function AppContent() {
         </div>
         <PullToRefresh onRefresh={async()=>{ if(refreshScores) await refreshScores(); }}>
         <div style={{padding:"0 13px 100px"}}>
-          {tab==="home"      && <MyWorldCupTab favTeams={favTeams} saved={saved} syncProfile={syncProfile} displayName={displayName} userAvatar={userAvatar} onMatchTap={onMatchTap} setTab={setTab} onPickTeams={()=>setShowSyncModal(true)} C={C} DS={DS} GROUPS={GROUPS} MATCHES={MATCHES} resolvedMatches={resolvedMatches} MATCH_UTC={MATCH_UTC} R32_SLOT_TEMPLATE={R32_SLOT_TEMPLATE} LiveScoresCtx={LiveScoresCtx} getFlag={getFlag} getUserId={getUserId} statusIsFinished={statusIsFinished} calcStandings={calcStandings} apiPred={apiPred} Crest={Crest}/>}
+          {tab==="home"      && <MyWorldCupTab language={language} favTeams={favTeams} saved={saved} syncProfile={syncProfile} displayName={displayName} userAvatar={userAvatar} onMatchTap={onMatchTap} setTab={setTab} onPickTeams={()=>setShowSyncModal(true)} C={C} DS={DS} GROUPS={GROUPS} MATCHES={MATCHES} resolvedMatches={resolvedMatches} MATCH_UTC={MATCH_UTC} R32_SLOT_TEMPLATE={R32_SLOT_TEMPLATE} LiveScoresCtx={LiveScoresCtx} getFlag={getFlag} getUserId={getUserId} statusIsFinished={statusIsFinished} calcStandings={calcStandings} apiPred={apiPred} Crest={Crest}/>}
           {tab==="live"      && <LiveTab onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} tabTop={tabBarBottom} savedIds={savedIds} matches={resolvedMatches}/>}
-          {tab==="schedule"  && <SchedTab onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} tabTop={tabBarBottom} savedIds={savedIds} matches={resolvedMatches} C={C} FavCtx={FavCtx} LiveScoresCtx={LiveScoresCtx} MATCHES={MATCHES} MATCH_DATES={MATCH_DATES} MATCH_UTC={MATCH_UTC} ALL_TEAMS={ALL_TEAMS} calcStandings={calcStandings} getFlag={getFlag} matchTimes={matchTimes} statusIsFinished={statusIsFinished} useElemHeight={useElemHeight} MatchCard={MatchCard} Pill={Pill}/>}
-          {tab==="groups"    && <GrpTab onTeam={onTeam} onMatchTap={onMatchTap} tabTop={tabBarBottom} C={C} GROUPS={GROUPS} LiveScoresCtx={LiveScoresCtx} MATCHES={MATCHES} calcStandings={calcStandings} normTeam={normTeam} statusIsFinished={statusIsFinished} statusIsLive={statusIsLive} useElemHeight={useElemHeight} Badge={Badge} Card={Card} Crest={Crest} Pill={Pill}/>}
+          {tab==="schedule"  && <SchedTab language={language} t={t} onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} tabTop={tabBarBottom} savedIds={savedIds} matches={resolvedMatches} C={C} FavCtx={FavCtx} LiveScoresCtx={LiveScoresCtx} MATCHES={MATCHES} MATCH_DATES={MATCH_DATES} MATCH_UTC={MATCH_UTC} ALL_TEAMS={ALL_TEAMS} calcStandings={calcStandings} getFlag={getFlag} matchTimes={matchTimes} statusIsFinished={statusIsFinished} useElemHeight={useElemHeight} MatchCard={MatchCard} Pill={Pill}/>}
+          {tab==="groups"    && <GrpTab language={language} t={t} onTeam={onTeam} onMatchTap={onMatchTap} tabTop={tabBarBottom} C={C} GROUPS={GROUPS} LiveScoresCtx={LiveScoresCtx} MATCHES={MATCHES} calcStandings={calcStandings} normTeam={normTeam} statusIsFinished={statusIsFinished} statusIsLive={statusIsLive} useElemHeight={useElemHeight} Badge={Badge} Card={Card} Crest={Crest} Pill={Pill}/>}
           {tab==="stats"     && <StatsHubTab initial={statsTeam} tabTop={tabBarBottom}/>}
-          {tab==="predict"   && <PredTab tabTop={tabBarBottom} geoData={geoData} C={C} DS={DS} PREDS={PREDS} TEAMS={TEAMS} useElemHeight={useElemHeight} Badge={Badge} Card={Card} Crest={Crest} OddsLineChart={OddsLineChart}/>}
-          {tab==="predictor" && <PredictorTab syncProfile={syncProfile} displayName={displayName} onShowSync={()=>setShowSyncModal(true)} userAvatar={userAvatar} resolvedMatches={resolvedMatches} C={C} FavCtx={FavCtx} LiveScoresCtx={LiveScoresCtx} MATCHES={MATCHES} FLAG_CODES_MAP={FLAG_CODES_MAP} FOOTBALL_ICONS={FOOTBALL_ICONS} apiPred={apiPred} fantasyLockLabel={fantasyLockLabel} fantasyMatchConfirmed={fantasyMatchConfirmed} fantasyMatchLocked={fantasyMatchLocked} fantasyStageLabel={fantasyStageLabel} fantasyTeamsKnown={fantasyTeamsKnown} fantasyVisibleMatch={fantasyVisibleMatch} getUserId={getUserId} scoreOnePred={scoreOnePred} sortFantasyChronological={sortFantasyChronological} statusIsFinished={statusIsFinished} Badge={Badge} Card={Card} Crest={Crest} FantasyTeamSlot={FantasyTeamSlot} LeaguesPanel={LeaguesPanel} Pill={Pill}/>}
+          {tab==="predict"   && <PredTab language={language} t={t} tabTop={tabBarBottom} geoData={geoData} C={C} DS={DS} PREDS={PREDS} TEAMS={TEAMS} useElemHeight={useElemHeight} Badge={Badge} Card={Card} Crest={Crest} OddsLineChart={OddsLineChart}/>}
+          {tab==="predictor" && <PredictorTab language={language} t={t} syncProfile={syncProfile} displayName={displayName} onShowSync={()=>setShowSyncModal(true)} userAvatar={userAvatar} resolvedMatches={resolvedMatches} C={C} FavCtx={FavCtx} LiveScoresCtx={LiveScoresCtx} MATCHES={MATCHES} FLAG_CODES_MAP={FLAG_CODES_MAP} FOOTBALL_ICONS={FOOTBALL_ICONS} apiPred={apiPred} fantasyLockLabel={fantasyLockLabel} fantasyMatchConfirmed={fantasyMatchConfirmed} fantasyMatchLocked={fantasyMatchLocked} fantasyStageLabel={fantasyStageLabel} fantasyTeamsKnown={fantasyTeamsKnown} fantasyVisibleMatch={fantasyVisibleMatch} getUserId={getUserId} scoreOnePred={scoreOnePred} sortFantasyChronological={sortFantasyChronological} statusIsFinished={statusIsFinished} Badge={Badge} Card={Card} Crest={Crest} FantasyTeamSlot={FantasyTeamSlot} LeaguesPanel={LeaguesPanel} Pill={Pill}/>}
           {tab==="shop"      && <ShopTab tabTop={tabBarBottom} geoData={geoData}/>}
-          {tab==="sim"       && <SimTab tabTop={tabBarBottom} C={C} DS={DS} getFlag={getFlag} runFullSim={runFullSim} useElemHeight={useElemHeight} Card={Card} Crest={Crest} Pill={Pill}/>}
-          {tab==="bracket"   && <MyBracketTab tabTop={tabBarBottom} onMatchTap={onMatchTap} C={C} DS={DS} GROUPS={GROUPS} LiveScoresCtx={LiveScoresCtx} MATCHES={MATCHES} R32_SLOT_TEMPLATE={R32_SLOT_TEMPLATE} STR={STR} gs={gs} calcStandings={calcStandings} statusIsFinished={statusIsFinished} useElemHeight={useElemHeight} defaultBracketGroups={defaultBracketGroups} readSavedMyBracket={readSavedMyBracket} writeSavedMyBracket={writeSavedMyBracket} clearSavedMyBracket={clearSavedMyBracket} Card={Card} Crest={Crest} DragList={DragList} Pill={Pill} VisualBracketTree={VisualBracketTree}/>}
-          {tab==="ask"       && <AskWorldCupTab tabTop={tabBarBottom} resolvedMatches={resolvedMatches} C={C} GROUPS={GROUPS} LiveScoresCtx={LiveScoresCtx} MATCHES={MATCHES} STR={STR} TEAMS={TEAMS} PREDS={PREDS} FORM_DATA={FORM_DATA} WC_TOP_SCORERS={WC_TOP_SCORERS} getFlag={getFlag} Card={Card}/>}
-          {tab==="news"       && <WCNewsTab tabTop={tabBarBottom} C={C} DS={DS} AFFILIATE={AFFILIATE} SHOP_CATEGORIES={SHOP_CATEGORIES} timeAgo={timeAgo} useElemHeight={useElemHeight} SkeletonNewsCard={SkeletonNewsCard}/>}
+          {tab==="sim"       && <SimTab language={language} t={t} tabTop={tabBarBottom} C={C} DS={DS} getFlag={getFlag} runFullSim={runFullSim} useElemHeight={useElemHeight} Card={Card} Crest={Crest} Pill={Pill}/>}
+          {tab==="bracket"   && <MyBracketTab language={language} t={t} tabTop={tabBarBottom} onMatchTap={onMatchTap} C={C} DS={DS} GROUPS={GROUPS} LiveScoresCtx={LiveScoresCtx} MATCHES={MATCHES} R32_SLOT_TEMPLATE={R32_SLOT_TEMPLATE} STR={STR} gs={gs} calcStandings={calcStandings} statusIsFinished={statusIsFinished} useElemHeight={useElemHeight} defaultBracketGroups={defaultBracketGroups} readSavedMyBracket={readSavedMyBracket} writeSavedMyBracket={writeSavedMyBracket} clearSavedMyBracket={clearSavedMyBracket} Card={Card} Crest={Crest} DragList={DragList} Pill={Pill} VisualBracketTree={VisualBracketTree}/>}
+          {tab==="ask"       && <AskWorldCupTab language={language} t={t} tabTop={tabBarBottom} resolvedMatches={resolvedMatches} C={C} GROUPS={GROUPS} LiveScoresCtx={LiveScoresCtx} MATCHES={MATCHES} STR={STR} TEAMS={TEAMS} PREDS={PREDS} FORM_DATA={FORM_DATA} WC_TOP_SCORERS={WC_TOP_SCORERS} getFlag={getFlag} Card={Card}/>}
+          {tab==="news"       && <WCNewsTab language={language} t={t} tabTop={tabBarBottom} C={C} DS={DS} AFFILIATE={AFFILIATE} SHOP_CATEGORIES={SHOP_CATEGORIES} timeAgo={timeAgo} useElemHeight={useElemHeight} SkeletonNewsCard={SkeletonNewsCard}/>}
           {tab==="saved"     && <div style={{paddingTop:14}}><SavedTab saved={saved} onRemove={onRemove} onMatchTap={onMatchTap} syncUid={syncUid} syncPin={syncProfile?.pin||""} onPushSubscribed={()=>setMasterPushSubscribed(true)}/></div>}
         </div>
         </PullToRefresh>
@@ -7066,7 +7208,7 @@ function AppContent() {
               <div style={{fontSize:48,marginBottom:12}}>🔔</div>
               <div style={{fontSize:18,fontWeight:800,color:C.text,marginBottom:8}}>Get Kickoff Alerts</div>
               <div style={{fontSize:13,color:C.mid,lineHeight:1.6,marginBottom:20}}>Save matches + tap <strong style={{color:C.gold}}>&ldquo;Notify all&rdquo;</strong> in My Matches to get 30-min alerts before every kickoff — automatically.</div>
-              <button onClick={()=>{dismissBanner();setTab("saved");}} style={{width:"100%",padding:"13px",background:`linear-gradient(135deg,${C.gold},#f59e0b)`,border:"none",borderRadius:12,color:"#030a05",fontSize:15,fontWeight:800,cursor:"pointer",marginBottom:8}}>Set up notifications →</button>
+              <button onClick={()=>{dismissBanner();setTab("saved");}} style={{width:"100%",padding:"13px",background:`linear-gradient(135deg,${C.gold},#f59e0b)`,border:"none",borderRadius:12,color:"#030a05",fontSize:15,fontWeight:800,cursor:"pointer",marginBottom:8}}>{t("setup.notifications","Set up notifications →")}</button>
               <button onClick={dismissBanner} style={{width:"100%",padding:"8px",background:"none",border:"none",color:C.dim,fontSize:12,cursor:"pointer"}}>Already set up on another device · dismiss</button>
             </div>
           </div>
@@ -7078,7 +7220,7 @@ function AppContent() {
               <div style={{fontSize:48,marginBottom:12}}>🔔</div>
               <div style={{fontSize:18,fontWeight:800,color:C.text,marginBottom:8}}>Almost There!</div>
               <div style={{fontSize:13,color:C.mid,lineHeight:1.6,marginBottom:20}}>Notifications are enabled — tap <strong style={{color:C.green}}>&ldquo;Notify all&rdquo;</strong> in My Matches to complete setup and start receiving kickoff alerts.</div>
-              <button onClick={()=>{dismissBanner();setTab("saved");}} style={{width:"100%",padding:"13px",background:`linear-gradient(135deg,${C.green},#22c55e)`,border:"none",borderRadius:12,color:"#030a05",fontSize:15,fontWeight:800,cursor:"pointer",marginBottom:8}}>Finish setup →</button>
+              <button onClick={()=>{dismissBanner();setTab("saved");}} style={{width:"100%",padding:"13px",background:`linear-gradient(135deg,${C.green},#22c55e)`,border:"none",borderRadius:12,color:"#030a05",fontSize:15,fontWeight:800,cursor:"pointer",marginBottom:8}}>{t("setup.finish","Finish setup →")}</button>
               <button onClick={dismissBanner} style={{width:"100%",padding:"8px",background:"none",border:"none",color:C.dim,fontSize:12,cursor:"pointer"}}>Already set up on another device · dismiss</button>
             </div>
           </div>

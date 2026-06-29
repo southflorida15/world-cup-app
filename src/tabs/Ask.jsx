@@ -1,4 +1,5 @@
 import React, { useState, useContext } from "react";
+import { displayTeamName, displayStageName, displayVenueName } from "../i18n/display";
 import { WC_TEAM_HISTORY, getPlayerScoringLog } from "../data/wcTeamHistory";
 
 // Shared App.jsx values, passed in as props rather than imported directly
@@ -8,11 +9,15 @@ import { WC_TEAM_HISTORY, getPlayerScoringLog } from "../data/wcTeamHistory";
 // WC_TOP_SCORERS, getFlag, Card
 
 export default function AskWorldCupTab({
+  language="en", t=(key, fallback)=>fallback,
   tabTop=116, resolvedMatches,
   // Shared App.jsx values, passed as props to avoid a circular import
   C, GROUPS, LiveScoresCtx, MATCHES, STR, TEAMS, PREDS, FORM_DATA,
   WC_TOP_SCORERS, getFlag, Card,
 }) {
+  const isPtBR = language === "pt-BR";
+  const tx = (en, pt) => isPtBR ? pt : en;
+
   // Was: every match title throughout this component (dozens of spots)
   // built from the raw MATCHES array, which still holds an unresolved
   // slot placeholder ("2A"/"2B") for an R32+ match until that group
@@ -27,35 +32,35 @@ export default function AskWorldCupTab({
   const scoresRef = scores || {};
 
   const examples = [
-    "Teams at WC for first time",
-    "Most international caps",
-    "Top players by goals",
-    "Most titled teams",
-    "Championship odds",
-    "Strongest teams",
-    "Best form teams",
-    "Total goals scored",
-    "Highest scoring match",
-    "Biggest win so far",
-    "Which teams have won so far",
-    "Unbeaten teams",
-    "How many matches left",
-    "Matches today",
-    "Next match",
-    "Next Brazil match",
-    "Group A matches",
-    "Matches in Miami",
-    "Germany all-time top scorers",
-    "Brazil vs France history",
-    "Who is coaching Spain",
-    "Teams from Africa",
-    "Final match",
+    tx("Teams at WC for first time", "Times estreantes na Copa"),
+    tx("Most international caps", "Mais jogos por seleção"),
+    tx("Top players by goals", "Artilheiros"),
+    tx("Most titled teams", "Times com mais títulos"),
+    tx("Championship odds", "Chances de título"),
+    tx("Strongest teams", "Times mais fortes"),
+    tx("Best form teams", "Times em melhor fase"),
+    tx("Total goals scored", "Total de gols marcados"),
+    tx("Highest scoring match", "Jogo com mais gols"),
+    tx("Biggest win so far", "Maior goleada até agora"),
+    tx("Which teams have won so far", "Quais times já venceram"),
+    tx("Unbeaten teams", "Times invictos"),
+    tx("How many matches left", "Quantos jogos faltam"),
+    tx("Matches today", "Jogos de hoje"),
+    tx("Next match", "Próximo jogo"),
+    tx("Next Brazil match", "Próximo jogo do Brasil"),
+    tx("Group A matches", "Jogos do Grupo A"),
+    tx("Matches in Miami", "Jogos em Miami"),
+    tx("Germany all-time top scorers", "Maiores artilheiros da Alemanha"),
+    tx("Brazil vs France history", "Histórico Brasil x França"),
+    tx("Who is coaching Spain", "Quem treina a Espanha"),
+    tx("Teams from Africa", "Times da África"),
+    tx("Final match", "Final"),
   ];
 
   const norm = (v) => String(v || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
   const fmtMatch = (m) => ({
-    title: `${getFlag(m.home)} ${m.home} vs ${getFlag(m.away)} ${m.away}`,
-    meta: `${m.date} · ${displayKickoffTime(m)} · ${m.venue}${m.group ? ` · Group ${m.group}` : ""}`,
+    title: `${getFlag(m.home)} ${displayTeamName(m.home, language)} vs ${getFlag(m.away)} ${displayTeamName(m.away, language)}`,
+    meta: `${m.date} · ${displayKickoffTime(m)} · ${displayVenueName(m.venue, language)}${m.group ? ` · ${language === "pt-BR" ? "Grupo" : "Group"} ${m.group}` : ""}`,
     match: m,
   });
 
@@ -144,7 +149,7 @@ export default function AskWorldCupTab({
 
   const answerLocal = (raw) => {
     const text = norm(raw);
-    if (!text) return { title:"Ask anything about the World Cup", summary:"Try one of the popular questions below.", rows:[] };
+    if (!text) return { title:tx("Ask anything about the World Cup", "Pergunte qualquer coisa sobre a Copa"), summary:tx("Try one of the popular questions below.", "Tente uma das perguntas populares abaixo."), rows:[] };
 
     const player = findPlayerInText(text);
     if (player && (text.includes("next") || text.includes("match") || text.includes("play") || text.includes("involving"))) {
@@ -285,11 +290,11 @@ export default function AskWorldCupTab({
       if (text.includes("biggest win")) {
         const top = [...withScores].sort((a,b)=>b.diff-a.diff).slice(0,3);
         const rows = top.map(m => ({ title:`${getFlag(m.home)} ${m.home} ${m.hg}–${m.ag} ${getFlag(m.away)} ${m.away}`, meta:`${m.date} · Margin: ${m.diff}`, match:m }));
-        return { title:"Biggest wins so far", summary:`Top ${rows.length} by goal margin.`, rows };
+        return { title:tx("Biggest wins so far", "Maiores goleadas até agora"), summary:isPtBR ? `Top ${rows.length} por saldo de gols.` : `Top ${rows.length} by goal margin.`, rows };
       }
       const top = [...withScores].sort((a,b)=>b.total-a.total).slice(0,3);
       const rows = top.map(m => ({ title:`${getFlag(m.home)} ${m.home} ${m.hg}–${m.ag} ${getFlag(m.away)} ${m.away}`, meta:`${m.date} · ${m.total} goals`, match:m }));
-      return { title:"Highest scoring matches", summary:`Top ${rows.length} by total goals.`, rows };
+      return { title:tx("Highest scoring matches", "Jogos com mais gols"), summary:isPtBR ? `Top ${rows.length} por total de gols.` : `Top ${rows.length} by total goals.`, rows };
     }
 
     // Which teams have won / unbeaten
@@ -305,11 +310,11 @@ export default function AskWorldCupTab({
       });
       if (text.includes("unbeaten")) {
         const unbeaten = Object.entries(teamRecord).filter(([,r])=>r.l===0&&(r.w>0||r.d>0)).sort((a,b)=>b[1].w-a[1].w);
-        if (!unbeaten.length) return { title:"Unbeaten teams", summary:"No finished matches yet.", rows:[] };
-        return { title:`Unbeaten teams (${unbeaten.length})`, summary:unbeaten.map(([t,r])=>`${getFlag(t)} ${t}: ${r.w}W ${r.d}D`).join(" · "), rows:[] };
+        if (!unbeaten.length) return { title:tx("Unbeaten teams", "Times invictos"), summary:tx("No finished matches yet.", "Nenhum jogo finalizado ainda."), rows:[] };
+        return { title:isPtBR ? `Times invictos (${unbeaten.length})` : `Unbeaten teams (${unbeaten.length})`, summary:unbeaten.map(([t,r])=>`${getFlag(t)} ${displayTeamName(t, language)}: ${r.w}V ${r.d}E`).join(" · "), rows:[] };
       }
       const winners = Object.entries(teamRecord).filter(([,r])=>r.w>0).sort((a,b)=>b[1].w-a[1].w);
-      if (!winners.length) return { title:"No wins yet", summary:"No finished matches yet.", rows:[] };
+      if (!winners.length) return { title:"No wins yet", summary:tx("No finished matches yet.", "Nenhum jogo finalizado ainda."), rows:[] };
       return { title:`Teams with wins (${winners.length})`, summary:winners.map(([t,r])=>`${getFlag(t)} ${t}: ${r.w}W ${r.d}D ${r.l}L`).join(" · "), rows:[] };
     }
 
@@ -382,7 +387,7 @@ export default function AskWorldCupTab({
       }, 0);
       const played = finished.length;
       const avg = played > 0 ? (total/played).toFixed(2) : "—";
-      return { title:"Total goals scored", summary: played > 0 ? `${total} goals scored across ${played} finished match${played!==1?"es":""} (avg ${avg} per game).` : "No finished matches yet — check back during the tournament.", rows:[] };
+      return { title:tx("Total goals scored", "Total de gols marcados"), summary: played > 0 ? `${total} goals scored across ${played} finished match${played!==1?"es":""} (avg ${avg} per game).` : "No finished matches yet — check back during the tournament.", rows:[] };
     }
 
     if (text.includes("red card") || (text.includes("red") && text.includes("card"))) {
@@ -427,10 +432,10 @@ export default function AskWorldCupTab({
         }
         return { title:`${t1} vs ${t2} — World Cup history`, summary:`We haven't compiled World Cup history for ${t1} or ${t2} yet — coverage currently includes Brazil and the United States (2022), with more teams and tournaments being added.`, rows:[] };
       }
-      return { title:"Historical World Cup search", summary:"Ask about a specific matchup, like \"has Brazil played Switzerland in a World Cup\" — historical coverage currently includes Brazil and the United States (2022), with more being added.", rows:[] };
+      return { title:tx("Historical World Cup search", "Busca histórica da Copa"), summary:tx("Ask about a specific matchup, like \"has Brazil played Switzerland in a World Cup\" — historical coverage currently includes Brazil and the United States (2022), with more being added.", "Pergunte sobre um confronto específico, como ‘Brasil já enfrentou a Suíça em Copa?’ — a cobertura histórica ainda está em expansão."), rows:[] };
     }
     if (text.includes("past")) {
-      return { title:"Historical World Cup search", summary:"Historical match search currently covers Brazil and the United States (2022), with more teams and tournaments being added. Try schedule questions for 2026 now, like matches at 9PM ET, matches in Miami, or Brazil matches.", rows:[] };
+      return { title:tx("Historical World Cup search", "Busca histórica da Copa"), summary:"Historical match search currently covers Brazil and the United States (2022), with more teams and tournaments being added. Try schedule questions for 2026 now, like matches at 9PM ET, matches in Miami, or Brazil matches.", rows:[] };
     }
 
     return { title:"I can answer schedule questions now", summary:"Try asking about teams, groups, dates, kickoff times, cities, players, or venues. Historical/player-event queries are on the roadmap.", rows:[] };
@@ -454,18 +459,18 @@ export default function AskWorldCupTab({
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
             <div style={{fontSize:24}}>🔎</div>
             <div>
-              <div style={{fontSize:20,fontWeight:900,color:C.green,lineHeight:1}}>Ask World Cup</div>
-              <div style={{fontSize:12,color:C.mid,marginTop:3}}>Search the 2026 schedule now. Historical and live-event answers are next.</div>
+              <div style={{fontSize:20,fontWeight:900,color:C.green,lineHeight:1}}>{tx("Ask World Cup", "Pergunte sobre a Copa")}</div>
+              <div style={{fontSize:12,color:C.mid,marginTop:3}}>{tx("Search the 2026 schedule now. Historical and live-event answers are next.", "Pesquise a tabela de 2026 agora. Respostas históricas e eventos ao vivo vêm a seguir.")}</div>
             </div>
           </div>
           <div style={{display:"flex",gap:8,marginTop:12}}>
-            <input value={q} onChange={e=>setQ(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")runAsk();}} placeholder="Ask about matches, teams, times, cities..." style={{flex:1,minWidth:0,background:C.bg,border:`1px solid ${C.b2}`,borderRadius:12,padding:"11px 12px",color:C.text,fontWeight:650,fontSize:14,outline:"none"}}/>
-            <button onClick={()=>runAsk()} style={{border:"none",borderRadius:12,padding:"0 14px",background:`linear-gradient(135deg,${C.green},#22c55e)`,color:"#031008",fontWeight:900,cursor:"pointer"}}>Ask</button>
+            <input value={q} onChange={e=>setQ(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")runAsk();}} placeholder={tx("Ask about matches, teams, times, cities...", "Pergunte sobre jogos, seleções, horários, cidades...")} style={{flex:1,minWidth:0,background:C.bg,border:`1px solid ${C.b2}`,borderRadius:12,padding:"11px 12px",color:C.text,fontWeight:650,fontSize:14,outline:"none"}}/>
+            <button onClick={()=>runAsk()} style={{border:"none",borderRadius:12,padding:"0 14px",background:`linear-gradient(135deg,${C.green},#22c55e)`,color:"#031008",fontWeight:900,cursor:"pointer"}}>{tx("Ask", "Perguntar")}</button>
           </div>
         </div>
       </Card>
 
-      <div style={{fontSize:11,color:C.dim,fontWeight:800,letterSpacing:"0.12em",textTransform:"uppercase",margin:"12px 2px 8px"}}>Popular Questions</div>
+      <div style={{fontSize:11,color:C.dim,fontWeight:800,letterSpacing:"0.12em",textTransform:"uppercase",margin:"12px 2px 8px"}}>{tx("Popular Questions", "Perguntas populares")}</div>
       <div style={{display:"flex",flexWrap:"wrap",gap:8,paddingBottom:4}}>
         {examples.map(ex=><button key={ex} onClick={()=>runAsk(ex)} style={{border:`1px solid ${C.b2}`,background:C.s1,color:C.text,borderRadius:999,padding:"7px 11px",fontWeight:600,fontSize:12,cursor:"pointer"}}>{ex}</button>)}
       </div>

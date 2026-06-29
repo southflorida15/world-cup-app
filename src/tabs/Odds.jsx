@@ -1,4 +1,5 @@
 import React, { useRef } from "react";
+import { displayTeamName } from "../i18n/display";
 
 // Shared App.jsx values, passed in as props rather than imported directly
 // to avoid a circular import (App.jsx -> Odds.jsx -> App.jsx), since
@@ -6,10 +7,14 @@ import React, { useRef } from "react";
 // C, DS, PREDS, TEAMS, useElemHeight, Badge, Card, Crest, OddsLineChart
 
 export default function PredTab({
+  language="en", t=(key, fallback)=>fallback,
   tabTop=140, geoData={},
   // Shared App.jsx values, passed as props to avoid a circular import
   C, DS, PREDS, TEAMS, useElemHeight, Badge, Card, Crest, OddsLineChart,
 }) {
+  const isPtBR = language === "pt-BR";
+  const tx = (en, pt) => isPtBR ? pt : en;
+
   const top = PREDS.filter(p=>p.team!=="Others");
   const others = PREDS.find(p=>p.team==="Others");
   const max = top[0].poly;
@@ -19,10 +24,10 @@ export default function PredTab({
       <div ref={_phRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:DS.shadow.sticky,padding:"8px 13px"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <div>
-            <span style={{fontWeight:700,fontSize:15,color:C.green}}>🎯 POLYMARKET ODDS</span>
-            <span style={{fontSize:11,color:C.dim,marginLeft:8}}>Updated Jun 5, 2026</span>
+            <span style={{fontWeight:700,fontSize:15,color:C.green}}>{tx("🎯 POLYMARKET ODDS", "🎯 ODDS POLYMARKET")}</span>
+            <span style={{fontSize:11,color:C.dim,marginLeft:8}}>{tx("Updated Jun 5, 2026", "Atualizado em 5 de junho de 2026")}</span>
           </div>
-          <a href="https://polymarket.com" target="_blank" rel="noopener noreferrer" style={{fontSize:11,color:C.green,textDecoration:"none",border:`1px solid ${C.greenS}`,padding:"3px 9px",borderRadius:20}}>Live →</a>
+          <a href="https://polymarket.com" target="_blank" rel="noopener noreferrer" style={{fontSize:11,color:C.green,textDecoration:"none",border:`1px solid ${C.greenS}`,padding:"3px 9px",borderRadius:20}}>{tx("Live →", "Ao vivo →")}</a>
         </div>
       </div>
       <div style={{height:0}}/>
@@ -31,8 +36,8 @@ export default function PredTab({
       {/* Line chart */}
       <Card style={{marginBottom:14}}>
         <div style={{padding:"10px 14px",borderBottom:`1px solid ${C.b1}`}}>
-          <span style={{fontWeight:700,color:C.green,fontSize:13}}>📈 ODDS EVOLUTION · TOP 6</span>
-          <span style={{fontSize:10,color:C.dim,marginLeft:8}}>Dec 2025 → Jun 5, 2026 · hover to inspect</span>
+          <span style={{fontWeight:700,color:C.green,fontSize:13}}>{tx("📈 ODDS EVOLUTION · TOP 6", "📈 EVOLUÇÃO DAS ODDS · TOP 6")}</span>
+          <span style={{fontSize:10,color:C.dim,marginLeft:8}}>{tx("Dec 2025 → Jun 5, 2026 · hover to inspect", "Dez 2025 → 5 jun 2026 · passe o mouse para ver")}</span>
         </div>
         <div style={{padding:"12px 14px 8px"}}>
           <OddsLineChart/>
@@ -46,7 +51,7 @@ export default function PredTab({
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:7}}>
               <div style={{fontWeight:700,color:C.dim,minWidth:22,fontSize:14}}>#{i+1}</div>
               <Crest team={p.team} size={26}/>
-              <span style={{fontWeight:700,color:C.text,flex:1,fontSize:14}}>{p.team}</span>
+              <span style={{fontWeight:700,color:C.text,flex:1,fontSize:14}}>{displayTeamName(p.team, language)}</span>
               <div style={{textAlign:"right"}}>
                 <div style={{fontWeight:700,fontSize:20,color:p.poly>=15?C.green:p.poly>=8?C.gold:C.mid}}>{p.poly}%</div>
                 <div style={{fontSize:10,color:C.dim}}>{p.odds}</div>

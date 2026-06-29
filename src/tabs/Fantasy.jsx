@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useContext } from "react";
+import { displayTeamName, displayStageName } from "../i18n/display";
 import FantasyScoringRules from "../components/FantasyScoringRules";
 import FantasyStatsSummary from "../components/FantasyStatsSummary";
 
@@ -12,6 +13,7 @@ import FantasyStatsSummary from "../components/FantasyStatsSummary";
 // Badge, Card, Crest, FantasyTeamSlot, LeaguesPanel, Pill
 
 export default function PredictorTab({
+  language="en", t=(key, fallback)=>fallback,
   syncProfile=null, displayName="", onShowSync=()=>{}, userAvatar=null, resolvedMatches,
   // Shared App.jsx values, passed as props to avoid a circular import
   C, FavCtx, LiveScoresCtx, MATCHES, FLAG_CODES_MAP, FOOTBALL_ICONS,
@@ -20,6 +22,9 @@ export default function PredictorTab({
   scoreOnePred, sortFantasyChronological, statusIsFinished,
   Badge, Card, Crest, FantasyTeamSlot, LeaguesPanel, Pill,
 }) {
+  const isPtBR = language === "pt-BR";
+  const tx = (en, pt) => isPtBR ? pt : en;
+
   resolvedMatches = resolvedMatches || MATCHES;
   const { getScore, isFinished, allFixtures=[] } = useContext(LiveScoresCtx);
   const { favTeam, favTeams=[] } = useContext(FavCtx);
@@ -187,7 +192,7 @@ export default function PredictorTab({
     try {
       const u = await apiPred("register", {}, { userId: fantasyUserId, name, avatar: userAvatar || null, city: "", country: "", syncUid: syncProfile?.uid || "" });
       setUser(u);
-    } catch(e) { setNameErr(e.message || "Could not save name"); }
+    } catch(e) { setNameErr(e.message || tx("Could not save name", "Não foi possível salvar o nome")); }
     finally { setNS(false); }
   };
 
@@ -235,7 +240,7 @@ export default function PredictorTab({
   if (userLoading) return (
     <div style={{textAlign:"center",padding:"28px 20px"}}>
       <div style={{width:28,height:28,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto 12px"}}/>
-      <div style={{fontSize:13,color:C.mid}}>Loading fantasy picks...</div>
+      <div style={{fontSize:13,color:C.mid}}>{tx("Loading fantasy picks...", "Carregando bolão...")}</div>
     </div>
   );
 
@@ -243,8 +248,8 @@ export default function PredictorTab({
     <div style={{paddingTop:12}}>
       <div style={{background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b2}`,borderRadius:12,padding:14,marginBottom:6,textAlign:"center"}}>
         <div style={{fontSize:"1.6rem",marginBottom:4}}>🔮</div>
-        <div style={{fontWeight:700,fontSize:17,color:C.green,marginBottom:4}}>Fantasy Picks / Bolão</div>
-        <div style={{fontSize:12,color:C.mid,lineHeight:1.5}}>Predict match scores for fun. Official scores come from the World Cup feed; your picks power points, rankings and leagues.</div>
+        <div style={{fontWeight:700,fontSize:17,color:C.green,marginBottom:4}}>{tx("Fantasy Picks", "Bolão")}</div>
+        <div style={{fontSize:12,color:C.mid,lineHeight:1.5}}>{tx("Predict match scores for fun. Official scores come from the World Cup feed; your picks power points, rankings and leagues.", "Dê seus palpites de placar. Os resultados oficiais vêm do feed da Copa; seus palpites valem pontos, ranking e ligas.")}</div>
       </div>
       {(syncProfile && displayName) ? (
         /* Signed in but name registration failed — show retry */
@@ -254,19 +259,19 @@ export default function PredictorTab({
               {userAvatar?.startsWith("data:") ? <img src={userAvatar} style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:"50%"}} alt=""/> : "⭐"}
             </div>
             <div>
-              <div style={{fontWeight:700,color:C.text,fontSize:15}}>Join as {displayName}?</div>
-              <div style={{fontSize:11,color:C.dim}}>Tap to join Fantasy Picks</div>
+              <div style={{fontWeight:700,color:C.text,fontSize:15}}>{tx("Join as", "Entrar como")} {displayName}?</div>
+              <div style={{fontSize:11,color:C.dim}}>{tx("Tap to join Fantasy Picks", "Toque para entrar no Bolão")}</div>
             </div>
           </div>
           {nameErr && <div style={{fontSize:12,color:C.red,marginBottom:8}}>{nameErr}</div>}
           <button onClick={handleRegister} disabled={nameSaving}
             style={{width:"100%",padding:"12px 0",borderRadius:12,background:`linear-gradient(135deg,${C.green},#22c55e)`,border:"none",color:"#030a05",fontWeight:700,fontSize:15,cursor:"pointer",opacity:nameSaving?0.6:1}}>
-            {nameSaving?"Joining...":"Join as " + displayName + " →"}
+            {nameSaving ? tx("Joining...", "Entrando...") : `${tx("Join as", "Entrar como")} ${displayName} →`}
           </button>
           <div style={{fontSize:11,color:C.dim,marginTop:10,textAlign:"center"}}>
-            Want a different name?
+            {tx("Want a different name?", "Quer usar outro nome?")}
             <input value={nameInput===displayName?"":nameInput} onChange={e=>{setNameInput(e.target.value.slice(0,20));setNameErr("");}}
-              placeholder="Type custom name..." maxLength={20}
+              placeholder={tx("Type custom name...", "Digite outro nome...")} maxLength={20}
               style={{display:"block",width:"100%",marginTop:8,padding:"10px 14px",background:C.s2,border:`1px solid ${nameErr?C.red:C.b2}`,borderRadius:10,color:C.text,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
           </div>
         </Card>
@@ -274,22 +279,22 @@ export default function PredictorTab({
         /* Not signed in — prompt to create account OR enter name */
         <div>
           <Card style={{padding:18,marginBottom:12}}>
-            <div style={{fontWeight:700,color:C.text,fontSize:15,marginBottom:4}}>Choose your display name</div>
-            <div style={{fontSize:12,color:C.dim,marginBottom:14}}>This is how you'll appear on the Fantasy leaderboard.</div>
+            <div style={{fontWeight:700,color:C.text,fontSize:15,marginBottom:4}}>{tx("Choose your display name", "Escolha seu nome de exibição")}</div>
+            <div style={{fontSize:12,color:C.dim,marginBottom:14}}>{tx("This is how you'll appear on the Fantasy leaderboard.", "É assim que você aparecerá na classificação do Bolão.")}</div>
             <input value={nameInput} onChange={e=>{setNameInput(e.target.value.slice(0,20));setNameErr("");}}
               onKeyDown={e=>e.key==="Enter"&&handleRegister()}
-              placeholder="e.g. Pablo, FootballFan99..." maxLength={20}
+              placeholder={tx("e.g. Pablo, FootballFan99...", "ex.: Felipe, FanáticoDaCopa...")} maxLength={20}
               style={{width:"100%",padding:"12px 14px",background:C.s2,border:`1px solid ${nameErr?C.red:C.b2}`,borderRadius:10,color:C.text,fontSize:15,outline:"none",marginBottom:8}}/>
             {nameErr && <div style={{fontSize:12,color:C.red,marginBottom:8}}>{nameErr}</div>}
-            <div style={{fontSize:11,color:C.dim,marginBottom:14}}>{20-nameInput.length} characters remaining</div>
+            <div style={{fontSize:11,color:C.dim,marginBottom:14}}>{20-nameInput.length} {tx("characters remaining", "caracteres restantes")}</div>
             <button onClick={handleRegister} disabled={nameSaving||!nameInput.trim()}
               style={{width:"100%",padding:"12px 0",borderRadius:12,background:nameInput.trim()?`linear-gradient(135deg,${C.green},#22c55e)`:C.b2,border:"none",color:nameInput.trim()?"#030a05":C.dim,fontWeight:700,fontSize:15,cursor:nameInput.trim()?"pointer":"default",opacity:nameSaving?0.6:1}}>
-              {nameSaving?"Saving...":"Join Fantasy Picks →"}
+              {nameSaving ? tx("Saving...", "Salvando...") : tx("Join Fantasy Picks →", "Entrar no Bolão →")}
             </button>
           </Card>
           <button onClick={onShowSync}
             style={{width:"100%",padding:"12px 0",borderRadius:12,background:"transparent",border:`1px solid ${C.b2}`,color:C.mid,fontWeight:600,fontSize:13,cursor:"pointer"}}>
-            🔗 Sign in with PIN to sync across devices
+            {tx("🔗 Sign in with PIN to sync across devices", "🔗 Entrar com PIN para sincronizar dispositivos")}
           </button>
         </div>
       )}
@@ -320,8 +325,8 @@ return (
     <div style={{background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b2}`,borderRadius:12,padding:14,marginBottom:8}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10}}>
         <div style={{minWidth:0,flex:1}}>
-          <div style={{fontWeight:700,fontSize:15,color:C.green}}>{"🎯 FANTASY PICKS / BOLÃO"}</div>
-          <div style={{fontSize:11,color:C.mid,marginTop:2}}>Playing as <strong style={{color:C.gold}}>{user.name}</strong></div>
+          <div style={{fontWeight:700,fontSize:15,color:C.green}}>{tx("🎯 FANTASY PICKS", "🎯 BOLÃO")}</div>
+          <div style={{fontSize:11,color:C.mid,marginTop:2}}>{tx("Playing as", "Jogando como")} <strong style={{color:C.gold}}>{user.name}</strong></div>
         </div>
 
         <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6,flexShrink:0}}>
@@ -337,7 +342,7 @@ return (
               whiteSpace:"nowrap",
               lineHeight:1
             }}>
-              🏅 Rank #{myRank}
+              🏅 {tx("Rank", "Posição")} #{myRank}
             </div>
           )}
           <button
@@ -354,7 +359,7 @@ return (
               whiteSpace:"nowrap"
             }}
           >
-            Scoring Criteria
+            {tx("Scoring Criteria", "Critérios de pontuação")}
           </button>
         </div>
       </div>
@@ -372,10 +377,10 @@ return (
 
       {/* Fantasy filters */}
       <div style={{display:"flex",gap:6,marginBottom:14,overflowX:"auto",scrollbarWidth:"none"}}>
-        {(syncProfile?.pin || displayName) && <Pill active={filter==="leagues"} onClick={()=>setFilter("leagues")} color={C.blue}>🏆 Leagues</Pill>}
-        <Pill active={filter==="board"} onClick={()=>setFilter("board")} color={C.rival}>🏅 Rankings</Pill>
-        <Pill active={filter==="upcoming"} onClick={()=>setFilter("upcoming")} color={C.green}>Picks ({upcoming.length})</Pill>
-        <Pill active={filter==="finished"} onClick={()=>setFilter("finished")} color={C.gold}>Scored ({finished.length})</Pill>
+        {(syncProfile?.pin || displayName) && <Pill active={filter==="leagues"} onClick={()=>setFilter("leagues")} color={C.blue}>{tx("🏆 Leagues", "🏆 Ligas")}</Pill>}
+        <Pill active={filter==="board"} onClick={()=>setFilter("board")} color={C.rival}>{tx("🏅 Rankings", "🏅 Classificação")}</Pill>
+        <Pill active={filter==="upcoming"} onClick={()=>setFilter("upcoming")} color={C.green}>{tx("Picks", "Palpites")} ({upcoming.length})</Pill>
+        <Pill active={filter==="finished"} onClick={()=>setFilter("finished")} color={C.gold}>{tx("Scored", "Pontuados")} ({finished.length})</Pill>
       </div>
 
       {/* ── LEADERBOARD ── */}
@@ -383,7 +388,7 @@ return (
         <div>
           {boardLoading && <div style={{textAlign:"center",padding:"32px 0"}}><div style={{width:24,height:24,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto"}}/></div>}
           {!boardLoading && board && board.length === 0 && (
-            <div style={{textAlign:"center",padding:"32px 20px",color:C.dim,fontSize:13}}>No predictions scored yet. Check back after June 11!</div>
+            <div style={{textAlign:"center",padding:"32px 20px",color:C.dim,fontSize:13}}>{tx("No predictions scored yet. Check back after June 11!", "Nenhum palpite pontuado ainda. Volte depois de 11 de junho!")}</div>
           )}
           {!boardLoading && board && board.map((entry, i) => {
             const isMe = entry.userId === fantasyUserId;
@@ -427,9 +432,9 @@ return (
       {filter==="leagues" && !syncProfile?.pin && displayName && (
         <div style={{textAlign:"center",padding:"32px 20px"}}>
           <div style={{fontSize:36,marginBottom:12}}>🏆</div>
-          <div style={{fontWeight:700,fontSize:16,color:C.text,marginBottom:8}}>Join the League!</div>
+          <div style={{fontWeight:700,fontSize:16,color:C.text,marginBottom:8}}>{tx("Join the League!", "Entrar na liga!")}</div>
           <div style={{fontSize:13,color:C.mid,marginBottom:24,lineHeight:1.6}}>
-            You're already playing Fantasy Picks as <strong style={{color:C.gold}}>{displayName}</strong>.<br/>
+            {tx("You're already playing Fantasy Picks as", "Você já está jogando o Bolão como")} <strong style={{color:C.gold}}>{displayName}</strong>.<br/>
             Create a PIN to join <strong style={{color:C.green}}>Brazucas em Broward</strong> and compete with the group.
           </div>
           <button onClick={onShowSync} style={{width:"100%",maxWidth:300,padding:"13px",borderRadius:12,border:"none",background:`linear-gradient(135deg,${C.gold},#f59e0b)`,color:"#030a05",fontSize:15,fontWeight:800,cursor:"pointer"}}>
@@ -444,7 +449,7 @@ return (
           {shownMatches.length===0 && (
             <div style={{textAlign:"center",padding:"32px 20px",color:C.dim}}>
               <div style={{fontSize:"2rem",marginBottom:8}}>⏳</div>
-              <div style={{fontSize:13}}>{filter==="upcoming"?"No pending Fantasy Picks right now — check back when fixtures are available!":"No finished matches yet."}</div>
+              <div style={{fontSize:13}}>{filter === "upcoming" ? tx("No pending Fantasy Picks right now — check back when fixtures are available!", "Não há palpites pendentes agora — volte quando os jogos estiverem disponíveis!") : tx("No finished matches yet.", "Ainda não há jogos finalizados.")}</div>
             </div>
           )}
           {shownMatches.map((m, idx) => {
@@ -466,7 +471,7 @@ return (
                   <div style={{display:"flex",alignItems:"center",gap:10,margin:"16px 0 10px"}}>
                     <div style={{height:1,background:C.b2,flex:1}}/>
                     <div style={{fontSize:10,color:C.gold,fontWeight:900,letterSpacing:"0.12em",textTransform:"uppercase",whiteSpace:"nowrap"}}>
-                      {m.stage}
+                      {displayStageName(m.stage, language)}
                     </div>
                     <div style={{height:1,background:C.b2,flex:1}}/>
                   </div>
@@ -474,26 +479,26 @@ return (
               <Card style={{marginBottom:8,border:`1px solid ${pts===3?C.green:pts===1?C.gold:pts===0?C.red:hasPred?`${C.green}44`:C.b2}`,opacity:done?0.45:locked?0.72:1,background:done?C.s2:undefined}} >
                 <div style={{padding:"10px 13px"}}>
                   <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
-                    <Badge>{fantasyStageLabel(m)} · {m.date}</Badge>
+                    <Badge>{displayStageName(fantasyStageLabel(m), language)} · {m.date}</Badge>
                     <div style={{display:"flex",alignItems:"center",gap:6}}>
-                      {saving && <span style={{fontSize:10,color:C.dim}}>saving...</span>}
-                      {!saving && hasPred && !done && !locked && <span style={{fontSize:10,color:C.green}}>✓ saved</span>}
+                      {saving && <span style={{fontSize:10,color:C.dim}}>{tx("saving...", "salvando...")}</span>}
+                      {!saving && hasPred && !done && !locked && <span style={{fontSize:10,color:C.green}}>✓ {tx("saved", "salvo")}</span>}
                       {!done && (
   locked ? (
-    <span style={{fontSize:10,color:C.gold}}>{!teamsKnown ? "⏳ teams TBD" : !matchupConfirmed ? (isMobileFantasy ? "⏳ pending" : "⏳ provisional") : "🔒 locked"}</span>
+    <span style={{fontSize:10,color:C.gold}}>{!teamsKnown ? tx("⏳ teams TBD", "⏳ times indefinidos") : !matchupConfirmed ? (isMobileFantasy ? tx("⏳ pending", "⏳ pendente") : tx("⏳ provisional", "⏳ provisório")) : tx("🔒 locked", "🔒 fechado")}</span>
   ) : (
     <span style={{fontSize:10,color:C.dim}}>{fantasyLockLabel(m)}</span>
   )
 )}
-                      {pts !== null && <div style={{fontWeight:700,color:ptColor,fontSize:12}}>{pts===3?"⚽⚽⚽ +3":pts===1?"⚽ +1":"❌ 0"}pts</div>}
+                      {pts !== null && <div style={{fontWeight:700,color:ptColor,fontSize:12}}>{pts===3?"⚽⚽⚽ +3":pts===1?"⚽ +1":"❌ 0"} {tx("pts", "pts")}</div>}
                     </div>
                   </div>
                   <div style={{display:"flex",alignItems:"center",gap:8}}>
-                    <FantasyTeamSlot team={m.home} side="left" tag={m.homeTag} compact={isMobileFantasy}/>
+                    <FantasyTeamSlot team={m.home} side="left" tag={m.homeTag} compact={isMobileFantasy} language={language}/>
                     <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
                       {done && sc && (
                         <div style={{textAlign:"center",minWidth:52,background:C.bg,borderRadius:8,padding:"5px 10px",border:`1px solid ${C.b2}`}}>
-                          <div style={{fontSize:9,color:C.text,marginBottom:1,fontWeight:700,letterSpacing:"0.05em"}}>RESULT</div>
+                          <div style={{fontSize:9,color:C.text,marginBottom:1,fontWeight:700,letterSpacing:"0.05em"}}>{tx("RESULT", "RESULTADO")}</div>
                           <div style={{fontWeight:900,fontSize:20,color:C.text,fontFamily:"monospace"}}>{sc.hg} – {sc.ag}</div>
                         </div>
                       )}
@@ -508,12 +513,12 @@ return (
                       )}
                       {done && hasPred && (
                         <div style={{textAlign:"center",minWidth:52,background:C.bg,borderRadius:8,padding:"5px 10px",border:`1px solid ${ptColor}`}}>
-                          <div style={{fontSize:9,color:ptColor,marginBottom:1,fontWeight:700,letterSpacing:"0.05em"}}>YOUR PICK</div>
+                          <div style={{fontSize:9,color:ptColor,marginBottom:1,fontWeight:700,letterSpacing:"0.05em"}}>{tx("YOUR PICK", "SEU PALPITE")}</div>
                           <div style={{fontWeight:900,fontSize:20,color:ptColor,fontFamily:"monospace"}}>{pred.hg}–{pred.ag}</div>
                         </div>
                       )}
                     </div>
-                    <FantasyTeamSlot team={m.away} side="right" tag={m.awayTag} compact={isMobileFantasy}/>
+                    <FantasyTeamSlot team={m.away} side="right" tag={m.awayTag} compact={isMobileFantasy} language={language}/>
                   </div>
                 </div>
               </Card>
@@ -534,7 +539,7 @@ return (
                 </div>
                 <div>
                   <div style={{fontWeight:800,fontSize:18,color:C.text}}>{viewingUser.name}</div>
-                  <div style={{fontSize:12,color:C.dim}}>{viewingUser.predCount} picks · {viewingUser.pts} pts · {viewingUser.exact} exact</div>
+                  <div style={{fontSize:12,color:C.dim}}>{viewingUser.predCount} {tx("picks", "palpites")} · {viewingUser.pts} {tx("pts", "pts")} · {viewingUser.exact} {tx("exact", "exatos")}</div>
                 </div>
               </div>
 
@@ -546,7 +551,7 @@ return (
                   const sc = getScore(m.home, m.away);
                   return sc && statusIsFinished(sc.status) && viewingPreds[m.id];
                 })).reverse(); // most recent first — sortFantasyChronological is oldest-first
-                if (scoredMatches.length === 0) return <div style={{textAlign:"center",padding:"20px",color:C.dim,fontSize:13}}>No scored picks yet.</div>;
+                if (scoredMatches.length === 0) return <div style={{textAlign:"center",padding:"20px",color:C.dim,fontSize:13}}>{tx("No scored picks yet.", "Ainda não há palpites pontuados.")}</div>;
                 return scoredMatches.map(m => {
                   const sc = getScore(m.home, m.away);
                   const pred = viewingPreds[m.id] || {};
@@ -557,15 +562,15 @@ return (
                     <Card key={m.id} style={{marginBottom:8,border:`1px solid ${pts===3?C.green:pts===1?C.gold:pts===0?C.red:C.b2}`,opacity:0.45,background:C.s2}}>
                       <div style={{padding:"10px 13px"}}>
                         <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
-                          <Badge>{fantasyStageLabel(m)} · {m.date}</Badge>
-                          <div style={{fontWeight:700,color:ptColor,fontSize:12}}>{pts===3?"⚽⚽⚽ +3":pts===1?"⚽ +1":"❌ 0"}pts</div>
+                          <Badge>{displayStageName(fantasyStageLabel(m), language)} · {m.date}</Badge>
+                          <div style={{fontWeight:700,color:ptColor,fontSize:12}}>{pts===3?"⚽⚽⚽ +3":pts===1?"⚽ +1":"❌ 0"} {tx("pts", "pts")}</div>
                         </div>
                         <div style={{display:"flex",alignItems:"center",gap:8}}>
                           <Crest team={m.home} size={22}/>
-                          <span style={{fontWeight:800,color:C.text,flex:1,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.home}</span>
+                          <span style={{fontWeight:800,color:C.text,flex:1,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{displayTeamName(m.home, language)}</span>
                           <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
                             <div style={{textAlign:"center",minWidth:52,background:C.bg,borderRadius:8,padding:"5px 10px",border:`1px solid ${C.b2}`}}>
-                              <div style={{fontSize:9,color:C.text,marginBottom:1,fontWeight:700,letterSpacing:"0.05em"}}>RESULT</div>
+                              <div style={{fontSize:9,color:C.text,marginBottom:1,fontWeight:700,letterSpacing:"0.05em"}}>{tx("RESULT", "RESULTADO")}</div>
                               <div style={{fontWeight:900,fontSize:20,color:C.text,fontFamily:"monospace"}}>{sc.hg} – {sc.ag}</div>
                             </div>
                             {hasPred && (
@@ -575,7 +580,7 @@ return (
                               </div>
                             )}
                           </div>
-                          <span style={{fontWeight:800,color:C.text,flex:1,fontSize:13,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{m.away}</span>
+                          <span style={{fontWeight:800,color:C.text,flex:1,fontSize:13,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{displayTeamName(m.away, language)}</span>
                           <Crest team={m.away} size={22}/>
                         </div>
                       </div>

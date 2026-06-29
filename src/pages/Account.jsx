@@ -1,5 +1,2 @@
-import React from "react";
-
-export default function Home() {
-  return null;
-}
+// Account is implemented inline in App.jsx for now.
+export default function Account() { return null; }

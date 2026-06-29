@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { displayTeamName } from "../i18n/display";
 
 // Shared App.jsx values, passed in as props rather than imported directly
 // to avoid a circular import (App.jsx -> Simulator.jsx -> App.jsx), since
@@ -6,10 +7,14 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 // C, DS, getFlag, runFullSim, useElemHeight, Card, Crest, Pill
 
 export default function SimTab({
+  language="en", t=(key, fallback)=>fallback,
   tabTop=116,
   // Shared App.jsx values, passed as props to avoid a circular import
   C, DS, getFlag, runFullSim, useElemHeight, Card, Crest, Pill,
 }) {
+  const isPtBR = language === "pt-BR";
+  const tx = (en, pt) => isPtBR ? pt : en;
+
   const [sims, setSims]       = useState(5000);
   const [running, setRunning] = useState(false);
   const [mc, setMc]           = useState(null);       // [{team, pct, wins}]
@@ -81,11 +86,11 @@ export default function SimTab({
       <div ref={_simhRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:DS.shadow.sticky,padding:"8px 13px"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
           <div>
-            <div style={{fontWeight:700,fontSize:15,color:C.green}}>{"🎲 WORLD CUP SIMULATOR"}</div>
-            <div style={{fontSize:10,color:C.dim}}>Poisson model · FIFA ratings · form · home advantage</div>
+            <div style={{fontWeight:700,fontSize:15,color:C.green}}>{tx("🎲 WORLD CUP SIMULATOR", "🎲 SIMULADOR DA COPA")}</div>
+            <div style={{fontSize:10,color:C.dim}}>{tx("Poisson model · FIFA ratings · form · home advantage", "Modelo Poisson · ratings FIFA · forma · vantagem de casa")}</div>
           </div>
           <button onClick={()=>runMC(sims)} disabled={running} style={{padding:"6px 12px",borderRadius:10,background:`${C.green}22`,border:`1px solid ${C.greenS}`,color:C.green,fontWeight:700,fontSize:12,cursor:"pointer",opacity:running?0.5:1,flexShrink:0}}>
-            {running ? "Running…" : "↻ Re-run"}
+            {running ? tx("Running…", "Rodando…") : tx("↻ Re-run", "↻ Rodar de novo")}
           </button>
         </div>
         <div style={{display:"flex",gap:6,marginBottom:6}}>
@@ -94,8 +99,8 @@ export default function SimTab({
           ))}
         </div>
         <div style={{display:"flex",gap:6}}>
-          <Pill active={view==="odds"}    onClick={()=>setView("odds")}    color={C.green}>📊 Win Odds</Pill>
-          <Pill active={view==="bracket"} onClick={()=>setView("bracket")} color={C.gold}>🏆 Most Likely Bracket</Pill>
+          <Pill active={view==="odds"}    onClick={()=>setView("odds")}    color={C.green}>{tx("📊 Win Odds", "📊 Chances de título")}</Pill>
+          <Pill active={view==="bracket"} onClick={()=>setView("bracket")} color={C.gold}>{tx("🏆 Most Likely Bracket", "🏆 Chave mais provável")}</Pill>
         </div>
       </div>
       <div style={{height:0}}/>
@@ -104,7 +109,7 @@ export default function SimTab({
       {running && (
         <div style={{textAlign:"center",padding:"48px 0"}}>
           <div style={{width:36,height:36,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto 12px"}}/>
-          <div style={{fontSize:13,color:C.mid}}>Simulating {sims.toLocaleString()} tournaments…</div>
+          <div style={{fontSize:13,color:C.mid}}>{isPtBR ? `Simulando ${sims.toLocaleString()} torneios…` : `Simulating ${sims.toLocaleString()} tournaments…`}</div>
         </div>
       )}
 
@@ -112,7 +117,7 @@ export default function SimTab({
       {!running && mc && view==="odds" && (
         <div>
           <div style={{fontSize:11,color:C.dim,marginBottom:10,lineHeight:1.6}}>
-            Based on {sims.toLocaleString()} simulated tournaments. Each % = how often that team won.
+            {isPtBR ? `Com base em ${sims.toLocaleString()} torneios simulados. Cada % indica a frequência com que o time foi campeão.` : `Based on ${sims.toLocaleString()} simulated tournaments. Each % = how often that team won.`}
           </div>
           {mc.slice(0,16).map((r,i)=>{
             const maxPct = parseFloat(mc[0].pct);
@@ -123,7 +128,7 @@ export default function SimTab({
                   <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
                     <div style={{fontWeight:700,color:C.dim,minWidth:26,fontSize:13,textAlign:"center"}}>{medal||`#${i+1}`}</div>
                     <Crest team={r.team} size={22}/>
-                    <span style={{fontWeight:700,color:C.text,flex:1,fontSize:14}}>{r.team}</span>
+                    <span style={{fontWeight:700,color:C.text,flex:1,fontSize:14}}>{displayTeamName(r.team, language)}</span>
                     <div style={{fontWeight:900,fontSize:20,color:i===0?C.green:i<3?C.gold:C.mid,minWidth:48,textAlign:"right"}}>{r.pct}%</div>
                   </div>
                   {/* Win probability bar */}
@@ -150,23 +155,23 @@ export default function SimTab({
       {!running && bracket && view==="bracket" && (
         <div>
           <div style={{fontSize:11,color:C.dim,marginBottom:12,lineHeight:1.6}}>
-            Each round shows the team more likely to advance based on {sims.toLocaleString()} simulations.
+            {isPtBR ? `Cada rodada mostra o time com maior probabilidade de avançar com base em ${sims.toLocaleString()} simulações.` : `Each round shows the team more likely to advance based on ${sims.toLocaleString()} simulations.`}
           </div>
           <div style={{background:`linear-gradient(135deg,${C.green}22,${C.gold}18)`,border:`1px solid ${C.greenS}`,borderRadius:14,padding:16,marginBottom:16,textAlign:"center"}}>
-            <div style={{fontSize:11,color:C.dim,letterSpacing:"0.15em",fontWeight:700,marginBottom:8}}>🏆 MOST LIKELY CHAMPION</div>
+            <div style={{fontSize:11,color:C.dim,letterSpacing:"0.15em",fontWeight:700,marginBottom:8}}>{tx("🏆 MOST LIKELY CHAMPION", "🏆 CAMPEÃO MAIS PROVÁVEL")}</div>
             <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:12,marginBottom:6}}>
               <Crest team={bracket.champion} size={52}/>
               <div>
                 <div style={{fontWeight:900,fontSize:26,color:C.green}}>{bracket.champion}</div>
-                <div style={{fontSize:12,color:C.gold}}>Win probability: {mc?.find(x=>x.team===bracket.champion)?.pct}%</div>
+                <div style={{fontSize:12,color:C.gold}}>{tx("Win probability", "Chance de título")}: {mc?.find(x=>x.team===bracket.champion)?.pct}%</div>
               </div>
             </div>
-            <div style={{fontSize:13,color:C.mid}}>Most likely runner-up: {getFlag(bracket.runnerUp)} {bracket.runnerUp} ({mc?.find(x=>x.team===bracket.runnerUp)?.finalPct}% reach final)</div>
+            <div style={{fontSize:13,color:C.mid}}>{isPtBR ? `Vice mais provável: ${getFlag(bracket.runnerUp)} ${bracket.runnerUp} (${mc?.find(x=>x.team===bracket.runnerUp)?.finalPct}% chegam à final)` : `Most likely runner-up: ${getFlag(bracket.runnerUp)} ${bracket.runnerUp} (${mc?.find(x=>x.team===bracket.runnerUp)?.finalPct}% reach final)`}</div>
           </div>
           {[
-            ["MOST LIKELY SEMI-FINALS", bracket.sf],
-            ["MOST LIKELY QUARTER-FINALS", bracket.qf],
-            ["MOST LIKELY ROUND OF 16", bracket.r16],
+            [tx("MOST LIKELY SEMI-FINALS", "SEMIFINAIS MAIS PROVÁVEIS"), bracket.sf],
+            [tx("MOST LIKELY QUARTER-FINALS", "QUARTAS MAIS PROVÁVEIS"), bracket.qf],
+            [tx("MOST LIKELY ROUND OF 16", "OITAVAS MAIS PROVÁVEIS"), bracket.r16],
           ].map(([label,teams])=>(
             <div key={label} style={{marginBottom:14}}>
               <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:7}}>{label}</div>

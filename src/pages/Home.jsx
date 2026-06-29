@@ -1,5 +1,1 @@
-import React from "react";
-
-export default function Home() {
-  return null;
-}
+export { default } from "../tabs/MyWorldCupTab.jsx";

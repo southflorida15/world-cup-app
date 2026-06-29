@@ -1,5 +1,2 @@
-import React from "react";
-
-export default function Home() {
-  return null;
-}
+// Live is implemented inline in App.jsx for now.
+export default function Live() { return null; }
