@@ -89,7 +89,7 @@ async function saveToKV(home, away, events, stats, lineups=null) {
 // gets checked repeatedly while it's still in progress.
 
 function scorerEventKey(matchKey, ev) {
-  const minute = ev?.time?.elapsed ?? "";
+  const minute = ev?.time?.display || ev?.time?.elapsed || "";
   const type = ev?.type || "";
   const detail = ev?.detail || "";
   const team = ev?.team?.name || "";
@@ -449,15 +449,37 @@ function parseLineups(data, homeTeam) {
 
   return (result.home || result.away) ? result : null;
 }
+function parseESPNEventTime(ev) {
+  const displayRaw =
+    ev?.time?.displayValue ||
+    ev?.play?.time?.displayValue ||
+    ev?.play?.clock?.displayValue ||
+    ev?.clock?.displayValue ||
+    ev?.addedClock?.displayValue ||
+    ev?.displayTime ||
+    "";
+
+  const display = String(displayRaw || "").trim();
+  const elapsedFromDisplay = display ? parseInt(display, 10) : null;
+  const elapsedFromClock = ev?.clock?.value ? Math.round(Number(ev.clock.value) / 60) : null;
+  const elapsedFromPlayClock = ev?.play?.clock?.value ? Math.round(Number(ev.play.clock.value) / 60) : null;
+  const extraMatch = display.match(/\+(\d+)/);
+
+  return {
+    elapsed: Number.isFinite(elapsedFromDisplay) ? elapsedFromDisplay : (elapsedFromClock || elapsedFromPlayClock || null),
+    extra: extraMatch ? Number(extraMatch[1]) : null,
+    display: display || null,
+  };
+}
+
 function parseEvents(data, homeTeam) {
   const events = [];
 
-  const keyEvents = data.keyEvents || [];
+  const keyEvents = (data.keyEvents && data.keyEvents.length) ? data.keyEvents : (data.header?.competitions?.[0]?.details || []);
   for (const ev of keyEvents) {
     const teamName = normESPN(ev.team?.displayName || ev.team?.name || "");
-    const elapsed = ev.clock?.displayValue
-      ? parseInt(ev.clock.displayValue)
-      : ev.clock?.value ? Math.round(ev.clock.value / 60) : null;
+    const time = parseESPNEventTime(ev);
+    const elapsed = time.elapsed;
     const text = (ev.text || ev.type?.text || "").toLowerCase();
     const typeText = (ev.type?.text || "").toLowerCase();
     const typeType = (ev.type?.type || "").toLowerCase();
@@ -484,7 +506,7 @@ function parseEvents(data, homeTeam) {
     if (!type || !teamName) continue;
 
     events.push({
-      time: { elapsed, extra: null },
+      time,
       team: { name: teamName },
       player: { name: p0 },
       assist: { name: (type === "Goal" || type === "subst") ? p1 : null },
@@ -497,7 +519,8 @@ function parseEvents(data, homeTeam) {
   if (events.length === 0 && data.plays?.length) {
     for (const play of data.plays) {
       const teamName = normESPN(play.team?.displayName || play.team?.name || "");
-      const elapsed = play.clock?.value ? Math.round(play.clock.value / 60) : null;
+      const time = parseESPNEventTime(play);
+      const elapsed = time.elapsed;
       const text = (play.type?.text || play.text || "").toLowerCase();
       let type = null, detail = "";
 
@@ -511,7 +534,7 @@ function parseEvents(data, homeTeam) {
       if (!type) continue;
       const athletes = play.athletesInvolved || [];
       events.push({
-        time: { elapsed, extra: null },
+        time,
         team: { name: teamName },
         player: { name: athletes[0]?.displayName || "" },
         assist: { name: athletes[1]?.displayName || null },
@@ -532,13 +555,13 @@ function parseEvents(data, homeTeam) {
   // common case of an exact-duplicate repost at the identical minute).
   const seen = new Set();
   const deduped = events.filter(ev => {
-    const key = `${ev.type}|${ev.team?.name}|${ev.player?.name}|${ev.time?.elapsed}`;
+    const key = `${ev.type}|${ev.team?.name}|${ev.player?.name}|${ev.time?.display || ev.time?.elapsed}`;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
   });
 
-  return deduped.sort((a, b) => (a.time?.elapsed || 0) - (b.time?.elapsed || 0));
+  return deduped.sort((a, b) => ((a.time?.elapsed || 0) - (b.time?.elapsed || 0)) || ((a.time?.extra || 0) - (b.time?.extra || 0)));
 }
 
 // ── Scorers aggregator ────────────────────────────────────────────────────

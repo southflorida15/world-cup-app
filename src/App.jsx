@@ -1692,119 +1692,72 @@ function PlayerPhoto({ src, name, size=32 }) {
   return <img src={src} alt={name} width={size} height={size} style={{borderRadius:"50%",objectFit:"cover",flexShrink:0,border:`1px solid ${C.b2}`}} onError={()=>setErr(true)}/>;
 }
 
-// ── RECENT FORM — WC 2026 results first, pre-tournament fallback ─────
+// ── RECENT FORM — dynamic, auto-upgrades to live WC data after Jun 11 ─────
 export function RecentForm({ team, staticData }) {
   const { language } = useI18n();
   const isPtBR = language === "pt-BR";
   const tx = (en, pt) => isPtBR ? pt : en;
-  const { allFixtures = [] } = useContext(LiveScoresCtx);
+  const { getScore } = useContext(LiveScoresCtx);
 
-  const normName = (name) => normTeam(name || "");
-  const sameTeam = (a, b) => normalizePlayerName(normName(a)) === normalizePlayerName(normName(b));
-  const teamLabel = (name) => displayTeamName(normName(name), language);
-  const venueLabel = (venue) => displayVenueName((venue || "").split(",")[0] || venue || "", language);
-  const dateLabel = (dateLike) => {
-    const d = dateLike ? new Date(dateLike) : null;
-    if (!d || Number.isNaN(d.getTime())) return "";
-    return d.toLocaleDateString(isPtBR ? "pt-BR" : "en-US", { month:"short", day:"numeric", timeZone:"America/New_York" });
-  };
-
-  const findScheduleMatch = (home, away) => MATCHES.find(m =>
-    (sameTeam(m.home, home) && sameTeam(m.away, away)) ||
-    (sameTeam(m.home, away) && sameTeam(m.away, home))
-  );
-
+  // Build form from actual WC 2026 MATCHES data using live scores — most accurate source
   const wcMatches = useMemo(() => {
     if (!team) return [];
-    const seen = new Set();
-    return (allFixtures || [])
-      .map(f => {
-        const home = normName(f?.teams?.home?.name);
-        const away = normName(f?.teams?.away?.name);
-        if (!home || !away) return null;
-        if (!sameTeam(home, team) && !sameTeam(away, team)) return null;
-        const status = f?.fixture?.status?.short || f?.status?.short || f?.status || "";
-        if (!statusIsFinished(status)) return null;
-        const hg = f?.goals?.home ?? f?.score?.fulltime?.home ?? null;
-        const ag = f?.goals?.away ?? f?.score?.fulltime?.away ?? null;
-        if (hg == null || ag == null) return null;
-        const pHome = f?.score?.penalty?.home ?? f?.score?.penalties?.home ?? f?.score?.shootout?.home ?? f?.penalty?.home ?? null;
-        const pAway = f?.score?.penalty?.away ?? f?.score?.penalties?.away ?? f?.score?.shootout?.away ?? f?.penalty?.away ?? null;
-        const isHome = sameTeam(home, team);
-        const opp = isHome ? away : home;
-        const teamGoals = Number(isHome ? hg : ag);
-        const oppGoals = Number(isHome ? ag : hg);
-        const teamPens = isHome ? pHome : pAway;
-        const oppPens = isHome ? pAway : pHome;
-        let res = "D";
-        if (teamGoals > oppGoals) res = "W";
-        else if (teamGoals < oppGoals) res = "L";
-        else if (teamPens != null && oppPens != null && Number(teamPens) !== Number(oppPens)) res = Number(teamPens) > Number(oppPens) ? "W" : "L";
-        const scheduleMatch = findScheduleMatch(home, away);
-        const fixtureDate = f?.fixture?.date || f?.date || null;
-        const sortMs = fixtureDate ? new Date(fixtureDate).getTime() : (scheduleMatch ? new Date(MATCH_UTC[scheduleMatch.id]).getTime() : 0);
-        const key = `${home}|${away}|${sortMs}|${hg}-${ag}|${pHome ?? ""}-${pAway ?? ""}`;
-        if (seen.has(key)) return null;
-        seen.add(key);
-        const venue = f?.fixture?.venue?.name || f?.venue?.name || scheduleMatch?.venue || "";
-        const score = `${teamGoals}-${oppGoals}${teamPens != null && oppPens != null ? ` (${teamPens}-${oppPens} pens)` : ""}`;
-        return {
-          date: dateLabel(fixtureDate || (scheduleMatch ? MATCH_UTC[scheduleMatch.id] : null)) || scheduleMatch?.date || "",
-          opp,
-          score,
-          loc: venueLabel(venue),
-          comp: tx("World Cup 2026", "Copa do Mundo 2026"),
-          res,
-          sortMs,
-          isWorldCup2026: true,
-        };
+    return MATCHES
+      .filter(m => (m.home === team || m.away === team))
+      .map(m => {
+        const sc = getScore(m.home, m.away);
+        if (!sc || sc.hg === null || sc.ag === null) return null;
+        if (!statusIsFinished(sc.status)) return null;
+        const isHome = m.home === team;
+        const teamGoals = isHome ? sc.hg : sc.ag;
+        const oppGoals  = isHome ? sc.ag : sc.hg;
+        const opp = isHome ? m.away : m.home;
+        const res = teamGoals > oppGoals ? "W" : teamGoals === oppGoals ? "D" : "L";
+        const matchUTC = MATCH_UTC[m.id];
+        const dateStr = matchUTC
+          ? new Date(matchUTC).toLocaleDateString("en-US",{month:"short",day:"numeric"})
+          : m.date;
+        return { date: dateStr, opp, score: `${teamGoals}-${oppGoals}`, loc: m.venue?.split(",")[0]||"", comp: tx("World Cup 2026", "Copa do Mundo 2026"), res, id: m.id };
       })
       .filter(Boolean)
-      .sort((a,b) => (b.sortMs || 0) - (a.sortMs || 0))
+      .sort((a,b) => (MATCH_UTC[b.id]||0) > (MATCH_UTC[a.id]||0) ? 1 : -1)
       .slice(0, 4);
-  }, [team, allFixtures, language]);
+  }, [team, getScore]);
 
   const isLiveData = wcMatches.length > 0;
   const display = isLiveData ? wcMatches : (staticData || []);
   if (!display.length) return null;
 
-  const headerTitle = isLiveData
-    ? tx("LATEST WORLD CUP 2026 MATCHES", "JOGOS MAIS RECENTES DA COPA 2026")
-    : tx("PRE-TOURNAMENT MATCHES", "JOGOS PRÉ-TORNEIO");
-  const sourceBadge = isLiveData
-    ? `${display.length} ${display.length === 1 ? tx("match", "jogo") : tx("matches", "jogos")}`
-    : tx("Pre-tournament", "Pré-torneio");
-
   return (
     <Card>
-      <div style={{padding:"10px 14px",borderBottom:`1px solid ${C.b1}`,display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
-        <span style={{fontWeight:700,color:C.green,fontSize:13}}>{headerTitle}</span>
-        <Badge color={isLiveData ? C.green : C.dim}>{sourceBadge}</Badge>
+      <div style={{padding:"10px 14px",borderBottom:`1px solid ${C.b1}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <span style={{fontWeight:700,color:C.green,fontSize:13}}>{tx("LAST 4 MATCHES", "ÚLTIMOS 4 JOGOS")}</span>
+        {isLiveData
+          ? <Badge color={C.green}>{tx("🔴 Live World Cup data", "🔴 Dados ao vivo da Copa")}</Badge>
+          : <Badge color={C.dim}>{tx("Pre-tournament", "Pré-torneio")}</Badge>
+        }
       </div>
       {display.map((g,i) => {
         const rc = g.res==="W" ? C.green : g.res==="D" ? C.gold : C.red;
-        const opp = g.isWorldCup2026 ? teamLabel(g.opp) : g.opp;
-        const comp = g.isWorldCup2026 ? tx("World Cup 2026", "Copa 2026") : g.comp;
         return (
           <div key={i} style={{padding:"10px 14px",borderBottom:i<display.length-1?`1px solid ${C.b1}`:"none"}}>
             <div style={{display:"flex",alignItems:"center",gap:8}}>
               <div style={{width:26,height:26,borderRadius:"50%",background:`${rc}22`,border:`2px solid ${rc}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,color:rc,flexShrink:0}}>{g.res}</div>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-                  <span style={{fontWeight:700,color:C.text,fontSize:13}}>{tx("vs", "x")} {opp}</span>
+              <div style={{flex:1}}>
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <span style={{fontWeight:700,color:C.text,fontSize:13}}>{tx("vs", "x")} {g.opp}</span>
                   <span style={{fontWeight:700,color:rc,fontSize:13}}>{g.score}</span>
                 </div>
                 <div style={{fontSize:11,color:C.dim,marginTop:2}}>{g.date}{g.loc ? ` · ${g.loc}` : ""}</div>
               </div>
               <span style={{fontSize:10,padding:"2px 7px",borderRadius:10,
-                background:g.isWorldCup2026?`${C.green}22`:g.comp==="Friendly"?`${C.dim}22`:`${C.blue}18`,
-                color:g.isWorldCup2026?C.green:g.comp==="Friendly"?C.mid:C.blue,
-                fontWeight:600,flexShrink:0}}>{comp}</span>
+                background:(g.comp==="World Cup 2026" || g.comp==="Copa do Mundo 2026")?`${C.green}22`:g.comp==="Friendly"?`${C.dim}22`:`${C.blue}18`,
+                color:(g.comp==="World Cup 2026" || g.comp==="Copa do Mundo 2026")?C.green:g.comp==="Friendly"?C.mid:C.blue,
+                fontWeight:600,flexShrink:0}}>{g.comp}</span>
             </div>
           </div>
         );
       })}
-      {!isLiveData && <div style={{padding:"8px 14px",borderTop:`1px solid ${C.b1}`,fontSize:10,color:C.dim}}>{tx("No World Cup 2026 matches found yet for this team. Showing recent pre-tournament matches.", "Nenhum jogo da Copa 2026 encontrado ainda para esta seleção. Exibindo jogos recentes pré-torneio.")}</div>}
     </Card>
   );
 }
@@ -4341,64 +4294,6 @@ function WeatherBadge({ lat, lon }) {
 }
 
 
-
-function rawEventMinute(ev) {
-  const candidates = [
-    ev?.time?.elapsed,
-    ev?.minute,
-    ev?.clock?.minute,
-    ev?.period?.displayClock,
-  ];
-  for (const c of candidates) {
-    const n = Number(c);
-    if (Number.isFinite(n) && n > 0) return n;
-  }
-  const text = String(ev?.clock?.displayValue ?? ev?.time?.displayValue ?? ev?.displayTime ?? ev?.timeText ?? ev?.text ?? "");
-  const m = text.match(/(\d{1,3})(?:\s*['’])?(?:\s*\+\s*(\d{1,2}))?/);
-  if (!m) return 1;
-  const base = Number(m[1]);
-  const extra = m[2] ? Number(m[2]) : 0;
-  if (base === 45 || base === 90 || base === 105 || base === 120) return base + extra;
-  return base;
-}
-
-function rawEventExtra(ev) {
-  const direct = ev?.time?.extra ?? ev?.time?.elapsedExtra ?? ev?.extra ?? ev?.addedTime ?? ev?.stoppageTime;
-  const n = Number(direct);
-  if (Number.isFinite(n) && n > 0) return n;
-  const text = String(ev?.clock?.displayValue ?? ev?.time?.displayValue ?? ev?.displayTime ?? ev?.timeText ?? ev?.text ?? "");
-  const m = text.match(/(?:45|90|105|120)\s*['’]?\s*\+\s*(\d{1,2})/);
-  return m ? Number(m[1]) : 0;
-}
-
-function eventMatchMinute(ev) {
-  const elapsed = rawEventMinute(ev);
-  const extra = rawEventExtra(ev);
-  if (extra > 0) {
-    const base = elapsed >= 120 ? 120 : elapsed >= 105 ? 105 : elapsed >= 90 ? 90 : elapsed >= 45 ? 45 : elapsed;
-    return base + extra;
-  }
-  return elapsed;
-}
-
-function eventChartMinute(ev) {
-  return Math.max(1, Math.min(90, eventMatchMinute(ev)));
-}
-
-function eventMinuteLabel(ev) {
-  const elapsed = rawEventMinute(ev);
-  const extra = rawEventExtra(ev);
-  if (extra > 0) {
-    const base = elapsed >= 120 ? 120 : elapsed >= 105 ? 105 : elapsed >= 90 ? 90 : elapsed >= 45 ? 45 : elapsed;
-    return `${base}+${extra}'`;
-  }
-  if (elapsed > 120) return `120+${elapsed - 120}'`;
-  if (elapsed > 105) return `105+${elapsed - 105}'`;
-  if (elapsed > 90) return `90+${elapsed - 90}'`;
-  if (elapsed > 45 && elapsed < 90 && ev?.period === 1) return `45+${elapsed - 45}'`;
-  return `${elapsed}'`;
-}
-
 function MatchMomentum({ match, events=[], momentum=[], stats, C, score=null }) {
   const safeEvents = Array.isArray(events) ? events : [];
   const safeMomentum = Array.isArray(momentum) ? momentum : [];
@@ -4467,7 +4362,7 @@ function MatchMomentum({ match, events=[], momentum=[], stats, C, score=null }) 
     for (let i=0; i<homeBursts; i++) addGaussian(rows, (90/(homeBursts+1))*(i+1)+(rand()-.5)*8, 1, 14+rand()*16, 2.1+rand()*1.4);
     for (let i=0; i<awayBursts; i++) addGaussian(rows, (90/(awayBursts+1))*(i+1)+(rand()-.5)*8, -1, 12+rand()*14, 2.0+rand()*1.3);
     safeEvents.forEach(ev => {
-      const min = eventChartMinute(ev);
+      const min = clamp(Number(ev.time?.elapsed) || 1, 1, 90);
       const side = sideFor(ev);
       if (ev.type === "Goal") addGaussian(rows, min, side, 48, 1.8);
       else if (ev.type === "Card" && ev.detail === "Red Card") addGaussian(rows, min, -side, 38, 1.9);
@@ -4493,7 +4388,7 @@ function MatchMomentum({ match, events=[], momentum=[], stats, C, score=null }) 
       sub: [0.06,0.24,0.52,0.24,0.06]
     };
     safeEvents.forEach(ev => {
-      const min = eventChartMinute(ev);
+      const min = clamp(Number(ev.time?.elapsed) || 1, 1, 90);
       const side = sideFor(ev);
       if (ev.type === "Goal") {
         addKernel(rows, min, side, 66, kernels.goal);
@@ -4538,7 +4433,7 @@ function MatchMomentum({ match, events=[], momentum=[], stats, C, score=null }) 
     }
 
     safeEvents.forEach(ev => {
-      const min = eventChartMinute(ev);
+      const min = clamp(Number(ev.time?.elapsed) || 1, 1, 90);
       const side = sideFor(ev);
       if (ev.type === "Goal") {
         addGaussian(rows, min, side, 70, 1.15);
@@ -4578,7 +4473,7 @@ function MatchMomentum({ match, events=[], momentum=[], stats, C, score=null }) 
   const scoreStatus = score?.status || score?.fixture?.status?.short || "";
   const isLiveMatch = statusIsLive(scoreStatus);
   const isFinishedMatch = statusIsFinished(scoreStatus);
-  const eventMaxMinute = safeEvents.reduce((m, ev) => Math.max(m, eventChartMinute(ev) || 0), 0);
+  const eventMaxMinute = safeEvents.reduce((m, ev) => Math.max(m, Number(ev.time?.elapsed) || 0), 0);
   const reportedElapsed = Number(score?.elapsed ?? score?.time?.elapsed ?? 0) || 0;
   const liveCutoff = isFinishedMatch
     ? 90
@@ -4597,7 +4492,7 @@ function MatchMomentum({ match, events=[], momentum=[], stats, C, score=null }) 
 
   const markersByMinute = Array.from({ length: 90 }, () => []);
   safeEvents.filter(ev => ["Goal","Card","subst"].includes(ev.type)).sort((a,b)=>eventWeight(b)-eventWeight(a)).forEach(ev => {
-    const min = eventChartMinute(ev);
+    const min = Math.max(1, Math.min(90, Number(ev.time?.elapsed) || 1));
     if (min > liveCutoff) return;
     markersByMinute[min - 1].push({ ...ev, min, isHome: normTeam(ev.team?.name || "") === match.home });
   });
@@ -4741,7 +4636,7 @@ function MatchCommentary({ commentary = [], C }) {
   const items = Array.isArray(commentary) ? commentary : [];
   const rows = items.map((item, idx) => {
     if (typeof item === "string") return { key: idx, time: "", text: item, type: "" };
-    const minute = item.minute ?? item.time?.elapsed ?? item.clock?.displayValue ?? item.time?.displayValue ?? item.displayTime ?? "";
+    const minute = item.time?.display || item.time?.displayValue || item.clock?.displayValue || item.displayTime || item.minute || item.time?.elapsed || "";
     const time = typeof minute === "number" ? `${minute}'` : String(minute || "");
     return {
       key: item.id || idx,
@@ -4927,7 +4822,7 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
     const base = window.location.origin;
     const keyEvents = events && events.length > 0
       ? events.filter(ev=>ev.type==="Goal"||ev.type==="Card").slice(0,5)
-          .map(ev=>({type:ev.type==="Goal"?"goal":ev.detail?.includes("Yellow")?"yellow":"red",name:ev.player?.name?.split(" ").pop()||"",min:ev.time?.elapsed||"",side:normTeam(ev.team?.name||"")===match.home?"home":"away"}))
+          .map(ev=>({type:ev.type==="Goal"?"goal":ev.detail?.includes("Yellow")?"yellow":"red",name:ev.player?.name?.split(" ").pop()||"",min:ev.time?.display||ev.time?.elapsed||"",side:normTeam(ev.team?.name||"")===match.home?"home":"away"}))
       : [];
     const params = new URLSearchParams();
     params.set("home", match.home);
@@ -5234,10 +5129,10 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
                           </div>
                           <div style={{display:"flex",flexDirection:"column",alignItems:"center",minWidth:52,flexShrink:0}}>
                             <div style={{fontSize:11,fontWeight:700,color:C.gold}}>
-                              {eventMinuteLabel(ev)}
+                              {ev.time?.display || `${ev.time?.elapsed ?? ""}${ev.time?.extra ? `+${ev.time.extra}` : ""}'`}
                               {(() => {
-                                const mins = rawEventMinute(ev);
-                                return !isNaN(mins) && mins > 45 && mins <= 90 && (
+                                const mins = parseInt(ev.time?.elapsed, 10);
+                                return !isNaN(mins) && mins > 45 && (
                                   <span style={{color:C.dim,fontWeight:600}}> ({mins-45}' H2)</span>
                                 );
                               })()}
