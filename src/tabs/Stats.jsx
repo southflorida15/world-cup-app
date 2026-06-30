@@ -6,7 +6,8 @@ import { displayTeamName } from "../i18n/display";
 // App.jsx itself needs to import this file to render it.
 // C, DS, GROUPS, PREDS, RECENT4, TEAMS, getFlag, isCaptain, parseName,
 // posColor, posLabel, posSort, useElemHeight, zafronixGet,
-// Badge, Card, Crest, Pill, QuickFacts, RC, RecentForm, TeamHistoryCard
+// Badge, Card, Crest, Pill, QuickFacts, RC, RecentForm, TeamHistoryCard,
+// resolvedMatches
 
 export default function StatsTab({
   language="en", t=(key, fallback)=>fallback,
@@ -15,6 +16,7 @@ export default function StatsTab({
   C, DS, GROUPS, PREDS, RECENT4, TEAMS, getFlag, isCaptain, parseName,
   posColor, posLabel, posSort, useElemHeight, zafronixGet,
   Badge, Card, Crest, Pill, QuickFacts, RC, RecentForm, TeamHistoryCard,
+  resolvedMatches=[],
 }) {
   const isPtBR = language === "pt-BR";
   const tx = (en, pt) => isPtBR ? pt : en;
@@ -226,7 +228,7 @@ export default function StatsTab({
           </Card>
 
           {/* Dynamic recent form — auto-switches to live WC data after Jun 11 */}
-          <RecentForm team={sel} staticData={RECENT4[sel]}/>
+          <RecentForm team={sel} staticData={RECENT4[sel]} resolvedMatches={resolvedMatches}/>
         </div>
       )}
     </div>
