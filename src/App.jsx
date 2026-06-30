@@ -705,7 +705,12 @@ const normStatus = (s) => String(s || "").trim();
 const upperStatus = (s) => normStatus(s).toUpperCase();
 export const statusIsLive = (s) => {
   const u = upperStatus(s);
-  return ["1H","HT","2H","ET","BT","P","LIVE","INPROGRESS","FIRST_HALF","HALFTIME","SECOND_HALF","EXTRA_TIME","PENALTIES","STATUS_IN_PROGRESS","STATUS_HALFTIME","STATUS_EXTRA_TIME","STATUS_PENALTY","STATUS_PENALTY_SHOOTOUT"].includes(u);
+  return [
+    "1H","HT","2H","ET","BT","P",
+    "LIVE","INPROGRESS","FIRST_HALF","HALFTIME","SECOND_HALF","EXTRA_TIME","PENALTIES",
+    "STATUS_IN_PROGRESS","STATUS_HALFTIME","STATUS_EXTRA_TIME","STATUS_OVERTIME","STATUS_END_OF_PERIOD",
+    "STATUS_PENALTY","STATUS_PENALTY_SHOOTOUT","STATUS_SHOOTOUT","STATUS_PENALTIES"
+  ].includes(u);
 };
 export const statusIsFinished = (s) => {
   const u = upperStatus(s);
@@ -718,9 +723,9 @@ const statusLabel = (s,e,ex) => {
   if(s==="1H"||s==="first_half"||s==="inprogress"||s==="LIVE") return e?(ex?`${e}+${ex}'`:`${e}'`):"LIVE";
   if(s==="HT"||s==="halftime") return "HT";
   if(s==="2H"||s==="second_half") return e?(ex?`${e}+${ex}' (${e-45}' H2)`:`${e}' (${e-45}' H2)`):"LIVE";
-  if(s==="ET"||s==="extra_time") return e?(ex?`ET ${e}+${ex}'`:`ET ${e}'`):"ET";
-  if(s==="BT") return "BT";
-  if(u==="P"||u==="PENALTIES"||u==="STATUS_PENALTY"||u==="STATUS_PENALTY_SHOOTOUT") return "Pens";
+  if(s==="ET"||s==="extra_time"||u==="STATUS_EXTRA_TIME"||u==="STATUS_OVERTIME") return e?(ex?`ET ${e}+${ex}'`:`ET ${e}'`):"ET";
+  if(s==="BT"||u==="STATUS_END_OF_PERIOD") return "BT";
+  if(u==="P"||u==="PENALTIES"||u==="STATUS_PENALTY"||u==="STATUS_PENALTY_SHOOTOUT"||u==="STATUS_SHOOTOUT"||u==="STATUS_PENALTIES") return "Pens";
   if(u==="FT"||u==="FINISHED"||u==="ENDED"||u==="STATUS_FINAL"||u==="STATUS_FULL_TIME") return "FT";
   if(u==="AET"||u==="AFTER_EXTRA_TIME"||u==="STATUS_FINAL_AET") return "AET";
   if(u==="PEN"||u==="AFTER_PENALTIES"||u==="STATUS_FINAL_PEN"||u==="STATUS_FINAL_PENALTY"||u==="STATUS_FINAL_PENALTIES") return "Pens";
