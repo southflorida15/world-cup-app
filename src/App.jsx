@@ -3425,50 +3425,69 @@ function DragList({ items, onReorder, renderItem }) {
 
 // ── MY BRACKET TAB ────────────────────────────────────────────────────────
 const defaultBracketGroups=()=>Object.fromEntries(Object.entries(GROUPS).map(([g,{teams}])=>[g,[...teams]]));
-function BracketMatchup({ match, t1, t2, winner, onPick, interactive=false, compact=false, t1Tag=null, t2Tag=null }) {
+function BracketMatchup({ match, t1, t2, winner, onPick, interactive=false, compact=false, t1Tag=null, t2Tag=null, onMatchTap=null }) {
+  const { getScore, isLive, isFinished } = useContext(LiveScoresCtx);
   const canPick = interactive && t1 && t2 && t1 !== "TBD" && t2 !== "TBD";
   const matchData = match ? MATCHES.find(m => m.id === match) : null;
+  const hasRealMatchup = t1 && t2 && t1 !== "TBD" && t2 !== "TBD";
+  const live = hasRealMatchup ? isLive(t1, t2) : false;
+  const finished = hasRealMatchup ? isFinished(t1, t2) : false;
+  // Only show score once the match has actually started — getScore returns
+  // a default 0-0 even for scheduled-but-not-yet-played matches.
+  const sc = hasRealMatchup && (live || finished) ? getScore(t1, t2) : null;
+  const canTapMatch = !!(matchData && onMatchTap && hasRealMatchup);
   const teamRow = (team, i, tag) => {
     const isW = winner && team === winner;
     const disabled = !canPick || !team || team === "TBD";
     const isClinched = tag === "clinched";
-    const isProvisional = tag === "provisional";
+    // Only dim provisional teams in manual/interactive mode — in the Actual
+    // bracket a provisionally-leading team should still show at full strength.
+    const isProvisional = tag === "provisional" && interactive;
     const nameColor = isW ? C.green : isClinched ? C.gold : isProvisional ? C.dim : team ? C.text : C.dim;
+    const score = sc ? (i === 0 ? sc.hg : sc.ag) : null;
     return (
       <button
         key={i}
         onClick={() => !disabled && onPick?.(team)}
         disabled={disabled}
-        title={canPick ? `Pick ${team}` : isProvisional ? `${team} is currently leading their group — not yet mathematically confirmed for 1st place` : isClinched ? `${team} has clinched 1st place in their group` : undefined}
+        title={canPick ? `Pick ${team}` : isProvisional ? `${team} is currently leading their group — not yet mathematically confirmed` : isClinched ? `${team} has clinched this slot` : undefined}
         style={{width:"100%",display:"flex",alignItems:"center",gap:8,padding:compact?"7px 8px":"10px 10px",background:isW?`${C.green}24`:"transparent",border:"none",borderBottom:i===0?`1px solid ${C.b1}`:"none",cursor:canPick?"pointer":"default",textAlign:"left",opacity:team?(isProvisional?0.7:1):0.65}}
       >
         <Crest team={team||"TBD"} size={compact?16:22}/>
         <span style={{fontSize:compact?12:14,color:nameColor,fontWeight:isW||isClinched?800:600,fontStyle:isProvisional?"italic":"normal",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",flex:1}}>{team||"TBD"}</span>
-        {isClinched && !isW && <span title="Clinched 1st place" style={{fontSize:11}}>🔒</span>}
+        {isClinched && !isW && <span title="Clinched this slot" style={{fontSize:11}}>🔒</span>}
         {isProvisional && <span style={{fontSize:8,color:C.dim,fontWeight:700,letterSpacing:"0.04em",whiteSpace:"nowrap"}}>LEADING</span>}
+        {score != null && <span style={{fontSize:compact?12:13,fontWeight:800,color:live?C.green:C.text,fontFamily:"monospace"}}>{score}</span>}
         {isW && <span style={{fontSize:12,color:C.green,fontWeight:900}}>✓</span>}
       </button>
     );
   };
   return (
-    <div style={{position:"relative",background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${winner?C.greenS:C.b1}`,borderRadius:12,overflow:"hidden",width:"100%",boxShadow:winner?DS.shadow.panel:DS.shadow.card}}>
-      <div style={{padding:"5px 10px",borderBottom:`1px solid ${C.b1}`,background:`${C.bg}88`}}>
+    <div style={{position:"relative",background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${winner?C.greenS:live?C.green:C.b1}`,borderRadius:12,overflow:"hidden",width:"100%",boxShadow:winner?DS.shadow.panel:DS.shadow.card}}>
+      <button
+        onClick={() => canTapMatch && onMatchTap({...matchData, home: t1, away: t2})}
+        disabled={!canTapMatch}
+        style={{width:"100%",display:"block",padding:"5px 10px",borderBottom:`1px solid ${C.b1}`,background:`${C.bg}88`,border:"none",borderBottomWidth:1,borderBottomStyle:"solid",borderBottomColor:C.b1,cursor:canTapMatch?"pointer":"default",textAlign:"left",WebkitAppearance:"none",appearance:"none"}}
+      >
         {matchData ? (
-          <>
-            <div style={{fontSize:10,fontWeight:700,color:C.gold,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{matchData.date} · {matchData.time}</div>
-            <div style={{fontSize:9,color:C.dim,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>📍 {matchData.venue.split(",")[0]}</div>
-          </>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:6}}>
+            <div style={{overflow:"hidden"}}>
+              <div style={{fontSize:10,fontWeight:700,color:C.gold,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{matchData.date} · {matchData.time}</div>
+              <div style={{fontSize:9,color:C.dim,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>📍 {matchData.venue.split(",")[0]}</div>
+            </div>
+            {live && <span style={{fontSize:9,color:C.red,fontWeight:800,flexShrink:0,animation:"pulse 1.2s infinite"}}>🔴 LIVE</span>}
+          </div>
         ) : (
           <div style={{fontSize:10,color:C.gold,fontWeight:900,letterSpacing:"0.08em"}}>M{match || "—"}</div>
         )}
-      </div>
+      </button>
       {teamRow(t1,0,t1Tag)}
       {teamRow(t2,1,t2Tag)}
     </div>
   );
 }
 
-function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick=()=>{}, completedCount=0 }) {
+function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick=()=>{}, completedCount=0, onMatchTap=null }) {
   const bracketScrollRef = useRef(null);
 
   useEffect(() => {
@@ -3546,7 +3565,7 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
             const m = matchesById[id]||{match:id,home:null,away:null,winner:null};
             return (
               <div key={id} style={{position:"absolute",top:tops[n],left:0,width:CW,opacity:!(m.home&&m.away)?0.55:1}}>
-                <BracketMatchup match={m.match} t1={m.home} t2={m.away} winner={m.winner} interactive={pickMode==="manual"} onPick={t=>onPick(m,t)} t1Tag={m.homeTag} t2Tag={m.awayTag}/>
+                <BracketMatchup match={m.match} t1={m.home} t2={m.away} winner={m.winner} interactive={pickMode==="manual"} onPick={t=>onPick(m,t)} t1Tag={m.homeTag} t2Tag={m.awayTag} onMatchTap={onMatchTap}/>
               </div>
             );
           })}
@@ -3609,7 +3628,7 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
               <div style={{position:"absolute",top:finalTop-22,left:0,width:190,textAlign:"center",fontSize:11,fontWeight:900,color:C.gold,letterSpacing:"0.12em"}}>FINAL</div>
               {/* Final card */}
               <div style={{position:"absolute",top:finalTop,left:0,width:190}}>
-                <BracketMatchup match={finalMatch.match} t1={finalMatch.home} t2={finalMatch.away} winner={finalMatch.winner} interactive={pickMode==="manual"} onPick={(team)=>onPick(finalMatch,team)}/>
+                <BracketMatchup match={finalMatch.match} t1={finalMatch.home} t2={finalMatch.away} winner={finalMatch.winner} interactive={pickMode==="manual"} onPick={(team)=>onPick(finalMatch,team)} onMatchTap={onMatchTap}/>
                 {finalMatch.winner && (
                   <div style={{marginTop:14,textAlign:"center",background:`${C.gold}16`,border:`1px solid ${C.gold}44`,borderRadius:14,padding:"10px 8px"}}>
                     <div style={{fontSize:10,color:C.dim,fontWeight:800,letterSpacing:"0.08em"}}>CHAMPION</div>
@@ -3628,7 +3647,7 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
   );
 }
 
-function VisualBracketTree({ bracket, pickMode="auto", onPick=()=>{}, view="compact" }) {
+function VisualBracketTree({ bracket, pickMode="auto", onPick=()=>{}, view="compact", onMatchTap=null }) {
   const byId = (matches=[]) => Object.fromEntries((matches||[]).map(m => [Number(m.match), m]));
   const matchesById = {
     ...byId(bracket?.r32),
@@ -3650,7 +3669,7 @@ function VisualBracketTree({ bracket, pickMode="auto", onPick=()=>{}, view="comp
   const completedCount = Object.values(matchesById).filter(m => m?.winner).length;
 
   if (view === "tree") {
-    return <WideBracketView rounds={rounds} matchesById={matchesById} bracket={bracket} pickMode={pickMode} onPick={onPick} completedCount={completedCount}/>;
+    return <WideBracketView rounds={rounds} matchesById={matchesById} bracket={bracket} pickMode={pickMode} onPick={onPick} completedCount={completedCount} onMatchTap={onMatchTap}/>;
   }
 
   return (
@@ -3685,7 +3704,7 @@ function VisualBracketTree({ bracket, pickMode="auto", onPick=()=>{}, view="comp
                   const locked = !(m.home && m.away);
                   return (
                     <div key={m.match} style={{opacity:locked?0.55:1,position:"relative"}}>
-                      <BracketMatchup match={m.match} t1={m.home} t2={m.away} winner={m.winner} interactive={pickMode==="manual"} onPick={(team)=>onPick(m,team)} t1Tag={m.homeTag} t2Tag={m.awayTag}/>
+                      <BracketMatchup match={m.match} t1={m.home} t2={m.away} winner={m.winner} interactive={pickMode==="manual"} onPick={(team)=>onPick(m,team)} t1Tag={m.homeTag} t2Tag={m.awayTag} onMatchTap={onMatchTap}/>
                     </div>
                   );
                 })}
@@ -4104,6 +4123,9 @@ function MyBracketTab({ tabTop=116 }) {
     // "provisional" the entire time before that.
     const slotTag = (slot) => {
       if (typeof slot !== "string") return null;
+      // Once all groups have finished their 3 matches, every 1X/2X slot is
+      // definitively settled — no more "provisional" anywhere in the R32.
+      if (allGroupsComplete) return "clinched";
       if (slot[0] === "1") return clinchedFirst[slot[1]] ? "clinched" : "provisional";
       if (slot[0] === "2") return groupComplete[slot[1]] ? "clinched" : "provisional";
       return null;
