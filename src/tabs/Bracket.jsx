@@ -390,9 +390,23 @@ export default function MyBracketTab({
       let s = getScore(home, away), swapped = false;
       if (!s) { s = getScore(away, home); swapped = true; }
       if (!s || !statusIsFinished(s.status)) return null;
-      const hg = swapped ? s.ag : s.hg, ag = swapped ? s.hg : s.ag;
-      if (hg == null || ag == null || hg === ag) return null;
-      return { hg, ag, winner: hg > ag ? home : away };
+
+      const hg = swapped ? s.ag : s.hg;
+      const ag = swapped ? s.hg : s.ag;
+      const pHome = swapped ? s.pAway : s.pHome;
+      const pAway = swapped ? s.pHome : s.pAway;
+
+      if (hg == null || ag == null) return null;
+
+      // Knockout matches can finish level after extra time and be resolved on
+      // penalties. Keep the 120-minute score on the bracket card, but advance
+      // the penalty-shootout winner into the next round.
+      if (s.winner) return { hg, ag, pHome, pAway, winner: s.winner };
+      if (Number(hg) !== Number(ag)) return { hg, ag, pHome, pAway, winner: Number(hg) > Number(ag) ? home : away };
+      if (pHome != null && pAway != null && Number(pHome) !== Number(pAway)) {
+        return { hg, ag, pHome, pAway, winner: Number(pHome) > Number(pAway) ? home : away };
+      }
+      return null;
     };
 
     const winnerMap = {};
