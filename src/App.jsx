@@ -1336,6 +1336,10 @@ export function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favT
     else if(sc.ag>sc.hg) winner=m.away;
     else if(sc.pHome != null && sc.pAway != null && Number(sc.pHome) !== Number(sc.pAway)) winner = Number(sc.pHome) > Number(sc.pAway) ? m.home : m.away;
   }
+  const winnerMark = (team) => winner === team
+    ? <span title={tx("Winner", "Vencedor")} style={{marginLeft:6,color:C.green,fontWeight:900}}>✓</span>
+    : null;
+  const winnerNameColor = (team, provisional=false) => provisional ? C.dim : (winner === team ? C.green : C.dim);
   const isFav = favTeams?.length && (favTeams.includes(m.home) || favTeams.includes(m.away));
   const [scoreFlash, setScoreFlash] = useState(false);
   const prevScore = useRef(null);
@@ -1383,7 +1387,7 @@ export function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favT
 
   if ((isPastDay || finished) && finished && hasScore) {
     return (
-      <div onClick={()=>onMatchTap&&onMatchTap(m)} style={{marginBottom:8,background:C.s1,border:`1px solid ${C.b2}`,borderRadius:12,overflow:"hidden",opacity:0.8,cursor:onMatchTap?"pointer":"default"}}>
+      <div onClick={()=>onMatchTap&&onMatchTap(m)} style={{marginBottom:8,background:C.s1,border:`1px solid ${winner?C.green:C.b2}`,borderRadius:12,overflow:"hidden",opacity:0.88,cursor:onMatchTap?"pointer":"default",boxShadow:winner?`0 0 0 1px ${C.green}22`:"none"}}>
         {/* Header: keep group/venue/time */}
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 13px",borderBottom:`1px solid ${C.b1}`,background:C.s2}}>
           <div style={{display:"flex",alignItems:"center",gap:6,minWidth:0,flex:1}}>
@@ -1404,7 +1408,7 @@ export function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favT
         <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 13px"}}>
           <div style={{opacity:homeProvisional?0.45:1}}><Crest team={m.home} size={32}/></div>
           <span style={{flex:1,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-            <span style={{fontWeight:winner===m.home?800:700,color:homeProvisional?C.dim:(winner===m.home?C.text:C.dim)}}>{dHome}</span>
+            <span style={{fontWeight:winner===m.home?900:700,color:winnerNameColor(m.home, homeProvisional)}}>{dHome}{winnerMark(m.home)}</span>
             {homeProvisional && <span style={{fontStyle:"italic",fontSize:10,color:C.dim,marginLeft:4}}>{tx("provisional", "provisório")}</span>}
           </span>
           <div style={{textAlign:"center",minWidth:60,flexShrink:0}}>
@@ -1412,7 +1416,7 @@ export function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favT
           </div>
           <span style={{flex:1,fontSize:14,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
             {awayProvisional && <span style={{fontStyle:"italic",fontSize:10,color:C.dim,marginRight:4}}>{tx("provisional", "provisório")}</span>}
-            <span style={{fontWeight:winner===m.away?800:700,color:awayProvisional?C.dim:(winner===m.away?C.text:C.dim)}}>{dAway}</span>
+            <span style={{fontWeight:winner===m.away?900:700,color:winnerNameColor(m.away, awayProvisional)}}>{dAway}{winnerMark(m.away)}</span>
           </span>
           <div style={{opacity:awayProvisional?0.45:1}}><Crest team={m.away} size={32}/></div>
         </div>
@@ -1421,7 +1425,7 @@ export function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favT
   }
 
   return (
-    <div onClick={()=>onMatchTap&&onMatchTap(m)} style={{marginBottom:8,background:isKickingOff?countdownBg:live?`linear-gradient(135deg,${C.green}14,${C.s1})`:C.s1,border:`${isKickingOff?"3px":live?"3px":"1px"} solid ${isKickingOff?C.gold:live?C.green:isFav?`${C.gold}66`:C.b2}`,borderRadius:12,overflow:"hidden",opacity:finished?0.8:1,cursor:onMatchTap?"pointer":"default",boxShadow:isKickingOff?`0 0 0 2px ${C.gold}44,0 4px 24px ${C.gold}33`:live?`0 0 0 1px ${C.green}44,0 4px 20px ${C.green}22`:"none",transition:"border-color .3s,box-shadow .3s,background .3s"}}>
+    <div onClick={()=>onMatchTap&&onMatchTap(m)} style={{marginBottom:8,background:isKickingOff?countdownBg:live?`linear-gradient(135deg,${C.green}14,${C.s1})`:C.s1,border:`${isKickingOff?"3px":live?"3px":"1px"} solid ${isKickingOff?C.gold:live?C.green:finished&&winner?C.green:isFav?`${C.gold}66`:C.b2}`,borderRadius:12,overflow:"hidden",opacity:finished?0.8:1,cursor:onMatchTap?"pointer":"default",boxShadow:isKickingOff?`0 0 0 2px ${C.gold}44,0 4px 24px ${C.gold}33`:live?`0 0 0 1px ${C.green}44,0 4px 20px ${C.green}22`:finished&&winner?`0 0 0 1px ${C.green}22`:"none",transition:"border-color .3s,box-shadow .3s,background .3s"}}>
       {/* Header: group/stage + venue + time */}
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 13px",borderBottom:`1px solid ${C.b1}`,background:C.s2}}>
         <div style={{display:"flex",alignItems:"center",gap:6,minWidth:0,flex:1}}>
@@ -1446,7 +1450,7 @@ export function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favT
       <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 13px"}}>
         <div style={{opacity:homeProvisional?0.45:1}}><Crest team={m.home} size={32}/></div>
         <span style={{flex:1,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-          <span style={{fontWeight:winner===m.home?800:700,color:homeProvisional?C.dim:(finished?(winner===m.home?C.text:C.dim):favTeams?.includes(m.home)?C.gold:C.text)}}>{dHome}</span>
+          <span style={{fontWeight:winner===m.home?900:700,color:homeProvisional?C.dim:(finished?(winner===m.home?C.green:C.dim):favTeams?.includes(m.home)?C.gold:C.text)}}>{dHome}{winnerMark(m.home)}</span>
           {homeProvisional && <span style={{fontStyle:"italic",fontSize:10,color:C.dim,marginLeft:4}}>{tx("provisional", "provisório")}</span>}
         </span>
         {isKickingOff ? (
@@ -1467,7 +1471,7 @@ export function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favT
         )}
         <span style={{flex:1,fontSize:14,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
           {awayProvisional && <span style={{fontStyle:"italic",fontSize:10,color:C.dim,marginRight:4}}>{tx("provisional", "provisório")}</span>}
-          <span style={{fontWeight:winner===m.away?800:700,color:awayProvisional?C.dim:(finished?(winner===m.away?C.text:C.dim):favTeams?.includes(m.away)?C.gold:C.text)}}>{dAway}</span>
+          <span style={{fontWeight:winner===m.away?900:700,color:awayProvisional?C.dim:(finished?(winner===m.away?C.green:C.dim):favTeams?.includes(m.away)?C.gold:C.text)}}>{dAway}{winnerMark(m.away)}</span>
         </span>
         <div style={{opacity:awayProvisional?0.45:1}}><Crest team={m.away} size={32}/></div>
       </div>
@@ -6461,21 +6465,21 @@ const I18N = {
 };
 
 function detectPreferredLanguage() {
-  // Use the user's OS/browser language only on first launch.
-  // Portuguese variants (pt, pt-BR, pt-PT, etc.) default to Brazilian
-  // Portuguese for now; everything else defaults to English. Manual
-  // selection still wins and is stored in localStorage.
+  // Manual selection wins only after the user explicitly changes language.
+  // Older dev builds stored wc2026_language during testing, which could make
+  // an English OS keep opening in PT-BR forever. Use the explicit manual key
+  // for persistence, otherwise detect the OS/browser language fresh.
   try {
-    const saved = localStorage.getItem("wc2026_language");
-    if (I18N[saved]) return saved;
+    const manual = localStorage.getItem("wc2026_language_manual");
+    if (I18N[manual]) return manual;
   } catch {}
 
   try {
     const langs = Array.isArray(navigator.languages) && navigator.languages.length
       ? navigator.languages
       : [navigator.language || ""];
-    const hasPortuguese = langs.some(l => String(l || "").toLowerCase().startsWith("pt"));
-    return hasPortuguese ? "pt-BR" : "en";
+    const primary = String(langs[0] || "").toLowerCase();
+    return primary.startsWith("pt") ? "pt-BR" : "en";
   } catch {
     return "en";
   }
@@ -6486,7 +6490,10 @@ function useI18n() {
   const setLanguage = useCallback((next) => {
     const safe = I18N[next] ? next : "en";
     setLanguageState(safe);
-    try { localStorage.setItem("wc2026_language", safe); } catch {}
+    try {
+      localStorage.setItem("wc2026_language", safe);
+      localStorage.setItem("wc2026_language_manual", safe);
+    } catch {}
   }, []);
   const t = useCallback((key, fallback="") => I18N[language]?.[key] || I18N.en?.[key] || fallback || key, [language]);
   return { language, setLanguage, t };
@@ -6679,6 +6686,11 @@ function AppContent() {
   }, []);
   const [tab, setTab] = useState("home");
   const { language, setLanguage, t } = useI18n();
+  const [languageRenderRev, setLanguageRenderRev] = useState(0);
+  const setAppLanguage = useCallback((next) => {
+    setLanguage(next);
+    setLanguageRenderRev(v => v + 1);
+  }, [setLanguage]);
   const [masterPushSubscribed, setMasterPushSubscribed] = useState(false);
 
   // Detect league invite from URL ?join=CODE
@@ -7128,7 +7140,7 @@ function AppContent() {
               </div>
             </div>
             <div style={{display:"flex",alignItems:"center",gap:8}}>
-              <LanguageSelector language={language} setLanguage={setLanguage} C={C} />
+              <LanguageSelector language={language} setLanguage={setAppLanguage} C={C} />
               {/* Dark/light toggle */}
               <button onClick={toggleDark} title={dark?t("header.switchToLight","Switch to light mode"):t("header.switchToDark","Switch to dark mode")} style={{position:"relative",width:56,height:28,borderRadius:14,border:"none",background:dark?"#4ade80":"#1a3828",cursor:"pointer",flexShrink:0,padding:0,transition:"background .25s"}}>
                 <span style={{position:"absolute",top:4,left:dark?32:4,width:20,height:20,borderRadius:"50%",background:"#e5e5ea",boxShadow:"0 1px 4px rgba(0,0,0,.35)",transition:"left .22s cubic-bezier(.4,0,.2,1)",display:"block"}}/>
@@ -7166,7 +7178,7 @@ function AppContent() {
           </div>
         </div>
         <PullToRefresh onRefresh={async()=>{ if(refreshScores) await refreshScores(); }}>
-        <div key={`tab-content-${language}-${tab}`} style={{padding:"0 13px 100px"}}>
+        <div key={`lang-${language}-${languageRenderRev}`} style={{padding:"0 13px 100px"}}>
           {tab==="home"      && <MyWorldCupTab language={language} favTeams={favTeams} saved={saved} syncProfile={syncProfile} displayName={displayName} userAvatar={userAvatar} onMatchTap={onMatchTap} setTab={setTab} onPickTeams={()=>setShowSyncModal(true)} C={C} DS={DS} GROUPS={GROUPS} MATCHES={MATCHES} resolvedMatches={resolvedMatches} MATCH_UTC={MATCH_UTC} R32_SLOT_TEMPLATE={R32_SLOT_TEMPLATE} LiveScoresCtx={LiveScoresCtx} getFlag={getFlag} getUserId={getUserId} statusIsFinished={statusIsFinished} calcStandings={calcStandings} apiPred={apiPred} Crest={Crest}/>}
           {tab==="live"      && <LiveTab onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} tabTop={tabBarBottom} savedIds={savedIds} matches={resolvedMatches}/>}
           {tab==="schedule"  && <SchedTab language={language} t={t} onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} tabTop={tabBarBottom} savedIds={savedIds} matches={resolvedMatches} C={C} FavCtx={FavCtx} LiveScoresCtx={LiveScoresCtx} MATCHES={MATCHES} MATCH_DATES={MATCH_DATES} MATCH_UTC={MATCH_UTC} ALL_TEAMS={ALL_TEAMS} calcStandings={calcStandings} getFlag={getFlag} matchTimes={matchTimes} statusIsFinished={statusIsFinished} useElemHeight={useElemHeight} MatchCard={MatchCard} Pill={Pill}/>}
