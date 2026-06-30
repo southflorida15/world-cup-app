@@ -1698,18 +1698,17 @@ function PlayerPhoto({ src, name, size=32 }) {
 }
 
 // ── RECENT FORM — dynamic, auto-upgrades to live WC data after Jun 11 ─────
-export function RecentForm({ team, staticData, resolvedMatches=[] }) {
+export function RecentForm({ team, staticData }) {
   const { language } = useI18n();
   const isPtBR = language === "pt-BR";
   const tx = (en, pt) => isPtBR ? pt : en;
   const { getScore } = useContext(LiveScoresCtx);
 
-  // Build WC 2026 matches from resolvedMatches (has real team names for ALL rounds,
-  // including R32, R16, QF, SF, Final — unlike raw MATCHES which has slot placeholders).
+  // Build form from actual WC 2026 MATCHES data using live scores — most accurate source
   const wcMatches = useMemo(() => {
-    if (!team || !resolvedMatches.length) return [];
-    return resolvedMatches
-      .filter(m => m.home === team || m.away === team)
+    if (!team) return [];
+    return MATCHES
+      .filter(m => (m.home === team || m.away === team))
       .map(m => {
         const sc = getScore(m.home, m.away);
         if (!sc || sc.hg === null || sc.ag === null) return null;
@@ -1718,54 +1717,31 @@ export function RecentForm({ team, staticData, resolvedMatches=[] }) {
         const teamGoals = isHome ? sc.hg : sc.ag;
         const oppGoals  = isHome ? sc.ag : sc.hg;
         const opp = isHome ? m.away : m.home;
-        let res = teamGoals > oppGoals ? "W" : teamGoals < oppGoals ? "L" : "D";
-        // For knockout matches resolved by penalties, use the penalty winner
-        if (res === "D" && sc.winner) res = sc.winner === team ? "W" : "L";
+        const res = teamGoals > oppGoals ? "W" : teamGoals === oppGoals ? "D" : "L";
         const matchUTC = MATCH_UTC[m.id];
         const dateStr = matchUTC
-          ? new Date(matchUTC).toLocaleDateString("en-US", { month:"short", day:"numeric" })
+          ? new Date(matchUTC).toLocaleDateString("en-US",{month:"short",day:"numeric"})
           : m.date;
-        const scoreStr = `${teamGoals}-${oppGoals}`;
-        const penStr = (sc.pHome != null && sc.pAway != null)
-          ? ` (${isHome ? sc.pHome : sc.pAway}–${isHome ? sc.pAway : sc.pHome} pens)`
-          : "";
-        return {
-          date: dateStr,
-          opp,
-          score: scoreStr + penStr,
-          loc: m.venue?.split(",")[0] || "",
-          comp: tx("World Cup 2026", "Copa 2026"),
-          res,
-          id: m.id,
-          sortKey: matchUTC || "",
-        };
+        return { date: dateStr, opp, score: `${teamGoals}-${oppGoals}`, loc: m.venue?.split(",")[0]||"", comp: tx("World Cup 2026", "Copa do Mundo 2026"), res, id: m.id };
       })
       .filter(Boolean)
-      .sort((a, b) => (b.sortKey > a.sortKey ? 1 : -1))
+      .sort((a,b) => (MATCH_UTC[b.id]||0) > (MATCH_UTC[a.id]||0) ? 1 : -1)
       .slice(0, 4);
-  }, [team, resolvedMatches, getScore]);
+  }, [team, getScore]);
 
   const isLiveData = wcMatches.length > 0;
   const display = isLiveData ? wcMatches : (staticData || []);
   if (!display.length) return null;
 
-  const count = display.length;
-  const headerLabel = tx("World Cup 2026 matches", "Jogos da Copa 2026");
-  const countLabel = isLiveData
-    ? (isPtBR ? `${count} mais recente${count !== 1 ? "s" : ""}` : `${count} most recent`)
-    : tx("Pre-tournament", "Pré-torneio");
-
   return (
     <Card>
       <div style={{padding:"10px 14px",borderBottom:`1px solid ${C.b1}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-        <span style={{fontWeight:700,color:C.green,fontSize:13}}>{headerLabel}</span>
-        <Badge color={isLiveData ? C.green : C.dim}>{isLiveData ? `🏆 ${countLabel}` : countLabel}</Badge>
+        <span style={{fontWeight:700,color:C.green,fontSize:13}}>{tx("LAST 4 MATCHES", "ÚLTIMOS 4 JOGOS")}</span>
+        {isLiveData
+          ? <Badge color={C.green}>{tx("🔴 Live World Cup data", "🔴 Dados ao vivo da Copa")}</Badge>
+          : <Badge color={C.dim}>{tx("Pre-tournament", "Pré-torneio")}</Badge>
+        }
       </div>
-      {!isLiveData && (
-        <div style={{padding:"6px 14px",background:`${C.gold}11`,borderBottom:`1px solid ${C.b1}`}}>
-          <span style={{fontSize:11,color:C.gold,fontWeight:600}}>{tx("No World Cup 2026 matches yet — showing recent pre-tournament results", "Nenhum jogo da Copa 2026 ainda — exibindo resultados pré-torneio")}</span>
-        </div>
-      )}
       {display.map((g,i) => {
         const rc = g.res==="W" ? C.green : g.res==="D" ? C.gold : C.red;
         return (
@@ -1780,8 +1756,8 @@ export function RecentForm({ team, staticData, resolvedMatches=[] }) {
                 <div style={{fontSize:11,color:C.dim,marginTop:2}}>{g.date}{g.loc ? ` · ${g.loc}` : ""}</div>
               </div>
               <span style={{fontSize:10,padding:"2px 7px",borderRadius:10,
-                background:(g.comp==="World Cup 2026"||g.comp==="Copa 2026")?`${C.green}22`:g.comp==="Friendly"?`${C.dim}22`:`${C.blue}18`,
-                color:(g.comp==="World Cup 2026"||g.comp==="Copa 2026")?C.green:g.comp==="Friendly"?C.mid:C.blue,
+                background:(g.comp==="World Cup 2026" || g.comp==="Copa do Mundo 2026")?`${C.green}22`:g.comp==="Friendly"?`${C.dim}22`:`${C.blue}18`,
+                color:(g.comp==="World Cup 2026" || g.comp==="Copa do Mundo 2026")?C.green:g.comp==="Friendly"?C.mid:C.blue,
                 fontWeight:600,flexShrink:0}}>{g.comp}</span>
             </div>
           </div>
@@ -6270,7 +6246,7 @@ function StatsHubTab({ initial="", tabTop=116 }) {
         </div>
       </div>
       <div style={{height:10}}/>
-      {mode==="team" && <StatsTab language={language} t={t} initial={initial} tabTop={childTop} C={C} DS={DS} GROUPS={GROUPS} PREDS={PREDS} RECENT4={RECENT4} TEAMS={TEAMS} getFlag={getFlag} isCaptain={isCaptain} parseName={parseName} posColor={posColor} posLabel={posLabel} posSort={posSort} useElemHeight={useElemHeight} zafronixGet={zafronixGet} Badge={Badge} Card={Card} Crest={Crest} Pill={Pill} QuickFacts={QuickFacts} RC={RC} RecentForm={RecentForm} TeamHistoryCard={TeamHistoryCard} resolvedMatches={resolvedMatches}/>}      
+      {mode==="team" && <StatsTab language={language} t={t} initial={initial} tabTop={childTop} C={C} DS={DS} GROUPS={GROUPS} PREDS={PREDS} RECENT4={RECENT4} TEAMS={TEAMS} getFlag={getFlag} isCaptain={isCaptain} parseName={parseName} posColor={posColor} posLabel={posLabel} posSort={posSort} useElemHeight={useElemHeight} zafronixGet={zafronixGet} Badge={Badge} Card={Card} Crest={Crest} Pill={Pill} QuickFacts={QuickFacts} RC={RC} RecentForm={RecentForm} TeamHistoryCard={TeamHistoryCard}/>}      
       {mode==="h2h" && <H2HTab tabTop={childTop}/>}      
       {mode==="scorers" && <TopScorersTab tabTop={childTop}/>}      
     </div>
