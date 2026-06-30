@@ -1,4 +1,5 @@
 // ── IMPORT COMPONENTS ──────────────────────────────────────────────────
+import { formatDisplayMinute } from "./i18n/display";
 import FantasyScoringRules from "./components/FantasyScoringRules";
 import MyWorldCupTab from "./tabs/MyWorldCupTab.jsx";
 import FantasyStatsSummary from "./components/FantasyStatsSummary";
@@ -693,12 +694,12 @@ export const LiveScoresCtx = createContext({scores:{},getScore:()=>null,isLive:(
 
 const statusIsLive = (s) => ["1H","HT","2H","ET","BT","P","LIVE","inprogress","first_half","halftime","second_half","extra_time","penalties"].includes(s);
 export const statusIsFinished = (s) => ["FT","AET","PEN","finished","ended","after_extra_time","after_penalties"].includes(s);
-const statusLabel = (s,e,ex) => {
+const statusLabel = (s,e,ex,language="en") => {
   if(!s||s==="NS"||s==="notstarted") return null;
-  if(s==="1H"||s==="first_half"||s==="inprogress"||s==="LIVE") return e?(ex?`${e}+${ex}'`:`${e}'`):"LIVE";
+  if(s==="1H"||s==="first_half"||s==="inprogress"||s==="LIVE") return e?(ex?formatDisplayMinute(`${e}+${ex}`,language):formatDisplayMinute(`${e}`,language)):"LIVE";
   if(s==="HT"||s==="halftime") return "HT";
-  if(s==="2H"||s==="second_half") return e?(ex?`${e}+${ex}' (${e-45}' H2)`:`${e}' (${e-45}' H2)`):"LIVE";
-  if(s==="ET"||s==="extra_time") return e?(ex?`ET ${e}+${ex}'`:`ET ${e}'`):"ET";
+  if(s==="2H"||s==="second_half") return e?(ex?formatDisplayMinute(`${e}+${ex}`,language):formatDisplayMinute(`${e}`,language)):"LIVE";
+  if(s==="ET"||s==="extra_time") return e?(ex?formatDisplayMinute(`${e}+${ex}`,language):formatDisplayMinute(`${e}`,language)):"ET";
   if(s==="BT") return "BT";
   if(s==="P"||s==="penalties") return "Pens";
   if(s==="FT"||s==="finished"||s==="ended") return "FT";
@@ -6550,12 +6551,13 @@ function MatchMomentum({ match, events=[], momentum=[], stats, C, score=null }) 
 }
 
 
-function MatchCommentary({ commentary = [], C }) {
+function MatchCommentary({ commentary = [], C, language = "en" }) {
   const items = Array.isArray(commentary) ? commentary : [];
   const rows = items.map((item, idx) => {
     if (typeof item === "string") return { key: idx, time: "", text: item, type: "" };
     const minute = item.minute ?? item.time?.elapsed ?? item.clock?.displayValue ?? item.time?.displayValue ?? item.displayTime ?? "";
-    const time = typeof minute === "number" ? `${minute}'` : String(minute || "");
+    const rawMin = typeof minute === "number" ? String(minute) : String(minute || "").replace(/'$/, "");
+    const time = rawMin ? formatDisplayMinute(rawMin, language) : "";
     return {
       key: item.id || idx,
       time,
@@ -6595,7 +6597,7 @@ function MatchCommentary({ commentary = [], C }) {
   );
 }
 
-function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), userPredHg, userPredAg }) {
+function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), userPredHg, userPredAg, language="en" }) {
   const [events, setEvents] = useState(null);
   const [matchStats, setMatchStats] = useState(null);
   const [lineups, setLineups] = useState(null);
@@ -7012,7 +7014,7 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
 
           {/* ── COMMENTARY ── */}
           {isPlayed && commentaryOpen && (
-            <MatchCommentary commentary={commentary || []} C={C} />
+            <MatchCommentary commentary={commentary || []} C={C} language={language} />
           )}
 
           {/* ── MATCH EVENTS ── */}
@@ -7047,13 +7049,7 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
                           </div>
                           <div style={{display:"flex",flexDirection:"column",alignItems:"center",minWidth:52,flexShrink:0}}>
                             <div style={{fontSize:11,fontWeight:700,color:C.gold}}>
-                              {ev.time?.elapsed}{ev.time?.extra?`+${ev.time.extra}`:""}'
-                              {(() => {
-                                const mins = parseInt(ev.time?.elapsed, 10);
-                                return !isNaN(mins) && mins > 45 && (
-                                  <span style={{color:C.dim,fontWeight:600}}> ({mins-45}' H2)</span>
-                                );
-                              })()}
+                              {formatDisplayMinute(ev.time?.extra!=null?`${ev.time?.elapsed}+${ev.time.extra}`:ev.time?.elapsed, language)}
                             </div>
                             <div style={{fontSize:16}}>{icon}</div>
                           </div>
@@ -9304,6 +9300,9 @@ export default function App() {
   });
   const [showFavPicker, setShowFavPicker] = useState(false);
   const favTeam = favTeams[0] || "";
+  const [language, setLanguage] = useState(() => {
+    try { return localStorage.getItem("wc2026_language") || "en"; } catch { return "en"; }
+  });
 
   // Client-triggered prediction scoring — fire on mount
   // Checks if any match ended in the last hour and triggers resolve
@@ -9635,7 +9634,7 @@ export default function App() {
             try{localStorage.removeItem("wc2026_favs")}catch{}
           }}
         />
-        <MatchEventsModal match={eventsModal.match} open={eventsModal.open} onClose={()=>setEventsModal({open:false,match:null})} onAction={onAction} savedIds={savedIds} userPredHg={eventsModal.predHg} userPredAg={eventsModal.predAg}/>
+        <MatchEventsModal match={eventsModal.match} open={eventsModal.open} onClose={()=>setEventsModal({open:false,match:null})} onAction={onAction} savedIds={savedIds} userPredHg={eventsModal.predHg} userPredAg={eventsModal.predAg} language={language}/>
         <Toast msg={toast} onDone={()=>setToast("")}/>
         <InstallBanner/>
         {showLeagueInvite && leagueInvite && (

@@ -128,3 +128,68 @@ export function displayMatchDate(date, language="en") {
   if (!date || language !== "pt-BR") return date;
   return String(date).replace(/^Jun\b/, "Jun").replace(/^Jul\b/, "Jul");
 }
+
+/**
+ * formatDisplayMinute(raw, language)
+ *
+ * Converts a raw match minute (number or string like "90+5" or "90+5'")
+ * into a human-readable label with an optional period-relative annotation.
+ *
+ * Examples (en):
+ *   30       → 30'            (plain 1H minute — no annotation)
+ *   45+2     → 45+2' (2' 1H) (1H stoppage)
+ *   75       → 75' (30' 2H)
+ *   90+5     → 90+5' (45+5' 2H)
+ *   105+2    → 105+2' (15+2' ET1)
+ *   120+1    → 120+1' (15+1' ET2)
+ *
+ * Same examples in pt-BR:
+ *   45+2     → 45+2' (2' 1T)
+ *   90+5     → 90+5' (45+5' 2T)
+ *   105+2    → 105+2' (15+2' PT1)
+ *   120+1    → 120+1' (15+1' PT2)
+ *
+ * This is the ONE canonical implementation. All timeline, commentary,
+ * live-badge, and event-list renderers must call this function.
+ * Do NOT add a second implementation elsewhere.
+ */
+export function formatDisplayMinute(raw, language = "en") {
+  if (raw == null || raw === "") return "";
+  const s = String(raw).trim();
+  // Strip trailing apostrophes so "90+5'" and "90+5" both parse cleanly
+  const m = s.replace(/'/g, "").match(/^(\d+)(?:\+(\d+))?$/);
+  if (!m) return s; // unrecognisable raw value — return as-is
+
+  const base = parseInt(m[1], 10);
+  const extra = m[2] != null ? parseInt(m[2], 10) : null;
+  const rawDisplay = extra != null ? `${base}+${extra}'` : `${base}'`;
+  const pt = language === "pt-BR";
+
+  // Plain 1H minutes (1–45, no stoppage) get no annotation — they're
+  // already unambiguous and adding "(30' 1H)" would just be noise.
+  if (base <= 45 && extra == null) return rawDisplay;
+
+  let rel;
+  if (base <= 45) {
+    // 1H stoppage: e.g. 45+2 → (2' 1H)
+    const period = pt ? "1T" : "1H";
+    rel = `${extra}' ${period}`;
+  } else if (base <= 90) {
+    // 2H: e.g. 75 → (30' 2H), 90+5 → (45+5' 2H)
+    const period = pt ? "2T" : "2H";
+    const relBase = base - 45;
+    rel = extra != null ? `${relBase}+${extra}' ${period}` : `${relBase}' ${period}`;
+  } else if (base <= 105) {
+    // ET first half: e.g. 105+2 → (15+2' ET1)
+    const period = pt ? "PT1" : "ET1";
+    const relBase = base - 90;
+    rel = extra != null ? `${relBase}+${extra}' ${period}` : `${relBase}' ${period}`;
+  } else {
+    // ET second half: e.g. 120+1 → (15+1' ET2)
+    const period = pt ? "PT2" : "ET2";
+    const relBase = base - 105;
+    rel = extra != null ? `${relBase}+${extra}' ${period}` : `${relBase}' ${period}`;
+  }
+
+  return `${rawDisplay} (${rel})`;
+}
