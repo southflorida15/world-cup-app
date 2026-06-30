@@ -15,7 +15,7 @@ import MatchHeader from "./components/MatchHeader";
 import MatchInfoSection from "./components/MatchInfoSection";
 import { buildMomentumEngineRows } from "./engine/momentum/momentumEngine";
 import React, { useState, useEffect, useContext, createContext, useCallback, useMemo, useRef } from "react";
-import { displayTeamName, displayStageName, displayVenueName } from "./i18n/display";
+import { displayTeamName, displayStageName, displayVenueName, formatDisplayMinute } from "./i18n/display";
 import { buildQualifiedThirdsFromSelectedTeams, buildThirdGroupsKey, ROUND_OF_16_TEMPLATE, QUARTER_FINAL_TEMPLATE, SEMI_FINAL_TEMPLATE, FINAL_TEMPLATE } from "./engine/fifa2026Bracket";
 import { getAnnexCMapping } from "./engine/annexC";
 import { WC_TEAM_HISTORY, getPlayerScoringLog } from "./data/wcTeamHistory";
@@ -720,10 +720,10 @@ const statusLabel = (s,e,ex) => {
   s = normStatus(s);
   const u = upperStatus(s);
   if(!s||u==="NS"||s==="notstarted") return null;
-  if(s==="1H"||s==="first_half"||s==="inprogress"||s==="LIVE") return e?(ex?`${e}+${ex}'`:`${e}'`):"LIVE";
+  if(s==="1H"||s==="first_half"||s==="inprogress"||s==="LIVE") return e?(ex?formatDisplayMinute(`${e}+${ex}`):formatDisplayMinute(e)):"LIVE";
   if(s==="HT"||s==="halftime") return "HT";
-  if(s==="2H"||s==="second_half") return e?(ex?`${e}+${ex}' (${e-45}' H2)`:`${e}' (${e-45}' H2)`):"LIVE";
-  if(s==="ET"||s==="extra_time"||u==="STATUS_EXTRA_TIME"||u==="STATUS_OVERTIME") return e?(ex?`ET ${e}+${ex}'`:`ET ${e}'`):"ET";
+  if(s==="2H"||s==="second_half") return e?(ex?formatDisplayMinute(`${e}+${ex}`):formatDisplayMinute(e)):"LIVE";
+  if(s==="ET"||s==="extra_time"||u==="STATUS_EXTRA_TIME"||u==="STATUS_OVERTIME") return e?(ex?formatDisplayMinute(`${e}+${ex}`):formatDisplayMinute(e)):"ET";
   if(s==="BT"||u==="STATUS_END_OF_PERIOD") return "BT";
   if(u==="P"||u==="PENALTIES"||u==="STATUS_PENALTY"||u==="STATUS_PENALTY_SHOOTOUT"||u==="STATUS_SHOOTOUT"||u==="STATUS_PENALTIES") return "Pens";
   if(u==="FT"||u==="FINISHED"||u==="ENDED"||u==="STATUS_FINAL"||u==="STATUS_FULL_TIME") return "FT";
@@ -5134,12 +5134,11 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
                           </div>
                           <div style={{display:"flex",flexDirection:"column",alignItems:"center",minWidth:52,flexShrink:0}}>
                             <div style={{fontSize:11,fontWeight:700,color:C.gold}}>
-                              {ev.time?.display || `${ev.time?.elapsed ?? ""}${ev.time?.extra ? `+${ev.time.extra}` : ""}'`}
                               {(() => {
-                                const mins = parseInt(ev.time?.elapsed, 10);
-                                return !isNaN(mins) && mins > 45 && (
-                                  <span style={{color:C.dim,fontWeight:600}}> ({mins-45}' H2)</span>
-                                );
+                                const raw = ev.time?.elapsed != null
+                                  ? (ev.time?.extra ? `${ev.time.elapsed}+${ev.time.extra}` : String(ev.time.elapsed))
+                                  : null;
+                                return raw ? formatDisplayMinute(raw) : (ev.time?.display || "");
                               })()}
                             </div>
                             <div style={{fontSize:16}}>{icon}</div>
