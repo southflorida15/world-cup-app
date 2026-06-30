@@ -6403,12 +6403,12 @@ const TABS = [
   {id:"groups",    icon:"🗂️", labelKey:"tabs.groups",    label:"Groups"},
   {id:"bracket",   icon:"🏆", labelKey:"tabs.bracket",   label:"Bracket"},
   {id:"predictor", icon:"🎯", labelKey:"tabs.predictor", label:"Fantasy"},
-  {id:"shop",      icon:"🏪", labelKey:"tabs.shop",      label:"Shop"},
   {id:"ask",       icon:"🔎", labelKey:"tabs.ask",       label:"Ask"},
   {id:"stats",     icon:"📊", labelKey:"tabs.stats",     label:"Stats"},
   {id:"news",      icon:"📰", labelKey:"tabs.news",      label:"WC News"},
   {id:"predict",   icon:"📈", labelKey:"tabs.predict",   label:"Odds"},
   {id:"sim",       icon:"🎮", labelKey:"tabs.sim",       label:"Simulator"},
+  {id:"shop",      icon:"🏪", labelKey:"tabs.shop",      label:"Shop"},
 ];
 
 // ── DEV i18n experiment ──────────────────────────────────────────────────
