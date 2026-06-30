@@ -1,5 +1,4 @@
 // ── IMPORT COMPONENTS ──────────────────────────────────────────────────
-import { formatDisplayMinute } from "./i18n/display";
 import FantasyScoringRules from "./components/FantasyScoringRules";
 import MyWorldCupTab from "./tabs/MyWorldCupTab.jsx";
 import FantasyStatsSummary from "./components/FantasyStatsSummary";
@@ -694,12 +693,12 @@ export const LiveScoresCtx = createContext({scores:{},getScore:()=>null,isLive:(
 
 const statusIsLive = (s) => ["1H","HT","2H","ET","BT","P","LIVE","inprogress","first_half","halftime","second_half","extra_time","penalties"].includes(s);
 export const statusIsFinished = (s) => ["FT","AET","PEN","finished","ended","after_extra_time","after_penalties"].includes(s);
-const statusLabel = (s,e,ex,language="en") => {
+const statusLabel = (s,e,ex) => {
   if(!s||s==="NS"||s==="notstarted") return null;
-  if(s==="1H"||s==="first_half"||s==="inprogress"||s==="LIVE") return e?(ex?formatDisplayMinute(`${e}+${ex}`,language):formatDisplayMinute(`${e}`,language)):"LIVE";
+  if(s==="1H"||s==="first_half"||s==="inprogress"||s==="LIVE") return e?(ex?`${e}+${ex}'`:`${e}'`):"LIVE";
   if(s==="HT"||s==="halftime") return "HT";
-  if(s==="2H"||s==="second_half") return e?(ex?formatDisplayMinute(`${e}+${ex}`,language):formatDisplayMinute(`${e}`,language)):"LIVE";
-  if(s==="ET"||s==="extra_time") return e?(ex?formatDisplayMinute(`${e}+${ex}`,language):formatDisplayMinute(`${e}`,language)):"ET";
+  if(s==="2H"||s==="second_half") return e?(ex?`${e}+${ex}' (${e-45}' H2)`:`${e}' (${e-45}' H2)`):"LIVE";
+  if(s==="ET"||s==="extra_time") return e?(ex?`ET ${e}+${ex}'`:`ET ${e}'`):"ET";
   if(s==="BT") return "BT";
   if(s==="P"||s==="penalties") return "Pens";
   if(s==="FT"||s==="finished"||s==="ended") return "FT";
@@ -3425,69 +3424,50 @@ function DragList({ items, onReorder, renderItem }) {
 
 // ── MY BRACKET TAB ────────────────────────────────────────────────────────
 const defaultBracketGroups=()=>Object.fromEntries(Object.entries(GROUPS).map(([g,{teams}])=>[g,[...teams]]));
-function BracketMatchup({ match, t1, t2, winner, onPick, interactive=false, compact=false, t1Tag=null, t2Tag=null, onMatchTap=null }) {
-  const { getScore, isLive, isFinished } = useContext(LiveScoresCtx);
+function BracketMatchup({ match, t1, t2, winner, onPick, interactive=false, compact=false, t1Tag=null, t2Tag=null }) {
   const canPick = interactive && t1 && t2 && t1 !== "TBD" && t2 !== "TBD";
   const matchData = match ? MATCHES.find(m => m.id === match) : null;
-  const hasRealMatchup = t1 && t2 && t1 !== "TBD" && t2 !== "TBD";
-  const live = hasRealMatchup ? isLive(t1, t2) : false;
-  const finished = hasRealMatchup ? isFinished(t1, t2) : false;
-  // Only show score once the match has actually started — getScore returns
-  // a default 0-0 even for scheduled-but-not-yet-played matches.
-  const sc = hasRealMatchup && (live || finished) ? getScore(t1, t2) : null;
-  const canTapMatch = !!(matchData && onMatchTap && hasRealMatchup);
   const teamRow = (team, i, tag) => {
     const isW = winner && team === winner;
     const disabled = !canPick || !team || team === "TBD";
     const isClinched = tag === "clinched";
-    // Only dim provisional teams in manual/interactive mode — in the Actual
-    // bracket a provisionally-leading team should still show at full strength.
-    const isProvisional = tag === "provisional" && interactive;
+    const isProvisional = tag === "provisional";
     const nameColor = isW ? C.green : isClinched ? C.gold : isProvisional ? C.dim : team ? C.text : C.dim;
-    const score = sc ? (i === 0 ? sc.hg : sc.ag) : null;
     return (
       <button
         key={i}
         onClick={() => !disabled && onPick?.(team)}
         disabled={disabled}
-        title={canPick ? `Pick ${team}` : isProvisional ? `${team} is currently leading their group — not yet mathematically confirmed` : isClinched ? `${team} has clinched this slot` : undefined}
+        title={canPick ? `Pick ${team}` : isProvisional ? `${team} is currently leading their group — not yet mathematically confirmed for 1st place` : isClinched ? `${team} has clinched 1st place in their group` : undefined}
         style={{width:"100%",display:"flex",alignItems:"center",gap:8,padding:compact?"7px 8px":"10px 10px",background:isW?`${C.green}24`:"transparent",border:"none",borderBottom:i===0?`1px solid ${C.b1}`:"none",cursor:canPick?"pointer":"default",textAlign:"left",opacity:team?(isProvisional?0.7:1):0.65}}
       >
         <Crest team={team||"TBD"} size={compact?16:22}/>
         <span style={{fontSize:compact?12:14,color:nameColor,fontWeight:isW||isClinched?800:600,fontStyle:isProvisional?"italic":"normal",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",flex:1}}>{team||"TBD"}</span>
-        {isClinched && !isW && <span title="Clinched this slot" style={{fontSize:11}}>🔒</span>}
+        {isClinched && !isW && <span title="Clinched 1st place" style={{fontSize:11}}>🔒</span>}
         {isProvisional && <span style={{fontSize:8,color:C.dim,fontWeight:700,letterSpacing:"0.04em",whiteSpace:"nowrap"}}>LEADING</span>}
-        {score != null && <span style={{fontSize:compact?12:13,fontWeight:800,color:live?C.green:C.text,fontFamily:"monospace"}}>{score}</span>}
         {isW && <span style={{fontSize:12,color:C.green,fontWeight:900}}>✓</span>}
       </button>
     );
   };
   return (
-    <div style={{position:"relative",background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${winner?C.greenS:live?C.green:C.b1}`,borderRadius:12,overflow:"hidden",width:"100%",boxShadow:winner?DS.shadow.panel:DS.shadow.card}}>
-      <button
-        onClick={() => canTapMatch && onMatchTap({...matchData, home: t1, away: t2})}
-        disabled={!canTapMatch}
-        style={{width:"100%",display:"block",padding:"5px 10px",borderBottom:`1px solid ${C.b1}`,background:`${C.bg}88`,border:"none",borderBottomWidth:1,borderBottomStyle:"solid",borderBottomColor:C.b1,cursor:canTapMatch?"pointer":"default",textAlign:"left",WebkitAppearance:"none",appearance:"none"}}
-      >
+    <div style={{position:"relative",background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${winner?C.greenS:C.b1}`,borderRadius:12,overflow:"hidden",width:"100%",boxShadow:winner?DS.shadow.panel:DS.shadow.card}}>
+      <div style={{padding:"5px 10px",borderBottom:`1px solid ${C.b1}`,background:`${C.bg}88`}}>
         {matchData ? (
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:6}}>
-            <div style={{overflow:"hidden"}}>
-              <div style={{fontSize:10,fontWeight:700,color:C.gold,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{matchData.date} · {matchData.time}</div>
-              <div style={{fontSize:9,color:C.dim,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>📍 {matchData.venue.split(",")[0]}</div>
-            </div>
-            {live && <span style={{fontSize:9,color:C.red,fontWeight:800,flexShrink:0,animation:"pulse 1.2s infinite"}}>🔴 LIVE</span>}
-          </div>
+          <>
+            <div style={{fontSize:10,fontWeight:700,color:C.gold,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{matchData.date} · {matchData.time}</div>
+            <div style={{fontSize:9,color:C.dim,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>📍 {matchData.venue.split(",")[0]}</div>
+          </>
         ) : (
           <div style={{fontSize:10,color:C.gold,fontWeight:900,letterSpacing:"0.08em"}}>M{match || "—"}</div>
         )}
-      </button>
+      </div>
       {teamRow(t1,0,t1Tag)}
       {teamRow(t2,1,t2Tag)}
     </div>
   );
 }
 
-function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick=()=>{}, completedCount=0, onMatchTap=null }) {
+function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick=()=>{}, completedCount=0 }) {
   const bracketScrollRef = useRef(null);
 
   useEffect(() => {
@@ -3565,7 +3545,7 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
             const m = matchesById[id]||{match:id,home:null,away:null,winner:null};
             return (
               <div key={id} style={{position:"absolute",top:tops[n],left:0,width:CW,opacity:!(m.home&&m.away)?0.55:1}}>
-                <BracketMatchup match={m.match} t1={m.home} t2={m.away} winner={m.winner} interactive={pickMode==="manual"} onPick={t=>onPick(m,t)} t1Tag={m.homeTag} t2Tag={m.awayTag} onMatchTap={onMatchTap}/>
+                <BracketMatchup match={m.match} t1={m.home} t2={m.away} winner={m.winner} interactive={pickMode==="manual"} onPick={t=>onPick(m,t)} t1Tag={m.homeTag} t2Tag={m.awayTag}/>
               </div>
             );
           })}
@@ -3628,7 +3608,7 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
               <div style={{position:"absolute",top:finalTop-22,left:0,width:190,textAlign:"center",fontSize:11,fontWeight:900,color:C.gold,letterSpacing:"0.12em"}}>FINAL</div>
               {/* Final card */}
               <div style={{position:"absolute",top:finalTop,left:0,width:190}}>
-                <BracketMatchup match={finalMatch.match} t1={finalMatch.home} t2={finalMatch.away} winner={finalMatch.winner} interactive={pickMode==="manual"} onPick={(team)=>onPick(finalMatch,team)} onMatchTap={onMatchTap}/>
+                <BracketMatchup match={finalMatch.match} t1={finalMatch.home} t2={finalMatch.away} winner={finalMatch.winner} interactive={pickMode==="manual"} onPick={(team)=>onPick(finalMatch,team)}/>
                 {finalMatch.winner && (
                   <div style={{marginTop:14,textAlign:"center",background:`${C.gold}16`,border:`1px solid ${C.gold}44`,borderRadius:14,padding:"10px 8px"}}>
                     <div style={{fontSize:10,color:C.dim,fontWeight:800,letterSpacing:"0.08em"}}>CHAMPION</div>
@@ -3647,7 +3627,7 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
   );
 }
 
-function VisualBracketTree({ bracket, pickMode="auto", onPick=()=>{}, view="compact", onMatchTap=null }) {
+function VisualBracketTree({ bracket, pickMode="auto", onPick=()=>{}, view="compact" }) {
   const byId = (matches=[]) => Object.fromEntries((matches||[]).map(m => [Number(m.match), m]));
   const matchesById = {
     ...byId(bracket?.r32),
@@ -3669,7 +3649,7 @@ function VisualBracketTree({ bracket, pickMode="auto", onPick=()=>{}, view="comp
   const completedCount = Object.values(matchesById).filter(m => m?.winner).length;
 
   if (view === "tree") {
-    return <WideBracketView rounds={rounds} matchesById={matchesById} bracket={bracket} pickMode={pickMode} onPick={onPick} completedCount={completedCount} onMatchTap={onMatchTap}/>;
+    return <WideBracketView rounds={rounds} matchesById={matchesById} bracket={bracket} pickMode={pickMode} onPick={onPick} completedCount={completedCount}/>;
   }
 
   return (
@@ -3704,7 +3684,7 @@ function VisualBracketTree({ bracket, pickMode="auto", onPick=()=>{}, view="comp
                   const locked = !(m.home && m.away);
                   return (
                     <div key={m.match} style={{opacity:locked?0.55:1,position:"relative"}}>
-                      <BracketMatchup match={m.match} t1={m.home} t2={m.away} winner={m.winner} interactive={pickMode==="manual"} onPick={(team)=>onPick(m,team)} t1Tag={m.homeTag} t2Tag={m.awayTag} onMatchTap={onMatchTap}/>
+                      <BracketMatchup match={m.match} t1={m.home} t2={m.away} winner={m.winner} interactive={pickMode==="manual"} onPick={(team)=>onPick(m,team)} t1Tag={m.homeTag} t2Tag={m.awayTag}/>
                     </div>
                   );
                 })}
@@ -4123,9 +4103,6 @@ function MyBracketTab({ tabTop=116 }) {
     // "provisional" the entire time before that.
     const slotTag = (slot) => {
       if (typeof slot !== "string") return null;
-      // Once all groups have finished their 3 matches, every 1X/2X slot is
-      // definitively settled — no more "provisional" anywhere in the R32.
-      if (allGroupsComplete) return "clinched";
       if (slot[0] === "1") return clinchedFirst[slot[1]] ? "clinched" : "provisional";
       if (slot[0] === "2") return groupComplete[slot[1]] ? "clinched" : "provisional";
       return null;
@@ -6573,13 +6550,12 @@ function MatchMomentum({ match, events=[], momentum=[], stats, C, score=null }) 
 }
 
 
-function MatchCommentary({ commentary = [], C, language = "en" }) {
+function MatchCommentary({ commentary = [], C }) {
   const items = Array.isArray(commentary) ? commentary : [];
   const rows = items.map((item, idx) => {
     if (typeof item === "string") return { key: idx, time: "", text: item, type: "" };
     const minute = item.minute ?? item.time?.elapsed ?? item.clock?.displayValue ?? item.time?.displayValue ?? item.displayTime ?? "";
-    const rawMin = typeof minute === "number" ? String(minute) : String(minute || "").replace(/'$/, "");
-    const time = rawMin ? formatDisplayMinute(rawMin, language) : "";
+    const time = typeof minute === "number" ? `${minute}'` : String(minute || "");
     return {
       key: item.id || idx,
       time,
@@ -6619,7 +6595,7 @@ function MatchCommentary({ commentary = [], C, language = "en" }) {
   );
 }
 
-function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), userPredHg, userPredAg, language="en" }) {
+function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), userPredHg, userPredAg }) {
   const [events, setEvents] = useState(null);
   const [matchStats, setMatchStats] = useState(null);
   const [lineups, setLineups] = useState(null);
@@ -7036,7 +7012,7 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
 
           {/* ── COMMENTARY ── */}
           {isPlayed && commentaryOpen && (
-            <MatchCommentary commentary={commentary || []} C={C} language={language} />
+            <MatchCommentary commentary={commentary || []} C={C} />
           )}
 
           {/* ── MATCH EVENTS ── */}
@@ -7071,7 +7047,13 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
                           </div>
                           <div style={{display:"flex",flexDirection:"column",alignItems:"center",minWidth:52,flexShrink:0}}>
                             <div style={{fontSize:11,fontWeight:700,color:C.gold}}>
-                              {formatDisplayMinute(ev.time?.extra!=null?`${ev.time?.elapsed}+${ev.time.extra}`:ev.time?.elapsed, language)}
+                              {ev.time?.elapsed}{ev.time?.extra?`+${ev.time.extra}`:""}'
+                              {(() => {
+                                const mins = parseInt(ev.time?.elapsed, 10);
+                                return !isNaN(mins) && mins > 45 && (
+                                  <span style={{color:C.dim,fontWeight:600}}> ({mins-45}' H2)</span>
+                                );
+                              })()}
                             </div>
                             <div style={{fontSize:16}}>{icon}</div>
                           </div>
@@ -9322,9 +9304,6 @@ export default function App() {
   });
   const [showFavPicker, setShowFavPicker] = useState(false);
   const favTeam = favTeams[0] || "";
-  const [language, setLanguage] = useState(() => {
-    try { return localStorage.getItem("wc2026_language") || "en"; } catch { return "en"; }
-  });
 
   // Client-triggered prediction scoring — fire on mount
   // Checks if any match ended in the last hour and triggers resolve
@@ -9656,7 +9635,7 @@ export default function App() {
             try{localStorage.removeItem("wc2026_favs")}catch{}
           }}
         />
-        <MatchEventsModal match={eventsModal.match} open={eventsModal.open} onClose={()=>setEventsModal({open:false,match:null})} onAction={onAction} savedIds={savedIds} userPredHg={eventsModal.predHg} userPredAg={eventsModal.predAg} language={language}/>
+        <MatchEventsModal match={eventsModal.match} open={eventsModal.open} onClose={()=>setEventsModal({open:false,match:null})} onAction={onAction} savedIds={savedIds} userPredHg={eventsModal.predHg} userPredAg={eventsModal.predAg}/>
         <Toast msg={toast} onDone={()=>setToast("")}/>
         <InstallBanner/>
         {showLeagueInvite && leagueInvite && (
