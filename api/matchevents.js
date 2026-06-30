@@ -18,8 +18,26 @@ const ESPN_HEADERS = {
   "Referer": "https://www.espn.com/",
 };
 
-const LIVE_STATUSES = ["LIVE","1H","HT","2H","ET","BT","P","inprogress","first_half","halftime","second_half","extra_time","penalties","STATUS_IN_PROGRESS","STATUS_HALFTIME"];
-const DONE_STATUSES = ["FT","AET","PEN","finished","ended","after_extra_time","after_penalties","STATUS_FINAL","STATUS_FULL_TIME"];
+const LIVE_STATUSES = new Set([
+  "LIVE", "1H", "HT", "2H", "ET", "BT", "P",
+  "inprogress", "first_half", "halftime", "second_half", "extra_time", "penalties",
+  "STATUS_IN_PROGRESS", "STATUS_HALFTIME", "STATUS_OVERTIME", "STATUS_SHOOTOUT"
+]);
+
+const DONE_STATUSES = new Set([
+  "FT", "AET", "PEN",
+  "finished", "ended", "after_extra_time", "after_penalties",
+  "STATUS_FINAL", "STATUS_FULL_TIME", "STATUS_AET", "STATUS_AFTER_EXTRA_TIME",
+  "STATUS_END_OF_EXTRATIME", "STATUS_FINAL_PEN", "STATUS_PENALTIES"
+]);
+
+function isDoneStatus(status) {
+  return DONE_STATUSES.has(String(status || ""));
+}
+
+function isLiveStatus(status) {
+  return LIVE_STATUSES.has(String(status || ""));
+}
 
 const memCache = {};
 const TTL_LIVE = 30 * 1000;
@@ -819,7 +837,7 @@ async function autoSeedEvents() {
       const data = await r.json();
       const statusType = data.header?.competitions?.[0]?.status?.type?.name || "NS";
 
-      if (DONE_STATUSES.includes(statusType)) {
+      if (isDoneStatus(statusType)) {
         const events = parseEvents(data, home);
         const stats = parseStats(data.boxscore, home);
         if (events.length > 0) {
@@ -827,7 +845,7 @@ async function autoSeedEvents() {
           seededThisCall++;
           console.log(`[scorers] auto-seeded ${home} vs ${away}: ${events.length} events`);
         }
-      } else if (LIVE_STATUSES.includes(statusType)) {
+      } else if (isLiveStatus(statusType)) {
         // Was the actual gap: a goal scored mid-match only reached the
         // aggregate if someone happened to open THAT SPECIFIC match's
         // timeline modal while it was live — this sweep previously skipped
@@ -947,7 +965,7 @@ async function backfillFinishedEvents({ limit = 10, force = false, targetHome = 
 
       const data = await r.json();
       const statusType = data.header?.competitions?.[0]?.status?.type?.name || "NS";
-      if (!DONE_STATUSES.includes(statusType)) {
+      if (!isDoneStatus(statusType)) {
         skipped.push({ home, away, eventId, statusType, reason: "not_finished" });
         continue;
       }
@@ -1216,8 +1234,8 @@ export default async function handler(req, res) {
     }
 
     const statusType = data.header?.competitions?.[0]?.status?.type?.name || "NS";
-    const isDone = DONE_STATUSES.includes(statusType);
-    const isLive = LIVE_STATUSES.includes(statusType);
+    const isDone = isDoneStatus(statusType);
+    const isLive = isLiveStatus(statusType);
     const isPrematch = !isDone && !isLive;
 
     const events = parseEvents(data, home);
