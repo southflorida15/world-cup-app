@@ -858,7 +858,7 @@ function eventCacheHasDisplayTimes(record) {
   return record.schemaVersion >= 2 && record.events.every(ev => ev?.time?.display);
 }
 
-async function backfillFinishedEvents({ limit = 10, force = false } = {}) {
+async function backfillFinishedEvents({ limit = 10, force = false, targetHome = null, targetAway = null, offset = 0 } = {}) {
   const candidates = [];
   const addCandidate = (home, away, espnId = null) => {
     home = normESPN(home || "");
@@ -900,13 +900,31 @@ async function backfillFinishedEvents({ limit = 10, force = false } = {}) {
     console.warn("[backfill] id map candidate load failed:", e.message);
   }
 
+  const normalizedTargetHome = targetHome ? normESPN(String(targetHome)) : null;
+  const normalizedTargetAway = targetAway ? normESPN(String(targetAway)) : null;
+  const hasTarget = !!(normalizedTargetHome && normalizedTargetAway);
+
+  // Targeted backfill lets you refresh one match, e.g.
+  // /api/matchevents?action=backfill-events&home=Brazil&away=Japan&force=1
+  // without force-rewriting the first N matches over and over.
+  if (hasTarget) addCandidate(normalizedTargetHome, normalizedTargetAway);
+
+  const scanCandidates = hasTarget
+    ? candidates.filter(c =>
+        (c.home === normalizedTargetHome && c.away === normalizedTargetAway) ||
+        (c.home === normalizedTargetAway && c.away === normalizedTargetHome)
+      )
+    : candidates.slice(Math.max(0, Number(offset) || 0));
+
   const processed = [];
   const skipped = [];
   const errors = [];
   let updated = 0;
+  let scanned = 0;
 
-  for (const candidate of candidates) {
+  for (const candidate of scanCandidates) {
     if (updated >= limit) break;
+    scanned++;
     const { home, away } = candidate;
     try {
       const existing = await loadFromKV(home, away);
@@ -959,10 +977,14 @@ async function backfillFinishedEvents({ limit = 10, force = false } = {}) {
     action: "backfill-events",
     force,
     limit,
+    offset: Math.max(0, Number(offset) || 0),
+    nextOffset: hasTarget ? null : Math.min(candidates.length, Math.max(0, Number(offset) || 0) + scanned),
+    target: hasTarget ? { home: normalizedTargetHome, away: normalizedTargetAway } : null,
     candidates: candidates.length,
+    scanned,
     updated,
     processed,
-    skipped: skipped.slice(0, 40),
+    skipped: skipped.slice(0, 80),
     errors,
     scorerRefresh: scorerRefresh ? {
       matchCount: scorerRefresh.matchCount,
@@ -1055,7 +1077,13 @@ export default async function handler(req, res) {
       res.setHeader("Cache-Control", "no-store");
       const limit = Math.max(1, Math.min(50, parseInt(req.query.limit || "10", 10) || 10));
       const force = req.query.force === "1" || req.query.force === "true";
-      return res.status(200).json(await backfillFinishedEvents({ limit, force }));
+      const offset = Math.max(0, parseInt(req.query.offset || "0", 10) || 0);
+      let targetHome = req.query.home ? String(req.query.home) : null;
+      let targetAway = req.query.away ? String(req.query.away) : null;
+      if ((!targetHome || !targetAway) && req.query.fixtureId && String(req.query.fixtureId).includes("|")) {
+        [targetHome, targetAway] = String(req.query.fixtureId).split("|");
+      }
+      return res.status(200).json(await backfillFinishedEvents({ limit, force, offset, targetHome, targetAway }));
     } catch(e) {
       return res.status(500).json({ ok: false, action: "backfill-events", error: e.message });
     }
