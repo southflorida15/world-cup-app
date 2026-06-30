@@ -58,7 +58,7 @@ const ESPN_HEADERS_DEFAULT = {
   "Referer": "https://www.espn.com/",
 };
 
-const WINDOW_MS = 150 * 60 * 1000;
+const WINDOW_MS = 8 * 60 * 60 * 1000;
 
 // Server-side copy of MATCHES (home/away by match id) — used for reconciliation
 const MATCH_TEAMS = {1:{home:"Mexico",away:"South Africa"},2:{home:"South Korea",away:"Czechia"},3:{home:"Canada",away:"Bosnia & Herz."},4:{home:"United States",away:"Paraguay"},5:{home:"Qatar",away:"Switzerland"},6:{home:"Brazil",away:"Morocco"},7:{home:"Haiti",away:"Scotland"},8:{home:"Australia",away:"Turkiye"},9:{home:"Germany",away:"Curacao"},10:{home:"Netherlands",away:"Japan"},11:{home:"Ivory Coast",away:"Ecuador"},12:{home:"Sweden",away:"Tunisia"},13:{home:"Spain",away:"Cape Verde"},14:{home:"Belgium",away:"Egypt"},15:{home:"Saudi Arabia",away:"Uruguay"},16:{home:"Iran",away:"New Zealand"},17:{home:"France",away:"Senegal"},18:{home:"Iraq",away:"Norway"},19:{home:"Argentina",away:"Algeria"},20:{home:"Austria",away:"Jordan"},21:{home:"Portugal",away:"DR Congo"},22:{home:"England",away:"Croatia"},23:{home:"Ghana",away:"Panama"},24:{home:"Uzbekistan",away:"Colombia"}};
@@ -237,7 +237,12 @@ const ESPN_STATUS_MAP = {
   "STATUS_FINAL_PENALTY": "PEN",
   "STATUS_FINAL_PENALTIES": "PEN",
   "STATUS_EXTRA_TIME": "ET",
+  "STATUS_OVERTIME": "ET",
+  "STATUS_END_OF_PERIOD": "LIVE",
   "STATUS_PENALTY": "P",
+  "STATUS_PENALTY_SHOOTOUT": "P",
+  "STATUS_SHOOTOUT": "P",
+  "STATUS_PENALTIES": "P",
   "STATUS_PENALTY_SHOOTOUT": "P",
   "STATUS_POSTPONED": "TBD",
   "STATUS_CANCELED": "CANC",
@@ -427,40 +432,98 @@ async function fetchFromHighlightly() {
 // is within the "should have data" window but isn't present in the fetched
 // fixtures, fetch it directly by ESPN event ID. This removes the dependency
 // on ESPN's date-bucketing logic ever including every match we expect.
-async function reconcileMissingMatches(fixtures) {
+async function reconcileMissingMatches(fixtures, persisted = {}) {
   const now = Date.now();
-  const present = new Set(fixtures.map(f => {
+
+  const present = new Set();
+  fixtures.forEach(f => {
     const h = f?.teams?.home?.name || "";
     const a = f?.teams?.away?.name || "";
-    return `${h}|${a}`;
-  }));
+    if (!h || !a) return;
+    present.add(`${h}|${a}`);
+    present.add(`${a}|${h}`);
+  });
+
+  // Get the persisted ESPN ID map (filled in by matchevents.js seeding).
+  // This is the canonical recovery list for knockout matches, because the
+  // client-side MATCHES placeholders can become resolved team names while
+  // the older server-side MATCH_TEAMS table still only knows early/group IDs.
+  let idMap = {};
+  try { idMap = await kv.get("wc2026:espn_ids") || {}; } catch(e) {}
+
+  const addCandidate = (map, key, value = {}) => {
+    if (!key || !key.includes("|")) return;
+    const [home, away] = key.split("|");
+    if (!home || !away) return;
+    const reverseKey = `${away}|${home}`;
+    if (map.has(key) || map.has(reverseKey)) return;
+    map.set(key, { home, away, key, ...value });
+  };
+
+  const candidatesByKey = new Map();
+
+  // 1) Existing scheduled group-stage table, with kickoff index metadata.
+  for (const [idStr, teams] of Object.entries(MATCH_TEAMS)) {
+    const id = parseInt(idStr, 10);
+    const key = `${teams.home}|${teams.away}`;
+    addCandidate(candidatesByKey, key, { id, kickoff: KICKOFFS[id - 1] || null });
+  }
+
+  // 2) Known resolved knockout kickoff table.
+  for (const [key, kickoff] of Object.entries(MATCH_KICKOFF_BY_KEY)) {
+    addCandidate(candidatesByKey, key, { kickoff });
+  }
+
+  // 3) Persisted ESPN event-ID map, including newly seeded knockout IDs.
+  for (const [key, espnId] of Object.entries(idMap || {})) {
+    addCandidate(candidatesByKey, key, { espnId, kickoff: scheduledKickoffForKey(key) });
+  }
+
+  // 4) Static fallback group-stage ID map.
+  for (const [key, espnId] of Object.entries(FALLBACK_ESPN_IDS || {})) {
+    addCandidate(candidatesByKey, key, { espnId, kickoff: scheduledKickoffForKey(key) });
+  }
 
   const missing = [];
-  for (const [idStr, teams] of Object.entries(MATCH_TEAMS)) {
-    const id = parseInt(idStr);
-    const ko = KICKOFFS[id - 1];
-    if (!ko) continue;
-    const koTime = new Date(ko).getTime();
-    const msSince = now - koTime;
-    // "Should have data" window: from 5 min before kickoff to 4 hours after
-    const inWindow = msSince >= -5 * 60 * 1000 && msSince <= 4 * 60 * 60 * 1000;
-    if (!inWindow) continue;
+  for (const m of candidatesByKey.values()) {
+    if (present.has(m.key)) continue;
 
-    const key = `${teams.home}|${teams.away}`;
-    if (!present.has(key)) missing.push({ id, ...teams, key });
+    const reverseKey = `${m.away}|${m.home}`;
+    const persistedResult = persisted?.[m.key] || persisted?.[reverseKey];
+
+    // If we have already permanently archived a finished result, the persisted
+    // result will be merged later. No need to recover it from ESPN on every call.
+    if (persistedResult) continue;
+
+    const kickoff = m.kickoff || scheduledKickoffForKey(m.key);
+    if (kickoff) {
+      const koTime = new Date(kickoff).getTime();
+      const msSince = now - koTime;
+      // Recover from 10 minutes before kickoff until the match has a persisted
+      // final result. This deliberately has no 4-hour cutoff; extra time,
+      // penalties, VAR, weather delays, and ESPN scoreboard dropouts can all
+      // push a match beyond the old window while it is still live.
+      const startedOrImminent = msSince >= -10 * 60 * 1000;
+      if (!startedOrImminent) continue;
+    } else {
+      // If there is no kickoff metadata, recover only when we have an ESPN ID and
+      // the match is not archived. This is a safety net for newly seeded knockout
+      // matches whose kickoff map has not been updated yet.
+      if (!(m.espnId || idMap[m.key] || idMap[reverseKey] || FALLBACK_ESPN_IDS[m.key] || FALLBACK_ESPN_IDS[reverseKey])) continue;
+    }
+
+    missing.push(m);
   }
 
   if (missing.length === 0) return fixtures;
 
-  console.log(`[livescores] Reconciliation: ${missing.length} match(es) missing from scoreboard — fetching directly`, missing.map(m => m.key));
-
-  // Get the persisted ESPN ID map (filled in by matchevents.js seeding)
-  let idMap = {};
-  try { idMap = await kv.get("wc2026:espn_ids") || {}; } catch(e) {}
+  console.log(`[livescores] Reconciliation: ${missing.length} missing unarchived match(es) — fetching directly`, missing.map(m => m.key));
 
   const recovered = [];
-  for (const m of missing) {
-    const espnId = idMap[m.key] || FALLBACK_ESPN_IDS[m.key];
+  const MAX_RECOVER_PER_CALL = 16;
+  for (const m of missing.slice(0, MAX_RECOVER_PER_CALL)) {
+    const reverseKey = `${m.away}|${m.home}`;
+    const espnId = m.espnId || idMap[m.key] || idMap[reverseKey] || FALLBACK_ESPN_IDS[m.key] || FALLBACK_ESPN_IDS[reverseKey];
     if (!espnId) {
       console.warn(`[livescores] No ESPN ID known for ${m.key} — cannot recover`);
       continue;
@@ -469,17 +532,12 @@ async function reconcileMissingMatches(fixtures) {
       const r = await fetch(`${ESPN_BASE}/summary?event=${espnId}`, { headers: ESPN_HEADERS_DEFAULT });
       if (!r.ok) { console.warn(`[livescores] direct fetch for ${m.key} (${espnId}) failed: ${r.status}`); continue; }
       const data = await r.json();
-      const header = data.header;
-      const comp = header?.competitions?.[0];
+      const comp = data.header?.competitions?.[0];
       if (!comp) continue;
       const home = comp.competitors?.find(c => c.homeAway === "home");
       const away = comp.competitors?.find(c => c.homeAway === "away");
       if (!home || !away) continue;
-      const fakeEvent = {
-        id: espnId,
-        date: comp.date,
-        competitions: [comp],
-      };
+      const fakeEvent = { id: espnId, date: comp.date, competitions: [comp] };
       const mapped = mapESPNEvent(fakeEvent);
       if (mapped) {
         recovered.push(mapped);
@@ -617,7 +675,7 @@ export default async function handler(req, res) {
   if (fixtures.length > 0) {
     // Reconciliation: catch any in-window match the bulk fetch missed
     try {
-      fixtures = await reconcileMissingMatches(fixtures);
+      fixtures = await reconcileMissingMatches(fixtures, persisted);
     } catch(e) {
       console.warn("[livescores] reconciliation error:", e.message);
     }
