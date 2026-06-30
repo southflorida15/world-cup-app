@@ -9,7 +9,6 @@ import {
   FINAL_TEMPLATE,
 } from "../engine/fifa2026Bracket";
 import { getAnnexCMapping } from "../engine/annexC";
-import CircularBracket from "./CircularBracket.jsx";
 
 // Shared App.jsx values, passed in as props rather than imported directly
 // to avoid a circular import (App.jsx -> Bracket.jsx -> App.jsx), since
@@ -26,7 +25,7 @@ export default function MyBracketTab({
   C, DS, GROUPS, LiveScoresCtx, MATCHES, R32_SLOT_TEMPLATE, STR, gs,
   calcStandings, statusIsFinished, useElemHeight, defaultBracketGroups,
   readSavedMyBracket, writeSavedMyBracket, clearSavedMyBracket,
-  Card, Crest, DragList, Pill, VisualBracketTree, getFlag,
+  Card, Crest, DragList, Pill, VisualBracketTree,
 }) {
   const isPtBR = language === "pt-BR";
   const tx = (en, pt) => isPtBR ? pt : en;
@@ -691,9 +690,6 @@ export default function MyBracketTab({
         <button onClick={()=>setBracketView("tree")} style={{border:"none",borderRadius:999,padding:"4px 8px",fontSize:10,fontWeight:800,cursor:"pointer",background:bracketView==="tree"?`${C.gold}22`:"transparent",color:bracketView==="tree"?C.gold:C.mid,lineHeight:1}}>
           {tx("🌳 Tree", "🌳 Árvore")}
         </button>
-        <button onClick={()=>setBracketView("circular")} style={{border:"none",borderRadius:999,padding:"4px 8px",fontSize:10,fontWeight:800,cursor:"pointer",background:bracketView==="circular"?`${C.blue}22`:"transparent",color:bracketView==="circular"?C.blue:C.mid,lineHeight:1}}>
-          {tx("⭕ Circle", "⭕ Circular")}
-        </button>
       </div>
     </div>
 
@@ -703,24 +699,14 @@ export default function MyBracketTab({
       </div>
     )}
 
-    {bracketView === "circular" ? (
-      <CircularBracket
-        bracket={actualBracket}
-        language={language}
-        C={C}
-        getFlag={getFlag}
-        onMatchTap={onMatchTap}
-      />
-    ) : (
-      <VisualBracketTree
-        bracket={actualBracket}
-        pickMode="auto"
-        onPick={()=>{}}
-        view={bracketView}
-        onMatchTap={onMatchTap}
-        language={language}
-      />
-    )}
+    <VisualBracketTree
+      bracket={actualBracket}
+      pickMode="auto"
+      onPick={()=>{}}
+      view={bracketView}
+      onMatchTap={onMatchTap}
+      language={language}
+    />
   </div>
 )}
 
