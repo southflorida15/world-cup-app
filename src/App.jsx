@@ -4642,7 +4642,19 @@ function MatchCommentary({ commentary = [], C }) {
   const rows = items.map((item, idx) => {
     if (typeof item === "string") return { key: idx, time: "", text: item, type: "" };
     const minute = item.time?.display || item.time?.displayValue || item.clock?.displayValue || item.displayTime || item.minute || item.time?.elapsed || "";
-    const time = typeof minute === "number" ? `${minute}'` : String(minute || "");
+
+    const raw = typeof minute === "number" ? `${minute}'` : String(minute || "");
+    let time = raw;
+    const m = raw.match(/^(\d+)'(?:\+(\d+)')?$/);
+    if (m) {
+      const base = Number(m[1]);
+      const extra = m[2];
+      if (base >= 90) {
+        time = extra ? `${raw} (45'+${extra}' 2H)` : `${raw} (45' 2H)`;
+      } else if (base >= 45) {
+        time = extra ? `${raw} (45'+${extra}' 1H)` : `${raw} (45' 1H)`;
+      }
+    }
     return {
       key: item.id || idx,
       time,
