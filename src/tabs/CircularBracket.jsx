@@ -1,35 +1,25 @@
-import React, { useState, useContext } from "react";
+import React, { useState } from "react";
 import { displayTeamName } from "../i18n/display";
 
 // ── CircularBracket ───────────────────────────────────────────────────────
-// Sunburst circular tournament bracket for WC 2026.
-// Teams on the outer ring advance inward toward the trophy at center.
-//
-// Props:
-//   bracket      – { r32[], r16[], qf[], sf[], final[] } — each: { match, home, away, winner }
-//   language     – "en" | "pt-BR"
-//   C            – app colour tokens
-//   getFlag      – (teamName) => emoji flag
-//   onMatchTap   – optional (match) => void
+// Sunburst circular bracket. Winners' flags migrate inward ring by ring,
+// growing larger as teams advance toward the trophy.
 
 const CX = 260, CY = 260;
 const R = { trophy:22, final:52, sf:94, qf:136, r16:178, r32:218, outer:238 };
 
-// Gap in degrees between the two halves of the same matchup (home vs away divider)
-const GAP_MATCH = 2.2;
-// Gap in degrees between adjacent matchups
-const GAP_PAIR  = 0.8;
+// Flag font size per ring (grows as team advances inward)
+const FLAG_SIZE = { r32:9, r16:12, qf:15, sf:19, final:22 };
 
-// Bracket spoke layout — 32 spokes, each 11.25°
-// Each R32 match occupies 2 adjacent spokes (home=left, away=right)
+const GAP_MATCH = 2.2; // degrees — divider between home and away within one match
+const GAP_PAIR  = 0.8; // degrees — gap between different matches
+
 const R32_ORDER = [73,75,74,77, 76,78,79,80, 83,84,81,82, 86,88,85,87];
 const R16_ORDER = [89,90,91,92, 93,94,95,96];
 const QF_ORDER  = [97,99,98,100];
 const SF_ORDER  = [101,102];
 
-// Which R32 match + side does each spoke correspond to?
-const SPOKE_R32  = [];
-const SPOKE_SIDE = [];
+const SPOKE_R32 = [], SPOKE_SIDE = [];
 R32_ORDER.forEach(id => { SPOKE_R32.push(id, id); SPOKE_SIDE.push(0, 1); });
 
 function buildRanges(order, spokesPerMatch) {
@@ -42,39 +32,31 @@ const R16_SEGS = buildRanges(R16_ORDER, 4);
 const QF_SEGS  = buildRanges(QF_ORDER,  8);
 const SF_SEGS  = buildRanges(SF_ORDER,  16);
 
-function spokeAngle(i)  { return (i / 32) * 360; }
-function toRad(deg)     { return (deg - 90) * Math.PI / 180; }
-function polar(deg, r)  {
-  const a = toRad(deg);
-  return [CX + r * Math.cos(a), CY + r * Math.sin(a)];
-}
+function spokeAngle(i) { return (i / 32) * 360; }
+function toRad(deg)    { return (deg - 90) * Math.PI / 180; }
+function polar(deg, r) { const a = toRad(deg); return [CX + r*Math.cos(a), CY + r*Math.sin(a)]; }
 
-// Filled arc segment path with independent left/right gaps
 function arcSeg(r1, r2, a1, a2, gL, gR) {
   const s = a1 + gL, e = a2 - gR;
   if (e <= s) return "";
-  const [ax, ay] = polar(s, r1), [bx, by] = polar(e, r1);
-  const [cx, cy] = polar(e, r2), [dx, dy] = polar(s, r2);
+  const [ax,ay] = polar(s,r1), [bx,by] = polar(e,r1);
+  const [cx,cy] = polar(e,r2), [dx,dy] = polar(s,r2);
   const lg = Math.abs(e - s) > 180 ? 1 : 0;
   return `M${ax},${ay}A${r1},${r1},0,${lg},1,${bx},${by}L${cx},${cy}A${r2},${r2},0,${lg},0,${dx},${dy}Z`;
 }
 
-function Short(team) {
-  if (!team) return "TBD";
-  const map = {
-    "United States":"USA","South Africa":"S.Africa","Netherlands":"Neth.",
-    "Bosnia & Herz.":"Bosnia","Saudi Arabia":"S.Arabia","Ivory Coast":"I.Coast",
-    "DR Congo":"D.R.Congo","New Zealand":"N.Zeal.",
-  };
-  return map[team] || team;
-}
+const SHORT = {
+  "United States":"USA","South Africa":"S.Africa","Netherlands":"Neth.",
+  "Bosnia & Herz.":"Bosnia","Saudi Arabia":"S.Arabia","Ivory Coast":"I.Coast",
+  "DR Congo":"D.R.Congo","New Zealand":"N.Zeal.",
+};
+function short(t) { if(!t) return "TBD"; return SHORT[t]||t; }
 
 export default function CircularBracket({ bracket, language="en", C, getFlag, onMatchTap }) {
   const [hovered, setHovered] = useState(null);
   const isPtBR = language === "pt-BR";
   const tx = (en, pt) => isPtBR ? pt : en;
 
-  // Colour palette — prefer passed-in C tokens, fall back to defaults
   const col = {
     bg:    C?.bg    || "#060e0a",
     s1:    C?.s1    || "#0c1a12",
@@ -85,144 +67,134 @@ export default function CircularBracket({ bracket, language="en", C, getFlag, on
     dim:   C?.dim   || "#3d6a4d",
     green: C?.green || "#4ade80",
     gold:  C?.gold  || "#fbbf24",
-    text:  C?.text  || "#d4ead9",
   };
 
-  // Index all bracket matches by id
   const byId = {};
   ["r32","r16","qf","sf","final"].forEach(key => {
     (bracket?.[key] || []).forEach(m => { byId[Number(m.match)] = m; });
   });
-
   function getMatch(id) { return byId[id] || { match:id, home:null, away:null, winner:null }; }
 
-  // ── Segment renderer ──────────────────────────────────────────────────
-  function renderHalf(id, r1, r2, a1, a2, gL, gR, team, isHome, round) {
+  // ── Arc segment (fill + border) ───────────────────────────────────────
+  function Seg({ id, r1, r2, a1, a2, gL, gR, team, isFinal=false }) {
     const m = getMatch(id);
-    const opp = isHome ? m.away : m.home;
     const hasW = !!m.winner;
     const won  = hasW && m.winner === team;
     const lost = hasW && !won;
-
-    const fill = hasW
-      ? (won ? `${col.green}38` : col.s1)
-      : (round === "Final" ? `${col.gold}18` : col.s2);
-    const stroke = won
-      ? (round === "Final" ? col.gold : col.green)
-      : col.ring;
-    const sw = won ? 2 : 0.5;
-    const opacity = lost ? 0.35 : 1;
-
     const pathD = arcSeg(r1, r2, a1, a2, gL, gR);
     if (!pathD) return null;
 
-    const hd = { h: m.home, a: m.away, w: m.winner, round };
+    const fill = hasW
+      ? (won ? (isFinal ? `${col.gold}40` : `${col.green}35`) : col.s1)
+      : (isFinal ? `${col.gold}15` : col.s2);
+    const stroke = won ? (isFinal ? col.gold : col.green) : col.ring;
+    const hd = { h:m.home, a:m.away, w:m.winner,
+      round: isFinal ? tx("Final","Final") : "" };
 
     return (
-      <path
-        key={`${id}-${isHome?'h':'a'}`}
-        d={pathD}
-        fill={fill}
-        stroke={stroke}
-        strokeWidth={sw}
-        opacity={opacity}
+      <path d={pathD} fill={fill} stroke={stroke}
+        strokeWidth={won ? 2 : 0.5} opacity={lost ? 0.3 : 1}
         style={{ cursor: onMatchTap ? "pointer" : "default" }}
         onClick={() => onMatchTap && onMatchTap(m)}
         onMouseEnter={() => setHovered(hd)}
-        onMouseLeave={() => setHovered(null)}
-      />
+        onMouseLeave={() => setHovered(null)} />
     );
   }
 
-  // ── Match divider radial line ─────────────────────────────────────────
-  function renderDivider(r1, r2, angleDeg) {
-    const [x1, y1] = polar(angleDeg, r1 + 1);
-    const [x2, y2] = polar(angleDeg, r2 - 1);
+  // ── Flag emoji centred in a ring segment ──────────────────────────────
+  // Only rendered for the winner, placed in the NEXT inner ring
+  function FlagInRing({ team, aMid, r_inner, r_outer, fontSize, isFinal=false }) {
+    if (!team) return null;
+    const rMid = (r_inner + r_outer) / 2;
+    const [x, y] = polar(aMid, rMid);
     return (
-      <line key={`div-${angleDeg}-${r1}`}
-        x1={x1} y1={y1} x2={x2} y2={y2}
-        stroke={col.ring} strokeWidth={1.5} opacity={0.9} />
+      <text x={x} y={y}
+        textAnchor="middle" dominantBaseline="middle"
+        fontSize={fontSize}
+        style={{ pointerEvents:"none", userSelect:"none" }}>
+        {getFlag(team)}
+      </text>
     );
   }
 
-  // ── Full round renderer ───────────────────────────────────────────────
-  function renderRound(segs, r1, r2, round) {
+  // ── Match divider line ────────────────────────────────────────────────
+  function Divider({ r1, r2, angleDeg }) {
+    const [x1,y1] = polar(angleDeg, r1+1);
+    const [x2,y2] = polar(angleDeg, r2-1);
+    return <line x1={x1} y1={y1} x2={x2} y2={y2}
+      stroke={col.ring} strokeWidth={1.5} opacity={0.85} />;
+  }
+
+  // ── Render one round's segments + winner flags in the inner ring ──────
+  function renderRound(segs, r_inner, r_outer, r_flag_inner, r_flag_outer, flagSize, isFinal=false) {
     const els = [];
     for (const [idStr, [s, e]] of Object.entries(segs)) {
       const id = Number(idStr);
       const m  = getMatch(id);
       const a1 = spokeAngle(s), a2 = spokeAngle(e);
-      const am = (a1 + a2) / 2;
+      const am = (a1 + a2) / 2; // mid = boundary between home and away
 
-      // Home half (left side of match)
-      const hEl = renderHalf(id, r1, r2, a1, am, GAP_PAIR, GAP_MATCH/2, m.home, true,  round);
-      const aEl = renderHalf(id, r1, r2, am, a2, GAP_MATCH/2, GAP_PAIR, m.away, false, round);
-      if (hEl) els.push(hEl);
-      if (aEl) els.push(aEl);
-      // Divider line at the home/away boundary
-      els.push(renderDivider(r1, r2, am));
+      // Home half
+      els.push(<Seg key={`${id}-h`} id={id} r1={r_inner} r2={r_outer}
+        a1={a1} a2={am} gL={GAP_PAIR} gR={GAP_MATCH/2} team={m.home} isFinal={isFinal}/>);
+      // Away half
+      els.push(<Seg key={`${id}-a`} id={id} r1={r_inner} r2={r_outer}
+        a1={am} a2={a2} gL={GAP_MATCH/2} gR={GAP_PAIR} team={m.away} isFinal={isFinal}/>);
+      // Divider between home/away
+      els.push(<Divider key={`${id}-div`} r1={r_inner} r2={r_outer} angleDeg={am}/>);
+
+      // Winner flag — placed in the NEXT inner ring (r_flag_inner → r_flag_outer)
+      if (m.winner) {
+        // Centre angle of the winner's half
+        const winnerIsHome = m.winner === m.home;
+        const flagAngle = winnerIsHome ? (a1+am)/2 : (am+a2)/2;
+        els.push(<FlagInRing key={`${id}-flag`}
+          team={m.winner} aMid={flagAngle}
+          r_inner={r_flag_inner} r_outer={r_flag_outer}
+          fontSize={flagSize} isFinal={isFinal}/>);
+      }
     }
     return els;
   }
 
-  // ── Final ring (gold treatment) ───────────────────────────────────────
+  // ── Final ring ────────────────────────────────────────────────────────
   function renderFinal() {
     const m = getMatch(104);
-    const hasW = !!m.winner;
-    const hWon = m.winner === m.home, aWon = m.winner === m.away;
-    const hFill = hasW ? (hWon ? `${col.gold}40` : col.s1) : `${col.gold}18`;
-    const aFill = hasW ? (aWon ? `${col.gold}40` : col.s1) : `${col.gold}18`;
-    const hd = { h: m.home, a: m.away, w: m.winner, round: tx("Final","Final") };
-    return (
-      <g>
-        <path d={arcSeg(R.trophy,R.final,0,180,GAP_MATCH/2,GAP_MATCH/2)}
-          fill={hFill} stroke={hWon?col.gold:col.ring} strokeWidth={hWon?2:0.5}
-          opacity={hasW&&!hWon?0.35:1} style={{cursor:onMatchTap?"pointer":"default"}}
-          onClick={()=>onMatchTap&&onMatchTap(m)}
-          onMouseEnter={()=>setHovered(hd)} onMouseLeave={()=>setHovered(null)}/>
-        <path d={arcSeg(R.trophy,R.final,180,360,GAP_MATCH/2,GAP_MATCH/2)}
-          fill={aFill} stroke={aWon?col.gold:col.ring} strokeWidth={aWon?2:0.5}
-          opacity={hasW&&!aWon?0.35:1} style={{cursor:onMatchTap?"pointer":"default"}}
-          onClick={()=>onMatchTap&&onMatchTap(m)}
-          onMouseEnter={()=>setHovered(hd)} onMouseLeave={()=>setHovered(null)}/>
-        {renderDivider(R.trophy,R.final,0)}
-        {renderDivider(R.trophy,R.final,180)}
-      </g>
-    );
+    const els = [];
+    els.push(<Seg key="104-h" id={104} r1={R.trophy} r2={R.final}
+      a1={0} a2={180} gL={GAP_MATCH/2} gR={GAP_MATCH/2} team={m.home} isFinal/>);
+    els.push(<Seg key="104-a" id={104} r1={R.trophy} r2={R.final}
+      a1={180} a2={360} gL={GAP_MATCH/2} gR={GAP_MATCH/2} team={m.away} isFinal/>);
+    els.push(<Divider key="104-d1" r1={R.trophy} r2={R.final} angleDeg={0}/>);
+    els.push(<Divider key="104-d2" r1={R.trophy} r2={R.final} angleDeg={180}/>);
+    return els;
   }
 
-  // ── Team labels on outer ring ─────────────────────────────────────────
-  function renderLabels() {
+  // ── Outside labels: team name only (no flag for losers/pending) ───────
+  function renderOuterLabels() {
     return SPOKE_R32.map((r32id, i) => {
       const side = SPOKE_SIDE[i];
       const m    = getMatch(r32id);
       const team = side === 0 ? m.home : m.away;
       if (!team || team === "TBD") return null;
 
-      const isW    = m.winner === team;
-      const isElim = m.winner && !isW;
-
-      // Centre of this half-spoke
-      const aMid = spokeAngle(i) + 360/32/2;
-      const [lx, ly] = polar(aMid, R.outer + 7);
-      const onRight   = aMid < 180 || aMid >= 360;
-      const anchor    = onRight ? "start" : "end";
-      const rotate    = onRight ? (aMid - 90) : (aMid + 90);
-      const dName     = displayTeamName(team, language);
-      const label     = `${getFlag(team)} ${Short(dName)}`;
+      const isElim = m.winner && m.winner !== team;
+      const aMid   = spokeAngle(i) + 360/32/2;
+      const [lx,ly] = polar(aMid, R.outer + 6);
+      const onRight  = aMid < 180;
+      const anchor   = onRight ? "start" : "end";
+      const rotate   = onRight ? (aMid - 90) : (aMid + 90);
+      const dName    = displayTeamName(team, language);
 
       return (
-        <text key={`label-${i}`}
-          x={lx} y={ly}
-          textAnchor={anchor}
-          dominantBaseline="middle"
-          fontSize={isW ? 9.5 : 8.5}
-          fontWeight={isW ? 700 : 400}
-          fill={isW ? col.green : (isElim ? col.dim : col.mid)}
-          opacity={isElim ? 0.5 : 1}
+        <text key={`lbl-${i}`} x={lx} y={ly}
+          textAnchor={anchor} dominantBaseline="middle"
+          fontSize={8.5} fontWeight={400}
+          fill={isElim ? col.dim : col.mid}
+          opacity={isElim ? 0.45 : 1}
           transform={`rotate(${rotate},${lx},${ly})`}
           style={{ pointerEvents:"none", userSelect:"none" }}>
-          {label}
+          {short(dName)}
         </text>
       );
     });
@@ -236,65 +208,85 @@ export default function CircularBracket({ bracket, language="en", C, getFlag, on
       {/* Legend */}
       <div style={{ display:"flex", gap:12, fontSize:10, color:col.mid, flexWrap:"wrap", justifyContent:"center" }}>
         {[
-          { fill:`${col.green}38`, stroke:col.green, label:tx("Advanced","Avançou") },
+          { fill:`${col.green}35`, stroke:col.green, label:tx("Advanced","Avançou") },
           { fill:`${col.gold}40`,  stroke:col.gold,  label:tx("Final","Final") },
-          { fill:col.s1,           stroke:col.ring,  label:tx("Eliminated","Eliminado"), opacity:0.4 },
+          { fill:col.s1,           stroke:col.ring,  label:tx("Eliminated","Eliminado"), op:0.4 },
           { fill:col.s2,           stroke:col.ring2, label:tx("Upcoming","A jogar") },
-        ].map(({ fill, stroke, label, opacity=1 }) => (
+        ].map(({ fill, stroke, label, op=1 }) => (
           <span key={label} style={{ display:"flex", alignItems:"center", gap:4 }}>
             <span style={{ width:9, height:9, borderRadius:2, background:fill,
-              border:`1.5px solid ${stroke}`, display:"inline-block", opacity }}/>
+              border:`1.5px solid ${stroke}`, display:"inline-block", opacity:op }}/>
             {label}
           </span>
         ))}
       </div>
 
-      {/* SVG */}
       <svg width="100%" viewBox="0 0 520 520" role="img"
         style={{ display:"block", maxWidth:560 }}>
         <title>{tx("World Cup 2026 Circular Bracket","Chaveamento Circular da Copa do Mundo 2026")}</title>
-        <desc>{tx("Circular bracket — 32 teams advance inward toward the trophy","Chaveamento circular — 32 seleções avançam para o centro")}</desc>
+        <desc>{tx("Circular bracket — winner flags advance inward ring by ring","Chaveamento circular — bandeiras dos vencedores avançam para o centro")}</desc>
 
-        {/* Background */}
-        <circle cx={CX} cy={CY} r={R.outer+18} fill={col.bg}/>
+        <circle cx={CX} cy={CY} r={R.outer+20} fill={col.bg}/>
 
-        {/* Subtle dashed ring guides */}
+        {/* Dashed ring guides */}
         {[R.final,R.sf,R.qf,R.r16,R.r32].map(r => (
           <circle key={r} cx={CX} cy={CY} r={r} fill="none"
             stroke={col.ring} strokeWidth={0.5} strokeDasharray="2,4" opacity={0.4}/>
         ))}
 
-        {/* Match boundary tick marks on the outer edge */}
+        {/* Match boundary tick marks */}
         {Array.from({length:16}, (_,i) => {
-          const d = spokeAngle(i * 2);
-          const [x1,y1] = polar(d, R.r32+1);
-          const [x2,y2] = polar(d, R.outer+5);
-          return <line key={`tick-${i}`} x1={x1} y1={y1} x2={x2} y2={y2}
+          const d = spokeAngle(i*2);
+          const [x1,y1] = polar(d, R.r32+1), [x2,y2] = polar(d, R.outer+5);
+          return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2}
             stroke={col.ring} strokeWidth={0.8} opacity={0.6}/>;
         })}
 
-        {/* All rounds */}
-        {renderRound(R32_SEGS, R.r16, R.r32, tx("R32","R32"))}
-        {renderRound(R16_SEGS, R.qf,  R.r16, tx("R16","Oitavas"))}
-        {renderRound(QF_SEGS,  R.sf,  R.qf,  tx("QF","Quartas"))}
-        {renderRound(SF_SEGS,  R.final,R.sf,  tx("SF","Semis"))}
+        {/*
+          Each renderRound call takes:
+            segs, r_inner (this ring), r_outer (this ring),
+            r_flag_inner (next inner ring), r_flag_outer (next inner ring),
+            flagSize
+
+          R32 segments live between R.r16 and R.r32.
+          Winner flags go into the R16 ring (R.qf → R.r16).
+
+          R16 segments live between R.qf and R.r16.
+          Winner flags go into QF ring (R.sf → R.qf).
+
+          QF segments live between R.sf and R.qf.
+          Winner flags go into SF ring (R.final → R.sf).
+
+          SF segments live between R.final and R.sf.
+          Winner flags go into Final ring (R.trophy → R.final).
+        */}
+
+        {renderRound(R32_SEGS, R.r16, R.r32,  R.qf,    R.r16,  FLAG_SIZE.r16)}
+        {renderRound(R16_SEGS, R.qf,  R.r16,  R.sf,    R.qf,   FLAG_SIZE.qf)}
+        {renderRound(QF_SEGS,  R.sf,  R.qf,   R.final, R.sf,   FLAG_SIZE.sf)}
+        {renderRound(SF_SEGS,  R.final,R.sf,   R.trophy,R.final,FLAG_SIZE.final, true)}
         {renderFinal()}
 
-        {/* Trophy centre */}
+        {/* Champion flag + trophy in centre */}
         <circle cx={CX} cy={CY} r={R.trophy}
           fill={champ ? `${col.gold}25` : col.s1}
           stroke={champ ? col.gold : col.ring2}
           strokeWidth={champ ? 2 : 0.8}/>
-        <text x={CX} y={champ ? CY-4 : CY}
-          textAnchor="middle" dominantBaseline="middle"
-          fontSize={champ ? 17 : 14}
-          style={{ pointerEvents:"none" }}>🏆</text>
-        {champ && (
-          <text x={CX} y={CY+9} textAnchor="middle" dominantBaseline="middle"
-            fontSize={7} fontWeight={700} fill={col.gold}
-            style={{ pointerEvents:"none" }}>
-            {Short(displayTeamName(champ, language))}
-          </text>
+        {champ ? (
+          <>
+            <text x={CX} y={CY-5} textAnchor="middle" dominantBaseline="middle"
+              fontSize={24} style={{ pointerEvents:"none" }}>
+              {getFlag(champ)}
+            </text>
+            <text x={CX} y={CY+9} textAnchor="middle" dominantBaseline="middle"
+              fontSize={6.5} fontWeight={700} fill={col.gold}
+              style={{ pointerEvents:"none" }}>
+              {short(displayTeamName(champ, language))}
+            </text>
+          </>
+        ) : (
+          <text x={CX} y={CY} textAnchor="middle" dominantBaseline="middle"
+            fontSize={16} style={{ pointerEvents:"none" }}>🏆</text>
         )}
 
         {/* Round labels at 12 o'clock */}
@@ -315,29 +307,27 @@ export default function CircularBracket({ bracket, language="en", C, getFlag, on
           );
         })}
 
-        {/* Team name labels */}
-        {renderLabels()}
+        {/* Outer team name labels (text only, no flag — flag is now inside the rings) */}
+        {renderOuterLabels()}
       </svg>
 
-      {/* Hover detail bar */}
-      <div style={{
-        width:"100%", maxWidth:400,
-        minHeight:38,
+      {/* Hover detail */}
+      <div style={{ width:"100%", maxWidth:400, minHeight:38,
         background:col.s1, border:`1px solid ${col.ring}`,
-        borderRadius:10, padding:"9px 14px",
-        fontSize:12, color:col.mid,
-        display:"flex", alignItems:"center", justifyContent:"center", gap:10,
-      }}>
+        borderRadius:10, padding:"9px 14px", fontSize:12, color:col.mid,
+        display:"flex", alignItems:"center", justifyContent:"center", gap:10 }}>
         {hovered ? (
           <>
-            <span style={{ fontWeight: hovered.w===hovered.h?700:400, color: hovered.w===hovered.h?col.green:col.mid }}>
-              {getFlag(hovered.h||"")} {Short(displayTeamName(hovered.h||"TBD",language))}
-              {hovered.w===hovered.h && " ✅"}
+            <span style={{ fontWeight:hovered.w===hovered.h?700:400,
+              color:hovered.w===hovered.h?col.green:col.mid }}>
+              {getFlag(hovered.h||"")} {short(displayTeamName(hovered.h||"TBD",language))}
+              {hovered.w===hovered.h&&" ✅"}
             </span>
-            <span style={{ fontSize:10, color:col.dim }}>{hovered.round}</span>
-            <span style={{ fontWeight: hovered.w===hovered.a?700:400, color: hovered.w===hovered.a?col.green:col.mid }}>
-              {hovered.w===hovered.a && "✅ "}
-              {Short(displayTeamName(hovered.a||"TBD",language))} {getFlag(hovered.a||"")}
+            <span style={{ fontSize:10, color:col.dim }}>{hovered.round||tx("vs","x")}</span>
+            <span style={{ fontWeight:hovered.w===hovered.a?700:400,
+              color:hovered.w===hovered.a?col.green:col.mid }}>
+              {hovered.w===hovered.a&&"✅ "}
+              {short(displayTeamName(hovered.a||"TBD",language))} {getFlag(hovered.a||"")}
             </span>
           </>
         ) : (
@@ -348,7 +338,8 @@ export default function CircularBracket({ bracket, language="en", C, getFlag, on
       </div>
 
       <div style={{ fontSize:10, color:col.dim, paddingBottom:4 }}>
-        {tx("Tap segment to open match · winners advance toward the trophy","Toque para abrir a partida · vencedores avançam para o centro")}
+        {tx("Winner flags advance inward · tap segment to open match",
+           "Bandeiras dos vencedores avançam para o centro · toque para abrir")}
       </div>
     </div>
   );
