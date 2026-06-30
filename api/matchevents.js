@@ -71,7 +71,7 @@ const SCORERS_AGGREGATE_KEY = "wc2026:scorers_aggregate";
 
 async function saveToKV(home, away, events, stats, lineups=null) {
   try {
-    await kv.set(kvKey(home, away), { events, stats, lineups, savedAt: Date.now() });
+    await kv.set(kvKey(home, away), { schemaVersion: 2, events, stats, lineups, savedAt: Date.now() });
     console.log(`[matchevents] Persisted ${events.length} events for ${home} vs ${away}`);
   } catch(e) {
     console.warn("[matchevents] KV save:", e.message);
@@ -89,7 +89,7 @@ async function saveToKV(home, away, events, stats, lineups=null) {
 // gets checked repeatedly while it's still in progress.
 
 function scorerEventKey(matchKey, ev) {
-  const minute = ev?.time?.display || ev?.time?.elapsed || "";
+  const minute = ev?.time?.elapsed ?? "";
   const type = ev?.type || "";
   const detail = ev?.detail || "";
   const team = ev?.team?.name || "";
@@ -449,119 +449,170 @@ function parseLineups(data, homeTeam) {
 
   return (result.home || result.away) ? result : null;
 }
-function parseESPNEventTime(ev) {
-  const displayRaw =
-    ev?.time?.displayValue ||
-    ev?.play?.time?.displayValue ||
-    ev?.play?.clock?.displayValue ||
-    ev?.clock?.displayValue ||
-    ev?.addedClock?.displayValue ||
-    ev?.displayTime ||
+function minuteFromESPN(...sources) {
+  const src = sources.find(x => x);
+  const raw =
+    src?.time?.displayValue ||
+    src?.play?.time?.displayValue ||
+    src?.play?.clock?.displayValue ||
+    src?.clock?.displayValue ||
+    src?.addedClock?.displayValue ||
+    src?.displayValue ||
     "";
 
-  const display = String(displayRaw || "").trim();
-  const elapsedFromDisplay = display ? parseInt(display, 10) : null;
-  const elapsedFromClock = ev?.clock?.value ? Math.round(Number(ev.clock.value) / 60) : null;
-  const elapsedFromPlayClock = ev?.play?.clock?.value ? Math.round(Number(ev.play.clock.value) / 60) : null;
+  const display = String(raw || "").trim();
+  const elapsed = display
+    ? parseInt(display, 10)
+    : (src?.clock?.value ? Math.round(src.clock.value / 60) : null);
   const extraMatch = display.match(/\+(\d+)/);
 
   return {
-    elapsed: Number.isFinite(elapsedFromDisplay) ? elapsedFromDisplay : (elapsedFromClock || elapsedFromPlayClock || null),
+    elapsed: Number.isFinite(elapsed) ? elapsed : null,
     extra: extraMatch ? Number(extraMatch[1]) : null,
-    display: display || null,
+    display: display || (Number.isFinite(elapsed) ? `${elapsed}'` : ""),
+  };
+}
+
+function isVarEvent(text, typeText, typeType) {
+  const all = `${text || ""} ${typeText || ""} ${typeType || ""}`.toLowerCase();
+  return all.includes("var") || all.includes("video assistant") || all.includes("review");
+}
+
+function varOutcomeDetail(text) {
+  const t = String(text || "").toLowerCase();
+  if (t.includes("goal awarded") || t.includes("goal confirmed") || t.includes("goal stands")) return "VAR: Goal confirmed";
+  if (t.includes("goal cancelled") || t.includes("goal disallowed") || t.includes("no goal")) return "VAR: Goal overturned";
+  if (t.includes("penalty awarded") || t.includes("penalty confirmed")) return "VAR: Penalty awarded";
+  if (t.includes("no penalty") || t.includes("penalty cancelled") || t.includes("penalty overturned")) return "VAR: Penalty overturned";
+  if (t.includes("red card awarded") || t.includes("red card confirmed")) return "VAR: Red card confirmed";
+  if (t.includes("red card cancelled") || t.includes("red card overturned")) return "VAR: Red card overturned";
+  return "VAR Review";
+}
+
+function eventSortValue(ev) {
+  const t = ev?.time || {};
+  return (Number(t.elapsed) || 0) * 100 + (Number(t.extra) || 0);
+}
+
+function normalizeEventFromESPN(ev, homeTeam) {
+  const teamName = normESPN(ev.team?.displayName || ev.team?.name || "");
+  const time = minuteFromESPN(ev);
+  const rawText = ev.text || ev.type?.text || "";
+  const text = rawText.toLowerCase();
+  const typeText = (ev.type?.text || "").toLowerCase();
+  const typeType = (ev.type?.type || "").toLowerCase();
+
+  const participants = ev.participants || ev.athletesInvolved || [];
+  const p0 = participants[0]?.athlete?.displayName || participants[0]?.displayName || "";
+  const p1 = participants[1]?.athlete?.displayName || participants[1]?.displayName || null;
+
+  let type = null, detail = "";
+
+  if (ev.scoringPlay || typeType === "goal" || typeText === "goal" || text.includes("goal!")) {
+    type = "Goal";
+    detail = text.includes("own goal") ? "Own Goal"
+           : text.includes("penalty")  ? "Penalty"
+           : "Normal Goal";
+  } else if (typeType === "yellow-card" || typeText.includes("yellow") || text.includes("shown the yellow")) {
+    type = "Card"; detail = "Yellow Card";
+  } else if (typeType === "red-card" || typeText.includes("red card") || typeText.includes("ejection") || text.includes("shown the red")) {
+    type = "Card"; detail = "Red Card";
+  } else if (typeType === "substitution" || typeText.includes("substitut") || text.includes("substitution,")) {
+    type = "subst"; detail = "Substitution";
+  } else if (isVarEvent(text, typeText, typeType)) {
+    type = "VAR"; detail = varOutcomeDetail(rawText);
+  }
+
+  if (!type) return null;
+
+  return {
+    time,
+    team: { name: teamName || normESPN(homeTeam || "") || "" },
+    player: { name: p0 || (type === "VAR" ? "VAR" : "") },
+    assist: { name: (type === "Goal" || type === "subst") ? p1 : null },
+    type,
+    detail,
+    text: rawText || "",
+  };
+}
+
+function normalizeCommentaryEvent(item, homeTeam) {
+  const ev = item.play || item;
+  const teamName = normESPN(ev.team?.displayName || ev.team?.name || item.team?.displayName || item.team?.name || "");
+  const time = minuteFromESPN(item.time, ev, item);
+  const rawText = item.text || ev.text || ev.type?.text || "";
+  const text = rawText.toLowerCase();
+  const typeText = (ev.type?.text || "").toLowerCase();
+  const typeType = (ev.type?.type || "").toLowerCase();
+  const participants = ev.participants || ev.athletesInvolved || item.participants || [];
+  const p0 = participants[0]?.athlete?.displayName || participants[0]?.displayName || "";
+  const p1 = participants[1]?.athlete?.displayName || participants[1]?.displayName || null;
+
+  let type = null, detail = "";
+  if (ev.scoringPlay || typeType === "goal" || typeText === "goal" || text.includes("goal!")) {
+    type = "Goal";
+    detail = text.includes("own goal") ? "Own Goal" : text.includes("penalty") ? "Penalty" : "Normal Goal";
+  } else if (typeType === "yellow-card" || typeText.includes("yellow") || text.includes("shown the yellow")) {
+    type = "Card"; detail = "Yellow Card";
+  } else if (typeType === "red-card" || typeText.includes("red card") || typeText.includes("ejection") || text.includes("shown the red")) {
+    type = "Card"; detail = "Red Card";
+  } else if (typeType === "substitution" || typeText.includes("substitut") || text.includes("substitution,")) {
+    type = "subst"; detail = "Substitution";
+  } else if (isVarEvent(text, typeText, typeType)) {
+    type = "VAR"; detail = varOutcomeDetail(rawText);
+  }
+  if (!type) return null;
+
+  return {
+    time,
+    team: { name: teamName || normESPN(homeTeam || "") || "" },
+    player: { name: p0 || (type === "VAR" ? "VAR" : "") },
+    assist: { name: (type === "Goal" || type === "subst") ? p1 : null },
+    type,
+    detail,
+    text: rawText || "",
   };
 }
 
 function parseEvents(data, homeTeam) {
   const events = [];
 
-  const keyEvents = (data.keyEvents && data.keyEvents.length) ? data.keyEvents : (data.header?.competitions?.[0]?.details || []);
-  for (const ev of keyEvents) {
-    const teamName = normESPN(ev.team?.displayName || ev.team?.name || "");
-    const time = parseESPNEventTime(ev);
-    const elapsed = time.elapsed;
-    const text = (ev.text || ev.type?.text || "").toLowerCase();
-    const typeText = (ev.type?.text || "").toLowerCase();
-    const typeType = (ev.type?.type || "").toLowerCase();
+  const add = ev => { if (ev) events.push(ev); };
 
-    const participants = ev.participants || ev.athletesInvolved || [];
-    const p0 = participants[0]?.athlete?.displayName || participants[0]?.displayName || "";
-    const p1 = participants[1]?.athlete?.displayName || participants[1]?.displayName || null;
+  // ESPN summary puts the most useful scoring/card/substitution events here.
+  (data.header?.competitions?.[0]?.details || []).forEach(ev => add(normalizeEventFromESPN(ev, homeTeam)));
+  (data.keyEvents || []).forEach(ev => add(normalizeEventFromESPN(ev, homeTeam)));
 
-    let type = null, detail = "";
+  // Commentary has the richest minute strings and many VAR/review outcomes.
+  (data.commentary || []).forEach(item => add(normalizeCommentaryEvent(item, homeTeam)));
 
-    if (ev.scoringPlay || typeType === "goal" || typeText === "goal") {
-      type = "Goal";
-      detail = text.includes("own goal") ? "Own Goal"
-             : text.includes("penalty")  ? "Penalty"
-             : "Normal Goal";
-    } else if (typeType === "yellow-card" || typeText.includes("yellow")) {
-      type = "Card"; detail = "Yellow Card";
-    } else if (typeType === "red-card" || typeText.includes("red card") || typeText.includes("ejection")) {
-      type = "Card"; detail = "Red Card";
-    } else if (typeType === "substitution" || typeText.includes("substitut")) {
-      type = "subst"; detail = "Substitution";
-    }
+  // Fallback: plays array when ESPN exposes it directly.
+  (data.plays || []).forEach(play => add(normalizeEventFromESPN(play, homeTeam)));
 
-    if (!type || !teamName) continue;
-
-    events.push({
-      time,
-      team: { name: teamName },
-      player: { name: p0 },
-      assist: { name: (type === "Goal" || type === "subst") ? p1 : null },
-      type,
-      detail,
+  // Roster player entries can contain individual plays; useful when summary
+  // omits top-level plays but embeds key player events under each roster row.
+  (data.rosters || []).forEach(r => {
+    (r.roster || r.entries || r.players || r.athletes || []).forEach(player => {
+      (player.plays || []).forEach(play => add(normalizeEventFromESPN(play, homeTeam)));
     });
-  }
+  });
 
-  // Fallback: plays array
-  if (events.length === 0 && data.plays?.length) {
-    for (const play of data.plays) {
-      const teamName = normESPN(play.team?.displayName || play.team?.name || "");
-      const time = parseESPNEventTime(play);
-      const elapsed = time.elapsed;
-      const text = (play.type?.text || play.text || "").toLowerCase();
-      let type = null, detail = "";
-
-      if (play.scoringPlay || text.includes("goal")) {
-        type = "Goal";
-        detail = text.includes("own goal") ? "Own Goal" : text.includes("penalty") ? "Penalty" : "Normal Goal";
-      } else if (text.includes("yellow") || text.includes("caution")) { type = "Card"; detail = "Yellow Card"; }
-      else if (text.includes("red card") || text.includes("ejection")) { type = "Card"; detail = "Red Card"; }
-      else if (text.includes("substitut")) { type = "subst"; detail = "Substitution"; }
-
-      if (!type) continue;
-      const athletes = play.athletesInvolved || [];
-      events.push({
-        time,
-        team: { name: teamName },
-        player: { name: athletes[0]?.displayName || "" },
-        assist: { name: athletes[1]?.displayName || null },
-        type,
-        detail,
-      });
-    }
-  }
-
-  // Dedup: ESPN's keyEvents feed can post the same goal twice — a
-  // provisional entry when it's first scored, then a second, re-confirmed
-  // entry after a brief review/update — with no shared ID to tell them
-  // apart from a plain "same player, same team, same minute" match. With
-  // no dedup, both copies became separate Goal events, inflating the
-  // events-derived goal count above the actual final score (confirmed
-  // directly: Ronaldo showed twice at completely different minutes here,
-  // which is a real double — but the SAME bug class also covers the more
-  // common case of an exact-duplicate repost at the identical minute).
   const seen = new Set();
   const deduped = events.filter(ev => {
-    const key = `${ev.type}|${ev.team?.name}|${ev.player?.name}|${ev.time?.display || ev.time?.elapsed}`;
+    const key = [
+      ev.type,
+      ev.detail,
+      ev.team?.name,
+      ev.player?.name,
+      ev.time?.display || `${ev.time?.elapsed || ""}+${ev.time?.extra || ""}`,
+      (ev.text || "").slice(0, 80),
+    ].join("|");
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
   });
 
-  return deduped.sort((a, b) => ((a.time?.elapsed || 0) - (b.time?.elapsed || 0)) || ((a.time?.extra || 0) - (b.time?.extra || 0)));
+  return deduped.sort((a, b) => eventSortValue(a) - eventSortValue(b));
 }
 
 // ── Scorers aggregator ────────────────────────────────────────────────────
@@ -799,6 +850,130 @@ async function autoSeedEvents() {
 }
 
 
+function eventCacheHasDisplayTimes(record) {
+  if (!record?.events?.length) return false;
+  // Schema v2 stores ESPN's official display minute on parsed events.
+  // Some old seeded events have plain elapsed values only; those should be
+  // refreshed when ESPN can provide richer source data.
+  return record.schemaVersion >= 2 && record.events.every(ev => ev?.time?.display);
+}
+
+async function backfillFinishedEvents({ limit = 10, force = false } = {}) {
+  const candidates = [];
+  const addCandidate = (home, away, espnId = null) => {
+    home = normESPN(home || "");
+    away = normESPN(away || "");
+    if (!home || !away || home.includes("TBD") || away.includes("TBD")) return;
+    if (/^(1|2|3rd|R16|QF|SF|🏆|3rd Place)/.test(home) || /^(1|2|3rd|R16|QF|SF|🏆|3rd Place)/.test(away)) return;
+    const key = `${home}|${away}`;
+    if (candidates.some(c => c.key === key || c.key === `${away}|${home}`)) return;
+    candidates.push({ key, home, away, espnId });
+  };
+
+  FULL_SCHEDULE.forEach(m => addCandidate(m.home, m.away, m.espnId || null));
+
+  // Include resolved knockout matches from the live-score cache. This is
+  // essential because FULL_SCHEDULE still contains placeholder slots such as
+  // 1C vs 2F, while the live feed has Brazil vs Japan with the real ESPN id.
+  try {
+    const cached = await kv.get("wc2026:livescores");
+    const fixtures = Array.isArray(cached) ? cached : (cached?.response || []);
+    fixtures.forEach(f => {
+      const home = f?.teams?.home?.name;
+      const away = f?.teams?.away?.name;
+      const espnId = f?.fixture?.id && !String(f.fixture.id).includes("|") ? String(f.fixture.id) : null;
+      addCandidate(home, away, espnId);
+    });
+  } catch(e) {
+    console.warn("[backfill] livescores candidate load failed:", e.message);
+  }
+
+  // Include all persisted ESPN id mappings too, in case the match is no longer
+  // in the current livescores cache but was seen earlier by the app.
+  try {
+    const idMap = await kv.get(ESPN_ID_MAP_KEY) || {};
+    Object.entries(idMap).forEach(([key, espnId]) => {
+      const [home, away] = key.split("|");
+      addCandidate(home, away, String(espnId));
+    });
+  } catch(e) {
+    console.warn("[backfill] id map candidate load failed:", e.message);
+  }
+
+  const processed = [];
+  const skipped = [];
+  const errors = [];
+  let updated = 0;
+
+  for (const candidate of candidates) {
+    if (updated >= limit) break;
+    const { home, away } = candidate;
+    try {
+      const existing = await loadFromKV(home, away);
+      if (!force && eventCacheHasDisplayTimes(existing)) {
+        skipped.push({ home, away, reason: "already_schema_v2" });
+        continue;
+      }
+
+      const eventId = candidate.espnId || await getESPNEventId(home, away);
+      if (!eventId) {
+        skipped.push({ home, away, reason: "no_espn_id" });
+        continue;
+      }
+
+      const r = await fetch(`${ESPN_BASE}/summary?event=${eventId}`, { headers: ESPN_HEADERS });
+      if (!r.ok) {
+        skipped.push({ home, away, eventId, reason: `espn_${r.status}` });
+        continue;
+      }
+
+      const data = await r.json();
+      const statusType = data.header?.competitions?.[0]?.status?.type?.name || "NS";
+      if (!DONE_STATUSES.includes(statusType)) {
+        skipped.push({ home, away, eventId, statusType, reason: "not_finished" });
+        continue;
+      }
+
+      const events = parseEvents(data, home);
+      const stats = parseStats(data.boxscore, home);
+      const lineups = parseLineups(data, home);
+      if (!events.length) {
+        skipped.push({ home, away, eventId, statusType, reason: "no_events" });
+        continue;
+      }
+
+      await saveESPNId(home, away, eventId).catch(() => {});
+      await saveToKV(home, away, events, stats, lineups);
+      processed.push({ home, away, eventId, statusType, events: events.length, hasDisplayTimes: eventCacheHasDisplayTimes({ schemaVersion: 2, events }) });
+      updated++;
+    } catch(e) {
+      errors.push({ home, away, error: e.message });
+    }
+  }
+
+  // Rebuild after any rewrite so Top Scorers/Cards uses the refreshed canonical events.
+  const scorerRefresh = updated ? await buildScorersFromPersistedEvents({ persist:true }).catch(e => ({ error: e.message })) : null;
+
+  return {
+    ok: true,
+    action: "backfill-events",
+    force,
+    limit,
+    candidates: candidates.length,
+    updated,
+    processed,
+    skipped: skipped.slice(0, 40),
+    errors,
+    scorerRefresh: scorerRefresh ? {
+      matchCount: scorerRefresh.matchCount,
+      goalEvents: scorerRefresh.goalEvents,
+      cardEvents: scorerRefresh.cardEvents,
+      error: scorerRefresh.error,
+    } : null,
+  };
+}
+
+
 
 async function getScorers() {
   // IMPORTANT: derive the leaderboard from persisted per-match event caches on
@@ -869,6 +1044,20 @@ export default async function handler(req, res) {
       return res.status(200).json(await rebuildScorersAggregate());
     } catch(e) {
       return res.status(500).json({ ok: false, error: e.message });
+    }
+  }
+
+  // Backfill finished match timelines from ESPN, preserving official
+  // stoppage-time display values such as 90'+5' and VAR/review outcomes.
+  // Run repeatedly with a modest limit until updated=0.
+  if (req.query.action === "backfill-events" || req.query.action === "backfill") {
+    try {
+      res.setHeader("Cache-Control", "no-store");
+      const limit = Math.max(1, Math.min(50, parseInt(req.query.limit || "10", 10) || 10));
+      const force = req.query.force === "1" || req.query.force === "true";
+      return res.status(200).json(await backfillFinishedEvents({ limit, force }));
+    } catch(e) {
+      return res.status(500).json({ ok: false, action: "backfill-events", error: e.message });
     }
   }
 
