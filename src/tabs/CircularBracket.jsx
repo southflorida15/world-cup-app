@@ -347,7 +347,7 @@ export default function CircularBracket({
       const m      = getMatch(matchId);
       const isW    = m.winner === team;
       const isElim = m.winner && !isW;
-      const angle  = degOf(i) + 360/32/2;
+      const angle  = degOf(i) + 360/32/2; // 0° = top, clockwise
       const labelR = RF + FLAG_R + 9;
       const [lx, ly] = pt(angle, labelR);
       const code = FIFA3[team] || (team ? team.slice(0,3).toUpperCase() : "");
@@ -355,16 +355,19 @@ export default function CircularBracket({
 
       ctx.save();
       ctx.translate(lx, ly);
-      // Rotate so text reads outward from centre on both sides of the circle
-      // Right half (0-180°): rotate by (angle-90) so text reads left→right outward
-      // Left half (180-360°): rotate by (angle+90) then flip so text still reads outward
-      const onRight = angle <= 180;
-      ctx.rotate(toRad(angle - 90));
-      if (!onRight) ctx.rotate(Math.PI); // flip text on left half
+      // angle 0° = top (12 o'clock), increases clockwise.
+      // Right half visually = 0°–180° (top → right → bottom).
+      // Left half visually = 180°–360° (bottom → left → top).
+      // Rotate so text baseline points away from centre (reads outward).
+      // On the right half: rotate (angle - 90). On the left half: rotate (angle + 90).
+      const onLeft = angle > 180 && angle < 360;
+      ctx.rotate(toRad(onLeft ? angle + 90 : angle - 90));
       ctx.font = `${isW ? "bold " : ""}9px system-ui, sans-serif`;
-      ctx.textAlign  = "center";
+      ctx.textAlign    = "center";
       ctx.textBaseline = "middle";
-      ctx.fillStyle  = isW ? "rgba(255,215,60,0.95)" : isElim ? "rgba(255,255,255,0.22)" : "rgba(255,255,255,0.55)";
+      ctx.fillStyle    = isW    ? "rgba(255,215,60,0.95)"  :
+                         isElim ? "rgba(255,255,255,0.22)" :
+                                  "rgba(255,255,255,0.55)";
       ctx.fillText(code, 0, 0);
       ctx.restore();
     }
