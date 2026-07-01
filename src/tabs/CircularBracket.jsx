@@ -16,11 +16,13 @@ const W = 580, H = 580, CX = W/2, CY = H/2;
 
 // Ring radii
 const RF   = 248; // outer flag circle centres
-const RB   = 196; // R32 bracket ring
-const R16  = 154; // R16
-const RQF  = 112; // QF
-const RSF  =  70; // SF
-const RFIN =  30; // Final / trophy
+const RB   = 196; // R32 bracket junction (where 2 outer flags converge)
+// Winner flags sit ON the inner bracket rings — they ARE the junction
+const RW1  = 160; // R32 winners / R16 bracket ring
+const RW2  = 118; // R16 winners / QF bracket ring  
+const RW3  =  80; // QF winners  / SF bracket ring
+const RW4  =  48; // SF winners  / Final bracket ring
+const RFIN =  22; // Trophy centre
 
 const FLAG_R = 22; // outer flag circle radius
 
@@ -139,7 +141,7 @@ export default function CircularBracket({
     ctx.fillRect(0, 0, W, H);
 
     // Subtle ring guides
-    [RB, R16, RQF, RSF].forEach(r => {
+    [RB, RW1, RW2, RW3, RW4].forEach(r => {
       ctx.beginPath(); ctx.arc(CX, CY, r, 0, Math.PI*2);
       ctx.strokeStyle = "rgba(255,220,100,0.05)";
       ctx.lineWidth = 1; ctx.stroke();
@@ -196,132 +198,127 @@ export default function CircularBracket({
     //   2. Short arc at rOuter connecting the two endpoints (the "match bar")
     //   3. One spoke from the midpoint of that arc → rInner (continues inward)
     //   4. Winner flag at rInner (centred on the match midpoint angle)
-    function drawRound(segs, rOuter, rInner, winFlagR, winFlagSz) {
+    // ── Core draw logic ───────────────────────────────────────────────
+    // For each match:
+    //   1. Arc at rOuter connecting the two input positions (the "match bar")
+    //   2. Two spokes from the match bar endpoints → converge at rWinner (the winner flag)
+    //   3. Winner flag drawn AT rWinner
+    //   4. Caller is responsible for drawing the next spoke FROM rWinner inward
+
+    function drawMatchBar(segs, rOuter, rWinner) {
       for (const [idStr, [s, e]] of Object.entries(segs)) {
         const id = Number(idStr);
         const m  = getMatch(id);
         const a1 = degOf(s), a2 = degOf(e);
-        const am = (a1 + a2) / 2;
-        const hA = (a1 + am) / 2;
-        const aA = (am + a2) / 2;
+        const am = (a1 + a2) / 2; // match midpoint = winner angle
+        const hA = (a1 + am) / 2; // home input angle
+        const aA = (am + a2) / 2; // away input angle
         const hasW = !!m.winner;
-        const lineCol = hasW ? LINE_WIN : LINE_UPCOMING;
-        const lineW   = hasW ? LW : LW_DIM;
-        const [mx, my] = pt(am, rOuter);
+        const lCol = hasW ? LINE_WIN : LINE_UPCOMING;
+        const lW   = hasW ? LW : LW_DIM;
 
-        // Match bar arc at rOuter connecting the two incoming spokes
-        arc(rOuter, hA+0.5, aA-0.5, lineCol, lineW);
+        // Match bar arc at rOuter
+        arc(rOuter, hA+0.5, aA-0.5, lCol, lW);
 
-        // Single spoke from bar midpoint → inner ring
-        const [ix, iy] = pt(am, rInner);
-        line(mx, my, ix, iy, lineCol, lineW);
+        // Two spokes converging on the winner position at rWinner
+        const [hx, hy] = pt(hA, rOuter);
+        const [ax, ay] = pt(aA, rOuter);
+        const [wx, wy] = pt(am, rWinner);
+        line(hx, hy, wx, wy, lCol, lW);
+        line(ax, ay, wx, wy, lCol, lW);
 
-        // Winner flag between this ring and the inner ring
+        // Winner flag AT the convergence point (rWinner)
         if (hasW) {
-          const [fx, fy] = pt(am, winFlagR);
-          drawFlag(m.winner, fx, fy, winFlagSz, 1,
+          drawFlag(m.winner, wx, wy, FLAG_R, 1,
             "rgba(255,215,60,0.85)", 1.5, "rgba(255,200,40,0.3)");
         }
       }
     }
 
-    // Final ring — single match connecting the two SF winners
-    function drawFinal() {
+    // ── Draw all rounds ───────────────────────────────────────────────
+    // R32: outer flags (at RF edge) → bar at RB → winner flag at RW1
+    // Then spoke from each RW1 flag → bar at RW1 connecting R16 pairs → R16 winner at RW2
+    // etc.
+
+    // QF/SF/Final use drawMatchBar with winner flags landing on the next ring
+    // They're drawn BEFORE the R16 section so flags render on top of lines
+
+    // SF: two QF winners (at RW3) → converge at RW4
+    drawMatchBar(SF_SEGS, RW3, RW4);
+    // QF: two R16 winners (at RW2) → converge at RW3
+    drawMatchBar(QF_SEGS, RW2, RW3);
+    // Final: two SF winners (at RW4) → converge at trophy
+    {
       const m = getMatch(104);
       const hasW = !!m.winner;
-      const lineCol = hasW ? LINE_WIN : LINE_UPCOMING;
-      const lineW   = hasW ? LW : LW_DIM;
-      // SF winners sit at angles 90° (SF101 mid) and 270° (SF102 mid)
-      // The final bar connects them at RSF ring
-      arc(RSF, 90.5, 269.5, lineCol, lineW);  // top arc
-      // Short spoke from each SF bar midpoint to RFIN
-      const [t1x,t1y] = pt(90,  RSF); const [t1ix,t1iy] = pt(90,  RFIN);
-      const [t2x,t2y] = pt(270, RSF); const [t2ix,t2iy] = pt(270, RFIN);
-      line(t1x,t1y, t1ix,t1iy, lineCol, lineW);
-      line(t2x,t2y, t2ix,t2iy, lineCol, lineW);
-      if (hasW) {
-        const [fx, fy] = pt(0, (RSF+RFIN)/2); // champion at top
-        drawFlag(m.winner, fx, fy, FLAG_R, 1,
-          "rgba(255,215,60,0.85)", 2, "rgba(255,200,40,0.4)");
-      }
+      const lCol = hasW ? LINE_WIN : LINE_UPCOMING;
+      const lW   = hasW ? LW : LW_DIM;
+      // SF101 winner sits at am=90° at RW4, SF102 winner at am=270° at RW4
+      const [h1x,h1y] = pt(90,  RW4);
+      const [h2x,h2y] = pt(270, RW4);
+      const [cx, cy]  = pt(0,   RFIN); // converge at centre (trophy)
+      line(h1x,h1y, cx,cy, lCol, lW);
+      line(h2x,h2y, cx,cy, lCol, lW);
     }
 
-    // QF bar at R16 ring (where R16 winners converge), flag between R16 and RQF
-    drawRound(QF_SEGS,  R16, RQF, (R16+RQF)/2, FLAG_R);
-    // SF bar at RQF ring, flag between RQF and RSF
-    drawRound(SF_SEGS,  RQF, RSF, (RQF+RSF)/2, FLAG_R);
-    // Final
-    drawFinal();
-    // ── R16 pairing: flags → R32 bar → R16 bar → inward spoke ────────
+    // ── R16 pairing: outer flags → R32 bar → R32 winner AT RW1 → R16 bar → R16 winner AT RW2 ──
     for (const [idStr, [s, e]] of Object.entries(R16_SEGS)) {
       const id   = Number(idStr);
-      const m    = getMatch(id);           // R16 match
+      const m    = getMatch(id);
       const hasW = !!m.winner;
-      const hWon = m.winner === m.home;
-      const aWon = m.winner === m.away;
-
       const SPOKE = 360/32;
-      const hBarAngle   = degOf(s)   + SPOKE; // R32 match 1 midpoint angle
-      const aBarAngle   = degOf(s+2) + SPOKE; // R32 match 2 midpoint angle
+      const hBarAngle   = degOf(s)   + SPOKE;
+      const aBarAngle   = degOf(s+2) + SPOKE;
       const r16MidAngle = (hBarAngle + aBarAngle) / 2;
-
-      // The two R32 matches that feed this R16 match
-      const r32HomeId = R32_ORDER[s >> 1];       // R32 match for first pair
-      const r32AwayId = R32_ORDER[(s >> 1) + 1]; // R32 match for second pair
-      const mH = getMatch(r32HomeId); // first R32 match
-      const mA = getMatch(r32AwayId); // second R32 match
-
-      // Outer flag angles
+      const mH = getMatch(R32_ORDER[s >> 1]);
+      const mA = getMatch(R32_ORDER[(s >> 1) + 1]);
       const hFlagA = degOf(s)   + SPOKE/2;
       const hFlagB = degOf(s+1) + SPOKE/2;
       const aFlagA = degOf(s+2) + SPOKE/2;
       const aFlagB = degOf(s+3) + SPOKE/2;
+      const lCol = "rgba(255,215,60,0.85)";
+      const lW   = LW;
+      const lColR16 = hasW ? LINE_WIN : LINE_UPCOMING;
+      const lWR16   = hasW ? LW : LW_DIM;
 
-      const col1 = "rgba(255,215,60,0.85)";
-      const wid1 = LW;
-
+      // R32 bar midpoints at RB
       const [hBar_x, hBar_y] = pt(hBarAngle, RB);
       const [aBar_x, aBar_y] = pt(aBarAngle, RB);
-      const [r16x,   r16y  ] = pt(r16MidAngle, RB);
 
-      // 1. Each outer flag → its R32 bar midpoint at RB
+      // 1. Outer flags → R32 bar at RB
       [[hFlagA, hFlagB], [aFlagA, aFlagB]].forEach(([fA, fB], side) => {
         const [bx, by] = side === 0 ? [hBar_x, hBar_y] : [aBar_x, aBar_y];
-        [fA, fB].forEach(flagAngle => {
-          const [fx, fy] = pt(flagAngle, RF - FLAG_R - 1);
-          line(fx, fy, bx, by, col1, wid1);
+        [fA, fB].forEach(a => {
+          const [fx, fy] = pt(a, RF - FLAG_R - 1);
+          line(fx, fy, bx, by, lCol, lW);
         });
       });
 
-      // 2. R16 match bar arc connecting the two R32 bar midpoints at RB
-      arc(RB, hBarAngle + 0.3, aBarAngle - 0.3, col1, wid1);
+      // 2. R32 bar → R32 winner flag AT RW1
+      const [hW1x, hW1y] = pt(hBarAngle, RW1);
+      const [aW1x, aW1y] = pt(aBarAngle, RW1);
+      line(hBar_x, hBar_y, hW1x, hW1y, lCol, lW);
+      line(aBar_x, aBar_y, aW1x, aW1y, lCol, lW);
 
-      // 3. Spoke from R16 bar midpoint → R16 inner ring
-      const [r16InnerX, r16InnerY] = pt(r16MidAngle, R16);
-      line(r16x, r16y, r16InnerX, r16InnerY,
-        hasW ? LINE_WIN : LINE_UPCOMING,
-        hasW ? LW : LW_DIM);
+      // 3. R32 winner flags AT RW1 (drawn on top of lines)
+      if (mH.winner) drawFlag(mH.winner, hW1x, hW1y, FLAG_R, 1,
+        "rgba(255,215,60,0.85)", 1.5, "rgba(255,200,40,0.3)");
+      if (mA.winner) drawFlag(mA.winner, aW1x, aW1y, FLAG_R, 1,
+        "rgba(255,215,60,0.85)", 1.5, "rgba(255,200,40,0.3)");
 
-      // 4. R32 winner flags — one per R32 match, at the bar midpoint radius
-      //    These are the teams that advanced from R32, sitting between RB and R16
-      const winnerR = (RB + R16) / 2;
-      if (mH.winner) {
-        const [fx, fy] = pt(hBarAngle, winnerR);
-        drawFlag(mH.winner, fx, fy, FLAG_R, 1,
-          "rgba(255,215,60,0.85)", 1.5, "rgba(255,200,40,0.3)");
-      }
-      if (mA.winner) {
-        const [fx, fy] = pt(aBarAngle, winnerR);
-        drawFlag(mA.winner, fx, fy, FLAG_R, 1,
-          "rgba(255,215,60,0.85)", 1.5, "rgba(255,200,40,0.3)");
-      }
+      // 4. From each R32 winner → converge at R16 midpoint AT RW1
+      //    This is the key: the R16 "match bar" connects the two R32 winners
+      const [r16x, r16y] = pt(r16MidAngle, RW1);
+      if (mH.winner || !hasW) line(hW1x, hW1y, r16x, r16y, lColR16, lWR16);
+      if (mA.winner || !hasW) line(aW1x, aW1y, r16x, r16y, lColR16, lWR16);
 
-      // 5. R16 winner flag — sits between R16 and QF rings
-      if (hasW) {
-        const [fx, fy] = pt(r16MidAngle, (R16 + RQF) / 2);
-        drawFlag(m.winner, fx, fy, FLAG_R, 1,
-          "rgba(255,215,60,0.85)", 1.5, "rgba(255,200,40,0.3)");
-      }
+      // 5. Single spoke inward: R16 midpoint → R16 winner AT RW2
+      const [r16InnerX, r16InnerY] = pt(r16MidAngle, RW2);
+      line(r16x, r16y, r16InnerX, r16InnerY, lColR16, lWR16);
+
+      // 6. R16 winner flag AT RW2
+      if (hasW) drawFlag(m.winner, r16InnerX, r16InnerY, FLAG_R, 1,
+        "rgba(255,215,60,0.85)", 1.5, "rgba(255,200,40,0.3)");
     }
 
     // ── Outer flag circles ─────────────────────────────────────────────
@@ -375,12 +372,12 @@ export default function CircularBracket({
     }
 
 
-    const tg = ctx.createRadialGradient(CX,CY,0,CX,CY,RSF*0.9);
+    const tg = ctx.createRadialGradient(CX,CY,0,CX,CY,RW3*0.9);
     tg.addColorStop(0, "rgba(255,200,40,0.20)");
     tg.addColorStop(0.5,"rgba(255,170,20,0.06)");
     tg.addColorStop(1,  "rgba(0,0,0,0)");
     ctx.fillStyle = tg;
-    ctx.beginPath(); ctx.arc(CX,CY,RSF*0.9,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(CX,CY,RW3*0.9,0,Math.PI*2); ctx.fill();
 
     ctx.beginPath(); ctx.arc(CX,CY,RFIN,0,Math.PI*2);
     ctx.fillStyle = "rgba(18,16,10,0.95)"; ctx.fill();
