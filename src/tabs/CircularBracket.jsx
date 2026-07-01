@@ -27,10 +27,11 @@ const FLAG_R = 22; // outer flag circle radius
 // Winner flag sizes at each inner ring
 const WIN_SZ = { r16:13, qf:16, sf:20, fin:24 };
 
-const LINE_WIN = "rgba(255,215,60,0.88)";
-const LINE_DIM = "rgba(255,255,255,0.10)";
-const LW       = 1.6;
-const LW_DIM   = 0.7;
+const LINE_WIN  = "rgba(255,215,60,0.88)";
+const LINE_DIM  = "rgba(255,255,255,0.10)";
+const LINE_UPCOMING = "rgba(255,215,60,0.28)"; // upcoming inner rounds — gold tint, visible
+const LW        = 1.6;
+const LW_DIM    = 0.8;
 
 const R32_ORDER = [73,75,74,77, 76,78,79,80, 83,84,81,82, 86,88,85,87];
 const R16_ORDER = [89,90,91,92, 93,94,95,96];
@@ -204,20 +205,18 @@ export default function CircularBracket({
         const hA = (a1 + am) / 2;
         const aA = (am + a2) / 2;
         const hasW = !!m.winner;
+        const lineCol = hasW ? LINE_WIN : LINE_UPCOMING;
+        const lineW   = hasW ? LW : LW_DIM;
         const [mx, my] = pt(am, rOuter);
 
-        // Match bar arc at rOuter
-        arc(rOuter, hA+0.5, aA-0.5,
-          hasW ? LINE_WIN : LINE_DIM,
-          hasW ? LW       : LW_DIM);
+        // Match bar arc at rOuter connecting the two incoming spokes
+        arc(rOuter, hA+0.5, aA-0.5, lineCol, lineW);
 
         // Single spoke from bar midpoint → inner ring
         const [ix, iy] = pt(am, rInner);
-        line(mx, my, ix, iy,
-          hasW ? LINE_WIN : LINE_DIM,
-          hasW ? LW       : LW_DIM);
+        line(mx, my, ix, iy, lineCol, lineW);
 
-        // Winner flag
+        // Winner flag between this ring and the inner ring
         if (hasW) {
           const [fx, fy] = pt(am, winFlagR);
           drawFlag(m.winner, fx, fy, winFlagSz, 1,
@@ -226,12 +225,33 @@ export default function CircularBracket({
       }
     }
 
-    // R16 handled by R16 pairing section below (includes outer flags + R16 winner flag)
-    // QF, SF, Final handled here
-    // QF bar at R16 ring (where R16 winners land), winner flag between R16 and RQF
+    // Final ring — single match connecting the two SF winners
+    function drawFinal() {
+      const m = getMatch(104);
+      const hasW = !!m.winner;
+      const lineCol = hasW ? LINE_WIN : LINE_UPCOMING;
+      const lineW   = hasW ? LW : LW_DIM;
+      // SF winners sit at angles 90° (SF101 mid) and 270° (SF102 mid)
+      // The final bar connects them at RSF ring
+      arc(RSF, 90.5, 269.5, lineCol, lineW);  // top arc
+      // Short spoke from each SF bar midpoint to RFIN
+      const [t1x,t1y] = pt(90,  RSF); const [t1ix,t1iy] = pt(90,  RFIN);
+      const [t2x,t2y] = pt(270, RSF); const [t2ix,t2iy] = pt(270, RFIN);
+      line(t1x,t1y, t1ix,t1iy, lineCol, lineW);
+      line(t2x,t2y, t2ix,t2iy, lineCol, lineW);
+      if (hasW) {
+        const [fx, fy] = pt(0, (RSF+RFIN)/2); // champion at top
+        drawFlag(m.winner, fx, fy, FLAG_R, 1,
+          "rgba(255,215,60,0.85)", 2, "rgba(255,200,40,0.4)");
+      }
+    }
+
+    // QF bar at R16 ring (where R16 winners converge), flag between R16 and RQF
     drawRound(QF_SEGS,  R16, RQF, (R16+RQF)/2, FLAG_R);
-    // SF bar at RQF ring, winner flag between RQF and RSF
+    // SF bar at RQF ring, flag between RQF and RSF
     drawRound(SF_SEGS,  RQF, RSF, (RQF+RSF)/2, FLAG_R);
+    // Final
+    drawFinal();
     // ── R16 pairing: flags → R32 bar → R16 bar → inward spoke ────────
     for (const [idStr, [s, e]] of Object.entries(R16_SEGS)) {
       const id   = Number(idStr);
@@ -279,7 +299,7 @@ export default function CircularBracket({
       // 3. Spoke from R16 bar midpoint → R16 inner ring
       const [r16InnerX, r16InnerY] = pt(r16MidAngle, R16);
       line(r16x, r16y, r16InnerX, r16InnerY,
-        hasW ? LINE_WIN : LINE_DIM,
+        hasW ? LINE_WIN : LINE_UPCOMING,
         hasW ? LW : LW_DIM);
 
       // 4. R32 winner flags — one per R32 match, at the bar midpoint radius
