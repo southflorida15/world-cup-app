@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
 import { displayTeamName } from "../i18n/display";
 
 // ── CircularBracket ───────────────────────────────────────────────────────
