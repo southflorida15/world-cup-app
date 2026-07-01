@@ -204,20 +204,55 @@ async function updateScorersAggregate(home, away, events) {
 // omits team name from key so empty-team duplicates collapse with named ones.
 // Multiple subs at the same minute are kept (legitimate).
 function deduplicateEvents(events) {
-  if (!events?.length) return events || [];
+  if (!Array.isArray(events)) return [];
+
   const seen = new Set();
+
   return events.filter(ev => {
-    let key;
-    if (ev.type === "Goal" || ev.type === "Card") {
-      // For goals/cards: type + player + elapsed is sufficient and stable across ESPN sources.
-      // Omit team, detail, text — these vary between details/keyEvents/commentary.
-      key = `${ev.type}|${ev.player?.name || ""}|${ev.time?.elapsed ?? ""}`;
-    } else {
-      // For subs: include team + both players so multiple subs at same minute are kept.
-      key = `${ev.type}|${ev.team?.name || ""}|${ev.player?.name || ""}|${ev.assist?.name || ""}|${ev.time?.elapsed ?? ""}`;
+
+    if (!ev) return false;
+
+    // Ignore broken goal events
+    if (ev.type === "Goal") {
+
+      const player = (ev.player?.name || "").trim();
+
+      if (!player) return false;
+
+      const key = [
+        "goal",
+        player.toLowerCase(),
+        (ev.team?.name || "").toLowerCase(),
+        ev.time?.elapsed ?? "",
+        ev.time?.extra ?? ""
+      ].join("|");
+
+      if (seen.has(key)) return false;
+
+      seen.add(key);
+      return true;
     }
-    if (seen.has(key)) return false;
-    seen.add(key);
+
+    if (ev.type === "Card") {
+
+      const player = (ev.player?.name || "").trim();
+
+      if (!player) return false;
+
+      const key = [
+        "card",
+        player.toLowerCase(),
+        (ev.team?.name || "").toLowerCase(),
+        ev.detail || "",
+        ev.time?.elapsed ?? ""
+      ].join("|");
+
+      if (seen.has(key)) return false;
+
+      seen.add(key);
+      return true;
+    }
+
     return true;
   });
 }
