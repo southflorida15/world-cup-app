@@ -211,7 +211,7 @@ export default function CircularBracket({
         const [wx,wy] = pt(wAngle, RW3);
         line(hx,hy, wx,wy, lCol, lW);
         line(ax,ay, wx,wy, lCol, lW);
-        if (hasW) innerFlags.push({ team:m.winner, x:wx, y:wy });
+        if (hasW) innerFlags.push({ team:m.winner, x:wx, y:wy, matchId:id });
       }
     }
 
@@ -230,7 +230,7 @@ export default function CircularBracket({
         const [wx,wy] = pt(wAngle, RW4);
         line(hx,hy, wx,wy, lCol, lW);
         line(ax,ay, wx,wy, lCol, lW);
-        if (hasW) innerFlags.push({ team:m.winner, x:wx, y:wy });
+        if (hasW) innerFlags.push({ team:m.winner, x:wx, y:wy, matchId:id });
       }
     }
 
@@ -295,9 +295,9 @@ export default function CircularBracket({
       line(jx, jy, r16InnerX, r16InnerY, lColR16, lWR16);
 
       // Collect inner flags (drawn after all lines + outer flags)
-      if (mH.winner) innerFlags.push({ team:mH.winner, x:hW1x,     y:hW1y     });
-      if (mA.winner) innerFlags.push({ team:mA.winner, x:aW1x,     y:aW1y     });
-      if (hasW)      innerFlags.push({ team:m.winner,  x:r16InnerX, y:r16InnerY });
+      if (mH.winner) innerFlags.push({ team:mH.winner, x:hW1x,      y:hW1y,      matchId:R32_ORDER[s >> 1]       });
+      if (mA.winner) innerFlags.push({ team:mA.winner, x:aW1x,      y:aW1y,      matchId:R32_ORDER[(s >> 1) + 1] });
+      if (hasW)      innerFlags.push({ team:m.winner,  x:r16InnerX, y:r16InnerY, matchId:id                      });
     }
 
         // ── Outer flag circles ─────────────────────────────────────────────
@@ -323,9 +323,10 @@ export default function CircularBracket({
     }
 
     // ── Inner winner flags (drawn last so they appear above all lines) ─
-    innerFlags.forEach(({ team, x, y }) => {
+    innerFlags.forEach(({ team, x, y, matchId }) => {
       drawFlag(team, x, y, FLAG_R, 1,
         "rgba(255,215,60,0.85)", 1.5, "rgba(255,200,40,0.3)");
+      if (matchId) hitRef.current.push({ x, y, r:FLAG_R+5, team, matchId });
     });
 
     // ── 3-letter country codes outside the flag ring ───────────────────
