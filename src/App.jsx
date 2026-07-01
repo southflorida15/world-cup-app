@@ -4262,8 +4262,10 @@ const LIGHT = {
 
 // ── MATCH EVENTS API ──────────────────────────────────────────────────────
 const eventsCache = {};
+const EVENTS_CACHE_VERSION = 2; // bump to invalidate browser session cache
 async function fetchMatchEvents(fixtureId) {
-  if (eventsCache[fixtureId]) return eventsCache[fixtureId];
+  const cacheKey = `${EVENTS_CACHE_VERSION}:${fixtureId}`;
+  if (eventsCache[cacheKey]) return eventsCache[cacheKey];
   try {
     const res = await fetch(`/api/matchevents?fixtureId=${encodeURIComponent(fixtureId)}&t=${Date.now()}`);
     if (!res.ok) throw new Error(res.statusText);
@@ -4275,7 +4277,7 @@ async function fetchMatchEvents(fixtureId) {
   result?.stats ||
   result?.lineups
 ) {
-  eventsCache[fixtureId] = result;
+    eventsCache[cacheKey] = result;
 }
     return result;
   } catch(e) {

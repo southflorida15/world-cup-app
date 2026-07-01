@@ -1187,7 +1187,7 @@ export default async function handler(req, res) {
       res.setHeader("Cache-Control", memCached.isDone
         ? "public, max-age=3600, s-maxage=3600"
         : "public, max-age=15, s-maxage=20, stale-while-revalidate=30");
-      return res.status(200).json({ events: memCached.events, stats: memCached.stats });
+      return res.status(200).json({ events: deduplicateEvents(memCached.events || []), stats: memCached.stats });
     }
   }
 
@@ -1195,11 +1195,16 @@ export default async function handler(req, res) {
   if (debug !== "1") {
     const persisted = await loadFromKV(home, away);
     if (persisted && persisted.events?.length > 0) {
-      console.log(`[matchevents] Serving ${home} vs ${away} from KV (${persisted.events.length} events)`);
-      memCache[cacheKey] = { ...persisted, isDone: true, ts: Date.now() };
-      // Finished match — data is permanent, cache aggressively.
+      const cleanEvents = deduplicateEvents(persisted.events);
+      // Re-save if dedup removed anything (fixes old cached duplicates permanently)
+      if (cleanEvents.length < persisted.events.length) {
+        await saveToKV(home, away, cleanEvents, persisted.stats, persisted.lineups).catch(()=>{});
+        console.log(`[matchevents] Cleaned ${persisted.events.length - cleanEvents.length} duplicate events for ${home} vs ${away}`);
+      }
+      console.log(`[matchevents] Serving ${home} vs ${away} from KV (${cleanEvents.length} events)`);
+      memCache[cacheKey] = { ...persisted, events: cleanEvents, isDone: true, ts: Date.now() };
       res.setHeader("Cache-Control", "public, max-age=3600, s-maxage=3600");
-      return res.status(200).json({ events: persisted.events, stats: persisted.stats, lineups: persisted.lineups || null });
+      return res.status(200).json({ events: cleanEvents, stats: persisted.stats, lineups: persisted.lineups || null });
     }
   }
 
