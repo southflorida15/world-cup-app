@@ -347,21 +347,21 @@ export default function CircularBracket({
       const m      = getMatch(matchId);
       const isW    = m.winner === team;
       const isElim = m.winner && !isW;
-      const angle  = degOf(i) + 360/32/2; // 0° = top, clockwise
+      const angle  = degOf(i) + 360/32/2;
       const labelR = RF + FLAG_R + 9;
       const [lx, ly] = pt(angle, labelR);
       const code = FIFA3[team] || (team ? team.slice(0,3).toUpperCase() : "");
       if (!code) continue;
 
+      // outward direction angle in canvas radians
+      const outwardRad = toRad(angle); // toRad already does (angle-90)*pi/180
+      // flip if text would be upside-down (left visual hemisphere)
+      const flip = Math.cos(outwardRad) < 0;
+      const rotRad = outwardRad + (flip ? Math.PI : 0);
+
       ctx.save();
       ctx.translate(lx, ly);
-      // angle 0° = top (12 o'clock), increases clockwise.
-      // Right half visually = 0°–180° (top → right → bottom).
-      // Left half visually = 180°–360° (bottom → left → top).
-      // Rotate so text baseline points away from centre (reads outward).
-      // On the right half: rotate (angle - 90). On the left half: rotate (angle + 90).
-      const onLeft = angle > 180 && angle < 360;
-      ctx.rotate(toRad(onLeft ? angle + 90 : angle - 90));
+      ctx.rotate(rotRad);
       ctx.font = `${isW ? "bold " : ""}9px system-ui, sans-serif`;
       ctx.textAlign    = "center";
       ctx.textBaseline = "middle";
