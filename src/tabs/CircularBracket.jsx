@@ -304,13 +304,14 @@ export default function CircularBracket({
       const [hBar_x, hBar_y] = pt(hBarAngle, RB);
       const [aBar_x, aBar_y] = pt(aBarAngle, RB);
 
-      // 1. Two lines from outer ring midpoints → R32 bar at RB
-      //    Use the R32 match midpoint angle (between the two flags), not individual flags
-      //    This gives clean single lines instead of 4 lines creating a mesh
-      const [hMidX, hMidY] = pt(hBarAngle, RF - FLAG_R - 2);
-      const [aMidX, aMidY] = pt(aBarAngle, RF - FLAG_R - 2);
-      line(hMidX, hMidY, hBar_x, hBar_y, lCol, lW);
-      line(aMidX, aMidY, aBar_x, aBar_y, lCol, lW);
+      // 1. Lines from each individual outer flag → its R32 bar at RB
+      //    4 lines total per R16 match (2 flags per R32 match × 2 R32 matches)
+      [[hFlagA, hFlagB, hBar_x, hBar_y], [aFlagA, aFlagB, aBar_x, aBar_y]].forEach(([fA, fB, bx, by]) => {
+        const [f1x,f1y] = pt(fA, RF - FLAG_R - 1);
+        const [f2x,f2y] = pt(fB, RF - FLAG_R - 1);
+        line(f1x,f1y, bx,by, lCol, lW);
+        line(f2x,f2y, bx,by, lCol, lW);
+      });
 
       // 2. R32 bar → R32 winner flag AT RW1
       const [hW1x, hW1y] = pt(hBarAngle, RW1);
