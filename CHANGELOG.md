@@ -4,6 +4,29 @@ All notable changes to this project are documented here.
 
 ---
 
+## [3.6.0] - 2026-07-01
+
+### Added
+- **`?action=flush-events` maintenance endpoint** in `api/matchevents.js` — clears KV event cache for all 16 R32 matches in one call; use after dedup logic changes to force re-fetch from ESPN
+
+### Changed
+- **Circular bracket — R16 pairing lines** now solid bright gold, connecting each pair of R32 winners to show their upcoming R16 matchup clearly
+- **Circular bracket — winner flags** now drawn after all lines (correct z-order); no lines render on top of flags
+- **Circular bracket — inner flags tappable** — all inner winner flags registered in `hitRef` with correct `matchId`; tapping opens the match card
+- **Match card from circular bracket** — `onTap` now merges full `MATCHES` entry (with `venue`, `date`, `tv`) with bracket entry's resolved team names before calling `onMatchTap`; fixes `venue.split()` crash that caused black screen
+- **Goal counter pills** — now use `correctedSc.hg + correctedSc.ag` (persisted live score) instead of counting raw timeline events; prevents ESPN duplicate events from inflating the displayed count
+
+### Fixed
+- **Black screen on match card tap** from circular bracket — `MatchEventsModal` was crashing on `match.venue.split(",")` because bracket entries don't carry venue; fixed by merging with full `MATCHES` data
+- **`useMemo` not defined** in `CircularBracket.jsx` — added to React import
+- **`cards is not defined`** — variable declaration dropped when replacing `goals` line in section pills block
+- **`getFlag` / `FLAG_CODES_MAP` not passed to `MyBracketTab`** — added to `App.jsx` MyBracketTab call; was causing circular bracket to crash on render (black bracket tab)
+- **Timeline event duplication** — ESPN returns the same goal from `details`, `keyEvents`, and `commentary` sources simultaneously; the prior dedup used player name in the key so `{player:"Kaishu Sano"}` and `{player:null}` at the same minute survived as separate events. New dedup in `api/matchevents.js` uses broad `type|elapsed` key (ignoring empty team name), keeps richest version, applied at both parse time and KV load time
+- **Score inflation** (e.g. Brazil 7-2 Japan) — `correctedSc` was using `Math.max(liveScore, eventCount)` which inflated to the duplicate event count; now trusts `getScore()` unconditionally when `hasScore` is true
+- **Stale browser session cache** — `eventsCache` version key bumped to `2:` so old duplicate-laden session caches are bypassed on next open
+
+---
+
 ## [3.5.0] - 2026-06-30
 
 ### Added
