@@ -88,7 +88,23 @@ export default function CircularBracket({
     slots.push({ team:m.home, matchId:id }, { team:m.away, matchId:id });
   });
 
-  // ── Preload all flag images ────────────────────────────────────────────
+  // FIFA official 3-letter country codes
+  const FIFA3 = {
+    "Mexico":"MEX","South Africa":"RSA","South Korea":"KOR","Czechia":"CZE",
+    "Canada":"CAN","Bosnia & Herz.":"BIH","Qatar":"QAT","Switzerland":"SUI",
+    "Brazil":"BRA","Morocco":"MAR","Haiti":"HAI","Scotland":"SCO",
+    "United States":"USA","Paraguay":"PAR","Australia":"AUS","Turkiye":"TUR",
+    "Germany":"GER","Curacao":"CUW","Ivory Coast":"CIV","Ecuador":"ECU",
+    "Netherlands":"NED","Japan":"JPN","Sweden":"SWE","Tunisia":"TUN",
+    "Belgium":"BEL","Egypt":"EGY","Iran":"IRN","New Zealand":"NZL",
+    "Spain":"ESP","Cape Verde":"CPV","Saudi Arabia":"KSA","Uruguay":"URU",
+    "France":"FRA","Senegal":"SEN","Iraq":"IRQ","Norway":"NOR",
+    "Argentina":"ARG","Algeria":"ALG","Austria":"AUT","Jordan":"JOR",
+    "Portugal":"POR","DR Congo":"COD","Uzbekistan":"UZB","Colombia":"COL",
+    "England":"ENG","Croatia":"CRO","Ghana":"GHA","Panama":"PAN",
+  };
+
+
   useEffect(() => {
     const needed = new Set(
       slots.map(s => FLAG_CODES_MAP[s.team]).filter(Boolean)
@@ -233,12 +249,7 @@ export default function CircularBracket({
     drawRound(QF_SEGS,  RQF, RSF, (RQF+RSF)/2, WIN_SZ.sf);
     drawRound(SF_SEGS,  RSF, RFIN,(RSF+RFIN)/2, WIN_SZ.fin);
 
-    // ── R16 pairing: connect each pair of flags to their shared R32 match bar ──
-    // For each R16 match, there are 2 R32 matches feeding it.
-    // Each R32 match has 2 outer flags. So 4 flags total feed one R16 match.
-    // Draw: flag1 → R32-bar-midpoint, flag2 → R32-bar-midpoint (both flags of same R32 match)
-    // Then R32-bar-midpoint is already connected inward by drawRound(R32_SEGS).
-    // The R16 pairings just need to show which two R32 bar midpoints face each other.
+    // ── R16 pairing: solid gold lines connecting the two R16 opponents ──
     for (const [idStr, [s, e]] of Object.entries(R16_SEGS)) {
       const id   = Number(idStr);
       const m    = getMatch(id);
@@ -246,47 +257,42 @@ export default function CircularBracket({
       const hWon = m.winner === m.home;
       const aWon = m.winner === m.away;
 
-      // The two R32 bar midpoints that feed this R16 match
-      // R32 home match bar midpoint: centre of spokes s, s+1 → angle = deg(s) + SPOKE
-      // R32 away match bar midpoint: centre of spokes s+2, s+3 → angle = deg(s+2) + SPOKE
       const SPOKE = 360/32;
-      const hBarAngle = degOf(s)   + SPOKE; // midpoint of first R32 match
-      const aBarAngle = degOf(s+2) + SPOKE; // midpoint of second R32 match
+      const hBarAngle  = degOf(s)   + SPOKE;
+      const aBarAngle  = degOf(s+2) + SPOKE;
       const r16MidAngle = (hBarAngle + aBarAngle) / 2;
 
-      // The outer flags for each R32 match
-      const hFlagA = degOf(s)   + SPOKE/2; // home-team flag of first R32
-      const hFlagB = degOf(s+1) + SPOKE/2; // away-team flag of first R32
-      const aFlagA = degOf(s+2) + SPOKE/2; // home-team flag of second R32
-      const aFlagB = degOf(s+3) + SPOKE/2; // away-team flag of second R32
+      const hFlagA = degOf(s)   + SPOKE/2;
+      const hFlagB = degOf(s+1) + SPOKE/2;
+      const aFlagA = degOf(s+2) + SPOKE/2;
+      const aFlagB = degOf(s+3) + SPOKE/2;
 
-      const pairCol = hasW ? LINE_WIN : "rgba(255,215,60,0.38)";
-      const pairW   = hasW ? LW : 1.0;
+      // Solid bright gold for upcoming R16, even brighter if played
+      const pairCol = hasW ? LINE_WIN : "rgba(255,215,60,0.85)";
+      const pairW   = hasW ? LW + 0.4 : LW;
 
-      // Lines: each flag → its R32 bar midpoint at RB
       const [hBar_x, hBar_y] = pt(hBarAngle, RB);
       const [aBar_x, aBar_y] = pt(aBarAngle, RB);
 
+      // Each flag → its R32 bar midpoint
       [[hFlagA, hFlagB], [aFlagA, aFlagB]].forEach(([fA, fB], side) => {
-        const barPt = side === 0 ? [hBar_x, hBar_y] : [aBar_x, aBar_y];
+        const [bx, by] = side === 0 ? [hBar_x, hBar_y] : [aBar_x, aBar_y];
         [fA, fB].forEach(flagAngle => {
           const [fx, fy] = pt(flagAngle, RF - FLAG_R - 1);
-          line(fx, fy, barPt[0], barPt[1], pairCol, pairW);
+          line(fx, fy, bx, by, pairCol, pairW);
         });
       });
 
-      // Dot at each R32 bar midpoint (where the two flags of that R32 meet)
-      dot(hBar_x, hBar_y, 2, hasW ? LINE_WIN : "rgba(255,215,60,0.5)");
-      dot(aBar_x, aBar_y, 2, hasW ? LINE_WIN : "rgba(255,215,60,0.5)");
+      // Dots at R32 bar midpoints
+      dot(hBar_x, hBar_y, 2.5, pairCol);
+      dot(aBar_x, aBar_y, 2.5, pairCol);
 
-      // R16 bar: short arc connecting the two R32 bar midpoints at RB
-      const G = 0.4;
-      arc(RB, hBarAngle+G, aBarAngle-G,
-        hasW ? LINE_WIN : "rgba(255,215,60,0.45)", hasW ? LW : 1.0);
+      // Arc at RB connecting the two R32 bars — this is the "R16 match bar"
+      arc(RB, hBarAngle + 0.3, aBarAngle - 0.3, pairCol, pairW);
 
-      // Midpoint dot of R16 bar
+      // Centre dot
       const [r16x, r16y] = pt(r16MidAngle, RB);
-      dot(r16x, r16y, hasW ? 2.5 : 1.8, hasW ? LINE_WIN : "rgba(255,215,60,0.5)");
+      dot(r16x, r16y, 3, pairCol);
     }
 
     // ── Outer flag circles ─────────────────────────────────────────────
@@ -311,7 +317,35 @@ export default function CircularBracket({
       hitRef.current.push({ x:fx, y:fy, r:FLAG_R+5, team, matchId });
     }
 
-    // ── Trophy glow ────────────────────────────────────────────────────
+    // ── 3-letter country codes outside the flag ring ───────────────────
+    for (let i = 0; i < 32; i++) {
+      const { team, matchId } = slots[i];
+      const m      = getMatch(matchId);
+      const isW    = m.winner === team;
+      const isElim = m.winner && !isW;
+      const angle  = degOf(i) + 360/32/2;
+      const labelR = RF + FLAG_R + 10;
+      const [lx, ly] = pt(angle, labelR);
+
+      const code = FIFA3[team] || (team ? team.slice(0,3).toUpperCase() : "");
+      if (!code) continue;
+
+      ctx.save();
+      ctx.translate(lx, ly);
+      // Rotate text to read outward from centre
+      const flip = angle > 180;
+      ctx.rotate(toRad(flip ? angle + 90 : angle - 90));
+      if (flip) ctx.rotate(Math.PI);
+
+      ctx.font = `${isW ? "bold " : ""}9px system-ui, sans-serif`;
+      ctx.textAlign  = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillStyle  = isW ? "rgba(255,215,60,0.95)" : isElim ? "rgba(255,255,255,0.22)" : "rgba(255,255,255,0.55)";
+      ctx.fillText(code, 0, 0);
+      ctx.restore();
+    }
+
+
     const tg = ctx.createRadialGradient(CX,CY,0,CX,CY,RSF*0.9);
     tg.addColorStop(0, "rgba(255,200,40,0.20)");
     tg.addColorStop(0.5,"rgba(255,170,20,0.06)");
