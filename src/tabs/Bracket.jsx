@@ -26,7 +26,7 @@ export default function MyBracketTab({
   C, DS, GROUPS, LiveScoresCtx, MATCHES, R32_SLOT_TEMPLATE, STR, gs,
   calcStandings, statusIsFinished, useElemHeight, defaultBracketGroups,
   readSavedMyBracket, writeSavedMyBracket, clearSavedMyBracket,
-  Card, Crest, DragList, Pill, VisualBracketTree, getFlag,
+  Card, Crest, DragList, Pill, VisualBracketTree, getFlag, FLAG_CODES_MAP={},
 }) {
   const isPtBR = language === "pt-BR";
   const tx = (en, pt) => isPtBR ? pt : en;
@@ -709,6 +709,7 @@ export default function MyBracketTab({
         language={language}
         C={C}
         getFlag={getFlag}
+        FLAG_CODES_MAP={FLAG_CODES_MAP}
         onMatchTap={onMatchTap}
       />
     ) : (
