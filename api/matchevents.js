@@ -78,10 +78,7 @@ const kvKey = (home, away) => `wc2026:events:${home}|${away}`;
 async function loadFromKV(home, away) {
   try {
     const data = await kv.get(kvKey(home, away));
-    if (!data) return null;
-    // Re-apply dedup on load in case cached data has duplicates from old saves
-    if (data.events) data.events = deduplicateEvents(data.events);
-    return data;
+    return data || null;
   } catch(e) {
     console.warn("[matchevents] KV load:", e.message);
     return null;
@@ -595,56 +592,6 @@ function normalizeCommentaryEvent(item, homeTeam) {
   };
 }
 
-function deduplicateEvents(events) {
-  // Step 1: for Goals and Cards, group by type+elapsed.
-  // Use team name in key ONLY if it's non-empty — empty team = wildcard.
-  // This handles ESPN returning the same goal from details (with team) and
-  // commentary (without team) as separate events.
-  const subSeen = new Set();
-  const goalCardBest = new Map();
-
-  events.forEach((ev, i) => {
-    if (ev.type === "subst") return;
-    const team = ev.team?.name || "";
-    // Key without team first (broadest match), then refine
-    const broadKey = `${ev.type}|${ev.time?.elapsed ?? ""}`;
-    const exactKey = `${ev.type}|${team}|${ev.time?.elapsed ?? ""}`;
-    const key = team ? exactKey : broadKey;
-
-    // Also check if there's already an entry at the same minute regardless of team
-    const broadExisting = goalCardBest.get(broadKey);
-    const exactExisting = goalCardBest.get(exactKey);
-    const existingIdx = exactExisting ?? broadExisting;
-
-    const rich = (ev.player?.name ? 2 : 0) + (ev.detail ? 1 : 0) + (team ? 1 : 0);
-
-    if (existingIdx === undefined) {
-      goalCardBest.set(broadKey, i);
-      if (team) goalCardBest.set(exactKey, i);
-    } else {
-      const prevEv = events[existingIdx];
-      const prevTeam = prevEv.team?.name || "";
-      const prevRich = (prevEv.player?.name ? 2 : 0) + (prevEv.detail ? 1 : 0) + (prevTeam ? 1 : 0);
-      if (rich > prevRich) {
-        goalCardBest.set(broadKey, i);
-        if (team) goalCardBest.set(exactKey, i);
-      }
-    }
-  });
-
-  const keepIdx = new Set(goalCardBest.values());
-
-  return events.filter((ev, i) => {
-    if (ev.type === "subst") {
-      const key = `subst|${ev.team?.name ?? ""}|${ev.time?.elapsed ?? ""}|${ev.player?.name ?? ""}|${ev.assist?.name ?? ""}`;
-      if (subSeen.has(key)) return false;
-      subSeen.add(key);
-      return true;
-    }
-    return keepIdx.has(i);
-  });
-}
-
 function parseEvents(data, homeTeam) {
   const events = [];
 
@@ -668,7 +615,23 @@ function parseEvents(data, homeTeam) {
     });
   });
 
-  const deduped = deduplicateEvents(events);
+  const seen = new Set();
+  const deduped = events.filter(ev => {
+    const key = [
+      ev.type,
+      ev.detail,
+      // For Goals/Cards: omit team name from key so that ESPN duplicates
+      // with empty team name collapse with the named-team version.
+      // For subs/other: include team to allow same-minute multi-subs.
+      (ev.type === "Goal" || ev.type === "Card") ? "" : (ev.team?.name || ""),
+      ev.player?.name,
+      ev.time?.display || `${ev.time?.elapsed || ""}+${ev.time?.extra || ""}`,
+      (ev.text || "").slice(0, 80),
+    ].join("|");
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 
   return deduped.sort((a, b) => eventSortValue(a) - eventSortValue(b));
 }
@@ -1158,26 +1121,6 @@ export default async function handler(req, res) {
   }
 
   // Seed ESPN IDs for today + tomorrow
-  if (req.query.action === "flush-events") {
-    // Delete KV event cache for all known R32 matches so they get re-fetched clean
-    const R32_PAIRS = [
-      ["Mexico","South Africa"],["Ecuador","Iran"],["Netherlands","Colombia"],
-      ["Brazil","Ivory Coast"],["France","Paraguay"],["Ivory Coast","Norway"],
-      ["Mexico","DR Congo"],["England","Austria"],["United States","Egypt"],
-      ["Belgium","Senegal"],["Portugal","Colombia"],["Spain","Norway"],
-      ["Canada","South Africa"],["Argentina","Austria"],["Portugal","Croatia"],
-      ["Germany","Japan"],
-    ];
-    const deleted = [];
-    for (const [h,a] of R32_PAIRS) {
-      const key = kvKey(h,a);
-      await kv.del(key).catch(()=>{});
-      delete memCache[`${h}|${a}`];
-      deleted.push(`${h}|${a}`);
-    }
-    return res.status(200).json({ ok: true, deleted });
-  }
-
   if (req.query.action === "seed-ids") {
     try {
       const result = await seedESPNIds();
@@ -1229,7 +1172,7 @@ export default async function handler(req, res) {
       res.setHeader("Cache-Control", memCached.isDone
         ? "public, max-age=3600, s-maxage=3600"
         : "public, max-age=15, s-maxage=20, stale-while-revalidate=30");
-      return res.status(200).json({ events: deduplicateEvents(memCached.events || []), stats: memCached.stats });
+      return res.status(200).json({ events: memCached.events, stats: memCached.stats });
     }
   }
 
@@ -1237,16 +1180,11 @@ export default async function handler(req, res) {
   if (debug !== "1") {
     const persisted = await loadFromKV(home, away);
     if (persisted && persisted.events?.length > 0) {
-      const cleanEvents = deduplicateEvents(persisted.events);
-      // Re-save if dedup removed anything (fixes old cached duplicates permanently)
-      if (cleanEvents.length < persisted.events.length) {
-        await saveToKV(home, away, cleanEvents, persisted.stats, persisted.lineups).catch(()=>{});
-        console.log(`[matchevents] Cleaned ${persisted.events.length - cleanEvents.length} duplicate events for ${home} vs ${away}`);
-      }
-      console.log(`[matchevents] Serving ${home} vs ${away} from KV (${cleanEvents.length} events)`);
-      memCache[cacheKey] = { ...persisted, events: cleanEvents, isDone: true, ts: Date.now() };
+      console.log(`[matchevents] Serving ${home} vs ${away} from KV (${persisted.events.length} events)`);
+      memCache[cacheKey] = { ...persisted, isDone: true, ts: Date.now() };
+      // Finished match — data is permanent, cache aggressively.
       res.setHeader("Cache-Control", "public, max-age=3600, s-maxage=3600");
-      return res.status(200).json({ events: cleanEvents, stats: persisted.stats, lineups: persisted.lineups || null });
+      return res.status(200).json({ events: persisted.events, stats: persisted.stats, lineups: persisted.lineups || null });
     }
   }
 
@@ -1303,12 +1241,11 @@ export default async function handler(req, res) {
     const isLive = isLiveStatus(statusType);
     const isPrematch = !isDone && !isLive;
 
-    const rawEvents = parseEvents(data, home);
-    const events = rawEvents; // parseEvents already calls deduplicateEvents internally
+    const events = parseEvents(data, home);
     const stats = parseStats(data.boxscore, home);
     const lineups = parseLineups(data, home);
 
-    console.log(`[matchevents] ${home} vs ${away}: ${events.length} events (details:${data.header?.competitions?.[0]?.details?.length||0} keyEvents:${data.keyEvents?.length||0}), stats=${!!stats}, lineups=${!!lineups}, status=${statusType}`);
+    console.log(`[matchevents] ${home} vs ${away}: ${events.length} events, stats=${!!stats}, lineups=${!!lineups}, status=${statusType}`);
 
     // Persist to KV permanently once the match is finished (unchanged
     // behavior — other code treats "exists in this cache" as "this match
