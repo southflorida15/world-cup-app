@@ -596,22 +596,44 @@ function normalizeCommentaryEvent(item, homeTeam) {
 }
 
 function deduplicateEvents(events) {
+  // Step 1: for Goals and Cards, group by type+elapsed.
+  // Use team name in key ONLY if it's non-empty — empty team = wildcard.
+  // This handles ESPN returning the same goal from details (with team) and
+  // commentary (without team) as separate events.
   const subSeen = new Set();
   const goalCardBest = new Map();
+
   events.forEach((ev, i) => {
     if (ev.type === "subst") return;
-    const key = `${ev.type}|${ev.team?.name ?? ""}|${ev.time?.elapsed ?? ""}`;
-    const prev = goalCardBest.get(key);
-    if (prev === undefined) {
-      goalCardBest.set(key, i);
+    const team = ev.team?.name || "";
+    // Key without team first (broadest match), then refine
+    const broadKey = `${ev.type}|${ev.time?.elapsed ?? ""}`;
+    const exactKey = `${ev.type}|${team}|${ev.time?.elapsed ?? ""}`;
+    const key = team ? exactKey : broadKey;
+
+    // Also check if there's already an entry at the same minute regardless of team
+    const broadExisting = goalCardBest.get(broadKey);
+    const exactExisting = goalCardBest.get(exactKey);
+    const existingIdx = exactExisting ?? broadExisting;
+
+    const rich = (ev.player?.name ? 2 : 0) + (ev.detail ? 1 : 0) + (team ? 1 : 0);
+
+    if (existingIdx === undefined) {
+      goalCardBest.set(broadKey, i);
+      if (team) goalCardBest.set(exactKey, i);
     } else {
-      const prevEv = events[prev];
-      const prevRich = (prevEv.player?.name ? 2 : 0) + (prevEv.detail ? 1 : 0);
-      const curRich  = (ev.player?.name    ? 2 : 0) + (ev.detail  ? 1 : 0);
-      if (curRich > prevRich) goalCardBest.set(key, i);
+      const prevEv = events[existingIdx];
+      const prevTeam = prevEv.team?.name || "";
+      const prevRich = (prevEv.player?.name ? 2 : 0) + (prevEv.detail ? 1 : 0) + (prevTeam ? 1 : 0);
+      if (rich > prevRich) {
+        goalCardBest.set(broadKey, i);
+        if (team) goalCardBest.set(exactKey, i);
+      }
     }
   });
+
   const keepIdx = new Set(goalCardBest.values());
+
   return events.filter((ev, i) => {
     if (ev.type === "subst") {
       const key = `subst|${ev.team?.name ?? ""}|${ev.time?.elapsed ?? ""}|${ev.player?.name ?? ""}|${ev.assist?.name ?? ""}`;
@@ -1281,11 +1303,12 @@ export default async function handler(req, res) {
     const isLive = isLiveStatus(statusType);
     const isPrematch = !isDone && !isLive;
 
-    const events = parseEvents(data, home);
+    const rawEvents = parseEvents(data, home);
+    const events = rawEvents; // parseEvents already calls deduplicateEvents internally
     const stats = parseStats(data.boxscore, home);
     const lineups = parseLineups(data, home);
 
-    console.log(`[matchevents] ${home} vs ${away}: ${events.length} events, stats=${!!stats}, lineups=${!!lineups}, status=${statusType}`);
+    console.log(`[matchevents] ${home} vs ${away}: ${events.length} events (details:${data.header?.competitions?.[0]?.details?.length||0} keyEvents:${data.keyEvents?.length||0}), stats=${!!stats}, lineups=${!!lineups}, status=${statusType}`);
 
     // Persist to KV permanently once the match is finished (unchanged
     // behavior — other code treats "exists in this cache" as "this match
