@@ -1250,8 +1250,18 @@ export default async function handler(req, res) {
     }
   }
 
+  // Seed ESPN IDs for today + next 7 days
+  if (req.query.action === "seed-ids") {
+    try {
+      res.setHeader("Cache-Control", "no-store");
+      return res.status(200).json({ ok: true, ...(await seedESPNIds()) });
+    } catch (e) {
+      return res.status(500).json({ ok: false, action: "seed-ids", error: e.message });
+    }
+  }
+
   // Seed ESPN IDs for today + tomorrow
-    let { home, away, debug, flush, fixtureId } = req.query;
+  let { home, away, debug, flush, fixtureId } = req.query;
   if ((!home || !away) && fixtureId && fixtureId.includes("|")) {
     [home, away] = fixtureId.split("|");
   }
