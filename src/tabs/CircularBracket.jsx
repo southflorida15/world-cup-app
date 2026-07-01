@@ -243,13 +243,12 @@ export default function CircularBracket({
       }
     }
 
-    // ── Draw all rounds ────────────────────────────────────────────────
-    drawRound(R32_SEGS, RB,  R16, (RB+R16)/2,  WIN_SZ.r16);
-    drawRound(R16_SEGS, R16, RQF, (R16+RQF)/2, WIN_SZ.qf);
-    drawRound(QF_SEGS,  RQF, RSF, (RQF+RSF)/2, WIN_SZ.sf);
-    drawRound(SF_SEGS,  RSF, RFIN,(RSF+RFIN)/2, WIN_SZ.fin);
+    // ── Draw all rounds (R16 inward — R32 layer handled by R16 pairing below) ──
+    drawRound(R16_SEGS, R16, RQF, (R16+RQF)/2, FLAG_R);
+    drawRound(QF_SEGS,  RQF, RSF, (RQF+RSF)/2, FLAG_R);
+    drawRound(SF_SEGS,  RSF, RFIN,(RSF+RFIN)/2, FLAG_R);
 
-    // ── R16 pairing: solid gold lines connecting the two R16 opponents ──
+    // ── R16 pairing: flags → R32 bar → R16 bar → inward spoke ────────
     for (const [idStr, [s, e]] of Object.entries(R16_SEGS)) {
       const id   = Number(idStr);
       const m    = getMatch(id);
@@ -258,41 +257,58 @@ export default function CircularBracket({
       const aWon = m.winner === m.away;
 
       const SPOKE = 360/32;
-      const hBarAngle  = degOf(s)   + SPOKE;
-      const aBarAngle  = degOf(s+2) + SPOKE;
+      const hBarAngle   = degOf(s)   + SPOKE; // R32 match 1 midpoint
+      const aBarAngle   = degOf(s+2) + SPOKE; // R32 match 2 midpoint
       const r16MidAngle = (hBarAngle + aBarAngle) / 2;
 
+      // Outer flag angles for the two R32 matches
       const hFlagA = degOf(s)   + SPOKE/2;
       const hFlagB = degOf(s+1) + SPOKE/2;
       const aFlagA = degOf(s+2) + SPOKE/2;
       const aFlagB = degOf(s+3) + SPOKE/2;
 
-      // Solid bright gold for upcoming R16, even brighter if played
-      const pairCol = hasW ? LINE_WIN : "rgba(255,215,60,0.85)";
-      const pairW   = hasW ? LW + 0.4 : LW;
+      const col1 = hasW ? LINE_WIN : "rgba(255,215,60,0.85)";
+      const wid1 = hasW ? LW + 0.4 : LW;
+      const col2 = LINE_DIM; // dim for the inward spoke until R16 played
+      const wid2 = LW_DIM;
 
       const [hBar_x, hBar_y] = pt(hBarAngle, RB);
       const [aBar_x, aBar_y] = pt(aBarAngle, RB);
+      const [r16x,   r16y  ] = pt(r16MidAngle, RB);
 
-      // Each flag → its R32 bar midpoint
+      // 1. Each flag → its R32 bar midpoint at RB
       [[hFlagA, hFlagB], [aFlagA, aFlagB]].forEach(([fA, fB], side) => {
         const [bx, by] = side === 0 ? [hBar_x, hBar_y] : [aBar_x, aBar_y];
         [fA, fB].forEach(flagAngle => {
           const [fx, fy] = pt(flagAngle, RF - FLAG_R - 1);
-          line(fx, fy, bx, by, pairCol, pairW);
+          line(fx, fy, bx, by, col1, wid1);
         });
       });
 
-      // Dots at R32 bar midpoints
-      dot(hBar_x, hBar_y, 2.5, pairCol);
-      dot(aBar_x, aBar_y, 2.5, pairCol);
+      // 2. Dots at R32 bar midpoints
+      dot(hBar_x, hBar_y, 2.5, col1);
+      dot(aBar_x, aBar_y, 2.5, col1);
 
-      // Arc at RB connecting the two R32 bars — this is the "R16 match bar"
-      arc(RB, hBarAngle + 0.3, aBarAngle - 0.3, pairCol, pairW);
+      // 3. R16 match bar arc connecting the two R32 bar midpoints
+      arc(RB, hBarAngle + 0.3, aBarAngle - 0.3, col1, wid1);
 
-      // Centre dot
-      const [r16x, r16y] = pt(r16MidAngle, RB);
-      dot(r16x, r16y, 3, pairCol);
+      // 4. Centre dot on R16 bar
+      dot(r16x, r16y, 3, col1);
+
+      // 5. Single spoke from R16 bar midpoint → R16 inner ring
+      const [r16InnerX, r16InnerY] = pt(r16MidAngle, R16);
+      line(r16x, r16y, r16InnerX, r16InnerY,
+        hasW ? LINE_WIN : LINE_DIM,
+        hasW ? LW : LW_DIM);
+
+      dot(r16InnerX, r16InnerY, hasW ? 2.5 : 1.5, hasW ? LINE_WIN : LINE_DIM);
+
+      // 6. Winner flag at R16 ring
+      if (hasW) {
+        const [fx, fy] = pt(r16MidAngle, (RB + R16) / 2);
+        drawFlag(m.winner, fx, fy, FLAG_R, 1,
+          "rgba(255,215,60,0.85)", 1.5, "rgba(255,200,40,0.3)");
+      }
     }
 
     // ── Outer flag circles ─────────────────────────────────────────────
