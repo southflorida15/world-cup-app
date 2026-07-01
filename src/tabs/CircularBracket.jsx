@@ -235,25 +235,6 @@ export default function CircularBracket({
     // ── R16 pairing: flags → R32 bar → R16 bar → inward spoke ────────
     for (const [idStr, [s, e]] of Object.entries(R16_SEGS)) {
       const id   = Number(idStr);
-      const m    = getMatch(id);
-      const hasW = !!m.winner;
-      const hWon = m.winner === m.home;
-      const aWon = m.winner === m.away;
-
-      const SPOKE = 360/32;
-      const hBarAngle   = degOf(s)   + SPOKE; // R32 match 1 midpoint
-      const aBarAngle   = degOf(s+2) + SPOKE; // R32 match 2 midpoint
-      const r16MidAngle = (hBarAngle + aBarAngle) / 2;
-
-      // Outer flag angles for the two R32 matches
-      const hFlagA = degOf(s)   + SPOKE/2;
-      const hFlagB = degOf(s+1) + SPOKE/2;
-      const aFlagA = degOf(s+2) + SPOKE/2;
-      const aFlagB = degOf(s+3) + SPOKE/2;
-
-    // ── R16 pairing: flags → R32 bar → R16 bar → inward spoke ────────
-    for (const [idStr, [s, e]] of Object.entries(R16_SEGS)) {
-      const id   = Number(idStr);
       const m    = getMatch(id);           // R16 match
       const hasW = !!m.winner;
       const hWon = m.winner === m.home;
