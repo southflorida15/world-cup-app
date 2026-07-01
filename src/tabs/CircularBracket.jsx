@@ -173,94 +173,92 @@ export default function CircularBracket({
     }
 
     // ── Draw bracket lines + inner winner flags for one round ──────────
+    // ── Draw bracket lines for one round ──────────────────────────────
+    // Structure per match:
+    //   1. Two spokes from rOuter → endpoints of a bracket arc at rOuter
+    //   2. Short arc at rOuter connecting the two endpoints (the "match bar")
+    //   3. One spoke from the midpoint of that arc → rInner (continues inward)
+    //   4. Winner flag at rInner (centred on the match midpoint angle)
     function drawRound(segs, rOuter, rInner, winFlagR, winFlagSz) {
       for (const [idStr, [s, e]] of Object.entries(segs)) {
         const id = Number(idStr);
         const m  = getMatch(id);
-        const a1 = degOf(s), a2 = degOf(e), am = (a1+a2)/2;
+        const a1 = degOf(s), a2 = degOf(e);
+        const am = (a1 + a2) / 2; // match midpoint — symmetric centre
         const hWon = m.winner === m.home;
         const aWon = m.winner === m.away;
         const hasW = !!m.winner;
-        const G = 0.9; // gap in degrees at arc ends
 
-        // Outer arc: two halves, one per team
-        arc(rOuter, a1+G, am-G, hWon ? LINE_WIN : LINE_DIM, hWon ? LW : LW_DIM);
-        arc(rOuter, am+G, a2-G, aWon ? LINE_WIN : LINE_DIM, aWon ? LW : LW_DIM);
+        // Angles of the two team "entry points" at rOuter
+        const hA = (a1 + am) / 2; // centre of home half
+        const aA = (am + a2) / 2; // centre of away half
 
-        // Midpoint junction on outer ring
-        const [jox, joy] = pt(am, rOuter);
-        dot(jox, joy, hasW?2:1.2, hasW ? LINE_WIN : LINE_DIM);
+        // Points at rOuter for each team's spoke end
+        const [hx, hy] = pt(hA, rOuter);
+        const [ax, ay] = pt(aA, rOuter);
 
-        // Both spokes converge to the MATCH midpoint on the inner ring
-        // (always the centre of the full match span — creates symmetric rings)
-        const wAngle = (a1 + a2) / 2;
-        const [hMidX, hMidY] = pt((a1+am)/2, rOuter);
-        const [aMidX, aMidY] = pt((am+a2)/2, rOuter);
-        const [ix, iy]       = pt(wAngle, rInner);
+        // Midpoint of match bar (always the full match centre)
+        const [mx, my] = pt(am, rOuter);
 
-        line(hMidX,hMidY, ix,iy, hWon ? LINE_WIN : LINE_DIM, hWon ? LW : LW_DIM);
-        line(aMidX,aMidY, ix,iy, aWon ? LINE_WIN : LINE_DIM, aWon ? LW : LW_DIM);
+        // 1. Match bar: short arc at rOuter between the two team spokes
+        const G = 0.5;
+        arc(rOuter, hA+G, aA-G,
+          hasW ? LINE_WIN : LINE_DIM,
+          hasW ? LW       : LW_DIM);
 
-        // Inner junction dot
+        // 2. Dot at midpoint of bar
+        dot(mx, my, hasW ? 2.2 : 1.4, hasW ? LINE_WIN : LINE_DIM);
+
+        // 3. Single spoke from bar midpoint → inner ring
+        const [ix, iy] = pt(am, rInner);
+        line(mx, my, ix, iy,
+          hasW ? LINE_WIN : LINE_DIM,
+          hasW ? LW       : LW_DIM);
+
+        // 4. Inner junction dot
         dot(ix, iy, hasW ? 2.5 : 1.5, hasW ? LINE_WIN : LINE_DIM);
 
-        // Winner flag circle on inner ring
+        // 5. Winner flag centred at match midpoint in the winner flag ring
         if (hasW) {
-          const [fx, fy] = pt(wAngle, winFlagR);
-          drawFlag(
-            m.winner, fx, fy, winFlagSz,
-            1,
-            "rgba(255,215,60,0.85)", 1.5,
-            "rgba(255,200,40,0.3)"
-          );
+          const [fx, fy] = pt(am, winFlagR);
+          drawFlag(m.winner, fx, fy, winFlagSz, 1,
+            "rgba(255,215,60,0.85)", 1.5, "rgba(255,200,40,0.3)");
         }
       }
     }
 
     // ── Draw all rounds ────────────────────────────────────────────────
-    // rOuter, rInner, winFlagRadius, winFlagSize
-    // Winner flag sits between rInner and the next ring inward
-    drawRound(R32_SEGS, RB,  R16, (RB+R16)/2,   WIN_SZ.r16);
-    drawRound(R16_SEGS, R16, RQF, (R16+RQF)/2,  WIN_SZ.qf);
-    drawRound(QF_SEGS,  RQF, RSF, (RQF+RSF)/2,  WIN_SZ.sf);
-    drawRound(SF_SEGS,  RSF, RFIN,(RSF+RFIN)/2,  WIN_SZ.fin);
+    drawRound(R32_SEGS, RB,  R16, (RB+R16)/2,  WIN_SZ.r16);
+    drawRound(R16_SEGS, R16, RQF, (R16+RQF)/2, WIN_SZ.qf);
+    drawRound(QF_SEGS,  RQF, RSF, (RQF+RSF)/2, WIN_SZ.sf);
+    drawRound(SF_SEGS,  RSF, RFIN,(RSF+RFIN)/2, WIN_SZ.fin);
 
-    // ── R16 pairing arcs at the outer flag ring ────────────────────────
-    // Each R16 match spans 4 spokes. The two R32 winners sit at the
-    // midpoints of each 2-spoke half. Draw a gold arc connecting them
-    // at RF, plus spokes from each flag down to the RB junction.
+    // ── R16 pairing: V-lines from outer flags to match bar at RB ──────
+    // Each R16 match spans 4 spokes. Its two R32 opponents sit at the
+    // midpoints of the two inner 2-spoke halves of that span.
+    // Draw two spokes from the flag edge → the RB match bar midpoint.
     for (const [idStr, [s, e]] of Object.entries(R16_SEGS)) {
-      const id  = Number(idStr);
-      const m   = getMatch(id);
+      const id   = Number(idStr);
+      const m    = getMatch(id);
       const hasW = !!m.winner;
 
-      // The two R32 winner angles on the outer ring
-      const hAngle = degOf(s)   + 360/32; // midpoint of first 2 spokes
-      const aAngle = degOf(s+2) + 360/32; // midpoint of second 2 spokes
-      const jAngle = (hAngle + aAngle) / 2; // midpoint between them
+      // The two R32 winner angles
+      const hAngle = degOf(s)   + 360/32;
+      const aAngle = degOf(s+2) + 360/32;
+      const jAngle = (hAngle + aAngle) / 2; // = match midpoint at RB
 
-      // Determine which side won R16 (home=first pair, away=second pair)
-      // m.home is the winner of the first R32 pair, m.away of the second
       const hWon = m.winner === m.home;
       const aWon = m.winner === m.away;
+      const pairCol = hasW ? LINE_WIN : "rgba(255,215,60,0.40)";
+      const pairW   = hasW ? LW : 1.1;
 
-      const lineCol  = hasW ? LINE_WIN : "rgba(255,255,255,0.14)";
-      const lineWid  = hasW ? LW : LW_DIM;
+      // Each flag's edge point → the RB bar midpoint
+      const [hx, hy] = pt(hAngle, RF - FLAG_R - 1);
+      const [ax, ay] = pt(aAngle, RF - FLAG_R - 1);
+      const [jx, jy] = pt(jAngle, RB); // this IS the bar midpoint drawn by drawRound
 
-      // Arc along RF connecting the two paired teams
-      const G2 = 2.5; // gap around each flag circle
-      arc(RF, hAngle+G2, aAngle-G2, lineCol, lineWid);
-
-      // Spoke from each flag down to the RB junction point
-      const [hfx, hfy] = pt(hAngle, RF - FLAG_R);
-      const [afx, afy] = pt(aAngle, RF - FLAG_R);
-      const [jx,  jy]  = pt(jAngle, RB);
-
-      line(hfx,hfy, jx,jy, hWon ? LINE_WIN : lineCol, hWon ? LW : lineWid);
-      line(afx,afy, jx,jy, aWon ? LINE_WIN : lineCol, aWon ? LW : lineWid);
-
-      // Junction dot at RB
-      dot(jx, jy, hasW ? 2.5 : 1.5, lineCol);
+      line(hx, hy, jx, jy, hWon ? LINE_WIN : pairCol, hWon ? LW+0.4 : pairW);
+      line(ax, ay, jx, jy, aWon ? LINE_WIN : pairCol, aWon ? LW+0.4 : pairW);
     }
 
     // ── Connector lines: outer flag → RB ring ─────────────────────────
