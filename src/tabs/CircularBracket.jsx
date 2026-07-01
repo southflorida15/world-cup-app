@@ -348,20 +348,13 @@ export default function CircularBracket({
       const isW    = m.winner === team;
       const isElim = m.winner && !isW;
       const angle  = degOf(i) + 360/32/2;
-      const labelR = RF + FLAG_R + 9;
+      const labelR = RF + FLAG_R + 12;
       const [lx, ly] = pt(angle, labelR);
       const code = FIFA3[team] || (team ? team.slice(0,3).toUpperCase() : "");
       if (!code) continue;
 
-      // outward direction angle in canvas radians
-      const outwardRad = toRad(angle); // toRad already does (angle-90)*pi/180
-      // flip if text would be upside-down (left visual hemisphere)
-      const flip = Math.cos(outwardRad) < 0;
-      const rotRad = outwardRad + (flip ? Math.PI : 0);
-
       ctx.save();
       ctx.translate(lx, ly);
-      ctx.rotate(rotRad);
       ctx.font = `${isW ? "bold " : ""}9px system-ui, sans-serif`;
       ctx.textAlign    = "center";
       ctx.textBaseline = "middle";
