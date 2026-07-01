@@ -199,6 +199,29 @@ async function updateScorersAggregate(home, away, events) {
 }
 
 
+// Deduplicates ESPN events — removes same goal/card at same minute from
+// multiple ESPN sources (details, keyEvents, commentary). For Goals and Cards,
+// omits team name from key so empty-team duplicates collapse with named ones.
+// Multiple subs at the same minute are kept (legitimate).
+function deduplicateEvents(events) {
+  if (!events?.length) return events || [];
+  const seen = new Set();
+  return events.filter(ev => {
+    const teamPart = (ev.type === "Goal" || ev.type === "Card") ? "" : (ev.team?.name || "");
+    const key = [
+      ev.type,
+      ev.detail,
+      teamPart,
+      ev.player?.name,
+      ev.time?.display || `${ev.time?.elapsed || ""}+${ev.time?.extra || ""}`,
+      (ev.text || "").slice(0, 80),
+    ].join("|");
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 async function buildScorersFromPersistedEvents({ persist=false } = {}) {
   let allKeys = [];
   let cursor = 0;
@@ -229,7 +252,8 @@ async function buildScorersFromPersistedEvents({ persist=false } = {}) {
     const records = await kv.mget(...keys).catch(() => keys.map(() => null));
     records.forEach((record, idx) => {
       if (!record?.events?.length) return;
-      const result = foldEventsIntoScorersAggregate(aggregate, keys[idx], record.events);
+      const cleanEvents = deduplicateEvents(record.events);
+      const result = foldEventsIntoScorersAggregate(aggregate, keys[idx], cleanEvents);
       aggregate = result.aggregate;
       goalEvents += result.addedGoals;
       cardEvents += result.addedCards;
@@ -615,23 +639,7 @@ function parseEvents(data, homeTeam) {
     });
   });
 
-  const seen = new Set();
-  const deduped = events.filter(ev => {
-    const key = [
-      ev.type,
-      ev.detail,
-      // For Goals/Cards: omit team name from key so that ESPN duplicates
-      // with empty team name collapse with the named-team version.
-      // For subs/other: include team to allow same-minute multi-subs.
-      (ev.type === "Goal" || ev.type === "Card") ? "" : (ev.team?.name || ""),
-      ev.player?.name,
-      ev.time?.display || `${ev.time?.elapsed || ""}+${ev.time?.extra || ""}`,
-      (ev.text || "").slice(0, 80),
-    ].join("|");
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+  const deduped = deduplicateEvents(events);
 
   return deduped.sort((a, b) => eventSortValue(a) - eventSortValue(b));
 }
