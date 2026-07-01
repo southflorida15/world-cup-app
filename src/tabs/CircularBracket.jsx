@@ -55,8 +55,9 @@ function toRad(d)  { return (d - 90) * Math.PI / 180; }
 function pt(d, r)  { const a = toRad(d); return [CX + r*Math.cos(a), CY + r*Math.sin(a)]; }
 
 export default function CircularBracket({
-  bracket, language="en", C, FLAG_CODES_MAP={}, MATCHES=[], onMatchTap,
+  bracket, language="en", C, FLAG_CODES_MAP={}, MATCHES=[], onMatchTap, getFlag: getF,
 }) {
+  const getFlag = getF || (() => "🏳");
   const canvasRef  = useRef(null);
   const imgsRef    = useRef({});
   const hitRef     = useRef([]);
