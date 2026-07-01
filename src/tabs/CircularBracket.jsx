@@ -1,344 +1,380 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { displayTeamName } from "../i18n/display";
 
 // ── CircularBracket ───────────────────────────────────────────────────────
-// Sunburst circular bracket.
-// Flags are HTML <img> elements absolutely positioned over the SVG —
-// avoids foreignObject (broken on iOS Safari) and SVG emoji (unreliable).
+// Canvas-based circular bracket. Flag circles on outer ring, thin bracket
+// lines converging inward, winner flags propagate toward the trophy.
+//
+// Props:
+//   bracket        – { r32[], r16[], qf[], sf[], final[] }
+//   language       – "en" | "pt-BR"
+//   C              – app colour tokens
+//   FLAG_CODES_MAP – { [teamName]: "isoCode" }
+//   onMatchTap     – optional (match) => void
 
-const CX = 260, CY = 260, VB = 520; // viewBox is 520×520
+const W = 580, H = 580, CX = W/2, CY = H/2;
 
-const R = { trophy:22, final:52, sf:94, qf:136, r16:178, r32:218, outer:238 };
+// Ring radii
+const RF   = 248; // outer flag circle centres
+const RB   = 196; // R32 bracket ring
+const R16  = 154; // R16
+const RQF  = 112; // QF
+const RSF  =  70; // SF
+const RFIN =  30; // Final / trophy
 
-// Flag image width (px in viewBox units) per ring — grows as team advances
-const FLAG_W = { r16:14, qf:18, sf:24, final:30, trophy:34 };
+const FLAG_R = 22; // outer flag circle radius
 
-const GAP_MATCH = 2.2;
-const GAP_PAIR  = 0.8;
+// Winner flag sizes at each inner ring
+const WIN_SZ = { r16:13, qf:16, sf:20, fin:24 };
+
+const LINE_WIN = "rgba(255,215,60,0.88)";
+const LINE_DIM = "rgba(255,255,255,0.10)";
+const LW       = 1.6;
+const LW_DIM   = 0.7;
 
 const R32_ORDER = [73,75,74,77, 76,78,79,80, 83,84,81,82, 86,88,85,87];
 const R16_ORDER = [89,90,91,92, 93,94,95,96];
 const QF_ORDER  = [97,99,98,100];
 const SF_ORDER  = [101,102];
 
-const SPOKE_R32 = [], SPOKE_SIDE = [];
-R32_ORDER.forEach(id => { SPOKE_R32.push(id, id); SPOKE_SIDE.push(0, 1); });
-
 function buildRanges(order, n) {
-  const out = {};
-  order.forEach((id, i) => { out[id] = [i*n, (i+1)*n]; });
-  return out;
+  const o = {};
+  order.forEach((id, i) => { o[id] = [i*n, (i+1)*n]; });
+  return o;
 }
 const R32_SEGS = buildRanges(R32_ORDER, 2);
 const R16_SEGS = buildRanges(R16_ORDER, 4);
 const QF_SEGS  = buildRanges(QF_ORDER,  8);
 const SF_SEGS  = buildRanges(SF_ORDER,  16);
 
-function spokeAngle(i) { return (i / 32) * 360; }
-function toRad(d)      { return (d - 90) * Math.PI / 180; }
-function polar(d, r)   { const a = toRad(d); return [CX + r*Math.cos(a), CY + r*Math.sin(a)]; }
+function degOf(i)  { return (i / 32) * 360; }
+function toRad(d)  { return (d - 90) * Math.PI / 180; }
+function pt(d, r)  { const a = toRad(d); return [CX + r*Math.cos(a), CY + r*Math.sin(a)]; }
 
-// Convert SVG viewBox coords → CSS % for absolute positioning
-function toPercent(svgX, svgY) {
-  return { left: `${(svgX / VB * 100).toFixed(3)}%`, top: `${(svgY / VB * 100).toFixed(3)}%` };
-}
-
-function arcSeg(r1, r2, a1, a2, gL, gR) {
-  const s = a1+gL, e = a2-gR;
-  if (e <= s) return "";
-  const [ax,ay]=polar(s,r1), [bx,by]=polar(e,r1);
-  const [cx,cy]=polar(e,r2), [dx,dy]=polar(s,r2);
-  const lg = Math.abs(e-s) > 180 ? 1 : 0;
-  return `M${ax},${ay}A${r1},${r1},0,${lg},1,${bx},${by}L${cx},${cy}A${r2},${r2},0,${lg},0,${dx},${dy}Z`;
-}
-
-const SHORT = {
-  "United States":"USA","South Africa":"S.Africa","Netherlands":"Neth.",
-  "Bosnia & Herz.":"Bosnia","Saudi Arabia":"S.Arabia","Ivory Coast":"I.Coast",
-  "DR Congo":"D.R.Congo","New Zealand":"N.Zeal.",
-};
-function short(t) { return t ? (SHORT[t] || t) : "TBD"; }
-
-export default function CircularBracket({ bracket, language="en", C, getFlag, FLAG_CODES_MAP={}, onMatchTap }) {
+export default function CircularBracket({
+  bracket, language="en", C, FLAG_CODES_MAP={}, onMatchTap,
+}) {
+  const canvasRef  = useRef(null);
+  const imgsRef    = useRef({});
+  const hitRef     = useRef([]);
   const [hovered, setHovered] = useState(null);
   const isPtBR = language === "pt-BR";
   const tx = (en, pt) => isPtBR ? pt : en;
 
   const col = {
-    bg:    C?.bg    || "#060e0a",
-    s1:    C?.s1    || "#0c1a12",
-    s2:    C?.s2    || "#112618",
-    ring:  C?.b1    || "#1a3828",
-    ring2: C?.b2    || "#234833",
+    bg1:   "#1a1c26",
+    bg2:   "#0d0e14",
+    gold:  C?.gold  || "#fbbf24",
+    green: C?.green || "#4ade80",
     mid:   C?.mid   || "#7aaa8a",
     dim:   C?.dim   || "#3d6a4d",
-    green: C?.green || "#4ade80",
-    gold:  C?.gold  || "#fbbf24",
+    s1:    C?.s1    || "#0c1a12",
+    ring:  C?.b1    || "#1a3828",
   };
 
+  // Index bracket matches by id
   const byId = {};
   ["r32","r16","qf","sf","final"].forEach(key => {
     (bracket?.[key] || []).forEach(m => { byId[Number(m.match)] = m; });
   });
-  function getMatch(id) { return byId[id] || { match:id, home:null, away:null, winner:null }; }
-
-  // Collect all flag images to render as HTML overlay
-  const flagOverlays = [];
-
-  function addFlag(team, aMid, r_inner, r_outer, wVB) {
-    if (!team) return;
-    const code = FLAG_CODES_MAP[team];
-    if (!code) return;
-    const rMid = (r_inner + r_outer) / 2;
-    const [svgX, svgY] = polar(aMid, rMid);
-    // wVB = width in viewBox units → convert to % of container
-    const wPct = (wVB / VB * 100).toFixed(3);
-    const hPct = (wVB * 0.67 / VB * 100).toFixed(3);
-    const pos = toPercent(svgX, svgY);
-    flagOverlays.push({
-      key: `flag-${team}-${aMid.toFixed(1)}`,
-      code, team,
-      left: pos.left, top: pos.top,
-      wPct, hPct,
-    });
+  function getMatch(id) {
+    return byId[id] || { match:id, home:null, away:null, winner:null };
   }
 
-  // ── SVG arc segment ───────────────────────────────────────────────────
-  function Seg({ id, r1, r2, a1, a2, gL, gR, team, isFinal=false }) {
+  // Build 32 outer slots from R32_ORDER
+  const slots = [];
+  R32_ORDER.forEach(id => {
     const m = getMatch(id);
-    const hasW = !!m.winner;
-    const won  = hasW && m.winner === team;
-    const lost = hasW && !won;
-    const pathD = arcSeg(r1, r2, a1, a2, gL, gR);
-    if (!pathD) return null;
-    const fill = hasW
-      ? (won ? (isFinal ? `${col.gold}40` : `${col.green}35`) : col.s1)
-      : (isFinal ? `${col.gold}15` : col.s2);
-    const stroke = won ? (isFinal ? col.gold : col.green) : col.ring;
-    const hd = { h:m.home, a:m.away, w:m.winner, round: isFinal ? tx("Final","Final") : "" };
-    return (
-      <path d={pathD} fill={fill} stroke={stroke}
-        strokeWidth={won ? 2 : 0.5} opacity={lost ? 0.3 : 1}
-        style={{ cursor: onMatchTap ? "pointer" : "default" }}
-        onClick={() => onMatchTap && onMatchTap(m)}
-        onMouseEnter={() => setHovered(hd)}
-        onMouseLeave={() => setHovered(null)} />
+    slots.push({ team:m.home, matchId:id }, { team:m.away, matchId:id });
+  });
+
+  // ── Preload all flag images ────────────────────────────────────────────
+  useEffect(() => {
+    const needed = new Set(
+      slots.map(s => FLAG_CODES_MAP[s.team]).filter(Boolean)
     );
-  }
+    let pending = needed.size;
+    if (pending === 0) { draw(); return; }
+    needed.forEach(code => {
+      if (imgsRef.current[code]) { if(--pending===0) draw(); return; }
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = `https://flagcdn.com/w80/${code}.png`;
+      img.onload = img.onerror = () => { if (--pending === 0) draw(); };
+      imgsRef.current[code] = img;
+    });
+  }, [bracket, FLAG_CODES_MAP]);
 
-  function Divider({ r1, r2, angleDeg }) {
-    const [x1,y1]=polar(angleDeg, r1+1), [x2,y2]=polar(angleDeg, r2-1);
-    return <line x1={x1} y1={y1} x2={x2} y2={y2}
-      stroke={col.ring} strokeWidth={1.5} opacity={0.85} />;
-  }
+  // ── Main draw ─────────────────────────────────────────────────────────
+  function draw() {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    hitRef.current = [];
 
-  // ── Render one full round (segments + register flag overlays) ─────────
-  function renderRound(segs, r_inner, r_outer, r_flag_inner, r_flag_outer, flagW, isFinal=false) {
-    const els = [];
-    for (const [idStr, [s, e]] of Object.entries(segs)) {
-      const id = Number(idStr);
-      const m  = getMatch(id);
-      const a1 = spokeAngle(s), a2 = spokeAngle(e), am = (a1+a2)/2;
+    ctx.clearRect(0, 0, W, H);
 
-      els.push(<Seg key={`${id}-h`} id={id} r1={r_inner} r2={r_outer}
-        a1={a1} a2={am} gL={GAP_PAIR} gR={GAP_MATCH/2} team={m.home} isFinal={isFinal}/>);
-      els.push(<Seg key={`${id}-a`} id={id} r1={r_inner} r2={r_outer}
-        a1={am} a2={a2} gL={GAP_MATCH/2} gR={GAP_PAIR} team={m.away} isFinal={isFinal}/>);
-      els.push(<Divider key={`${id}-div`} r1={r_inner} r2={r_outer} angleDeg={am}/>);
+    // Background
+    const bg = ctx.createRadialGradient(CX, CY, 0, CX, CY, W*0.65);
+    bg.addColorStop(0, col.bg1);
+    bg.addColorStop(1, col.bg2);
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
 
-      if (m.winner) {
-        const winIsHome = m.winner === m.home;
-        const flagAngle = winIsHome ? (a1+am)/2 : (am+a2)/2;
-        addFlag(m.winner, flagAngle, r_flag_inner, r_flag_outer, flagW);
+    // Subtle ring guides
+    [RB, R16, RQF, RSF].forEach(r => {
+      ctx.beginPath(); ctx.arc(CX, CY, r, 0, Math.PI*2);
+      ctx.strokeStyle = "rgba(255,220,100,0.05)";
+      ctx.lineWidth = 1; ctx.stroke();
+    });
+
+    // ── Helper: draw a flag image clipped to a circle ──────────────────
+    function drawFlag(team, x, y, r, alpha=1, strokeCol=null, strokeW=1, glowCol=null) {
+      if (!team) return;
+      const code = FLAG_CODES_MAP[team];
+      const img  = code ? imgsRef.current[code] : null;
+
+      if (glowCol) {
+        const g = ctx.createRadialGradient(x, y, r*0.2, x, y, r*2.4);
+        g.addColorStop(0, glowCol);
+        g.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(x, y, r*2.4, 0, Math.PI*2); ctx.fill();
+      }
+
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2);
+      ctx.fillStyle = "rgba(25,27,36,1)"; ctx.fill();
+
+      if (img && img.complete && img.naturalWidth > 0) {
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.beginPath(); ctx.arc(x, y, r-1, 0, Math.PI*2); ctx.clip();
+        const fw = r*2.4, fh = fw*0.67;
+        ctx.drawImage(img, x-fw/2, y-fh/2, fw, fh);
+        ctx.restore();
+      }
+
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2);
+      ctx.strokeStyle = strokeCol || "rgba(255,255,255,0.18)";
+      ctx.lineWidth   = strokeW; ctx.stroke();
+    }
+
+    function line(x1,y1,x2,y2,col,lw) {
+      ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2);
+      ctx.strokeStyle=col; ctx.lineWidth=lw; ctx.stroke();
+    }
+    function arc(r,a1,a2,col,lw) {
+      ctx.beginPath(); ctx.arc(CX,CY,r,toRad(a1),toRad(a2),false);
+      ctx.strokeStyle=col; ctx.lineWidth=lw; ctx.stroke();
+    }
+    function dot(x,y,r,col) {
+      ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
+      ctx.fillStyle=col; ctx.fill();
+    }
+
+    // ── Draw bracket lines + inner winner flags for one round ──────────
+    function drawRound(segs, rOuter, rInner, winFlagR, winFlagSz) {
+      for (const [idStr, [s, e]] of Object.entries(segs)) {
+        const id = Number(idStr);
+        const m  = getMatch(id);
+        const a1 = degOf(s), a2 = degOf(e), am = (a1+a2)/2;
+        const hWon = m.winner === m.home;
+        const aWon = m.winner === m.away;
+        const hasW = !!m.winner;
+        const G = 0.9; // gap in degrees at arc ends
+
+        // Outer arc: two halves, one per team
+        arc(rOuter, a1+G, am-G, hWon ? LINE_WIN : LINE_DIM, hWon ? LW : LW_DIM);
+        arc(rOuter, am+G, a2-G, aWon ? LINE_WIN : LINE_DIM, aWon ? LW : LW_DIM);
+
+        // Midpoint junction on outer ring
+        const [jox, joy] = pt(am, rOuter);
+        dot(jox, joy, hasW?2:1.2, hasW ? LINE_WIN : LINE_DIM);
+
+        // Convergence: both spokes lead to winner's angle on inner ring
+        const wAngle = hasW ? (hWon ? (a1+am)/2 : (am+a2)/2) : (a1+a2)/2;
+        const [hMidX, hMidY] = pt((a1+am)/2, rOuter);
+        const [aMidX, aMidY] = pt((am+a2)/2, rOuter);
+        const [ix, iy]       = pt(wAngle, rInner);
+
+        line(hMidX,hMidY, ix,iy, hWon ? LINE_WIN : LINE_DIM, hWon ? LW : LW_DIM);
+        line(aMidX,aMidY, ix,iy, aWon ? LINE_WIN : LINE_DIM, aWon ? LW : LW_DIM);
+
+        // Inner junction dot
+        dot(ix, iy, hasW ? 2.5 : 1.5, hasW ? LINE_WIN : LINE_DIM);
+
+        // Winner flag circle on inner ring
+        if (hasW) {
+          const [fx, fy] = pt(wAngle, winFlagR);
+          drawFlag(
+            m.winner, fx, fy, winFlagSz,
+            1,
+            "rgba(255,215,60,0.85)", 1.5,
+            "rgba(255,200,40,0.3)"
+          );
+        }
       }
     }
-    return els;
-  }
 
-  function renderFinal() {
-    const m = getMatch(104);
-    return (
-      <>
-        <Seg id={104} r1={R.trophy} r2={R.final}
-          a1={0} a2={180} gL={GAP_MATCH/2} gR={GAP_MATCH/2} team={m.home} isFinal/>
-        <Seg id={104} r1={R.trophy} r2={R.final}
-          a1={180} a2={360} gL={GAP_MATCH/2} gR={GAP_MATCH/2} team={m.away} isFinal/>
-        <Divider r1={R.trophy} r2={R.final} angleDeg={0}/>
-        <Divider r1={R.trophy} r2={R.final} angleDeg={180}/>
-      </>
-    );
-  }
+    // ── Draw all rounds ────────────────────────────────────────────────
+    // rOuter, rInner, winFlagRadius, winFlagSize
+    // Winner flag sits between rInner and the next ring inward
+    drawRound(R32_SEGS, RB,  R16, (RB+R16)/2,   WIN_SZ.r16);
+    drawRound(R16_SEGS, R16, RQF, (R16+RQF)/2,  WIN_SZ.qf);
+    drawRound(QF_SEGS,  RQF, RSF, (RQF+RSF)/2,  WIN_SZ.sf);
+    drawRound(SF_SEGS,  RSF, RFIN,(RSF+RFIN)/2,  WIN_SZ.fin);
 
-  function renderOuterLabels() {
-    return SPOKE_R32.map((r32id, i) => {
-      const side = SPOKE_SIDE[i];
-      const m    = getMatch(r32id);
-      const team = side === 0 ? m.home : m.away;
-      if (!team || team === "TBD") return null;
-      const isElim = m.winner && m.winner !== team;
-      const aMid   = spokeAngle(i) + 360/32/2;
-      const [lx,ly] = polar(aMid, R.outer + 6);
-      const onRight  = aMid < 180;
-      return (
-        <text key={`lbl-${i}`} x={lx} y={ly}
-          textAnchor={onRight ? "start" : "end"} dominantBaseline="middle"
-          fontSize={8.5} fontWeight={400}
-          fill={isElim ? col.dim : col.mid}
-          opacity={isElim ? 0.45 : 1}
-          transform={`rotate(${onRight ? aMid-90 : aMid+90},${lx},${ly})`}
-          style={{ pointerEvents:"none", userSelect:"none" }}>
-          {short(displayTeamName(team, language))}
-        </text>
+    // ── Connector lines: outer flag → RB ring ─────────────────────────
+    for (let i = 0; i < 32; i++) {
+      const { team, matchId } = slots[i];
+      const m = getMatch(matchId);
+      const isW    = m.winner === team;
+      const isElim = m.winner && !isW;
+      const angle  = degOf(i) + 360/32/2;
+      const [fx, fy] = pt(angle, RF);
+      const [bx, by] = pt(angle, RB);
+      line(fx,fy, bx,by,
+        isW    ? "rgba(255,210,60,0.5)"  :
+        isElim ? "rgba(255,255,255,0.04)" :
+                 "rgba(255,255,255,0.10)",
+        isW ? 1.4 : 0.6
       );
-    });
+    }
+
+    // ── Outer flag circles ─────────────────────────────────────────────
+    for (let i = 0; i < 32; i++) {
+      const { team, matchId } = slots[i];
+      const m     = getMatch(matchId);
+      const isW   = m.winner === team;
+      const isElim= m.winner && !isW;
+      const angle = degOf(i) + 360/32/2;
+      const [fx, fy] = pt(angle, RF);
+
+      drawFlag(
+        team, fx, fy, FLAG_R,
+        isElim ? 0.28 : 1,
+        isW    ? "rgba(255,215,60,0.9)"   :
+        isElim ? "rgba(255,255,255,0.07)" :
+                 "rgba(255,255,255,0.22)",
+        isW ? 2 : 1,
+        isW ? "rgba(255,200,40,0.35)" : null
+      );
+
+      hitRef.current.push({ x:fx, y:fy, r:FLAG_R+5, team, matchId });
+    }
+
+    // ── Trophy glow ────────────────────────────────────────────────────
+    const tg = ctx.createRadialGradient(CX,CY,0,CX,CY,RSF*0.9);
+    tg.addColorStop(0, "rgba(255,200,40,0.20)");
+    tg.addColorStop(0.5,"rgba(255,170,20,0.06)");
+    tg.addColorStop(1,  "rgba(0,0,0,0)");
+    ctx.fillStyle = tg;
+    ctx.beginPath(); ctx.arc(CX,CY,RSF*0.9,0,Math.PI*2); ctx.fill();
+
+    ctx.beginPath(); ctx.arc(CX,CY,RFIN,0,Math.PI*2);
+    ctx.fillStyle = "rgba(18,16,10,0.95)"; ctx.fill();
+    ctx.strokeStyle="rgba(255,200,40,0.45)"; ctx.lineWidth=1.8; ctx.stroke();
+
+    ctx.font = `${RFIN*1.35}px serif`;
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText("🏆", CX, CY+2);
   }
 
-  // ── Build all SVG segments (also populates flagOverlays as side effect) ──
-  const svgRounds = [
-    ...renderRound(R32_SEGS, R.r16, R.r32,  R.qf,    R.r16,  FLAG_W.r16),
-    ...renderRound(R16_SEGS, R.qf,  R.r16,  R.sf,    R.qf,   FLAG_W.qf),
-    ...renderRound(QF_SEGS,  R.sf,  R.qf,   R.final, R.sf,   FLAG_W.sf),
-    ...renderRound(SF_SEGS,  R.final,R.sf,  R.trophy,R.final, FLAG_W.final, true),
-  ];
+  // Re-draw whenever bracket changes
+  useEffect(() => { draw(); }, [bracket, language]);
 
-  // Champion flag in centre
-  const champ = getMatch(104).winner;
-  if (champ) addFlag(champ, 0, 0, 0, FLAG_W.trophy); // special: placed at CX,CY
+  // ── Canvas event handlers ─────────────────────────────────────────────
+  function getHit(e) {
+    const canvas = canvasRef.current;
+    const rect   = canvas.getBoundingClientRect();
+    const scaleX = W / rect.width, scaleY = H / rect.height;
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    const mx = (clientX - rect.left) * scaleX;
+    const my = (clientY - rect.top)  * scaleY;
+    for (const h of hitRef.current) {
+      const dx=mx-h.x, dy=my-h.y;
+      if (dx*dx+dy*dy < h.r*h.r) return h;
+    }
+    return null;
+  }
+
+  function onMouseMove(e) {
+    const h = getHit(e);
+    if (h) {
+      canvasRef.current.style.cursor = "pointer";
+      setHovered(h);
+    } else {
+      canvasRef.current.style.cursor = "default";
+      setHovered(null);
+    }
+  }
+
+  function onTap(e) {
+    e.preventDefault();
+    const h = getHit(e);
+    if (h && onMatchTap) {
+      const m = byId[h.matchId];
+      if (m) onMatchTap(m);
+    }
+  }
+
+  const col2 = {
+    gold:  C?.gold  || "#fbbf24",
+    green: C?.green || "#4ade80",
+    mid:   C?.mid   || "#7aaa8a",
+    dim:   C?.dim   || "#3d6a4d",
+    s1:    C?.s1    || "#0c1a12",
+    ring:  C?.b1    || "#1a3828",
+  };
 
   return (
-    <div style={{ width:"100%", display:"flex", flexDirection:"column", alignItems:"center", gap:8 }}>
-
-      <div style={{ display:"flex", gap:12, fontSize:10, color:col.mid, flexWrap:"wrap", justifyContent:"center" }}>
-        {[
-          { fill:`${col.green}35`, stroke:col.green, label:tx("Advanced","Avançou") },
-          { fill:`${col.gold}40`,  stroke:col.gold,  label:tx("Final","Final") },
-          { fill:col.s1, stroke:col.ring, label:tx("Eliminated","Eliminado"), op:0.4 },
-          { fill:col.s2, stroke:col.ring2, label:tx("Upcoming","A jogar") },
-        ].map(({ fill, stroke, label, op=1 }) => (
-          <span key={label} style={{ display:"flex", alignItems:"center", gap:4 }}>
-            <span style={{ width:9, height:9, borderRadius:2, background:fill,
-              border:`1.5px solid ${stroke}`, display:"inline-block", opacity:op }}/>
-            {label}
-          </span>
-        ))}
-      </div>
-
-      {/* position:relative container so flag imgs can overlay the SVG */}
+    <div style={{ width:"100%", display:"flex", flexDirection:"column", alignItems:"center", gap:6 }}>
       <div style={{ position:"relative", width:"100%", maxWidth:560 }}>
-        <svg width="100%" viewBox={`0 0 ${VB} ${VB}`} role="img"
-          style={{ display:"block" }}>
-          <title>{tx("World Cup 2026 Circular Bracket","Chaveamento Circular da Copa 2026")}</title>
-
-          <circle cx={CX} cy={CY} r={R.outer+20} fill={col.bg}/>
-
-          {[R.final,R.sf,R.qf,R.r16,R.r32].map(r => (
-            <circle key={r} cx={CX} cy={CY} r={r} fill="none"
-              stroke={col.ring} strokeWidth={0.5} strokeDasharray="2,4" opacity={0.4}/>
-          ))}
-
-          {Array.from({length:16}, (_,i) => {
-            const d=spokeAngle(i*2);
-            const [x1,y1]=polar(d,R.r32+1), [x2,y2]=polar(d,R.outer+5);
-            return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2}
-              stroke={col.ring} strokeWidth={0.8} opacity={0.6}/>;
-          })}
-
-          {svgRounds}
-          {renderFinal()}
-
-          {/* Trophy or champ placeholder circle */}
-          <circle cx={CX} cy={CY} r={R.trophy}
-            fill={champ ? `${col.gold}25` : col.s1}
-            stroke={champ ? col.gold : col.ring2}
-            strokeWidth={champ ? 2 : 0.8}/>
-          {!champ && (
-            <text x={CX} y={CY} textAnchor="middle" dominantBaseline="middle"
-              fontSize={16} style={{ pointerEvents:"none" }}>🏆</text>
-          )}
-
-          {/* Round labels */}
-          {[
-            { label:tx("F","F"),     r:(R.trophy+R.final)/2 },
-            { label:tx("SF","SF"),   r:(R.final+R.sf)/2 },
-            { label:tx("QF","QF"),   r:(R.sf+R.qf)/2 },
-            { label:tx("R16","R16"), r:(R.qf+R.r16)/2 },
-            { label:tx("R32","R32"), r:(R.r16+R.r32)/2 },
-          ].map(({ label, r }) => {
-            const [x,y]=polar(0,r);
-            return (
-              <text key={label} x={x} y={y} textAnchor="middle" dominantBaseline="middle"
-                fontSize={8.5} fontWeight={600} fill={col.dim}
-                style={{ pointerEvents:"none" }}>
-                {label}
-              </text>
-            );
-          })}
-
-          {renderOuterLabels()}
-        </svg>
-
-        {/* ── HTML flag image overlays ── */}
-        {flagOverlays.map(({ key, code, team, left, top, wPct, hPct }) => {
-          // Special case: champion gets centred on CX,CY
-          const isChamp = team === champ && left === toPercent(CX,CY).left;
-          const style = isChamp ? {
-            position:"absolute",
-            left: toPercent(CX, CY).left,
-            top:  toPercent(CY, CY).top,
-            width: `${(FLAG_W.trophy / VB * 100).toFixed(3)}%`,
-            transform:"translate(-50%,-33%)",
-            pointerEvents:"none",
-            borderRadius:2,
-            objectFit:"cover",
-          } : {
-            position:"absolute",
-            left,
-            top,
-            width:`${wPct}%`,
-            transform:"translate(-50%,-33%)",
-            pointerEvents:"none",
-            borderRadius:2,
-            objectFit:"cover",
-          };
-          return (
-            <img key={key}
-              src={`https://flagcdn.com/w80/${code}.png`}
-              alt={team}
-              style={style}
-            />
-          );
-        })}
+        <canvas
+          ref={canvasRef}
+          width={W} height={H}
+          style={{ display:"block", width:"100%", borderRadius:12 }}
+          onMouseMove={onMouseMove}
+          onMouseLeave={() => { setHovered(null); }}
+          onTouchStart={onTap}
+          onClick={onTap}
+        />
       </div>
 
-      {/* Hover detail bar */}
-      <div style={{ width:"100%", maxWidth:400, minHeight:38,
-        background:col.s1, border:`1px solid ${col.ring}`,
-        borderRadius:10, padding:"9px 14px", fontSize:12, color:col.mid,
-        display:"flex", alignItems:"center", justifyContent:"center", gap:10 }}>
-        {hovered ? (
-          <>
-            <span style={{ fontWeight:hovered.w===hovered.h?700:400,
-              color:hovered.w===hovered.h?col.green:col.mid }}>
-              {getFlag(hovered.h||"")} {short(displayTeamName(hovered.h||"TBD",language))}
-              {hovered.w===hovered.h&&" ✅"}
-            </span>
-            <span style={{ fontSize:10, color:col.dim }}>{hovered.round||tx("vs","x")}</span>
-            <span style={{ fontWeight:hovered.w===hovered.a?700:400,
-              color:hovered.w===hovered.a?col.green:col.mid }}>
-              {hovered.w===hovered.a&&"✅ "}
-              {short(displayTeamName(hovered.a||"TBD",language))} {getFlag(hovered.a||"")}
-            </span>
-          </>
-        ) : (
-          <span style={{ fontSize:10, color:col.dim }}>
-            {tx("Tap any segment to see match details","Toque para ver detalhes")}
+      {/* Match detail bar */}
+      <div style={{
+        width:"100%", maxWidth:420, minHeight:40,
+        background:"rgba(255,255,255,0.04)",
+        border:`1px solid rgba(255,200,50,0.12)`,
+        borderRadius:10, padding:"9px 14px",
+        fontSize:12, color:col2.mid,
+        display:"flex", alignItems:"center", justifyContent:"center", gap:10,
+      }}>
+        {hovered ? (() => {
+          const m = getMatch(hovered.matchId);
+          const h = m.home||"TBD", a = m.away||"TBD", w = m.winner;
+          return (
+            <>
+              <span style={{ fontWeight:w===h?700:400, color:w===h?col2.gold:col2.mid }}>
+                {h}{w===h&&" ✅"}
+              </span>
+              <span style={{ fontSize:10, color:col2.dim }}>vs</span>
+              <span style={{ fontWeight:w===a?700:400, color:w===a?col2.gold:col2.mid }}>
+                {w===a&&"✅ "}{a}
+              </span>
+            </>
+          );
+        })() : (
+          <span style={{ fontSize:10, color:col2.dim }}>
+            {tx("Tap a flag to see the matchup","Toque em uma bandeira para ver o jogo")}
           </span>
         )}
       </div>
 
-      <div style={{ fontSize:10, color:col.dim, paddingBottom:4 }}>
-        {tx("Winner flags advance inward · tap segment to open match",
-           "Bandeiras dos vencedores avançam para o centro · toque para abrir")}
+      <div style={{ fontSize:10, color:col2.dim, paddingBottom:4 }}>
+        {tx("Winner flags advance inward toward the trophy",
+           "Bandeiras dos vencedores avançam em direção ao troféu")}
       </div>
     </div>
   );
