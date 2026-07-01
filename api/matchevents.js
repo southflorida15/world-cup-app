@@ -661,18 +661,18 @@ function parseEvents(data, homeTeam) {
   (data.keyEvents || []).forEach(ev => add(normalizeEventFromESPN(ev, homeTeam)));
 
   // Commentary has the richest minute strings and many VAR/review outcomes.
-  (data.commentary || []).forEach(item => add(normalizeCommentaryEvent(item, homeTeam)));
+  // (data.commentary || []).forEach(item => add(normalizeCommentaryEvent(item, homeTeam)));
 
   // Fallback: plays array when ESPN exposes it directly.
   (data.plays || []).forEach(play => add(normalizeEventFromESPN(play, homeTeam)));
 
   // Roster player entries can contain individual plays; useful when summary
   // omits top-level plays but embeds key player events under each roster row.
-  (data.rosters || []).forEach(r => {
-    (r.roster || r.entries || r.players || r.athletes || []).forEach(player => {
-      (player.plays || []).forEach(play => add(normalizeEventFromESPN(play, homeTeam)));
-    });
-  });
+  // (data.rosters || []).forEach(r => {
+  //   (r.roster || r.entries || r.players || r.athletes || []).forEach(player => {
+  /    (player.plays || []).forEach(play => add(normalizeEventFromESPN(play, homeTeam)));
+   // });
+  // });
 
   const deduped = deduplicateEvents(events);
 
