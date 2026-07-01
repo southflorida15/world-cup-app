@@ -670,9 +670,9 @@ function parseEvents(data, homeTeam) {
   // omits top-level plays but embeds key player events under each roster row.
   // (data.rosters || []).forEach(r => {
   //   (r.roster || r.entries || r.players || r.athletes || []).forEach(player => {
-  /    (player.plays || []).forEach(play => add(normalizeEventFromESPN(play, homeTeam)));
-   // });
+  //    (player.plays || []).forEach(play => add(normalizeEventFromESPN(play, homeTeam)));
   // });
+  //});
 
   const deduped = deduplicateEvents(events);
 
