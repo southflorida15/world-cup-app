@@ -224,6 +224,44 @@ export default function CircularBracket({
     drawRound(QF_SEGS,  RQF, RSF, (RQF+RSF)/2,  WIN_SZ.sf);
     drawRound(SF_SEGS,  RSF, RFIN,(RSF+RFIN)/2,  WIN_SZ.fin);
 
+    // ── R16 pairing arcs at the outer flag ring ────────────────────────
+    // Each R16 match spans 4 spokes. The two R32 winners sit at the
+    // midpoints of each 2-spoke half. Draw a gold arc connecting them
+    // at RF, plus spokes from each flag down to the RB junction.
+    for (const [idStr, [s, e]] of Object.entries(R16_SEGS)) {
+      const id  = Number(idStr);
+      const m   = getMatch(id);
+      const hasW = !!m.winner;
+
+      // The two R32 winner angles on the outer ring
+      const hAngle = degOf(s)   + 360/32; // midpoint of first 2 spokes
+      const aAngle = degOf(s+2) + 360/32; // midpoint of second 2 spokes
+      const jAngle = (hAngle + aAngle) / 2; // midpoint between them
+
+      // Determine which side won R16 (home=first pair, away=second pair)
+      // m.home is the winner of the first R32 pair, m.away of the second
+      const hWon = m.winner === m.home;
+      const aWon = m.winner === m.away;
+
+      const lineCol  = hasW ? LINE_WIN : "rgba(255,255,255,0.14)";
+      const lineWid  = hasW ? LW : LW_DIM;
+
+      // Arc along RF connecting the two paired teams
+      const G2 = 2.5; // gap around each flag circle
+      arc(RF, hAngle+G2, aAngle-G2, lineCol, lineWid);
+
+      // Spoke from each flag down to the RB junction point
+      const [hfx, hfy] = pt(hAngle, RF - FLAG_R);
+      const [afx, afy] = pt(aAngle, RF - FLAG_R);
+      const [jx,  jy]  = pt(jAngle, RB);
+
+      line(hfx,hfy, jx,jy, hWon ? LINE_WIN : lineCol, hWon ? LW : lineWid);
+      line(afx,afy, jx,jy, aWon ? LINE_WIN : lineCol, aWon ? LW : lineWid);
+
+      // Junction dot at RB
+      dot(jx, jy, hasW ? 2.5 : 1.5, lineCol);
+    }
+
     // ── Connector lines: outer flag → RB ring ─────────────────────────
     for (let i = 0; i < 32; i++) {
       const { team, matchId } = slots[i];
