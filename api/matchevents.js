@@ -1081,6 +1081,26 @@ export default async function handler(req, res) {
 
   // Rebuild scorers/cards aggregate from persisted match event caches.
   // Use this if the leaderboard looks inflated or stale after parser changes.
+  if (req.query.action === "flush-events") {
+    const R32_PAIRS = [
+      ["Mexico","South Africa"],["Ecuador","Iran"],["Netherlands","Colombia"],
+      ["Brazil","Ivory Coast"],["France","Paraguay"],["Ivory Coast","Norway"],
+      ["Mexico","DR Congo"],["England","DR Congo"],["England","Austria"],
+      ["United States","Egypt"],["Belgium","Senegal"],["Portugal","Colombia"],
+      ["Spain","Norway"],["Canada","South Africa"],["Argentina","Austria"],
+      ["Portugal","Croatia"],["Germany","Japan"],["Germany","Paraguay"],
+    ];
+    const deleted = [];
+    for (const [h,a] of R32_PAIRS) {
+      await kv.del(kvKey(h,a)).catch(()=>{});
+      delete memCache[`${h}|${a}`];
+      deleted.push(`${h}|${a}`);
+    }
+    // Also clear the scorers aggregate so it gets rebuilt from clean data
+    await kv.del(SCORERS_AGGREGATE_KEY).catch(()=>{});
+    return res.status(200).json({ ok:true, deleted, note:"Scorers aggregate also cleared. Run backfill then rebuild-scorers." });
+  }
+
   if (req.query.action === "rebuild-scorers") {
     try {
       res.setHeader("Cache-Control", "no-store");
