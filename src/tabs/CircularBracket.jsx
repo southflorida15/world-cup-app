@@ -233,49 +233,60 @@ export default function CircularBracket({
     drawRound(QF_SEGS,  RQF, RSF, (RQF+RSF)/2, WIN_SZ.sf);
     drawRound(SF_SEGS,  RSF, RFIN,(RSF+RFIN)/2, WIN_SZ.fin);
 
-    // ── R16 pairing: V-lines from outer flags to match bar at RB ──────
-    // Each R16 match spans 4 spokes. Its two R32 opponents sit at the
-    // midpoints of the two inner 2-spoke halves of that span.
-    // Draw two spokes from the flag edge → the RB match bar midpoint.
+    // ── R16 pairing: connect each pair of flags to their shared R32 match bar ──
+    // For each R16 match, there are 2 R32 matches feeding it.
+    // Each R32 match has 2 outer flags. So 4 flags total feed one R16 match.
+    // Draw: flag1 → R32-bar-midpoint, flag2 → R32-bar-midpoint (both flags of same R32 match)
+    // Then R32-bar-midpoint is already connected inward by drawRound(R32_SEGS).
+    // The R16 pairings just need to show which two R32 bar midpoints face each other.
     for (const [idStr, [s, e]] of Object.entries(R16_SEGS)) {
       const id   = Number(idStr);
       const m    = getMatch(id);
       const hasW = !!m.winner;
-
-      // The two R32 winner angles
-      const hAngle = degOf(s)   + 360/32;
-      const aAngle = degOf(s+2) + 360/32;
-      const jAngle = (hAngle + aAngle) / 2; // = match midpoint at RB
-
       const hWon = m.winner === m.home;
       const aWon = m.winner === m.away;
-      const pairCol = hasW ? LINE_WIN : "rgba(255,215,60,0.40)";
-      const pairW   = hasW ? LW : 1.1;
 
-      // Each flag's edge point → the RB bar midpoint
-      const [hx, hy] = pt(hAngle, RF - FLAG_R - 1);
-      const [ax, ay] = pt(aAngle, RF - FLAG_R - 1);
-      const [jx, jy] = pt(jAngle, RB); // this IS the bar midpoint drawn by drawRound
+      // The two R32 bar midpoints that feed this R16 match
+      // R32 home match bar midpoint: centre of spokes s, s+1 → angle = deg(s) + SPOKE
+      // R32 away match bar midpoint: centre of spokes s+2, s+3 → angle = deg(s+2) + SPOKE
+      const SPOKE = 360/32;
+      const hBarAngle = degOf(s)   + SPOKE; // midpoint of first R32 match
+      const aBarAngle = degOf(s+2) + SPOKE; // midpoint of second R32 match
+      const r16MidAngle = (hBarAngle + aBarAngle) / 2;
 
-      line(hx, hy, jx, jy, hWon ? LINE_WIN : pairCol, hWon ? LW+0.4 : pairW);
-      line(ax, ay, jx, jy, aWon ? LINE_WIN : pairCol, aWon ? LW+0.4 : pairW);
-    }
+      // The outer flags for each R32 match
+      const hFlagA = degOf(s)   + SPOKE/2; // home-team flag of first R32
+      const hFlagB = degOf(s+1) + SPOKE/2; // away-team flag of first R32
+      const aFlagA = degOf(s+2) + SPOKE/2; // home-team flag of second R32
+      const aFlagB = degOf(s+3) + SPOKE/2; // away-team flag of second R32
 
-    // ── Connector lines: outer flag → RB ring ─────────────────────────
-    for (let i = 0; i < 32; i++) {
-      const { team, matchId } = slots[i];
-      const m = getMatch(matchId);
-      const isW    = m.winner === team;
-      const isElim = m.winner && !isW;
-      const angle  = degOf(i) + 360/32/2;
-      const [fx, fy] = pt(angle, RF);
-      const [bx, by] = pt(angle, RB);
-      line(fx,fy, bx,by,
-        isW    ? "rgba(255,210,60,0.5)"  :
-        isElim ? "rgba(255,255,255,0.04)" :
-                 "rgba(255,255,255,0.10)",
-        isW ? 1.4 : 0.6
-      );
+      const pairCol = hasW ? LINE_WIN : "rgba(255,215,60,0.38)";
+      const pairW   = hasW ? LW : 1.0;
+
+      // Lines: each flag → its R32 bar midpoint at RB
+      const [hBar_x, hBar_y] = pt(hBarAngle, RB);
+      const [aBar_x, aBar_y] = pt(aBarAngle, RB);
+
+      [[hFlagA, hFlagB], [aFlagA, aFlagB]].forEach(([fA, fB], side) => {
+        const barPt = side === 0 ? [hBar_x, hBar_y] : [aBar_x, aBar_y];
+        [fA, fB].forEach(flagAngle => {
+          const [fx, fy] = pt(flagAngle, RF - FLAG_R - 1);
+          line(fx, fy, barPt[0], barPt[1], pairCol, pairW);
+        });
+      });
+
+      // Dot at each R32 bar midpoint (where the two flags of that R32 meet)
+      dot(hBar_x, hBar_y, 2, hasW ? LINE_WIN : "rgba(255,215,60,0.5)");
+      dot(aBar_x, aBar_y, 2, hasW ? LINE_WIN : "rgba(255,215,60,0.5)");
+
+      // R16 bar: short arc connecting the two R32 bar midpoints at RB
+      const G = 0.4;
+      arc(RB, hBarAngle+G, aBarAngle-G,
+        hasW ? LINE_WIN : "rgba(255,215,60,0.45)", hasW ? LW : 1.0);
+
+      // Midpoint dot of R16 bar
+      const [r16x, r16y] = pt(r16MidAngle, RB);
+      dot(r16x, r16y, hasW ? 2.5 : 1.8, hasW ? LINE_WIN : "rgba(255,215,60,0.5)");
     }
 
     // ── Outer flag circles ─────────────────────────────────────────────
