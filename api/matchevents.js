@@ -1141,44 +1141,7 @@ export default async function handler(req, res) {
   }
 
   // Seed ESPN IDs for today + tomorrow
-  if (req.query.action === "flush-events") {
-    const R32_PAIRS = [
-      ["Mexico","South Africa"],["Ecuador","Iran"],["Netherlands","Colombia"],
-      ["Brazil","Ivory Coast"],["France","Paraguay"],["Ivory Coast","Norway"],
-      ["Mexico","DR Congo"],["England","DR Congo"],["England","Austria"],
-      ["United States","Egypt"],["Belgium","Senegal"],["Portugal","Colombia"],
-      ["Spain","Norway"],["Canada","South Africa"],["Argentina","Austria"],
-      ["Portugal","Croatia"],["Germany","Japan"],
-    ];
-    const deleted = [];
-    for (const [h,a] of R32_PAIRS) {
-      await kv.del(kvKey(h,a)).catch(()=>{});
-      delete memCache[`${h}|${a}`];
-      deleted.push(`${h}|${a}`);
-    }
-    return res.status(200).json({ ok: true, deleted });
-  }
-
-  if (req.query.action === "seed-ids") {
-    try {
-      const result = await seedESPNIds();
-      return res.status(200).json({ ok: true, ...result });
-    } catch(e) {
-      return res.status(500).json({ error: e.message });
-    }
-  }
-
-  // Auto-seed IDs once per day on first request
-  try {
-    const lastSeed = await kv.get("wc2026:espn_ids_seeded_date").catch(() => null);
-    const today = new Date().toISOString().slice(0, 10);
-    if (lastSeed !== today) {
-      seedESPNIds().catch(e => console.warn("[matchevents] auto-seed failed:", e.message));
-      await kv.set("wc2026:espn_ids_seeded_date", today, { ex: 86400 }).catch(() => {});
-    }
-  } catch(e) { /* non-critical */ }
-
-  let { home, away, debug, flush, fixtureId } = req.query;
+    let { home, away, debug, flush, fixtureId } = req.query;
   if ((!home || !away) && fixtureId && fixtureId.includes("|")) {
     [home, away] = fixtureId.split("|");
   }
