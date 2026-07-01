@@ -1121,6 +1121,24 @@ export default async function handler(req, res) {
   }
 
   // Seed ESPN IDs for today + tomorrow
+  if (req.query.action === "flush-events") {
+    const R32_PAIRS = [
+      ["Mexico","South Africa"],["Ecuador","Iran"],["Netherlands","Colombia"],
+      ["Brazil","Ivory Coast"],["France","Paraguay"],["Ivory Coast","Norway"],
+      ["Mexico","DR Congo"],["England","DR Congo"],["England","Austria"],
+      ["United States","Egypt"],["Belgium","Senegal"],["Portugal","Colombia"],
+      ["Spain","Norway"],["Canada","South Africa"],["Argentina","Austria"],
+      ["Portugal","Croatia"],["Germany","Japan"],
+    ];
+    const deleted = [];
+    for (const [h,a] of R32_PAIRS) {
+      await kv.del(kvKey(h,a)).catch(()=>{});
+      delete memCache[`${h}|${a}`];
+      deleted.push(`${h}|${a}`);
+    }
+    return res.status(200).json({ ok: true, deleted });
+  }
+
   if (req.query.action === "seed-ids") {
     try {
       const result = await seedESPNIds();
