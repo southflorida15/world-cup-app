@@ -4817,9 +4817,11 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
     });
     return { h, a };
   }, [events, match]);
-  const correctedSc = sc && eventsScore
-    ? { ...sc, hg: Math.max(sc.hg ?? 0, eventsScore.h), ag: Math.max(sc.ag ?? 0, eventsScore.a) }
-    : sc;
+  const correctedSc = sc && hasScore
+    ? sc  // trust getScore() — it comes from persisted Redis/ESPN data
+    : (sc && eventsScore)
+      ? { ...sc, hg: eventsScore.h, ag: eventsScore.a }  // fallback: no score yet, use event count
+      : sc;
 
   if (!match) return null;
 
