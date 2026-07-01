@@ -4721,14 +4721,37 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
     setEvents(null); setLoading(true); setEvOpen(true); setEvFilter(["Goal","Card","subst"]); setLineups(null); setCommentary([]); setMomentumData([]); setLineupsOpen(false); setStatsOpen(false); setMomentumOpen(false); setCommentaryOpen(false);
     fetchMatchEvents(`${match.home}|${match.away}`)
       .then(d => {
-        // Deduplicate events — ESPN sometimes returns the same event multiple times
+        // Deduplicate events — ESPN often sends the same event multiple times
+        // with slightly different data (e.g. one with player name, one without).
+        // Strategy: for Goals and Cards, keep the most informative version
+        // (the one with a player name) and discard bare duplicates at same minute.
         const rawEvents = d?.events || [];
+        // First pass: group by type+team+elapsed, keep the richest entry
+        const buckets = new Map();
+        rawEvents.forEach(ev => {
+          const key = `${ev.type}|${ev.team?.name ?? ""}|${ev.time?.elapsed ?? ""}`;
+          const existing = buckets.get(key);
+          if (!existing) {
+            buckets.set(key, ev);
+          } else {
+            // Keep the entry with more info (player name wins over no player name)
+            const existingScore = (existing.player?.name ? 1 : 0) + (existing.detail ? 1 : 0);
+            const newScore = (ev.player?.name ? 1 : 0) + (ev.detail ? 1 : 0);
+            if (newScore > existingScore) buckets.set(key, ev);
+          }
+        });
+        // For substitutions (multiple subs can happen at same minute), use full key
         const seen = new Set();
         const dedupedEvents = rawEvents.filter(ev => {
-          const key = `${ev.type}|${ev.time?.elapsed}|${ev.time?.extra ?? ""}|${ev.team?.name ?? ""}|${ev.player?.name ?? ""}|${ev.detail ?? ""}`;
-          if (seen.has(key)) return false;
-          seen.add(key);
-          return true;
+          if (ev.type === "subst") {
+            const key = `subst|${ev.team?.name ?? ""}|${ev.time?.elapsed ?? ""}|${ev.player?.name ?? ""}`;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          }
+          // For goals/cards: only keep the richest version from buckets
+          const key = `${ev.type}|${ev.team?.name ?? ""}|${ev.time?.elapsed ?? ""}`;
+          return buckets.get(key) === ev;
         });
         setEvents(dedupedEvents);
         setMatchStats(d?.stats || null);
