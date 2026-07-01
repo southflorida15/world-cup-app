@@ -1026,19 +1026,61 @@ async function backfillFinishedEvents({ limit = 10, force = false, targetHome = 
 
 
 
+// Cache for ESPN leaders data — refresh every 5 minutes
+let espnLeadersCache = null;
+let espnLeadersCacheTs = 0;
+const ESPN_LEADERS_TTL = 5 * 60 * 1000;
+
 async function getScorers() {
-  // IMPORTANT: derive the leaderboard from persisted per-match event caches on
-  // every request. The old mutable scorer aggregate was the source of the
-  // Messi 15 / Vinicius 10 inflation bug after the same matches were folded in
-  // more than once. This tournament is small, so recalculating from ~100 match
-  // event arrays is fast and keeps Stats, Home, and Top Scorers aligned.
+  // Fetch directly from ESPN leaders API — authoritative scorer data, no duplicate counting
+  if (espnLeadersCache && Date.now() - espnLeadersCacheTs < ESPN_LEADERS_TTL) {
+    return espnLeadersCache;
+  }
+  try {
+    const url = "https://sports.core.api.espn.com/v2/sports/soccer/leagues/fifa.world/leaders";
+    const r = await fetch(url, { headers: ESPN_HEADERS });
+    if (r.ok) {
+      const data = await r.json();
+      const result = parseESPNLeaders(data);
+      if (result.scorers.length > 0) {
+        espnLeadersCache = result;
+        espnLeadersCacheTs = Date.now();
+        return result;
+      }
+    }
+  } catch(e) {
+    console.warn("[getScorers] ESPN leaders fetch failed:", e.message);
+  }
+  // Fallback to persisted events aggregate
+  console.warn("[getScorers] falling back to KV aggregate");
   const result = await buildScorersFromPersistedEvents({ persist:false });
-  return {
-    scorers: result.scorers,
-    cards: result.cards,
-    matchCount: result.matchCount,
-    rebuiltAt: result.rebuiltAt,
-  };
+  return { scorers: result.scorers, cards: result.cards, matchCount: result.matchCount, rebuiltAt: result.rebuiltAt };
+}
+
+function parseESPNLeaders(data) {
+  const scorers = [];
+  for (const cat of (data.categories || [])) {
+    const nm = (cat.name || cat.displayName || "").toLowerCase();
+    for (const leader of (cat.leaders || [])) {
+      const athlete = leader.athlete;
+      const name = athlete?.displayName || athlete?.fullName || "";
+      const team = athlete?.team?.displayName || athlete?.teamName || "";
+      const val = Number(leader.value || 0);
+      if (!name) continue;
+      if (nm.includes("goal") && !nm.includes("against")) {
+        const ex = scorers.find(s => s.name === name);
+        if (ex) ex.goals = val;
+        else scorers.push({ name, team, goals: val, assists: 0 });
+      }
+      if (nm.includes("assist")) {
+        const ex = scorers.find(s => s.name === name);
+        if (ex) ex.assists = val;
+        else scorers.push({ name, team, goals: 0, assists: val });
+      }
+    }
+  }
+  scorers.sort((a, b) => b.goals - a.goals || b.assists - a.assists);
+  return { scorers: scorers.filter(s => s.goals > 0).slice(0, 30), cards: [], matchCount: 0, rebuiltAt: Date.now(), source: "espn_leaders" };
 }
 
 // ── Seed ESPN IDs for today + next 7 days + merge hardcoded ─────────────────
@@ -1089,6 +1131,31 @@ export default async function handler(req, res) {
 
   // Rebuild scorers/cards aggregate from persisted match event caches.
   // Use this if the leaderboard looks inflated or stale after parser changes.
+  if (req.query.action === "debug-events") {
+    // Show raw events from KV for a specific match to diagnose duplicates
+    // Usage: ?action=debug-events&home=Switzerland&away=Bosnia+%26+Herz.
+    const dh = normESPN(String(req.query.home || ""));
+    const da = normESPN(String(req.query.away || ""));
+    if (!dh || !da) return res.status(400).json({ error: "home and away required" });
+    const raw = await kv.get(kvKey(dh, da)).catch(() => null);
+    if (!raw) return res.status(200).json({ found: false, key: kvKey(dh, da) });
+    const goals = (raw.events || []).filter(e => e.type === "Goal");
+    return res.status(200).json({
+      found: true,
+      totalEvents: raw.events?.length,
+      goalCount: goals.length,
+      goals: goals.map(e => ({
+        player: e.player?.name,
+        team: e.team?.name,
+        elapsed: e.time?.elapsed,
+        extra: e.time?.extra,
+        display: e.time?.display,
+        detail: e.detail,
+        text: (e.text || "").slice(0, 60),
+      }))
+    });
+  }
+
   if (req.query.action === "flush-events") {
     const R32_PAIRS = [
       ["Mexico","South Africa"],["Ecuador","Iran"],["Netherlands","Colombia"],
