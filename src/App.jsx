@@ -4985,6 +4985,8 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
             const goals = correctedSc?.hg != null && correctedSc?.ag != null
               ? (correctedSc.hg + correctedSc.ag)
               : (events ? events.filter(e=>e.type==="Goal").length : 0);
+            const cards = events ? events.filter(e=>e.type==="Card").length : 0;
+            const redCards = (events||[]).filter(e=>e.type==="Card" && e.detail==="Red Card").length;
             const yellowCards = Math.max(0, cards - redCards);
             const timelineLabel = evOpen ? "Timeline" : `Timeline${events?.length ? ` · ${goals}⚽ ${yellowCards}🟨${redCards ? ` ${redCards}🟥` : ""}` : ""}`;
             const pill = (label, active, onClick, disabled) => (
