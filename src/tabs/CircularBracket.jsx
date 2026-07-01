@@ -191,8 +191,9 @@ export default function CircularBracket({
         const [jox, joy] = pt(am, rOuter);
         dot(jox, joy, hasW?2:1.2, hasW ? LINE_WIN : LINE_DIM);
 
-        // Convergence: both spokes lead to winner's angle on inner ring
-        const wAngle = hasW ? (hWon ? (a1+am)/2 : (am+a2)/2) : (a1+a2)/2;
+        // Both spokes converge to the MATCH midpoint on the inner ring
+        // (always the centre of the full match span — creates symmetric rings)
+        const wAngle = (a1 + a2) / 2;
         const [hMidX, hMidY] = pt((a1+am)/2, rOuter);
         const [aMidX, aMidY] = pt((am+a2)/2, rOuter);
         const [ix, iy]       = pt(wAngle, rInner);
