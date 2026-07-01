@@ -4721,37 +4721,35 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
     setEvents(null); setLoading(true); setEvOpen(true); setEvFilter(["Goal","Card","subst"]); setLineups(null); setCommentary([]); setMomentumData([]); setLineupsOpen(false); setStatsOpen(false); setMomentumOpen(false); setCommentaryOpen(false);
     fetchMatchEvents(`${match.home}|${match.away}`)
       .then(d => {
-        // Deduplicate events — ESPN often sends the same event multiple times
-        // with slightly different data (e.g. one with player name, one without).
-        // Strategy: for Goals and Cards, keep the most informative version
-        // (the one with a player name) and discard bare duplicates at same minute.
+        // Deduplicate events — ESPN often sends the same goal/card multiple times,
+        // sometimes with player name, sometimes without. Keep richest version per minute.
         const rawEvents = d?.events || [];
-        // First pass: group by type+team+elapsed, keep the richest entry
-        const buckets = new Map();
-        rawEvents.forEach(ev => {
+        const winnerIdx = new Map(); // key → index of best event so far
+        rawEvents.forEach((ev, i) => {
+          if (ev.type === "subst") return; // handle subs separately
           const key = `${ev.type}|${ev.team?.name ?? ""}|${ev.time?.elapsed ?? ""}`;
-          const existing = buckets.get(key);
-          if (!existing) {
-            buckets.set(key, ev);
+          const prev = winnerIdx.get(key);
+          if (prev === undefined) {
+            winnerIdx.set(key, i);
           } else {
-            // Keep the entry with more info (player name wins over no player name)
-            const existingScore = (existing.player?.name ? 1 : 0) + (existing.detail ? 1 : 0);
-            const newScore = (ev.player?.name ? 1 : 0) + (ev.detail ? 1 : 0);
-            if (newScore > existingScore) buckets.set(key, ev);
+            // Replace if this entry has more info
+            const prevEv = rawEvents[prev];
+            const prevRich = (prevEv.player?.name ? 2 : 0) + (prevEv.detail ? 1 : 0);
+            const curRich  = (ev.player?.name    ? 2 : 0) + (ev.detail  ? 1 : 0);
+            if (curRich > prevRich) winnerIdx.set(key, i);
           }
         });
-        // For substitutions (multiple subs can happen at same minute), use full key
-        const seen = new Set();
-        const dedupedEvents = rawEvents.filter(ev => {
+        const keepIdx = new Set(winnerIdx.values());
+        // For subs: dedup by full key including player names
+        const subSeen = new Set();
+        const dedupedEvents = rawEvents.filter((ev, i) => {
           if (ev.type === "subst") {
-            const key = `subst|${ev.team?.name ?? ""}|${ev.time?.elapsed ?? ""}|${ev.player?.name ?? ""}`;
-            if (seen.has(key)) return false;
-            seen.add(key);
+            const key = `subst|${ev.team?.name ?? ""}|${ev.time?.elapsed ?? ""}|${ev.player?.name ?? ""}|${ev.assist?.name ?? ""}`;
+            if (subSeen.has(key)) return false;
+            subSeen.add(key);
             return true;
           }
-          // For goals/cards: only keep the richest version from buckets
-          const key = `${ev.type}|${ev.team?.name ?? ""}|${ev.time?.elapsed ?? ""}`;
-          return buckets.get(key) === ev;
+          return keepIdx.has(i);
         });
         setEvents(dedupedEvents);
         setMatchStats(d?.stats || null);
