@@ -405,9 +405,12 @@ export default function CircularBracket({
     const h = getHit(e);
     if (h && onMatchTap) {
       const m = byId[h.matchId];
-      // Only open modal if match has real team names (not null/placeholder)
+      console.log("[CircularBracket] tap:", h.matchId, m);
       if (m && m.home && m.away && !m.home.includes("|") && m.home.length > 1) {
+        console.log("[CircularBracket] calling onMatchTap with:", m);
         onMatchTap(m);
+      } else {
+        console.log("[CircularBracket] skipped - missing or invalid teams:", m?.home, m?.away);
       }
     }
   }
