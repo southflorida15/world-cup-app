@@ -210,24 +210,22 @@ export default function CircularBracket({
         const id = Number(idStr);
         const m  = getMatch(id);
         const a1 = degOf(s), a2 = degOf(e);
-        const am = (a1 + a2) / 2; // match midpoint = winner angle
+        const am = (a1 + a2) / 2;
         const hA = (a1 + am) / 2; // home input angle
         const aA = (am + a2) / 2; // away input angle
         const hasW = !!m.winner;
         const lCol = hasW ? LINE_WIN : LINE_UPCOMING;
         const lW   = hasW ? LW : LW_DIM;
 
-        // Match bar arc at rOuter
-        arc(rOuter, hA+0.5, aA-0.5, lCol, lW);
-
-        // Two spokes converging on the winner position at rWinner
+        // Two clean lines from each input point → winner convergence point
+        // No arcs — avoids the polygon fill effect on large spans
         const [hx, hy] = pt(hA, rOuter);
         const [ax, ay] = pt(aA, rOuter);
         const [wx, wy] = pt(am, rWinner);
         line(hx, hy, wx, wy, lCol, lW);
         line(ax, ay, wx, wy, lCol, lW);
 
-        // Winner flag AT the convergence point (rWinner)
+        // Winner flag AT the convergence point
         if (hasW) {
           drawFlag(m.winner, wx, wy, FLAG_R, 1,
             "rgba(255,215,60,0.85)", 1.5, "rgba(255,200,40,0.3)");
@@ -285,14 +283,13 @@ export default function CircularBracket({
       const [hBar_x, hBar_y] = pt(hBarAngle, RB);
       const [aBar_x, aBar_y] = pt(aBarAngle, RB);
 
-      // 1. Outer flags → R32 bar at RB
-      [[hFlagA, hFlagB], [aFlagA, aFlagB]].forEach(([fA, fB], side) => {
-        const [bx, by] = side === 0 ? [hBar_x, hBar_y] : [aBar_x, aBar_y];
-        [fA, fB].forEach(a => {
-          const [fx, fy] = pt(a, RF - FLAG_R - 1);
-          line(fx, fy, bx, by, lCol, lW);
-        });
-      });
+      // 1. Two lines from outer ring midpoints → R32 bar at RB
+      //    Use the R32 match midpoint angle (between the two flags), not individual flags
+      //    This gives clean single lines instead of 4 lines creating a mesh
+      const [hMidX, hMidY] = pt(hBarAngle, RF - FLAG_R - 2);
+      const [aMidX, aMidY] = pt(aBarAngle, RF - FLAG_R - 2);
+      line(hMidX, hMidY, hBar_x, hBar_y, lCol, lW);
+      line(aMidX, aMidY, aBar_x, aBar_y, lCol, lW);
 
       // 2. R32 bar → R32 winner flag AT RW1
       const [hW1x, hW1y] = pt(hBarAngle, RW1);
@@ -351,19 +348,19 @@ export default function CircularBracket({
       const isW    = m.winner === team;
       const isElim = m.winner && !isW;
       const angle  = degOf(i) + 360/32/2;
-      const labelR = RF + FLAG_R + 10;
+      const labelR = RF + FLAG_R + 9;
       const [lx, ly] = pt(angle, labelR);
-
       const code = FIFA3[team] || (team ? team.slice(0,3).toUpperCase() : "");
       if (!code) continue;
 
       ctx.save();
       ctx.translate(lx, ly);
-      // Rotate text to read outward from centre
-      const flip = angle > 180;
-      ctx.rotate(toRad(flip ? angle + 90 : angle - 90));
-      if (flip) ctx.rotate(Math.PI);
-
+      // Rotate so text reads outward from centre on both sides of the circle
+      // Right half (0-180°): rotate by (angle-90) so text reads left→right outward
+      // Left half (180-360°): rotate by (angle+90) then flip so text still reads outward
+      const onRight = angle <= 180;
+      ctx.rotate(toRad(angle - 90));
+      if (!onRight) ctx.rotate(Math.PI); // flip text on left half
       ctx.font = `${isW ? "bold " : ""}9px system-ui, sans-serif`;
       ctx.textAlign  = "center";
       ctx.textBaseline = "middle";
