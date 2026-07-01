@@ -306,15 +306,17 @@ export default function CircularBracket({
       if (mA.winner) drawFlag(mA.winner, aW1x, aW1y, FLAG_R, 1,
         "rgba(255,215,60,0.85)", 1.5, "rgba(255,200,40,0.3)");
 
-      // 4. From each R32 winner → converge at R16 midpoint AT RW1
-      //    This is the key: the R16 "match bar" connects the two R32 winners
-      const [r16x, r16y] = pt(r16MidAngle, RW1);
-      if (mH.winner || !hasW) line(hW1x, hW1y, r16x, r16y, lColR16, lWR16);
-      if (mA.winner || !hasW) line(aW1x, aW1y, r16x, r16y, lColR16, lWR16);
+      // 4. From each R32 winner flag → converge inward to R16 junction
+      //    Junction sits INSIDE RW1 at radius RW1*0.78, at the match midpoint angle
+      //    This makes the connecting line clearly visible between the two R32 winner flags
+      const junctionR = (RW1 + RW2) / 2;  // midway between RW1 and RW2
+      const [jx, jy] = pt(r16MidAngle, junctionR);
+      line(hW1x, hW1y, jx, jy, lColR16, lWR16);
+      line(aW1x, aW1y, jx, jy, lColR16, lWR16);
 
-      // 5. Single spoke inward: R16 midpoint → R16 winner AT RW2
+      // 5. Single spoke inward: junction → R16 winner AT RW2
       const [r16InnerX, r16InnerY] = pt(r16MidAngle, RW2);
-      line(r16x, r16y, r16InnerX, r16InnerY, lColR16, lWR16);
+      line(jx, jy, r16InnerX, r16InnerY, lColR16, lWR16);
 
       // 6. R16 winner flag AT RW2
       if (hasW) drawFlag(m.winner, r16InnerX, r16InnerY, FLAG_R, 1,
