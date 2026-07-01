@@ -4721,7 +4721,16 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
     setEvents(null); setLoading(true); setEvOpen(true); setEvFilter(["Goal","Card","subst"]); setLineups(null); setCommentary([]); setMomentumData([]); setLineupsOpen(false); setStatsOpen(false); setMomentumOpen(false); setCommentaryOpen(false);
     fetchMatchEvents(`${match.home}|${match.away}`)
       .then(d => {
-        setEvents(d?.events || []);
+        // Deduplicate events — ESPN sometimes returns the same event multiple times
+        const rawEvents = d?.events || [];
+        const seen = new Set();
+        const dedupedEvents = rawEvents.filter(ev => {
+          const key = `${ev.type}|${ev.time?.elapsed}|${ev.time?.extra ?? ""}|${ev.team?.name ?? ""}|${ev.player?.name ?? ""}|${ev.detail ?? ""}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+        setEvents(dedupedEvents);
         setMatchStats(d?.stats || null);
         setLineups(d?.lineups || null);
         setCommentary(d?.commentary || []);
