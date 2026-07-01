@@ -405,7 +405,10 @@ export default function CircularBracket({
     const h = getHit(e);
     if (h && onMatchTap) {
       const m = byId[h.matchId];
-      if (m) onMatchTap(m);
+      // Only open modal if match has real team names (not null/placeholder)
+      if (m && m.home && m.away && !m.home.includes("|") && m.home.length > 1) {
+        onMatchTap(m);
+      }
     }
   }
 
@@ -443,7 +446,10 @@ export default function CircularBracket({
       }}>
         {hovered ? (() => {
           const m = getMatch(hovered.matchId);
-          const h = m.home||"TBD", a = m.away||"TBD", w = m.winner;
+          const h = m.home || hovered.team || "TBD";
+          const a = m.away || "TBD";
+          const w = m.winner;
+          const canTap = m.home && m.away;
           return (
             <>
               <span style={{ fontWeight:w===h?700:400, color:w===h?col2.gold:col2.mid }}>
@@ -453,6 +459,7 @@ export default function CircularBracket({
               <span style={{ fontWeight:w===a?700:400, color:w===a?col2.gold:col2.mid }}>
                 {w===a&&"✅ "}{a}
               </span>
+              {canTap && <span style={{ fontSize:10, color:col2.dim }}>· tap to open</span>}
             </>
           );
         })() : (
