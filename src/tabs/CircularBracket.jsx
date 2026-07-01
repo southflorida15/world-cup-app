@@ -55,7 +55,7 @@ function toRad(d)  { return (d - 90) * Math.PI / 180; }
 function pt(d, r)  { const a = toRad(d); return [CX + r*Math.cos(a), CY + r*Math.sin(a)]; }
 
 export default function CircularBracket({
-  bracket, language="en", C, FLAG_CODES_MAP={}, onMatchTap,
+  bracket, language="en", C, FLAG_CODES_MAP={}, MATCHES=[], onMatchTap,
 }) {
   const canvasRef  = useRef(null);
   const imgsRef    = useRef({});
@@ -75,7 +75,7 @@ export default function CircularBracket({
     ring:  C?.b1    || "#1a3828",
   };
 
-  // Index bracket matches by id
+  // Index bracket matches by id (for winner/result data)
   const byId = {};
   ["r32","r16","qf","sf","final"].forEach(key => {
     (bracket?.[key] || []).forEach(m => { byId[Number(m.match)] = m; });
@@ -83,6 +83,13 @@ export default function CircularBracket({
   function getMatch(id) {
     return byId[id] || { match:id, home:null, away:null, winner:null };
   }
+
+  // Index full MATCHES array by id (has venue, date, tv etc. needed by MatchEventsModal)
+  const fullById = useMemo(() => {
+    const map = {};
+    (MATCHES || []).forEach(m => { map[m.id] = m; });
+    return map;
+  }, [MATCHES]);
 
   // Build 32 outer slots from R32_ORDER
   const slots = [];
@@ -404,14 +411,15 @@ export default function CircularBracket({
     e.preventDefault();
     const h = getHit(e);
     if (h && onMatchTap) {
-      const m = byId[h.matchId];
-      console.log("[CircularBracket] tap:", h.matchId, m);
-      if (m && m.home && m.away && !m.home.includes("|") && m.home.length > 1) {
-        console.log("[CircularBracket] calling onMatchTap with:", m);
-        onMatchTap(m);
-      } else {
-        console.log("[CircularBracket] skipped - missing or invalid teams:", m?.home, m?.away);
-      }
+      // Use bracket byId for winner/score, but merge with full MATCHES entry for venue/date/tv
+      const bracketM = byId[h.matchId];
+      const fullM    = fullById[h.matchId];
+      if (!bracketM || !bracketM.home || !bracketM.away) return;
+      // Merge: full MATCHES fields + bracket winner overlay
+      const m = fullM
+        ? { ...fullM, home: bracketM.home, away: bracketM.away, winner: bracketM.winner }
+        : bracketM;
+      onMatchTap(m);
     }
   }
 

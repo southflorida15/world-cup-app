@@ -710,6 +710,7 @@ export default function MyBracketTab({
         C={C}
         getFlag={getFlag}
         FLAG_CODES_MAP={FLAG_CODES_MAP}
+        MATCHES={MATCHES}
         onMatchTap={onMatchTap}
       />
     ) : (
