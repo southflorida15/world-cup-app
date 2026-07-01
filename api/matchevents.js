@@ -78,7 +78,10 @@ const kvKey = (home, away) => `wc2026:events:${home}|${away}`;
 async function loadFromKV(home, away) {
   try {
     const data = await kv.get(kvKey(home, away));
-    return data || null;
+    if (!data) return null;
+    // Re-apply dedup on load in case cached data has duplicates from old saves
+    if (data.events) data.events = deduplicateEvents(data.events);
+    return data;
   } catch(e) {
     console.warn("[matchevents] KV load:", e.message);
     return null;
@@ -592,6 +595,34 @@ function normalizeCommentaryEvent(item, homeTeam) {
   };
 }
 
+function deduplicateEvents(events) {
+  const subSeen = new Set();
+  const goalCardBest = new Map();
+  events.forEach((ev, i) => {
+    if (ev.type === "subst") return;
+    const key = `${ev.type}|${ev.team?.name ?? ""}|${ev.time?.elapsed ?? ""}`;
+    const prev = goalCardBest.get(key);
+    if (prev === undefined) {
+      goalCardBest.set(key, i);
+    } else {
+      const prevEv = events[prev];
+      const prevRich = (prevEv.player?.name ? 2 : 0) + (prevEv.detail ? 1 : 0);
+      const curRich  = (ev.player?.name    ? 2 : 0) + (ev.detail  ? 1 : 0);
+      if (curRich > prevRich) goalCardBest.set(key, i);
+    }
+  });
+  const keepIdx = new Set(goalCardBest.values());
+  return events.filter((ev, i) => {
+    if (ev.type === "subst") {
+      const key = `subst|${ev.team?.name ?? ""}|${ev.time?.elapsed ?? ""}|${ev.player?.name ?? ""}|${ev.assist?.name ?? ""}`;
+      if (subSeen.has(key)) return false;
+      subSeen.add(key);
+      return true;
+    }
+    return keepIdx.has(i);
+  });
+}
+
 function parseEvents(data, homeTeam) {
   const events = [];
 
@@ -615,20 +646,7 @@ function parseEvents(data, homeTeam) {
     });
   });
 
-  const seen = new Set();
-  const deduped = events.filter(ev => {
-    const key = [
-      ev.type,
-      ev.detail,
-      ev.team?.name,
-      ev.player?.name,
-      ev.time?.display || `${ev.time?.elapsed || ""}+${ev.time?.extra || ""}`,
-      (ev.text || "").slice(0, 80),
-    ].join("|");
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+  const deduped = deduplicateEvents(events);
 
   return deduped.sort((a, b) => eventSortValue(a) - eventSortValue(b));
 }

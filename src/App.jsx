@@ -4721,37 +4721,7 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
     setEvents(null); setLoading(true); setEvOpen(true); setEvFilter(["Goal","Card","subst"]); setLineups(null); setCommentary([]); setMomentumData([]); setLineupsOpen(false); setStatsOpen(false); setMomentumOpen(false); setCommentaryOpen(false);
     fetchMatchEvents(`${match.home}|${match.away}`)
       .then(d => {
-        // Deduplicate events — ESPN often sends the same goal/card multiple times,
-        // sometimes with player name, sometimes without. Keep richest version per minute.
-        const rawEvents = d?.events || [];
-        const winnerIdx = new Map(); // key → index of best event so far
-        rawEvents.forEach((ev, i) => {
-          if (ev.type === "subst") return; // handle subs separately
-          const key = `${ev.type}|${ev.team?.name ?? ""}|${ev.time?.elapsed ?? ""}`;
-          const prev = winnerIdx.get(key);
-          if (prev === undefined) {
-            winnerIdx.set(key, i);
-          } else {
-            // Replace if this entry has more info
-            const prevEv = rawEvents[prev];
-            const prevRich = (prevEv.player?.name ? 2 : 0) + (prevEv.detail ? 1 : 0);
-            const curRich  = (ev.player?.name    ? 2 : 0) + (ev.detail  ? 1 : 0);
-            if (curRich > prevRich) winnerIdx.set(key, i);
-          }
-        });
-        const keepIdx = new Set(winnerIdx.values());
-        // For subs: dedup by full key including player names
-        const subSeen = new Set();
-        const dedupedEvents = rawEvents.filter((ev, i) => {
-          if (ev.type === "subst") {
-            const key = `subst|${ev.team?.name ?? ""}|${ev.time?.elapsed ?? ""}|${ev.player?.name ?? ""}|${ev.assist?.name ?? ""}`;
-            if (subSeen.has(key)) return false;
-            subSeen.add(key);
-            return true;
-          }
-          return keepIdx.has(i);
-        });
-        setEvents(dedupedEvents);
+        setEvents(d?.events || []);
         setMatchStats(d?.stats || null);
         setLineups(d?.lineups || null);
         setCommentary(d?.commentary || []);
