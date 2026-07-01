@@ -205,56 +205,77 @@ export default function CircularBracket({
     //   3. Winner flag drawn AT rWinner
     //   4. Caller is responsible for drawing the next spoke FROM rWinner inward
 
-    function drawMatchBar(segs, rOuter, rWinner) {
-      for (const [idStr, [s, e]] of Object.entries(segs)) {
-        const id = Number(idStr);
-        const m  = getMatch(id);
-        const a1 = degOf(s), a2 = degOf(e);
-        const am = (a1 + a2) / 2;
-        const hA = (a1 + am) / 2; // home input angle
-        const aA = (am + a2) / 2; // away input angle
+    // ── Draw bracket lines ─────────────────────────────────────────────
+    // Rule: lines only connect REAL flag positions to their convergence point.
+    // Never compute arbitrary angle midpoints — always use the exact angles
+    // where winner flags actually sit.
+    //
+    // Winner flag angles by round:
+    //   R32 winners: hBarAngle / aBarAngle per R16 match (computed in R16 loop)
+    //   R16 winners: r16MidAngle per R16 match
+    //   QF  winners: am of QF match (midpoint of its 8-spoke span)
+    //   SF  winners: am of SF match (midpoint of its 16-spoke span)
+
+    // QF: each QF match has 2 R16 winners as inputs.
+    // R16 match [s,s+4) winner sits at r16MidAngle = degOf(s) + 2*SPOKE
+    // QF match [s,s+8) has two R16 matches: [s,s+4) and [s+4,s+8)
+    // Their r16MidAngles: degOf(s)+2*SPOKE and degOf(s+4)+2*SPOKE
+    // QF winner sits at am = midpoint of [s,s+8) = degOf(s+4)
+    {
+      const SPOKE = 360/32;
+      for (const [idStr, [s, e]] of Object.entries(QF_SEGS)) {
+        const id = Number(idStr), m = getMatch(id);
         const hasW = !!m.winner;
         const lCol = hasW ? LINE_WIN : LINE_UPCOMING;
         const lW   = hasW ? LW : LW_DIM;
-
-        // Two clean lines from each input point → winner convergence point
-        // No arcs — avoids the polygon fill effect on large spans
-        const [hx, hy] = pt(hA, rOuter);
-        const [ax, ay] = pt(aA, rOuter);
-        const [wx, wy] = pt(am, rWinner);
-        line(hx, hy, wx, wy, lCol, lW);
-        line(ax, ay, wx, wy, lCol, lW);
-
-        // Winner flag AT the convergence point
-        if (hasW) {
-          drawFlag(m.winner, wx, wy, FLAG_R, 1,
-            "rgba(255,215,60,0.85)", 1.5, "rgba(255,200,40,0.3)");
-        }
+        const hAngle = degOf(s)   + 2*SPOKE; // R16 match 1 winner angle
+        const aAngle = degOf(s+4) + 2*SPOKE; // R16 match 2 winner angle
+        const wAngle = (hAngle + aAngle) / 2; // QF winner angle
+        const [hx,hy] = pt(hAngle, RW2);
+        const [ax,ay] = pt(aAngle, RW2);
+        const [wx,wy] = pt(wAngle, RW3);
+        line(hx,hy, wx,wy, lCol, lW);
+        line(ax,ay, wx,wy, lCol, lW);
+        if (hasW) drawFlag(m.winner, wx, wy, FLAG_R, 1,
+          "rgba(255,215,60,0.85)", 1.5, "rgba(255,200,40,0.3)");
       }
     }
 
-    // ── Draw all rounds ───────────────────────────────────────────────
-    // R32: outer flags (at RF edge) → bar at RB → winner flag at RW1
-    // Then spoke from each RW1 flag → bar at RW1 connecting R16 pairs → R16 winner at RW2
-    // etc.
+    // SF: each SF match has 2 QF winners as inputs.
+    // QF match [s,s+8) winner sits at degOf(s+4) (midpoint of 8-spoke span)
+    // SF match [s,s+16) has two QF matches: [s,s+8) and [s+8,s+16)
+    // Their winner angles: degOf(s+4) and degOf(s+12)
+    // SF winner sits at midpoint of [s,s+16) = degOf(s+8)
+    {
+      for (const [idStr, [s, e]] of Object.entries(SF_SEGS)) {
+        const id = Number(idStr), m = getMatch(id);
+        const hasW = !!m.winner;
+        const lCol = hasW ? LINE_WIN : LINE_UPCOMING;
+        const lW   = hasW ? LW : LW_DIM;
+        const hAngle = degOf(s+4);  // QF match 1 winner angle
+        const aAngle = degOf(s+12); // QF match 2 winner angle
+        const wAngle = degOf(s+8);  // SF winner angle
+        const [hx,hy] = pt(hAngle, RW3);
+        const [ax,ay] = pt(aAngle, RW3);
+        const [wx,wy] = pt(wAngle, RW4);
+        line(hx,hy, wx,wy, lCol, lW);
+        line(ax,ay, wx,wy, lCol, lW);
+        if (hasW) drawFlag(m.winner, wx, wy, FLAG_R, 1,
+          "rgba(255,215,60,0.85)", 1.5, "rgba(255,200,40,0.3)");
+      }
+    }
 
-    // QF/SF/Final use drawMatchBar with winner flags landing on the next ring
-    // They're drawn BEFORE the R16 section so flags render on top of lines
-
-    // SF: two QF winners (at RW3) → converge at RW4
-    drawMatchBar(SF_SEGS, RW3, RW4);
-    // QF: two R16 winners (at RW2) → converge at RW3
-    drawMatchBar(QF_SEGS, RW2, RW3);
-    // Final: two SF winners (at RW4) → converge at trophy
+    // Final: two SF winners converge at trophy centre
     {
       const m = getMatch(104);
       const hasW = !!m.winner;
       const lCol = hasW ? LINE_WIN : LINE_UPCOMING;
       const lW   = hasW ? LW : LW_DIM;
-      // SF101 winner sits at am=90° at RW4, SF102 winner at am=270° at RW4
-      const [h1x,h1y] = pt(90,  RW4);
-      const [h2x,h2y] = pt(270, RW4);
-      const [cx, cy]  = pt(0,   RFIN); // converge at centre (trophy)
+      // SF101 spans spokes 0-15, winner at degOf(8)=90°
+      // SF102 spans spokes 16-31, winner at degOf(24)=270°
+      const [h1x,h1y] = pt(degOf(8),  RW4);
+      const [h2x,h2y] = pt(degOf(24), RW4);
+      const [cx,cy]   = pt(0, RFIN);
       line(h1x,h1y, cx,cy, lCol, lW);
       line(h2x,h2y, cx,cy, lCol, lW);
     }
