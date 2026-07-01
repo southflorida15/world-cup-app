@@ -1136,6 +1136,26 @@ export default async function handler(req, res) {
   }
 
   // Seed ESPN IDs for today + tomorrow
+  if (req.query.action === "flush-events") {
+    // Delete KV event cache for all known R32 matches so they get re-fetched clean
+    const R32_PAIRS = [
+      ["Mexico","South Africa"],["Ecuador","Iran"],["Netherlands","Colombia"],
+      ["Brazil","Ivory Coast"],["France","Paraguay"],["Ivory Coast","Norway"],
+      ["Mexico","DR Congo"],["England","Austria"],["United States","Egypt"],
+      ["Belgium","Senegal"],["Portugal","Colombia"],["Spain","Norway"],
+      ["Canada","South Africa"],["Argentina","Austria"],["Portugal","Croatia"],
+      ["Germany","Japan"],
+    ];
+    const deleted = [];
+    for (const [h,a] of R32_PAIRS) {
+      const key = kvKey(h,a);
+      await kv.del(key).catch(()=>{});
+      delete memCache[`${h}|${a}`];
+      deleted.push(`${h}|${a}`);
+    }
+    return res.status(200).json({ ok: true, deleted });
+  }
+
   if (req.query.action === "seed-ids") {
     try {
       const result = await seedESPNIds();
