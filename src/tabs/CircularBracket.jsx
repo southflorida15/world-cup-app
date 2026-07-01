@@ -307,12 +307,11 @@ export default function CircularBracket({
         "rgba(255,215,60,0.85)", 1.5, "rgba(255,200,40,0.3)");
 
       // 4. From each R32 winner flag → converge inward to R16 junction
-      //    Junction sits INSIDE RW1 at radius RW1*0.78, at the match midpoint angle
-      //    This makes the connecting line clearly visible between the two R32 winner flags
-      const junctionR = (RW1 + RW2) / 2;  // midway between RW1 and RW2
+      //    Always solid gold — these teams ARE confirmed to face each other
+      const junctionR = (RW1 + RW2) / 2;
       const [jx, jy] = pt(r16MidAngle, junctionR);
-      line(hW1x, hW1y, jx, jy, lColR16, lWR16);
-      line(aW1x, aW1y, jx, jy, lColR16, lWR16);
+      line(hW1x, hW1y, jx, jy, LINE_WIN, LW);
+      line(aW1x, aW1y, jx, jy, LINE_WIN, LW);
 
       // 5. Single spoke inward: junction → R16 winner AT RW2
       const [r16InnerX, r16InnerY] = pt(r16MidAngle, RW2);
