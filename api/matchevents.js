@@ -1107,59 +1107,37 @@ async function getScorers() {
 }
 
 function parseESPNStatistics(text, category) {
-  // Extract leaders array for a given category name from the raw JSON text
-  // Uses string search to avoid parsing the full 666KB response
-  const marker = `"${category}"`;
+  const marker = `"name":"${category}"`;
   const idx = text.indexOf(marker);
   if (idx === -1) return [];
 
-  // Find the "leaders" array after the category name
-  const leadersIdx = text.indexOf('"leaders":[', idx);
-  if (leadersIdx === -1 || leadersIdx - idx > 500) return [];
+  // Find the leaders array start
+  const leadersStart = text.indexOf('"leaders":[', idx);
+  if (leadersStart === -1 || leadersStart - idx > 300) return [];
 
-  // Extract entries by finding each {..."value":N..."athlete":{..."displayName":"..."team":{..."displayName":"..."}} pattern
+  // Find end of this leaders array — next top-level stat category starts with },{"name":
+  const nextCat = text.indexOf('},{"name":', leadersStart);
+  const leadersEnd = nextCat > 0 ? nextCat + 1 : leadersStart + 150000;
+  const slice = text.slice(leadersStart + 10, Math.min(leadersEnd, leadersStart + 150000));
+
   const results = [];
-  let pos = leadersIdx + 10;
-  const isGoals   = category === "goalsLeaders";
-  const isAssists = category === "assistsLeaders";
-
-  // Find the closing bracket of the leaders array for this category
-  const nextCategory = text.indexOf('{"name":', leadersIdx + 100);
-  const endIdx = nextCategory > 0 ? nextCategory : leadersIdx + 200000;
-  const slice = text.slice(leadersIdx, Math.min(endIdx, leadersIdx + 100000));
-
-  // Parse each leader entry
-  const valueRe = /"value":([\d.]+)/g;
-  const nameRe  = /"displayName":"([^"]+)"/g;
-  const teamRe  = /"team":\{[^}]*"displayName":"([^"]+)"/g;
-
-  // Reset and extract structured entries by splitting on "athlete" boundaries
-  const entries = slice.split('"athlete":{');
-  entries.shift(); // remove prefix before first athlete
-
-  for (const entry of entries) {
-    if (results.length >= 30) break;
-    // Get value from before this athlete block (it precedes "athlete" key)
-    const beforeAthlete = slice.slice(
-      slice.lastIndexOf('"value":', slice.indexOf('"athlete":{' + entry.slice(0, 20))) ,
-      slice.indexOf('"athlete":{' + entry.slice(0, 20))
-    );
-    const valMatch = /"value":([\d.]+)/.exec(beforeAthlete);
-    const val = valMatch ? Number(valMatch[1]) : 0;
-
-    const nameMatch = /"displayName":"([^"]+)"/.exec(entry);
-    const teamMatch = /"team":\{[^}]*?"displayName":"([^"]+)"/.exec(entry);
-
-    if (nameMatch && val > 0) {
+  // Each entry looks like: {"displayValue":"...","value":6.0,"athlete":{..."displayName":"X"..."team":{..."displayName":"Y"...}}
+  // Split on entry boundaries
+  const entryRe = /"value":([\d.]+)[^{]*"athlete":\{[^{}]*"displayName":"([^"]+)"[^{}]*(?:\{[^{}]*\}[^{}]*)*?"team":\{[^{}]*?"displayName":"([^"]+)"/g;
+  let m;
+  while ((m = entryRe.exec(slice)) !== null && results.length < 30) {
+    const val  = Number(m[1]);
+    const name = m[2];
+    const team = m[3];
+    if (name && val > 0) {
       results.push({
-        name:    nameMatch[1],
-        team:    teamMatch?.[1] || "",
-        goals:   isGoals   ? val : 0,
-        assists: isAssists ? val : 0,
+        name,
+        team,
+        goals:   category === "goalsLeaders"   ? val : 0,
+        assists: category === "assistsLeaders" ? val : 0,
       });
     }
   }
-
   return results;
 }
 
