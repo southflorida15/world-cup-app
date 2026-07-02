@@ -1089,7 +1089,7 @@ export const Badge = ({children,color=C.green,style={}}) => (
       background:`${color}16`,
       border:`1px solid ${color}33`,
       color,
-      fontSize:11,
+      fontSize:13,
       fontWeight:700,
       whiteSpace:"nowrap",
       ...style
@@ -1112,7 +1112,7 @@ export const Pill = ({children,active,onClick,color=C.green,style={}}) => (
       border:`1px solid ${active?color:C.b1}`,
       background:active?`${color}16`:C.bg,
       color:active?color:C.mid,
-      fontSize:12,
+      fontSize:14,
       fontWeight:700,
       cursor:"pointer",
       whiteSpace:"nowrap",
@@ -1138,7 +1138,7 @@ const SectionTitle = ({icon,children,meta,actions=null,style={}}) => (
     <div style={{minWidth:0}}>
       <div style={{fontSize:15,color:C.green,fontWeight:900,lineHeight:1.15}}>
         {icon ? `${icon} ` : ""}{children}
-        {meta && <span style={{marginLeft:6,fontSize:11,color:C.dim,fontWeight:700}}>{meta}</span>}
+        {meta && <span style={{marginLeft:6,fontSize:13,color:C.dim,fontWeight:700}}>{meta}</span>}
       </div>
     </div>
     {actions}
@@ -1237,10 +1237,10 @@ function AddModal({ match, open, onClose, onCal, onRem }) {
         <div>
           <div style={{background:C.s2,borderRadius:10,padding:14,marginBottom:14}}>
             <div style={{fontWeight:700,color:C.text,marginBottom:3}}>{match.home} vs {match.away}</div>
-            <div style={{fontSize:12,color:C.dim}}>{match.date} · {match.time} · {match.venue}</div>
+            <div style={{fontSize:14,color:C.dim}}>{match.date} · {match.time} · {match.venue}</div>
           </div>
           <div style={{marginBottom:14}}>
-            <div style={{fontSize:12,color:C.mid,marginBottom:8,fontWeight:600}}>Show as</div>
+            <div style={{fontSize:14,color:C.mid,marginBottom:8,fontWeight:600}}>Show as</div>
             <div style={{display:"flex",gap:8}}>
               {["busy","free"].map(o=><button key={o} onClick={()=>setAvail(o)} style={{flex:1,padding:"10px 0",borderRadius:10,cursor:"pointer",border:`1px solid ${avail===o?C.green:C.b1}`,background:avail===o?`${C.green}22`:C.s2,color:avail===o?C.green:C.mid,fontSize:13,fontWeight:600}}>{o==="busy"?"🔴 Busy":"🟢 Free"}</button>)}
             </div>
@@ -1251,7 +1251,7 @@ function AddModal({ match, open, onClose, onCal, onRem }) {
       {tab==="rem" && (
         <div>
           <div style={{marginBottom:14}}>
-            <div style={{fontSize:12,color:C.mid,marginBottom:8,fontWeight:600}}>Remind me via</div>
+            <div style={{fontSize:14,color:C.mid,marginBottom:8,fontWeight:600}}>Remind me via</div>
             <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
               {[
                 ["push","🔔 Push"],
@@ -1259,7 +1259,7 @@ function AddModal({ match, open, onClose, onCal, onRem }) {
                 ["sms","📱 SMS"],
                 ["whatsapp","💬 WhatsApp"],
               ].map(([v,l])=>(
-                <button key={v} onClick={()=>setCh(v)} style={{flex:"1 1 auto",padding:"9px 6px",borderRadius:10,cursor:"pointer",border:`1px solid ${ch===v?C.gold:C.b1}`,background:ch===v?`${C.gold}22`:C.s2,color:ch===v?C.gold:C.mid,fontSize:12,fontWeight:600}}>{l}</button>
+                <button key={v} onClick={()=>setCh(v)} style={{flex:"1 1 auto",padding:"9px 6px",borderRadius:10,cursor:"pointer",border:`1px solid ${ch===v?C.gold:C.b1}`,background:ch===v?`${C.gold}22`:C.s2,color:ch===v?C.gold:C.mid,fontSize:14,fontWeight:600}}>{l}</button>
               ))}
             </div>
           </div>
@@ -1282,13 +1282,13 @@ function AddModal({ match, open, onClose, onCal, onRem }) {
           {/* Contact input for non-push channels */}
           {ch!=="push" && (
             <div style={{marginBottom:12}}>
-              <div style={{fontSize:12,color:C.mid,marginBottom:6,fontWeight:600}}>{ch==="email"?"Email":"Phone"}</div>
+              <div style={{fontSize:14,color:C.mid,marginBottom:6,fontWeight:600}}>{ch==="email"?"Email":"Phone"}</div>
               <input value={contact} onChange={e=>setContact(e.target.value)} placeholder={ch==="email"?"you@example.com":"+1 555 0000"} style={{width:"100%",padding:"10px 14px",background:C.s2,border:`1px solid ${C.b2}`,borderRadius:10,color:C.text,fontSize:14,outline:"none"}}/>
             </div>
           )}
 
           <div style={{marginBottom:14}}>
-            <div style={{fontSize:12,color:C.mid,marginBottom:6,fontWeight:600}}>How far in advance</div>
+            <div style={{fontSize:14,color:C.mid,marginBottom:6,fontWeight:600}}>How far in advance</div>
             <select value={mins} onChange={e=>setMins(Number(e.target.value))} style={{width:"100%",padding:"10px 14px",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:10,color:C.text,fontSize:14,outline:"none"}}>
               {RO.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}
             </select>
@@ -1403,14 +1403,14 @@ export function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favT
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 13px",borderBottom:`1px solid ${C.b1}`,background:C.s2}}>
           <div style={{display:"flex",alignItems:"center",gap:6,minWidth:0,flex:1}}>
             {m.group
-              ? <span style={{fontSize:11,fontWeight:700,color:C.green,background:`${C.green}18`,padding:"2px 7px",borderRadius:10,flexShrink:0}}>{tx("Group", "Grupo")} {m.group}</span>
-              : <span style={{fontSize:11,fontWeight:700,color:C.gold,background:`${C.gold}18`,padding:"2px 7px",borderRadius:10,flexShrink:0}}>{roundLabel(m.stage)}</span>
+              ? <span style={{fontSize:13,fontWeight:700,color:C.green,background:`${C.green}18`,padding:"2px 7px",borderRadius:10,flexShrink:0}}>{tx("Group", "Grupo")} {m.group}</span>
+              : <span style={{fontSize:13,fontWeight:700,color:C.gold,background:`${C.gold}18`,padding:"2px 7px",borderRadius:10,flexShrink:0}}>{roundLabel(m.stage)}</span>
             }
             <span style={{fontSize:10,color:C.dim,flexShrink:0}}>#{m.id}</span>
-            <span style={{fontSize:11,color:C.dim,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>📍 {String(dVenue || m.venue).split(",")[0]}</span>
+            <span style={{fontSize:13,color:C.dim,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>📍 {String(dVenue || m.venue).split(",")[0]}</span>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
-            <span style={{fontSize:12,fontWeight:600,color:C.text}}>{displayTime}</span>
+            <span style={{fontSize:14,fontWeight:600,color:C.text}}>{displayTime}</span>
             <span style={{fontSize:10,color:C.dim}}>{tzLabel}</span>
             <span style={{fontSize:10,color:C.dim,marginLeft:2}}>· FT</span>
           </div>
@@ -1441,17 +1441,17 @@ export function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favT
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 13px",borderBottom:`1px solid ${C.b1}`,background:C.s2}}>
         <div style={{display:"flex",alignItems:"center",gap:6,minWidth:0,flex:1}}>
           {m.group
-            ? <span style={{fontSize:11,fontWeight:700,color:C.green,background:`${C.green}18`,padding:"2px 7px",borderRadius:10,flexShrink:0}}>{tx("Group", "Grupo")} {m.group}</span>
-            : <span style={{fontSize:11,fontWeight:700,color:C.gold,background:`${C.gold}18`,padding:"2px 7px",borderRadius:10,flexShrink:0}}>{roundLabel(m.stage)}</span>
+            ? <span style={{fontSize:13,fontWeight:700,color:C.green,background:`${C.green}18`,padding:"2px 7px",borderRadius:10,flexShrink:0}}>{tx("Group", "Grupo")} {m.group}</span>
+            : <span style={{fontSize:13,fontWeight:700,color:C.gold,background:`${C.gold}18`,padding:"2px 7px",borderRadius:10,flexShrink:0}}>{roundLabel(m.stage)}</span>
           }
           <span style={{fontSize:10,color:C.dim,flexShrink:0}}>#{m.id}</span>
-          <span onClick={(e)=>{e.stopPropagation();openMaps(m.venue);}} style={{fontSize:11,color:finished?C.dim:C.mid,cursor:"pointer",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+          <span onClick={(e)=>{e.stopPropagation();openMaps(m.venue);}} style={{fontSize:13,color:finished?C.dim:C.mid,cursor:"pointer",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
             📍 {String(dVenue || m.venue).split(",")[0]}
           </span>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
           {live && <span style={{fontSize:10,fontWeight:700,color:C.green}}>🔴 {statusLabel(sc.status,sc.elapsed,sc.elapsedExtra)}</span>}
-          {!live && <span style={{fontSize:12,fontWeight:600,color:timeMode==="venue"?C.gold:C.text}}>{displayTime}</span>}
+          {!live && <span style={{fontSize:14,fontWeight:600,color:timeMode==="venue"?C.gold:C.text}}>{displayTime}</span>}
           {!live && <span style={{fontSize:10,color:C.dim}}>{tzLabel}</span>}
           {finished && <span style={{fontSize:10,color:C.dim,marginLeft:2}}>· {"FT"}</span>}
         </div>
@@ -1468,7 +1468,7 @@ export function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favT
           <div style={{textAlign:"center",minWidth:60,flexShrink:0}}>
             {countdown
               ? <div style={{fontSize:13,fontWeight:800,color:C.gold,fontFamily:"monospace",animation:"pulse 1s infinite",lineHeight:1}}>⏱ {countdown}</div>
-              : <div style={{fontSize:11,fontWeight:700,color:C.green,animation:"pulse 1s infinite"}}>{tx("🔴 Starting...", "🔴 Começando...")}</div>
+              : <div style={{fontSize:13,fontWeight:700,color:C.green,animation:"pulse 1s infinite"}}>{tx("🔴 Starting...", "🔴 Começando...")}</div>
             }
           </div>
         ) : hasScore ? (
@@ -1477,7 +1477,7 @@ export function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favT
           </div>
         ) : (
           <div style={{textAlign:"center",minWidth:60,flexShrink:0}}>
-            <span style={{fontSize:11,color:C.dim,fontWeight:700}}>{tx("VS", "x")}</span>
+            <span style={{fontSize:13,color:C.dim,fontWeight:700}}>{tx("VS", "x")}</span>
           </div>
         )}
         <span style={{flex:1,fontSize:14,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
@@ -1489,13 +1489,13 @@ export function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favT
 
       {/* Footer: TV + actions */}
       <div onClick={e=>e.stopPropagation()} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"5px 13px",borderTop:`1px solid ${C.b2}`,background:C.s2}}>
-        <div style={{fontSize:11,color:finished?C.dim:C.mid,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1}}>
+        <div style={{fontSize:13,color:finished?C.dim:C.mid,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1}}>
           {m.tv && <>📺 {isUS ? m.tv : bc.primary}</>}
         </div>
         <div style={{display:"flex",gap:5,alignItems:"center",flexShrink:0}}>
-          {onMatchTap && (live||finished||(MATCH_UTC[m.id]&&Date.now()>new Date(MATCH_UTC[m.id]).getTime())) && <button onClick={()=>onMatchTap(m)} style={{background:`${C.blue}18`,border:`1px solid ${C.blue}33`,color:C.blue,padding:"3px 8px",borderRadius:20,fontSize:11,fontWeight:600,cursor:"pointer"}}>{tx("Match Events", "Lances")}</button>}
+          {onMatchTap && (live||finished||(MATCH_UTC[m.id]&&Date.now()>new Date(MATCH_UTC[m.id]).getTime())) && <button onClick={()=>onMatchTap(m)} style={{background:`${C.blue}18`,border:`1px solid ${C.blue}33`,color:C.blue,padding:"3px 8px",borderRadius:20,fontSize:13,fontWeight:600,cursor:"pointer"}}>{tx("Match Events", "Lances")}</button>}
           {!finished && !live && (()=>{ const isSaved=savedIds.has(m.id); return (
-            <button onClick={()=>onAction(m)} style={{background:isSaved?`${C.gold}22`:`${C.green}22`,border:`1px solid ${isSaved?C.gold:C.greenS}`,color:isSaved?C.gold:C.green,padding:"3px 9px",borderRadius:20,fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
+            <button onClick={()=>onAction(m)} style={{background:isSaved?`${C.gold}22`:`${C.green}22`,border:`1px solid ${isSaved?C.gold:C.greenS}`,color:isSaved?C.gold:C.green,padding:"3px 9px",borderRadius:20,fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}>
               <StarIcon filled={isSaved} size={12}/>{isSaved?tx("Saved", "Salvo"):tx("Add", "Adicionar")}
             </button>
           ); })()}
@@ -1556,16 +1556,16 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=n
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <div style={{fontWeight:700,fontSize:15,color:C.green}}>{tx("LIVE SCORES", "PLACARES AO VIVO")}</div>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
-            {lastUpdate && <span style={{fontSize:11,color:C.dim}}>{tx("Updated", "Atualizado")} {lastUpdate}</span>}
+            {lastUpdate && <span style={{fontSize:13,color:C.dim}}>{tx("Updated", "Atualizado")} {lastUpdate}</span>}
           </div>
         </div>
       </div>
       
       <div style={{height:10}}/>
-      {liveMatches.length>0 && <div style={{marginBottom:16}}><div style={{fontSize:11,color:C.green,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>{tx("LIVE — TODAY", "AO VIVO — HOJE")}</div>{sortByKickoff(liveMatches).map(m=><MatchCard key={m.id} m={m} onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} savedIds={savedIds}/> )}</div>}
+      {liveMatches.length>0 && <div style={{marginBottom:16}}><div style={{fontSize:13,color:C.green,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>{tx("LIVE — TODAY", "AO VIVO — HOJE")}</div>{sortByKickoff(liveMatches).map(m=><MatchCard key={m.id} m={m} onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} savedIds={savedIds}/> )}</div>}
       {upcomingToday.length > 0 && (
         <div style={{marginBottom:16}}>
-          <div style={{fontSize:11,color:C.blue,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>
+          <div style={{fontSize:13,color:C.blue,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>
             {tx("TODAY — UPCOMING", "HOJE — PRÓXIMOS")}
           </div>
           {sortByKickoff(upcomingToday).map(m => (
@@ -1575,7 +1575,7 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=n
           ))}
         </div>
       )}
-      {finishedToday.length>0 && <div style={{marginTop:liveMatches.length?16:0}}><div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>{tx("TODAY'S RESULTS", "RESULTADOS DE HOJE")}</div>{sortByKickoff(finishedToday).map(m=><MatchCard key={m.id} m={m} onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} savedIds={savedIds}/> )}</div>}
+      {finishedToday.length>0 && <div style={{marginTop:liveMatches.length?16:0}}><div style={{fontSize:13,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>{tx("TODAY'S RESULTS", "RESULTADOS DE HOJE")}</div>{sortByKickoff(finishedToday).map(m=><MatchCard key={m.id} m={m} onAction={onAction} onMatchTap={onMatchTap} favTeam={favTeam} savedIds={savedIds}/> )}</div>}
       {liveMatches.length===0 && finishedToday.length===0 && upcomingToday.length===0 && !lastFetch && (
         <div style={{marginTop:8}}>
           {[1,2,3].map(i=><SkeletonMatchCard key={i}/>)}
@@ -1586,7 +1586,7 @@ function LiveTab({ onAction, onMatchTap=null, favTeam="", tabTop=116, savedIds=n
           <div style={{fontSize:"2.5rem",marginBottom:10}}>⚽</div>
           <div style={{fontWeight:700,fontSize:16,color:C.mid,marginBottom:6}}>{tx("No matches today", "Nenhum jogo hoje")}</div>
           <div style={{fontSize:13,color:C.dim}}>{tx("Live scores appear here on match days.", "Os placares ao vivo aparecem aqui nos dias de jogos.")}</div>
-          <div style={{fontSize:12,color:C.dim,marginTop:12}}>{tx("Tournament starts Jun 11, 2026", "O torneio começa em 11 de junho de 2026")}</div>
+          <div style={{fontSize:14,color:C.dim,marginTop:12}}>{tx("Tournament starts Jun 11, 2026", "O torneio começa em 11 de junho de 2026")}</div>
         </div>
       )}
     </div>
@@ -1757,13 +1757,13 @@ export function RecentForm({ team, staticData }) {
         return (
           <div key={i} style={{padding:"10px 14px",borderBottom:i<display.length-1?`1px solid ${C.b1}`:"none"}}>
             <div style={{display:"flex",alignItems:"center",gap:8}}>
-              <div style={{width:26,height:26,borderRadius:"50%",background:`${rc}22`,border:`2px solid ${rc}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,color:rc,flexShrink:0}}>{g.res}</div>
+              <div style={{width:26,height:26,borderRadius:"50%",background:`${rc}22`,border:`2px solid ${rc}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,color:rc,flexShrink:0}}>{g.res}</div>
               <div style={{flex:1}}>
                 <div style={{display:"flex",alignItems:"center",gap:8}}>
                   <span style={{fontWeight:700,color:C.text,fontSize:13}}>{tx("vs", "x")} {g.opp}</span>
                   <span style={{fontWeight:700,color:rc,fontSize:13}}>{g.score}</span>
                 </div>
-                <div style={{fontSize:11,color:C.dim,marginTop:2}}>{g.date}{g.loc ? ` · ${g.loc}` : ""}</div>
+                <div style={{fontSize:13,color:C.dim,marginTop:2}}>{g.date}{g.loc ? ` · ${g.loc}` : ""}</div>
               </div>
               <span style={{fontSize:10,padding:"2px 7px",borderRadius:10,
                 background:(g.comp==="World Cup 2026" || g.comp==="Copa do Mundo 2026")?`${C.green}22`:g.comp==="Friendly"?`${C.dim}22`:`${C.blue}18`,
@@ -1876,7 +1876,7 @@ export function OddsLineChart() {
         <div style={{position:"absolute",top:PT,left:Math.min(xScale(hover)+8, W-100),background:"#0c1a12",border:`1px solid #1a3828`,borderRadius:8,padding:"7px 10px",pointerEvents:"none",minWidth:90}}>
           <div style={{fontSize:10,color:"#3d6a4d",marginBottom:4,fontWeight:700}}>{pts[hover].date}</div>
           {CHART_TEAMS.slice().sort((a,b)=>(pts[hover][b]||0)-(pts[hover][a]||0)).map(team=>(
-            <div key={team} style={{display:"flex",justifyContent:"space-between",gap:8,fontSize:11,marginBottom:2}}>
+            <div key={team} style={{display:"flex",justifyContent:"space-between",gap:8,fontSize:13,marginBottom:2}}>
               <span style={{color:CHART_COLORS[team],fontWeight:600}}>{team}</span>
               <span style={{color:"#d4ead9",fontWeight:700}}>{pts[hover][team]}%</span>
             </div>
@@ -1963,7 +1963,7 @@ function H2HBar({ label, v1, v2, color1=C.green, color2=C.red }) {
   const p2=100-p1;
   return (
     <div style={{marginBottom:10}}>
-      <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:C.mid,marginBottom:4}}>
+      <div style={{display:"flex",justifyContent:"space-between",fontSize:13,color:C.mid,marginBottom:4}}>
         <span style={{fontWeight:700,color:color1}}>{v1}</span>
         <span style={{color:C.dim,fontSize:10}}>{label}</span>
         <span style={{fontWeight:700,color:color2}}>{v2}</span>
@@ -2061,7 +2061,7 @@ function YearDetailModal({ team, year, data, color, onClose }) {
       <div style={{marginBottom:8}}>
         <div style={{fontSize:9,color:C.dim,marginBottom:3}}>{label}</div>
         {players.map(p => (
-          <div key={p.name} style={{display:"flex",justifyContent:"space-between",fontSize:12,padding:"2px 0"}}>
+          <div key={p.name} style={{display:"flex",justifyContent:"space-between",fontSize:14,padding:"2px 0"}}>
             <span style={{color:C.text}}>{p.name}</span>
             <span style={{color:C.dim}}>{p.club}</span>
           </div>
@@ -2075,7 +2075,7 @@ function YearDetailModal({ team, year, data, color, onClose }) {
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:4}}>
           <div>
             <div style={{fontWeight:900,fontSize:16,color}}>{team} · {year}</div>
-            <div style={{fontSize:11,color:C.dim,marginTop:2}}>{data.host ? `${data.host} · ` : ""}{data.result}{data.matches ? ` · ${data.matches.length} ${data.matches.length===1?"match":"matches"}` : ""}{data.coach ? ` · Coach: ${data.coach}` : ""}</div>
+            <div style={{fontSize:13,color:C.dim,marginTop:2}}>{data.host ? `${data.host} · ` : ""}{data.result}{data.matches ? ` · ${data.matches.length} ${data.matches.length===1?"match":"matches"}` : ""}{data.coach ? ` · Coach: ${data.coach}` : ""}</div>
           </div>
           <button onClick={onClose} style={{background:"none",border:"none",color:C.dim,fontSize:20,cursor:"pointer",lineHeight:1,padding:4}}>✕</button>
         </div>
@@ -2085,7 +2085,7 @@ function YearDetailModal({ team, year, data, color, onClose }) {
             <div style={{fontSize:9,color:C.dim,fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:6}}>Matches</div>
             {data.matches.map((m,i) => (
               <div key={i} style={{padding:"6px 0",borderBottom:`1px solid ${C.b1}`}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:12}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:14}}>
                   <span style={{color:C.dim,minWidth:90}}>{m.stage}</span>
                   <span style={{flex:1,color:C.text,paddingLeft:6}}>vs {m.opponent}</span>
                   <span style={{fontWeight:800,color: m.result==="W"?C.green:m.result==="D"?C.gold:C.red}}>{m.score}</span>
@@ -2103,8 +2103,8 @@ function YearDetailModal({ team, year, data, color, onClose }) {
             <div style={{fontSize:9,color:C.dim,fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:6}}>Top Scorers · {year}</div>
             {data.topScorers.map((s,i) => (
               <div key={s.name} style={{display:"flex",alignItems:"center",gap:6,padding:"4px 0"}}>
-                <span style={{fontSize:12,minWidth:18}}>{i===0?"🥇":i===1?"🥈":"🥉"}</span>
-                <span style={{fontSize:12,color:C.text,flex:1}}>{s.name}</span>
+                <span style={{fontSize:14,minWidth:18}}>{i===0?"🥇":i===1?"🥈":"🥉"}</span>
+                <span style={{fontSize:14,color:C.text,flex:1}}>{s.name}</span>
                 <span style={{fontSize:13,fontWeight:700,color}}>{s.goals}⚽</span>
               </div>
             ))}
@@ -2207,7 +2207,7 @@ function ScorerLogModal({ team, scorer, color, onClose }) {
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:4}}>
           <div>
             <div style={{fontWeight:900,fontSize:16,color}}>{scorer.name}</div>
-            <div style={{fontSize:11,color:C.dim,marginTop:2}}>
+            <div style={{fontSize:13,color:C.dim,marginTop:2}}>
               {team} · {scorer.goals} career WC goals
               {scorer.liveGoals2026 > 0 && <span style={{color:C.red,fontWeight:700}}> ({scorer.liveGoals2026} live in 2026)</span>}
             </div>
@@ -2224,7 +2224,7 @@ function ScorerLogModal({ team, scorer, color, onClose }) {
         {!loading2026 && log.length === 0 ? (
           <div style={{textAlign:"center",padding:"24px 0"}}>
             <div style={{fontSize:"1.6rem",marginBottom:6}}>📭</div>
-            <div style={{fontSize:12,color:C.dim,lineHeight:1.6}}>
+            <div style={{fontSize:14,color:C.dim,lineHeight:1.6}}>
               No match-by-match data available for {scorer.name}. Our detailed match archive only covers 1982 onward — {scorer.name}'s World Cup career likely fell before that, or partially before it.
             </div>
           </div>
@@ -2237,13 +2237,13 @@ function ScorerLogModal({ team, scorer, color, onClose }) {
             )}
             {log.map((m, i) => (
               <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 0",borderBottom:i<log.length-1?`1px solid ${C.b1}`:"none"}}>
-                <div style={{minWidth:38,fontSize:12,fontWeight:800,color:m.year===2026?C.red:C.mid}}>{m.year}</div>
+                <div style={{minWidth:38,fontSize:14,fontWeight:800,color:m.year===2026?C.red:C.mid}}>{m.year}</div>
                 <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:12,color:C.text,fontWeight:600}}>vs {m.opponent}</div>
+                  <div style={{fontSize:14,color:C.text,fontWeight:600}}>vs {m.opponent}</div>
                   <div style={{fontSize:10,color:C.dim,marginTop:1}}>{m.stage} · {m.host}</div>
                 </div>
                 <div style={{textAlign:"right"}}>
-                  <div style={{fontSize:12,fontWeight:800,color:m.result==="W"?C.green:m.result==="D"?C.gold:m.result==="L"?C.red:C.dim}}>{m.score}</div>
+                  <div style={{fontSize:14,fontWeight:800,color:m.result==="W"?C.green:m.result==="D"?C.gold:m.result==="L"?C.red:C.dim}}>{m.score}</div>
                   <div style={{fontSize:10,color:C.dim,marginTop:1}}>{"⚽".repeat(Math.max(1, m.goals))}{m.isPK?" · PK":""}</div>
                 </div>
               </div>
@@ -2269,12 +2269,12 @@ export function TeamHistoryCard({ team, data, color }) {
     <div style={{padding:"20px 10px",textAlign:"center"}}>
       <div style={{fontSize:"1.6rem",marginBottom:6}}>📭</div>
       <div style={{fontSize:13,fontWeight:700,color,marginBottom:4}}>No data available</div>
-      <div style={{fontSize:11,color:C.dim,lineHeight:1.6}}>{team}'s World Cup history isn't in our database yet.</div>
+      <div style={{fontSize:13,color:C.dim,lineHeight:1.6}}>{team}'s World Cup history isn't in our database yet.</div>
     </div>
   );
   const apps = d.appearances || [];
   if (apps.length === 0) return (
-    <div style={{fontSize:12,color:C.dim,textAlign:"center",padding:"16px 0"}}>No World Cup history found</div>
+    <div style={{fontSize:14,color:C.dim,textAlign:"center",padding:"16px 0"}}>No World Cup history found</div>
   );
   const past = [...apps].filter(a=>a.year<2026).reverse();
   const st = wcStats(apps);
@@ -2315,13 +2315,13 @@ export function TeamHistoryCard({ team, data, color }) {
           <div style={{fontSize:9,color:C.dim,fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:5}}>ALL-TIME TOP SCORERS</div>
           {topScorers.map((s,i) => (
             <button key={s.name} onClick={()=>setSelectedScorer(s)} style={{width:"100%",display:"flex",alignItems:"center",gap:6,padding:"4px 0",borderBottom:`1px solid ${C.b1}`,background:"none",border:"none",borderBottomWidth:1,borderBottomStyle:"solid",borderBottomColor:C.b1,cursor:"pointer",textAlign:"left"}}>
-              <span style={{fontSize:12,minWidth:18,textAlign:"center",color:C.dim}}>{i===0?"🥇":i===1?"🥈":i===2?"🥉":`${i+1}.`}</span>
-              <span style={{fontSize:12,color:C.text,flex:1}}>{s.name}</span>
+              <span style={{fontSize:14,minWidth:18,textAlign:"center",color:C.dim}}>{i===0?"🥇":i===1?"🥈":i===2?"🥉":`${i+1}.`}</span>
+              <span style={{fontSize:14,color:C.text,flex:1}}>{s.name}</span>
               {s.liveGoals2026 > 0 && (
                 <span style={{fontSize:9,color:C.red,fontWeight:700,background:`${C.red}18`,padding:"1px 5px",borderRadius:6,whiteSpace:"nowrap"}}>+{s.liveGoals2026} in '26</span>
               )}
               <span style={{fontSize:13,fontWeight:700,color}}>{s.goals}⚽</span>
-              <span style={{fontSize:11,color:C.dim}}>›</span>
+              <span style={{fontSize:13,color:C.dim}}>›</span>
             </button>
           ))}
         </div>
@@ -2362,11 +2362,11 @@ export function TeamHistoryCard({ team, data, color }) {
       <div style={{background:C.s2,borderRadius:8,padding:"7px 10px",marginBottom:10,border:`1px solid ${C.b1}`}}>
         <div style={{fontSize:9,color:C.dim,fontWeight:700,marginBottom:4}}>GROUP STAGE RECORD</div>
         <div style={{display:"flex",gap:6,alignItems:"center"}}>
-          <span style={{fontWeight:700,color:C.green,fontSize:12}}>{st.gs_w}W</span>
+          <span style={{fontWeight:700,color:C.green,fontSize:14}}>{st.gs_w}W</span>
           <span style={{color:C.dim,fontSize:10}}>/</span>
-          <span style={{fontWeight:700,color:C.gold,fontSize:12}}>{st.gs_d}D</span>
+          <span style={{fontWeight:700,color:C.gold,fontSize:14}}>{st.gs_d}D</span>
           <span style={{color:C.dim,fontSize:10}}>/</span>
-          <span style={{fontWeight:700,color:C.red,fontSize:12}}>{st.gs_l}L</span>
+          <span style={{fontWeight:700,color:C.red,fontSize:14}}>{st.gs_l}L</span>
           <span style={{fontSize:9,color:C.dim,marginLeft:2}}>({st.gs_p} played)</span>
         </div>
       </div>
@@ -2385,13 +2385,13 @@ export function TeamHistoryCard({ team, data, color }) {
           const detail = WC_TEAM_HISTORY[team]?.[a.year];
           return (
             <div key={a.year} onClick={()=>detail&&setExpandedYear(a.year)} style={{display:"flex",alignItems:"center",gap:6,padding:"5px 0",borderBottom:`1px solid ${C.b1}`,cursor:detail?"pointer":"default"}}>
-              <span style={{fontSize:11,fontWeight:700,color:C.mid,minWidth:32}}>{a.year}</span>
+              <span style={{fontSize:13,fontWeight:700,color:C.mid,minWidth:32}}>{a.year}</span>
               <div style={{flex:1}}>
-                <div style={{fontSize:11,fontWeight:700,color:pc}}>{posLabel2(a.finalPosition)}</div>
+                <div style={{fontSize:13,fontWeight:700,color:pc}}>{posLabel2(a.finalPosition)}</div>
                 {gs && <div style={{fontSize:9,color:C.dim}}>Grp {gs.group||"?"} · {gw}W {gd}D {gl}L · {gf}–{ga}{detail?.matches ? ` · ${detail.matches.length} matches played` : ""}</div>}
               </div>
-              <div style={{fontSize:11,fontWeight:600,color:C.dim}}>{a.goalsScored||0}⚽</div>
-              {detail && <span style={{fontSize:11,color,marginLeft:2}}>›</span>}
+              <div style={{fontSize:13,fontWeight:600,color:C.dim}}>{a.goalsScored||0}⚽</div>
+              {detail && <span style={{fontSize:13,color,marginLeft:2}}>›</span>}
             </div>
           );
         })}
@@ -2515,7 +2515,7 @@ function H2HTab({ tabTop=116 }) {
           <div style={{padding:"10px 14px",borderBottom:`1px solid ${C.b1}`}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
               <span style={{fontWeight:700,color:C.green,fontSize:13}}>🎯 POLYMARKET · WORLD CUP WINNER</span>
-              <a href="https://polymarket.com/event/world-cup-winner" target="_blank" rel="noopener noreferrer" style={{fontSize:11,color:C.green,textDecoration:"none",border:`1px solid ${C.greenS}`,padding:"3px 9px",borderRadius:20,fontWeight:600}}>Trade →</a>
+              <a href="https://polymarket.com/event/world-cup-winner" target="_blank" rel="noopener noreferrer" style={{fontSize:13,color:C.green,textDecoration:"none",border:`1px solid ${C.greenS}`,padding:"3px 9px",borderRadius:20,fontWeight:600}}>Trade →</a>
             </div>
           </div>
           <div style={{padding:12,display:"flex",gap:10}}>
@@ -2577,7 +2577,7 @@ function H2HTab({ tabTop=116 }) {
                 <div style={{padding:"8px 10px"}}>
                   {data
                     ? <TeamHistoryCard team={team} data={data} color={color}/>
-                    : <div style={{fontSize:12,color:C.dim,textAlign:"center",padding:"16px 0"}}>No data available</div>
+                    : <div style={{fontSize:14,color:C.dim,textAlign:"center",padding:"16px 0"}}>No data available</div>
                   }
                 </div>
               </Card>
@@ -2734,11 +2734,11 @@ function BracketMatchup({ match, t1, t2, winner, onPick, interactive=false, comp
       >
         <span style={flagStyle}><Crest team={team||"TBD"} size={compact?16:22}/></span>
         <span style={{fontSize:compact?12:14,color:nameColor,fontWeight:isW||isClinched?800:600,fontStyle:isProvisional?"italic":"normal",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",flex:1,opacity:hasRealTeam?1:0.65}}>{shownTeam}</span>
-        {isClinched && !isW && <span title="Clinched into this slot" style={{fontSize:11}}>🔒</span>}
+        {isClinched && !isW && <span title="Clinched into this slot" style={{fontSize:13}}>🔒</span>}
         {isProvisional && <span style={{fontSize:8,color:C.dim,fontWeight:700,letterSpacing:"0.04em",whiteSpace:"nowrap"}}>{language === "pt-BR" ? "LIDERANDO" : "LEADING"}</span>}
         {sc && i===0 && <span style={{fontSize:compact?12:13,fontWeight:800,color:live?C.green:C.text,fontFamily:"monospace"}}>{sc.hg}</span>}
         {sc && i===1 && <span style={{fontSize:compact?12:13,fontWeight:800,color:live?C.green:C.text,fontFamily:"monospace"}}>{sc.ag}</span>}
-        {isW && <span style={{fontSize:12,color:C.green,fontWeight:900}}>✓</span>}
+        {isW && <span style={{fontSize:14,color:C.green,fontWeight:900}}>✓</span>}
       </button>
     );
   };
@@ -2906,7 +2906,7 @@ function WideBracketView({ rounds, matchesById, bracket, pickMode="auto", onPick
               {/* Right stub from sfR */}
               <div style={{position:"absolute",top:finalTop+CH/2,right:-GAP,width:GAP,borderTop:`1.5px solid ${C.b2}`,opacity:0.6}}/>
               {/* FINAL label just above the card */}
-              <div style={{position:"absolute",top:finalTop-22,left:0,width:190,textAlign:"center",fontSize:11,fontWeight:900,color:C.gold,letterSpacing:"0.12em"}}>FINAL</div>
+              <div style={{position:"absolute",top:finalTop-22,left:0,width:190,textAlign:"center",fontSize:13,fontWeight:900,color:C.gold,letterSpacing:"0.12em"}}>FINAL</div>
               {/* Final card */}
               <div style={{position:"absolute",top:finalTop,left:0,width:190}}>
                 <BracketMatchup match={finalMatch.match} t1={finalMatch.home} t2={finalMatch.away} winner={finalMatch.winner} interactive={pickMode==="manual"} onPick={(team)=>onPick(finalMatch,team)} onMatchTap={onMatchTap} language={language}/>
@@ -2958,7 +2958,7 @@ export function VisualBracketTree({ bracket, pickMode="auto", onPick=()=>{}, vie
       <div style={{textAlign:"center",marginBottom:14,background:`linear-gradient(135deg,${C.s1},${C.s2})`,border:`1px solid ${C.b1}`,borderRadius:16,padding:14}}>
         <div style={{fontSize:34,lineHeight:1,filter:"drop-shadow(0 8px 14px rgba(0,0,0,0.35))"}}>🏆</div>
         <div style={{fontSize:10,color:C.gold,fontWeight:900,letterSpacing:"0.14em",marginTop:6}}>{language === "pt-BR" ? "CAMINHO ATÉ A TAÇA" : "WORLD CUP PATH"}</div>
-        <div style={{fontSize:12,color:C.mid,marginTop:5,lineHeight:1.45}}>
+        <div style={{fontSize:14,color:C.mid,marginTop:5,lineHeight:1.45}}>
           {bracket?.champion
             ? <>{language === "pt-BR" ? "Campeão escolhido:" : "Champion selected:"} <strong style={{color:C.green}}>{getFlag(bracket.champion)} {displayTeamName(bracket.champion, language)}</strong></>
             : <>{language === "pt-BR" ? "Escolha os vencedores rodada por rodada. Novos confrontos são liberados automaticamente." : "Select winners round by round. New matchups unlock automatically."}</>}
@@ -2974,7 +2974,7 @@ export function VisualBracketTree({ bracket, pickMode="auto", onPick=()=>{}, vie
             <section key={round.key} style={{background:`linear-gradient(180deg,${C.s1},transparent)`,border:`1px solid ${C.b1}`,borderRadius:16,padding:12,overflow:"hidden"}}>
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:10}}>
                 <div>
-                  <div style={{fontSize:11,fontWeight:900,color:round.key==="final"?C.gold:C.green,letterSpacing:"0.12em"}}>{round.short}</div>
+                  <div style={{fontSize:13,fontWeight:900,color:round.key==="final"?C.gold:C.green,letterSpacing:"0.12em"}}>{round.short}</div>
                   <div style={{fontSize:16,fontWeight:900,color:C.text}}>{round.label}</div>
                 </div>
                 <div style={{fontSize:10,color:C.dim,background:C.s2,border:`1px solid ${C.b1}`,borderRadius:999,padding:"4px 8px",whiteSpace:"nowrap"}}>{unlocked}/{matches.length} {language === "pt-BR" ? "liberados" : "unlocked"}</div>
@@ -3002,7 +3002,7 @@ export function VisualBracketTree({ bracket, pickMode="auto", onPick=()=>{}, vie
             <Crest team={bracket.champion} size={46}/>
             <div style={{textAlign:"left"}}>
               <div style={{fontWeight:900,fontSize:22,color:C.green}}>{displayTeamName(bracket.champion, language)}</div>
-              <div style={{fontSize:12,color:C.mid}}>{language === "pt-BR" ? "Seu campeão da Copa" : "Your World Cup winner"}</div>
+              <div style={{fontSize:14,color:C.mid}}>{language === "pt-BR" ? "Seu campeão da Copa" : "Your World Cup winner"}</div>
             </div>
           </div>
         ) : (
@@ -3121,14 +3121,14 @@ function SavedMatchCard({ item, onRemove, onMatchTap, notifiedIds=new Set(), onN
         <Crest team={m.home} size={22}/>
         <div onClick={()=>onMatchTap&&onMatchTap(m)} style={{flex:1,minWidth:0,cursor:onMatchTap?"pointer":"default"}}>
           <div style={{display:"flex",alignItems:"center",gap:5}}>
-            <span style={{color:C.gold,fontSize:11}}>★</span>
+            <span style={{color:C.gold,fontSize:13}}>★</span>
             <span style={{fontWeight:700,color:C.text,fontSize:13,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{m.home} vs {m.away}</span>
           </div>
-          <div style={{fontSize:11,color:C.dim,marginTop:1}}>{m.date} · {m.time} · {m.venue?.split(",")[0]||""}</div>
+          <div style={{fontSize:13,color:C.dim,marginTop:1}}>{m.date} · {m.time} · {m.venue?.split(",")[0]||""}</div>
         </div>
         <div style={{display:"flex",gap:4,alignItems:"center",flexShrink:0}}>
-          <button onClick={handleCalendar} title="Add to Calendar" style={{padding:"5px 10px",borderRadius:7,border:`1px solid ${C.green}44`,background:`${C.green}15`,color:C.green,fontSize:12,fontWeight:600,cursor:"pointer"}}>📅 Calendar</button>
-          <button onClick={handlePush} disabled={pushState==="denied"} title={pushState==="needs-install"?"Install app to enable push":"Set push notification"} style={{padding:"5px 10px",borderRadius:7,border:`1px solid ${notified?C.green:pushState==="denied"?C.b2:C.gold}44`,background:notified?`${C.green}15`:pushState==="denied"?C.s1:`${C.gold}15`,color:notified?C.green:pushState==="denied"?C.dim:C.gold,fontSize:12,fontWeight:600,cursor:pushState==="denied"?"not-allowed":"pointer",opacity:pushState==="denied"?0.4:1}}>
+          <button onClick={handleCalendar} title="Add to Calendar" style={{padding:"5px 10px",borderRadius:7,border:`1px solid ${C.green}44`,background:`${C.green}15`,color:C.green,fontSize:14,fontWeight:600,cursor:"pointer"}}>📅 Calendar</button>
+          <button onClick={handlePush} disabled={pushState==="denied"} title={pushState==="needs-install"?"Install app to enable push":"Set push notification"} style={{padding:"5px 10px",borderRadius:7,border:`1px solid ${notified?C.green:pushState==="denied"?C.b2:C.gold}44`,background:notified?`${C.green}15`:pushState==="denied"?C.s1:`${C.gold}15`,color:notified?C.green:pushState==="denied"?C.dim:C.gold,fontSize:14,fontWeight:600,cursor:pushState==="denied"?"not-allowed":"pointer",opacity:pushState==="denied"?0.4:1}}>
             {notified?"🔔 Set":"🔔 Notify me"}
           </button>
           <button onClick={()=>onRemove(item.id)} style={{padding:"5px 7px",borderRadius:7,border:`1px solid ${C.b2}`,background:"none",color:C.dim,fontSize:15,cursor:"pointer",lineHeight:1}}>×</button>
@@ -3136,8 +3136,8 @@ function SavedMatchCard({ item, onRemove, onMatchTap, notifiedIds=new Set(), onN
       </div>
       {pushState==="needs-install" && showInstallTip && (
         <div style={{padding:"10px 12px",borderTop:`1px solid ${C.b1}`,background:`${C.blue}08`}}>
-          <div style={{fontSize:12,fontWeight:700,color:C.blue,marginBottom:4}}>Install the app to get notifications</div>
-          <div style={{fontSize:11,color:C.dim,lineHeight:1.6}}>
+          <div style={{fontSize:14,fontWeight:700,color:C.blue,marginBottom:4}}>Install the app to get notifications</div>
+          <div style={{fontSize:13,color:C.dim,lineHeight:1.6}}>
             <strong>iPhone:</strong> Safari → Share ↑ → Add to Home Screen<br/>
             <strong>Android:</strong> Chrome → ⋯ → Add to Home Screen<br/>
             <strong>Desktop:</strong> Click the install icon in your browser address bar
@@ -3219,7 +3219,7 @@ function SavedTab({ saved, onRemove, onMatchTap, tabTop=116, syncUid="", syncPin
   const ss = (active) => ({
     padding:"5px 12px", borderRadius:20, border:`1px solid ${active?C.green:C.b1}`,
     background:active?`${C.green}18`:"transparent", color:active?C.green:C.mid,
-    fontSize:12, fontWeight:600, cursor:"pointer", whiteSpace:"nowrap",
+    fontSize:14, fontWeight:600, cursor:"pointer", whiteSpace:"nowrap",
   });
 
   if (saved.length === 0) return (
@@ -3236,18 +3236,18 @@ function SavedTab({ saved, onRemove, onMatchTap, tabTop=116, syncUid="", syncPin
       <div ref={_ref} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:DS.shadow.sticky,padding:"8px 13px"}}>
         {/* Master actions */}
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
-          <span style={{fontSize:12,fontWeight:700,color:C.mid,letterSpacing:"0.06em"}}>ALL MATCHES ({saved.length}){(filterMode!=="all"&&filterVal.size>0)&&filtered.length!==saved.length?<span style={{color:C.dim,fontWeight:400}}> · {filtered.length} shown</span>:null}</span>
-          <button onClick={()=>saved.forEach(it=>onRemove(it.id))} style={{background:"none",border:`1px solid ${C.b2}`,color:C.dim,fontSize:11,cursor:"pointer",padding:"2px 8px",borderRadius:6}}>Clear all</button>
+          <span style={{fontSize:14,fontWeight:700,color:C.mid,letterSpacing:"0.06em"}}>ALL MATCHES ({saved.length}){(filterMode!=="all"&&filterVal.size>0)&&filtered.length!==saved.length?<span style={{color:C.dim,fontWeight:400}}> · {filtered.length} shown</span>:null}</span>
+          <button onClick={()=>saved.forEach(it=>onRemove(it.id))} style={{background:"none",border:`1px solid ${C.b2}`,color:C.dim,fontSize:13,cursor:"pointer",padding:"2px 8px",borderRadius:6}}>Clear all</button>
         </div>
         <div style={{display:"flex",gap:6,marginBottom:8}}>
-          <button onClick={handleMasterCalendar} style={{flex:1,padding:"6px 4px",borderRadius:8,cursor:"pointer",border:`1px solid ${C.green}44`,background:`${C.green}15`,color:C.green,fontSize:11,fontWeight:600}}>📅 Export all</button>
-          <button onClick={handleMasterPush} style={{flex:1,padding:"6px 4px",borderRadius:8,cursor:"pointer",border:`1px solid ${masterPushDone?C.green:C.gold}44`,background:masterPushDone?`${C.green}15`:`${C.gold}15`,color:masterPushDone?C.green:C.gold,fontSize:11,fontWeight:600}}>{masterPushDone?"🔔 All set!":"🔔 Notify all"}</button>
+          <button onClick={handleMasterCalendar} style={{flex:1,padding:"6px 4px",borderRadius:8,cursor:"pointer",border:`1px solid ${C.green}44`,background:`${C.green}15`,color:C.green,fontSize:13,fontWeight:600}}>📅 Export all</button>
+          <button onClick={handleMasterPush} style={{flex:1,padding:"6px 4px",borderRadius:8,cursor:"pointer",border:`1px solid ${masterPushDone?C.green:C.gold}44`,background:masterPushDone?`${C.green}15`:`${C.gold}15`,color:masterPushDone?C.green:C.gold,fontSize:13,fontWeight:600}}>{masterPushDone?"🔔 All set!":"🔔 Notify all"}</button>
         </div>
         {/* Notification prompt if not yet subscribed */}
         {typeof Notification !== "undefined" && Notification.permission !== "granted" && (
           <div style={{background:`${C.gold}12`,border:`1px solid ${C.gold}33`,borderRadius:8,padding:"8px 10px",marginBottom:4,display:"flex",alignItems:"center",gap:8}}>
             <span style={{fontSize:14}}>🔔</span>
-            <div style={{flex:1,fontSize:11,color:C.mid}}>Tap <strong style={{color:C.gold}}>"Notify all"</strong> above to get 30-min kickoff alerts for all your saved matches</div>
+            <div style={{flex:1,fontSize:13,color:C.mid}}>Tap <strong style={{color:C.gold}}>"Notify all"</strong> above to get 30-min kickoff alerts for all your saved matches</div>
           </div>
         )}
         {/* Filter pills */}
@@ -3264,7 +3264,7 @@ function SavedTab({ saved, onRemove, onMatchTap, tabTop=116, syncUid="", syncPin
               const active = filterVal.has(g);
               return (
                 <button key={g} onClick={()=>setFilterVal(prev=>{const n=new Set(prev);active?n.delete(g):n.add(g);return n;})}
-                  style={{padding:"5px 12px",borderRadius:20,border:`1px solid ${active?C.green:C.b2}`,background:active?`${C.green}18`:"transparent",color:active?C.green:C.mid,fontSize:12,fontWeight:600,cursor:"pointer"}}>
+                  style={{padding:"5px 12px",borderRadius:20,border:`1px solid ${active?C.green:C.b2}`,background:active?`${C.green}18`:"transparent",color:active?C.green:C.mid,fontSize:14,fontWeight:600,cursor:"pointer"}}>
                   Group {g}
                 </button>
               );
@@ -3277,7 +3277,7 @@ function SavedTab({ saved, onRemove, onMatchTap, tabTop=116, syncUid="", syncPin
               const active = filterVal.has(t);
               return (
                 <button key={t} onClick={()=>setFilterVal(prev=>{const n=new Set(prev);active?n.delete(t):n.add(t);return n;})}
-                  style={{display:"flex",alignItems:"center",gap:5,padding:"5px 10px",borderRadius:20,border:`1px solid ${active?C.green:C.b2}`,background:active?`${C.green}18`:"transparent",color:active?C.green:C.mid,fontSize:11,fontWeight:600,cursor:"pointer",flexShrink:0}}>
+                  style={{display:"flex",alignItems:"center",gap:5,padding:"5px 10px",borderRadius:20,border:`1px solid ${active?C.green:C.b2}`,background:active?`${C.green}18`:"transparent",color:active?C.green:C.mid,fontSize:13,fontWeight:600,cursor:"pointer",flexShrink:0}}>
                   <Crest team={t} size={14}/>{t}
                 </button>
               );
@@ -3443,9 +3443,9 @@ function MatchdayCard({ m, onAction, favTeam }) {
         <div style={{display:"flex",justifyContent:"space-between",marginBottom:7}}>
           {m.group ? <Badge>{tx("Group", "Grupo")} {m.group}</Badge> : <Badge color={C.gold}>{roundLabel(m.stage)}</Badge>}
           <div style={{display:"flex",alignItems:"center",gap:6}}>
-            {isMatchday && countdown && !live && <span style={{fontSize:11,fontWeight:700,color:C.gold}}>⏱ {countdown}</span>}
-            {wx && <span style={{fontSize:11,color:C.mid}}>{wx.icon} {wx.temp}°F / {wx.tempC}°C</span>}
-            <span style={{fontSize:11,color:C.dim}}>{localTime}</span>
+            {isMatchday && countdown && !live && <span style={{fontSize:13,fontWeight:700,color:C.gold}}>⏱ {countdown}</span>}
+            {wx && <span style={{fontSize:13,color:C.mid}}>{wx.icon} {wx.temp}°F / {wx.tempC}°C</span>}
+            <span style={{fontSize:13,color:C.dim}}>{localTime}</span>
           </div>
         </div>
         {/* Teams + score */}
@@ -3458,29 +3458,29 @@ function MatchdayCard({ m, onAction, favTeam }) {
               {statusLabel(sc.status,sc.elapsed,sc.elapsedExtra) && <div style={{fontSize:10,fontWeight:700,marginTop:2,color:live?C.green:C.dim}}>{live?"🔴 ":""}{statusLabel(sc.status,sc.elapsed,sc.elapsedExtra)}</div>}
             </div>
           ) : (
-            <span style={{fontSize:11,color:C.dim,fontWeight:700,minWidth:40,textAlign:"center"}}>{tx("VS", "x")}</span>
+            <span style={{fontSize:13,color:C.dim,fontWeight:700,minWidth:40,textAlign:"center"}}>{tx("VS", "x")}</span>
           )}
           <span style={{fontWeight:700,color:favTeams?.includes(m.away)?C.gold:C.text,flex:1,fontSize:14,textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{dAway}</span>
           <Crest team={m.away} size={24}/>
         </div>
         {/* Venue */}
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:m.tv?4:0}}>
-          <span onClick={()=>openMaps(m.venue)} style={{fontSize:11,color:C.blue,cursor:"pointer"}}>📍 <span style={{textDecoration:"underline",textDecorationStyle:"dotted"}}>{dVenue}</span></span>
+          <span onClick={()=>openMaps(m.venue)} style={{fontSize:13,color:C.blue,cursor:"pointer"}}>📍 <span style={{textDecoration:"underline",textDecorationStyle:"dotted"}}>{dVenue}</span></span>
           {!finished && (()=>{ const isSaved=savedIds.has(m.id); return (
-            <button onClick={()=>onAction(m)} style={{background:isSaved?`${C.gold}22`:`${C.green}22`,border:`1px solid ${isSaved?C.gold:C.greenS}`,color:isSaved?C.gold:C.green,padding:"3px 9px",borderRadius:20,fontSize:11,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
+            <button onClick={()=>onAction(m)} style={{background:isSaved?`${C.gold}22`:`${C.green}22`,border:`1px solid ${isSaved?C.gold:C.greenS}`,color:isSaved?C.gold:C.green,padding:"3px 9px",borderRadius:20,fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
               <StarIcon filled={isSaved} size={12}/>{isSaved?tx("Saved", "Salvo"):tx("Add", "Adicionar")}
             </button>
           ); })()}
           {finished && <span style={{fontSize:10,color:C.dim,fontStyle:"italic"}}>Final</span>}
         </div>
-        {m.tv && <div style={{fontSize:11,color:finished?C.dim:C.gold,marginBottom: isMatchday&&city?4:0}}>📺 {m.tv}</div>}
+        {m.tv && <div style={{fontSize:13,color:finished?C.dim:C.gold,marginBottom: isMatchday&&city?4:0}}>📺 {m.tv}</div>}
         {/* Matchday extra info */}
         {isMatchday && city && (
           <div style={{marginTop:8,padding:"8px 10px",background:C.bg,borderRadius:8,border:`1px solid ${C.b1}`}}>
             <div style={{fontSize:10,color:C.gold,fontWeight:700,marginBottom:5}}>🏟️ MATCHDAY INFO · {cityKey?.toUpperCase()}</div>
-            <div style={{fontSize:11,color:C.mid,marginBottom:3}}>🚇 {city.transit}</div>
-            <div style={{fontSize:11,color:C.mid,marginBottom:3}}>🅿️ {city.parking}</div>
-            {wx && <div style={{fontSize:11,color:C.mid}}>🌡️ {wx.icon} {wx.temp}°F / {wx.tempC}°C · Wind {wx.wind} mph</div>}
+            <div style={{fontSize:13,color:C.mid,marginBottom:3}}>🚇 {city.transit}</div>
+            <div style={{fontSize:13,color:C.mid,marginBottom:3}}>🅿️ {city.parking}</div>
+            {wx && <div style={{fontSize:13,color:C.mid}}>🌡️ {wx.icon} {wx.temp}°F / {wx.tempC}°C · Wind {wx.wind} mph</div>}
           </div>
         )}
       </div>
@@ -3828,7 +3828,7 @@ function SingleLeagueView({ league, pin, fantasyUserId, userStats, leagueBoard, 
         {onBack && <button onClick={onBack} style={{background:"none",border:"none",color:C.mid,fontSize:22,cursor:"pointer",padding:0}}>‹</button>}
         <div style={{flex:1}}>
           <div style={{fontWeight:800,fontSize:16,color:C.text}}>{league.name}</div>
-          <div style={{fontSize:11,color:C.dim}}>{league.members.length} member{league.members.length!==1?"s":""}</div>
+          <div style={{fontSize:13,color:C.dim}}>{league.members.length} member{league.members.length!==1?"s":""}</div>
         </div>
         {myRank && <div style={{background:`${C.gold}18`,border:`1px solid ${C.gold}44`,borderRadius:10,padding:"5px 10px",textAlign:"center"}}>
           <div style={{fontSize:10,color:C.dim}}>RANK</div>
@@ -3836,14 +3836,14 @@ function SingleLeagueView({ league, pin, fantasyUserId, userStats, leagueBoard, 
         </div>}
       </div>
       <div style={{background:C.s1,border:`1px solid ${C.b2}`,borderRadius:12,padding:"12px 14px",marginBottom:14}}>
-                                <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.08em",marginBottom:8}}>📨 INVITE FRIENDS</div>
+                                <div style={{fontSize:13,color:C.dim,fontWeight:700,letterSpacing:"0.08em",marginBottom:8}}>📨 INVITE FRIENDS</div>
         <div style={{display:"flex",gap:8}}>
           <div style={{flex:1,background:C.s2,border:`1px solid ${C.b2}`,borderRadius:8,padding:"8px 12px",display:"flex",alignItems:"center",gap:8}}>
-            <span style={{fontSize:11,color:C.dim}}>Code:</span>
+            <span style={{fontSize:13,color:C.dim}}>Code:</span>
             <span style={{fontSize:14,fontWeight:800,color:C.blue,letterSpacing:"0.15em"}}>{league.code}</span>
           </div>
-          <button onClick={()=>copyCode(league.code)} style={{padding:"8px 12px",background:`${C.blue}18`,border:`1px solid ${C.blue}44`,borderRadius:8,color:C.blue,fontSize:11,fontWeight:700,cursor:"pointer"}}>{copied?"✓":"📋"}</button>
-          <button onClick={()=>shareInviteLink(league)} style={{padding:"8px 12px",background:`${C.green}18`,border:`1px solid ${C.green}44`,borderRadius:8,color:C.green,fontSize:11,fontWeight:700,cursor:"pointer"}}>{inviteCopied?"✓ Copied!":"🔗 Invite"}</button>
+          <button onClick={()=>copyCode(league.code)} style={{padding:"8px 12px",background:`${C.blue}18`,border:`1px solid ${C.blue}44`,borderRadius:8,color:C.blue,fontSize:13,fontWeight:700,cursor:"pointer"}}>{copied?"✓":"📋"}</button>
+          <button onClick={()=>shareInviteLink(league)} style={{padding:"8px 12px",background:`${C.green}18`,border:`1px solid ${C.green}44`,borderRadius:8,color:C.green,fontSize:13,fontWeight:700,cursor:"pointer"}}>{inviteCopied?"✓ Copied!":"🔗 Invite"}</button>
         </div>
       </div>
       {boardLoading ? (
@@ -3857,7 +3857,7 @@ function SingleLeagueView({ league, pin, fantasyUserId, userStats, leagueBoard, 
               <div style={{fontSize:18,width:28,textAlign:"center"}}>{medal||<span style={{color:C.dim,fontSize:13}}>#{i+1}</span>}</div>
               <div style={{flex:1}}>
                 <div style={{fontWeight:700,color:isMe?C.gold:C.text,fontSize:13}}>{entry.name}{isMe?" (you)":""}</div>
-                <div style={{fontSize:11,color:C.dim}}>{entry.correct} correct · {entry.exact} exact</div>
+                <div style={{fontSize:13,color:C.dim}}>{entry.correct} correct · {entry.exact} exact</div>
               </div>
               <div style={{textAlign:"right"}}>
                 <div style={{fontWeight:900,fontSize:18,color:isMe?C.gold:C.green}}>{entry.pts}</div>
@@ -3868,8 +3868,8 @@ function SingleLeagueView({ league, pin, fantasyUserId, userStats, leagueBoard, 
         );
       })}
       <div style={{display:"flex",gap:8,marginTop:12}}>
-        <button onClick={()=>fetchLeagueBoard(league.code)} style={{flex:1,padding:"9px",borderRadius:10,border:`1px solid ${C.b2}`,background:C.s2,color:C.mid,fontSize:12,fontWeight:700,cursor:"pointer"}}>↻ Refresh</button>
-        {!isOwner && <button onClick={()=>handleLeave(league.code)} style={{padding:"9px 14px",borderRadius:10,border:`1px solid ${C.red}44`,background:`${C.red}12`,color:C.red,fontSize:12,fontWeight:700,cursor:"pointer"}}>Leave</button>}
+        <button onClick={()=>fetchLeagueBoard(league.code)} style={{flex:1,padding:"9px",borderRadius:10,border:`1px solid ${C.b2}`,background:C.s2,color:C.mid,fontSize:14,fontWeight:700,cursor:"pointer"}}>↻ Refresh</button>
+        {!isOwner && <button onClick={()=>handleLeave(league.code)} style={{padding:"9px 14px",borderRadius:10,border:`1px solid ${C.red}44`,background:`${C.red}12`,color:C.red,fontSize:14,fontWeight:700,cursor:"pointer"}}>Leave</button>}
       </div>
     </div>
   );
@@ -4011,15 +4011,15 @@ export function LeaguesPanel({ pin, fantasyUserId, syncProfile, userStats }) {
       <div>
         {/* Create/Join pills */}
         <div style={{display:"flex",gap:8,marginBottom:16,paddingBottom:14,borderBottom:`1px solid ${C.b2}`}}>
-          <button onClick={()=>{setScreen("create");setError("");}} style={{flex:1,padding:"9px",borderRadius:10,border:`1px solid ${C.blue}44`,background:`${C.blue}12`,color:C.blue,fontSize:12,fontWeight:700,cursor:"pointer"}}>+ Create League</button>
-          <button onClick={()=>{setScreen("join");setError("");}} style={{flex:1,padding:"9px",borderRadius:10,border:`1px solid ${C.green}44`,background:`${C.green}12`,color:C.green,fontSize:12,fontWeight:700,cursor:"pointer"}}>🤝 Join League</button>
-          {leagues.length > 1 && <button onClick={()=>setScreen("list")} style={{flex:1,padding:"9px",borderRadius:10,border:`1px solid ${C.b2}`,background:C.s2,color:C.mid,fontSize:12,fontWeight:700,cursor:"pointer"}}>My Leagues</button>}
+          <button onClick={()=>{setScreen("create");setError("");}} style={{flex:1,padding:"9px",borderRadius:10,border:`1px solid ${C.blue}44`,background:`${C.blue}12`,color:C.blue,fontSize:14,fontWeight:700,cursor:"pointer"}}>+ Create League</button>
+          <button onClick={()=>{setScreen("join");setError("");}} style={{flex:1,padding:"9px",borderRadius:10,border:`1px solid ${C.green}44`,background:`${C.green}12`,color:C.green,fontSize:14,fontWeight:700,cursor:"pointer"}}>🤝 Join League</button>
+          {leagues.length > 1 && <button onClick={()=>setScreen("list")} style={{flex:1,padding:"9px",borderRadius:10,border:`1px solid ${C.b2}`,background:C.s2,color:C.mid,fontSize:14,fontWeight:700,cursor:"pointer"}}>My Leagues</button>}
         </div>
         {/* Header */}
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
           <div style={{flex:1}}>
             <div style={{fontWeight:800,fontSize:16,color:C.text}}>{activeLeague.name}</div>
-            <div style={{fontSize:11,color:C.dim}}>{activeLeague.members.length} member{activeLeague.members.length!==1?"s":""}</div>
+            <div style={{fontSize:13,color:C.dim}}>{activeLeague.members.length} member{activeLeague.members.length!==1?"s":""}</div>
           </div>
           {myRank && <div style={{background:`${C.gold}18`,border:`1px solid ${C.gold}44`,borderRadius:10,padding:"5px 10px",textAlign:"center"}}>
             <div style={{fontSize:10,color:C.dim}}>YOUR RANK</div>
@@ -4031,16 +4031,16 @@ export function LeaguesPanel({ pin, fantasyUserId, syncProfile, userStats }) {
 
         {/* Invite section */}
         <div style={{background:C.s1,border:`1px solid ${C.b2}`,borderRadius:12,padding:"12px 14px",marginBottom:14}}>
-                                <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.08em",marginBottom:8}}>📨 INVITE FRIENDS</div>
+                                <div style={{fontSize:13,color:C.dim,fontWeight:700,letterSpacing:"0.08em",marginBottom:8}}>📨 INVITE FRIENDS</div>
           <div style={{display:"flex",gap:8}}>
             <div style={{flex:1,background:C.s2,border:`1px solid ${C.b2}`,borderRadius:8,padding:"8px 12px",display:"flex",alignItems:"center",gap:8}}>
-              <span style={{fontSize:11,color:C.dim}}>Code:</span>
+              <span style={{fontSize:13,color:C.dim}}>Code:</span>
               <span style={{fontSize:14,fontWeight:800,color:C.blue,letterSpacing:"0.15em"}}>{activeLeague.code}</span>
             </div>
-            <button onClick={()=>copyCode(activeLeague.code)} style={{padding:"8px 12px",background:`${C.blue}18`,border:`1px solid ${C.blue}44`,borderRadius:8,color:C.blue,fontSize:11,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>
+            <button onClick={()=>copyCode(activeLeague.code)} style={{padding:"8px 12px",background:`${C.blue}18`,border:`1px solid ${C.blue}44`,borderRadius:8,color:C.blue,fontSize:13,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>
               {copied ? "✓" : "📋 Copy"}
             </button>
-            <button onClick={()=>shareInviteLink(activeLeague)} style={{padding:"8px 12px",background:`${C.green}18`,border:`1px solid ${C.green}44`,borderRadius:8,color:C.green,fontSize:11,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>
+            <button onClick={()=>shareInviteLink(activeLeague)} style={{padding:"8px 12px",background:`${C.green}18`,border:`1px solid ${C.green}44`,borderRadius:8,color:C.green,fontSize:13,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>
               {inviteCopied ? "✓ Copied!" : "🔗 Invite"}
             </button>
           </div>
@@ -4058,7 +4058,7 @@ export function LeaguesPanel({ pin, fantasyUserId, syncProfile, userStats }) {
                 <div style={{fontSize:18,width:28,textAlign:"center"}}>{medal||<span style={{color:C.dim,fontSize:13}}>#{i+1}</span>}</div>
                 <div style={{flex:1}}>
                   <div style={{fontWeight:700,color:isMe?C.gold:C.text,fontSize:13}}>{entry.name}{isMe?" (you)":""}</div>
-                  <div style={{fontSize:11,color:C.dim}}>{entry.correct} correct · {entry.exact} exact</div>
+                  <div style={{fontSize:13,color:C.dim}}>{entry.correct} correct · {entry.exact} exact</div>
                 </div>
                 <div style={{textAlign:"right"}}>
                   <div style={{fontWeight:900,fontSize:18,color:isMe?C.gold:C.green}}>{entry.pts}</div>
@@ -4070,8 +4070,8 @@ export function LeaguesPanel({ pin, fantasyUserId, syncProfile, userStats }) {
         })}
 
         <div style={{display:"flex",gap:8,marginTop:12}}>
-          <button onClick={()=>fetchLeagueBoard(activeLeague.code)} style={{flex:1,padding:"9px",borderRadius:10,border:`1px solid ${C.b2}`,background:C.s2,color:C.mid,fontSize:12,fontWeight:700,cursor:"pointer"}}>↻ Refresh</button>
-          {!isOwner && <button onClick={()=>handleLeave(activeLeague.code)} style={{padding:"9px 14px",borderRadius:10,border:`1px solid ${C.red}44`,background:`${C.red}12`,color:C.red,fontSize:12,fontWeight:700,cursor:"pointer"}}>Leave</button>}
+          <button onClick={()=>fetchLeagueBoard(activeLeague.code)} style={{flex:1,padding:"9px",borderRadius:10,border:`1px solid ${C.b2}`,background:C.s2,color:C.mid,fontSize:14,fontWeight:700,cursor:"pointer"}}>↻ Refresh</button>
+          {!isOwner && <button onClick={()=>handleLeave(activeLeague.code)} style={{padding:"9px 14px",borderRadius:10,border:`1px solid ${C.red}44`,background:`${C.red}12`,color:C.red,fontSize:14,fontWeight:700,cursor:"pointer"}}>Leave</button>}
         </div>
       </div>
     );
@@ -4084,14 +4084,14 @@ export function LeaguesPanel({ pin, fantasyUserId, syncProfile, userStats }) {
     return (
       <div>
         <div style={{display:"flex",gap:8,marginBottom:16,paddingBottom:14,borderBottom:`1px solid ${C.b2}`}}>
-          <button onClick={()=>{setScreen("create");setError("");}} style={{flex:1,padding:"9px",borderRadius:10,border:`1px solid ${C.blue}44`,background:`${C.blue}12`,color:C.blue,fontSize:12,fontWeight:700,cursor:"pointer"}}>+ Create League</button>
-          <button onClick={()=>{setScreen("join");setError("");}} style={{flex:1,padding:"9px",borderRadius:10,border:`1px solid ${C.green}44`,background:`${C.green}12`,color:C.green,fontSize:12,fontWeight:700,cursor:"pointer"}}>🤝 Join League</button>
-          {leagues.length > 0 && <button onClick={()=>setScreen("list")} style={{flex:1,padding:"9px",borderRadius:10,border:`1px solid ${C.b2}`,background:C.s2,color:C.mid,fontSize:12,fontWeight:700,cursor:"pointer"}}>My Leagues</button>}
+          <button onClick={()=>{setScreen("create");setError("");}} style={{flex:1,padding:"9px",borderRadius:10,border:`1px solid ${C.blue}44`,background:`${C.blue}12`,color:C.blue,fontSize:14,fontWeight:700,cursor:"pointer"}}>+ Create League</button>
+          <button onClick={()=>{setScreen("join");setError("");}} style={{flex:1,padding:"9px",borderRadius:10,border:`1px solid ${C.green}44`,background:`${C.green}12`,color:C.green,fontSize:14,fontWeight:700,cursor:"pointer"}}>🤝 Join League</button>
+          {leagues.length > 0 && <button onClick={()=>setScreen("list")} style={{flex:1,padding:"9px",borderRadius:10,border:`1px solid ${C.b2}`,background:C.s2,color:C.mid,fontSize:14,fontWeight:700,cursor:"pointer"}}>My Leagues</button>}
         </div>
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
           <div style={{flex:1}}>
             <div style={{fontWeight:800,fontSize:16,color:C.text}}>🌍 Global</div>
-            <div style={{fontSize:11,color:C.dim}}>{globalBoard.length} players</div>
+            <div style={{fontSize:13,color:C.dim}}>{globalBoard.length} players</div>
           </div>
           {myRank && <div style={{background:`${C.gold}18`,border:`1px solid ${C.gold}44`,borderRadius:10,padding:"5px 10px",textAlign:"center"}}>
             <div style={{fontSize:10,color:C.dim}}>YOUR RANK</div>
@@ -4109,7 +4109,7 @@ export function LeaguesPanel({ pin, fantasyUserId, syncProfile, userStats }) {
                 <div style={{fontSize:18,width:28,textAlign:"center"}}>{medal||<span style={{color:C.dim,fontSize:13}}>#{i+1}</span>}</div>
                 <div style={{flex:1}}>
                   <div style={{fontWeight:700,color:isMe?C.gold:C.text,fontSize:13}}>{entry.name}{isMe?" (you)":""}</div>
-                  <div style={{fontSize:11,color:C.dim}}>{entry.correct} correct · {entry.exact} exact</div>
+                  <div style={{fontSize:13,color:C.dim}}>{entry.correct} correct · {entry.exact} exact</div>
                 </div>
                 <div style={{textAlign:"right"}}>
                   <div style={{fontWeight:900,fontSize:18,color:isMe?C.gold:C.green}}>{entry.pts}</div>
@@ -4120,7 +4120,7 @@ export function LeaguesPanel({ pin, fantasyUserId, syncProfile, userStats }) {
           );
         })}
         <div style={{marginTop:12}}>
-          <button onClick={fetchGlobalBoard} style={{width:"100%",padding:"9px",borderRadius:10,border:`1px solid ${C.b2}`,background:C.s2,color:C.mid,fontSize:12,fontWeight:700,cursor:"pointer"}}>↻ Refresh</button>
+          <button onClick={fetchGlobalBoard} style={{width:"100%",padding:"9px",borderRadius:10,border:`1px solid ${C.b2}`,background:C.s2,color:C.mid,fontSize:14,fontWeight:700,cursor:"pointer"}}>↻ Refresh</button>
         </div>
       </div>
     );
@@ -4138,11 +4138,11 @@ export function LeaguesPanel({ pin, fantasyUserId, syncProfile, userStats }) {
           placeholder="League name (e.g. Office Picks, Family Cup)"
           autoFocus
           style={{width:"100%",padding:"12px 14px",background:C.s2,border:`1px solid ${C.b2}`,borderRadius:10,color:C.text,fontSize:14,outline:"none",marginBottom:10,boxSizing:"border-box"}}/>
-        {error && <div style={{color:C.red,fontSize:12,marginBottom:8}}>{error}</div>}
+        {error && <div style={{color:C.red,fontSize:14,marginBottom:8}}>{error}</div>}
         <button onClick={handleCreate} disabled={creating} style={{width:"100%",padding:"13px",background:`linear-gradient(135deg,${C.blue},#3b82f6)`,border:"none",borderRadius:10,color:"white",fontSize:15,fontWeight:800,cursor:"pointer",opacity:creating?0.6:1,marginBottom:10}}>
           {creating ? "Creating..." : "🏆 Create League"}
         </button>
-        <div style={{fontSize:11,color:C.dim,textAlign:"center"}}>A 6-character invite code will be generated. Share it with friends to join.</div>
+        <div style={{fontSize:13,color:C.dim,textAlign:"center"}}>A 6-character invite code will be generated. Share it with friends to join.</div>
       </div>
     );
   }
@@ -4158,7 +4158,7 @@ export function LeaguesPanel({ pin, fantasyUserId, syncProfile, userStats }) {
         <input value={joinCode} onChange={e=>setJoinCode(e.target.value.toUpperCase())} placeholder="6-CHARACTER CODE"
           maxLength={6} autoFocus
           style={{width:"100%",padding:"12px 14px",background:C.s2,border:`1px solid ${C.b2}`,borderRadius:10,color:C.text,fontSize:22,fontWeight:800,letterSpacing:"0.25em",outline:"none",marginBottom:10,textAlign:"center",boxSizing:"border-box"}}/>
-        {error && <div style={{color:C.red,fontSize:12,marginBottom:8,textAlign:"center"}}>{error}</div>}
+        {error && <div style={{color:C.red,fontSize:14,marginBottom:8,textAlign:"center"}}>{error}</div>}
         <button onClick={handleJoin} disabled={joining} style={{width:"100%",padding:"13px",background:`linear-gradient(135deg,${C.green},#22c55e)`,border:"none",borderRadius:10,color:"#030a05",fontSize:15,fontWeight:800,cursor:"pointer",opacity:joining?0.6:1}}>
           {joining ? "Joining..." : "🤝 Join League"}
         </button>
@@ -4179,7 +4179,7 @@ export function LeaguesPanel({ pin, fantasyUserId, syncProfile, userStats }) {
               <div style={{fontSize:28}}>🌍</div>
               <div style={{flex:1}}>
                 <div style={{fontWeight:700,fontSize:14,color:C.text}}>Global</div>
-                <div style={{fontSize:11,color:C.dim,marginTop:2}}>All players · open ranking</div>
+                <div style={{fontSize:13,color:C.dim,marginTop:2}}>All players · open ranking</div>
               </div>
               <span style={{color:C.dim,fontSize:18}}>›</span>
             </div>
@@ -4187,7 +4187,7 @@ export function LeaguesPanel({ pin, fantasyUserId, syncProfile, userStats }) {
           <div style={{textAlign:"center",padding:"20px 0 0"}}>
             <div style={{fontSize:36,marginBottom:8}}>🏆</div>
             <div style={{fontSize:14,color:C.text,fontWeight:700,marginBottom:4}}>No private leagues yet</div>
-            <div style={{fontSize:12,color:C.dim,marginBottom:20}}>Create a league and invite friends, or join one with a code.</div>
+            <div style={{fontSize:14,color:C.dim,marginBottom:20}}>Create a league and invite friends, or join one with a code.</div>
             <div style={{display:"flex",gap:10}}>
               <button onClick={()=>{setScreen("create");setError("");}} style={{flex:1,padding:"12px",borderRadius:12,border:"none",background:`linear-gradient(135deg,${C.blue},#3b82f6)`,color:"white",fontSize:13,fontWeight:800,cursor:"pointer"}}>+ Create a League</button>
               <button onClick={()=>{setScreen("join");setError("");}} style={{flex:1,padding:"12px",borderRadius:12,border:`1px solid ${C.green}44`,background:`${C.green}12`,color:C.green,fontSize:13,fontWeight:700,cursor:"pointer"}}>🤝 Join a League</button>
@@ -4230,7 +4230,7 @@ export function LeaguesPanel({ pin, fantasyUserId, syncProfile, userStats }) {
                 <div style={{fontSize:28}}>🏆</div>
                 <div style={{flex:1}}>
                   <div style={{fontWeight:700,fontSize:14,color:C.text}}>{league.name}</div>
-                  <div style={{fontSize:11,color:C.dim,marginTop:2}}>{league.members.length} member{league.members.length!==1?"s":""} · <span style={{color:C.blue,fontWeight:700,letterSpacing:"0.1em"}}>{league.code}</span></div>
+                  <div style={{fontSize:13,color:C.dim,marginTop:2}}>{league.members.length} member{league.members.length!==1?"s":""} · <span style={{color:C.blue,fontWeight:700,letterSpacing:"0.1em"}}>{league.code}</span></div>
                   {league.ownerPin===String(pin) && <div style={{fontSize:10,color:C.gold,marginTop:2}}>👑 You created this</div>}
                 </div>
                 <span style={{color:C.dim,fontSize:18}}>›</span>
@@ -4242,7 +4242,7 @@ export function LeaguesPanel({ pin, fantasyUserId, syncProfile, userStats }) {
               <div style={{fontSize:28}}>🌍</div>
               <div style={{flex:1}}>
                 <div style={{fontWeight:700,fontSize:14,color:C.text}}>Global</div>
-                <div style={{fontSize:11,color:C.dim,marginTop:2}}>All players · open ranking</div>
+                <div style={{fontSize:13,color:C.dim,marginTop:2}}>All players · open ranking</div>
               </div>
               <span style={{color:C.dim,fontSize:18}}>›</span>
             </div>
@@ -4302,7 +4302,7 @@ function WeatherBadge({ lat, lon }) {
   return (
     <div style={{textAlign:"center",flexShrink:0}}>
       <div style={{fontSize:18,lineHeight:1}}>{wx.icon}</div>
-      <div style={{fontSize:11,fontWeight:700,color:C.text}}>{wx.temp}°F<span style={{color:C.dim}}> / {wx.tempC}°C</span></div>
+      <div style={{fontSize:13,fontWeight:700,color:C.text}}>{wx.temp}°F<span style={{color:C.dim}}> / {wx.tempC}°C</span></div>
       <div style={{fontSize:9,color:C.dim}}>at venue</div>
     </div>
   );
@@ -4328,7 +4328,7 @@ function TimelineMinuteLabel({ raw, language="en" }) {
     <span style={{whiteSpace:"nowrap"}}>
       <span>{primary}</span>{" "}
       <span style={{
-        fontSize:"0.82em",
+        fontSize:"0.9em",
         fontWeight:500,
         color:contextColor,
         fontStyle:"italic",
@@ -4672,10 +4672,10 @@ function MatchMomentum({ match, events=[], momentum=[], stats, C, score=null }) 
       <div style={{background:C.s1,border:`1px solid ${C.b1}`,borderRadius:12,padding:12,marginBottom:10}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,gap:8}}>
           <div>
-            <div style={{fontSize:12,fontWeight:900,color:C.green,letterSpacing:".08em"}}>MATCH FLOW</div>
-            <div style={{fontSize:11,color:C.dim}}>{engineMeta[engine]}</div>
+            <div style={{fontSize:14,fontWeight:900,color:C.green,letterSpacing:".08em"}}>MATCH FLOW</div>
+            <div style={{fontSize:13,color:C.dim}}>{engineMeta[engine]}</div>
           </div>
-          <div style={{fontSize:11,color:C.mid,textAlign:"right"}}>{goals.length} ⚽ · {cardSummary} · {subs.length} 🔄</div>
+          <div style={{fontSize:13,color:C.mid,textAlign:"right"}}>{goals.length} ⚽ · {cardSummary} · {subs.length} 🔄</div>
         </div>
 
         <div style={{display:"flex",gap:6,marginBottom:10,flexWrap:"wrap"}}>
@@ -4684,7 +4684,7 @@ function MatchMomentum({ match, events=[], momentum=[], stats, C, score=null }) 
             ["spikes","Spikes"],
             ["balanced","Balanced"],
           ].map(([key,label]) => (
-            <button key={key} onClick={()=>setEngine(key)} style={{border:`1px solid ${engine===key?C.green:C.b1}`,background:engine===key?C.greenS:C.s2,color:engine===key?C.green:C.mid,borderRadius:999,padding:"5px 10px",fontSize:11,fontWeight:900,cursor:"pointer"}}>
+            <button key={key} onClick={()=>setEngine(key)} style={{border:`1px solid ${engine===key?C.green:C.b1}`,background:engine===key?C.greenS:C.s2,color:engine===key?C.green:C.mid,borderRadius:999,padding:"5px 10px",fontSize:13,fontWeight:900,cursor:"pointer"}}>
               {label}
             </button>
           ))}
@@ -4737,18 +4737,18 @@ function MatchMomentum({ match, events=[], momentum=[], stats, C, score=null }) 
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
         <div style={{background:C.s1,border:`1px solid ${C.b1}`,borderRadius:10,padding:10}}>
           <div style={{fontSize:10,color:C.dim,fontWeight:800}}>{showSoFar ? "⚡ STRONGEST SPELL (SO FAR)" : "⚡ STRONGEST SPELL"}</div>
-          <div style={{fontSize:12,color:sideColor(strongestSpell.side),fontWeight:900}}>{sideName(strongestSpell.side)}</div>
-          <div style={{fontSize:11,color:C.mid}}>{strongestSpell.start}'–{strongestSpell.end}'</div>
+          <div style={{fontSize:14,color:sideColor(strongestSpell.side),fontWeight:900}}>{sideName(strongestSpell.side)}</div>
+          <div style={{fontSize:13,color:C.mid}}>{strongestSpell.start}'–{strongestSpell.end}'</div>
         </div>
         <div style={{background:C.s1,border:`1px solid ${C.b1}`,borderRadius:10,padding:10}}>
           <div style={{fontSize:10,color:C.dim,fontWeight:800}}>{showSoFar ? "📈 LONGEST CONTROL (SO FAR)" : "📈 LONGEST CONTROL"}</div>
-          <div style={{fontSize:12,color:sideColor(longestRun.side),fontWeight:900}}>{sideName(longestRun.side)}</div>
-          <div style={{fontSize:11,color:C.mid}}>{longestRun.len} min</div>
+          <div style={{fontSize:14,color:sideColor(longestRun.side),fontWeight:900}}>{sideName(longestRun.side)}</div>
+          <div style={{fontSize:13,color:C.mid}}>{longestRun.len} min</div>
         </div>
         <div style={{background:C.s1,border:`1px solid ${C.b1}`,borderRadius:10,padding:10}}>
           <div style={{fontSize:10,color:C.dim,fontWeight:800}}>{showSoFar ? "🔥 BIGGEST SWING (SO FAR)" : "🔥 BIGGEST SWING"}</div>
-          <div style={{fontSize:12,color:C.text,fontWeight:900}}>{swing.minute}'</div>
-          <div style={{fontSize:11,color:C.mid}}>{Math.round(swing.change)} pt swing</div>
+          <div style={{fontSize:14,color:C.text,fontWeight:900}}>{swing.minute}'</div>
+          <div style={{fontSize:13,color:C.mid}}>{Math.round(swing.change)} pt swing</div>
         </div>
       </div>
     </div>
@@ -4774,24 +4774,24 @@ function MatchCommentary({ commentary = [], C }) {
     <div style={{background:C.s1,border:`1px solid ${C.b1}`,borderRadius:12,padding:12,marginBottom:12}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:8}}>
         <div>
-          <div style={{fontSize:12,fontWeight:900,color:C.green,letterSpacing:1}}>COMMENTARY</div>
+          <div style={{fontSize:14,fontWeight:900,color:C.green,letterSpacing:1}}>COMMENTARY</div>
           <div style={{fontSize:10,color:C.dim}}>Minute-by-minute match notes when available</div>
         </div>
-        <div style={{fontSize:11,color:C.dim,fontWeight:700}}>{rows.length} notes</div>
+        <div style={{fontSize:13,color:C.dim,fontWeight:700}}>{rows.length} notes</div>
       </div>
 
       {rows.length === 0 ? (
-        <div style={{padding:"18px 10px",border:`1px dashed ${C.b2}`,borderRadius:10,color:C.dim,fontSize:12,textAlign:"center"}}>
+        <div style={{padding:"18px 10px",border:`1px dashed ${C.b2}`,borderRadius:10,color:C.dim,fontSize:14,textAlign:"center"}}>
           No commentary available for this match yet.
         </div>
       ) : (
         <div style={{maxHeight:360,overflowY:"auto",paddingRight:4}}>
           {rows.map((r, i) => (
             <div key={r.key} style={{display:"grid",gridTemplateColumns:"46px 1fr",gap:10,padding:"9px 0",borderBottom:i<rows.length-1?`1px solid ${C.b1}`:"none"}}>
-              <div style={{fontSize:12,fontWeight:900,color:C.gold,textAlign:"right"}}>{r.time}</div>
+              <div style={{fontSize:14,fontWeight:900,color:C.gold,textAlign:"right"}}>{r.time}</div>
               <div>
                 {r.type && <div style={{fontSize:10,color:C.dim,fontWeight:800,textTransform:"uppercase",letterSpacing:.5,marginBottom:2}}>{r.type}</div>}
-                <div style={{fontSize:12,lineHeight:1.35,color:C.text}}>{r.text}</div>
+                <div style={{fontSize:14,lineHeight:1.35,color:C.text}}>{r.text}</div>
               </div>
             </div>
           ))}
@@ -5104,7 +5104,7 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
             const yellowCards = Math.max(0, cards - redCards);
             const timelineLabel = evOpen ? "Timeline" : `Timeline${events?.length ? ` · ${goals}⚽ ${yellowCards}🟨${redCards ? ` ${redCards}🟥` : ""}` : ""}`;
             const pill = (label, active, onClick, disabled) => (
-              <button onClick={disabled ? undefined : onClick} style={{padding:"6px 14px",borderRadius:999,border:`1.5px solid ${active?C.green:disabled?C.b1:C.b2}`,background:active?`${C.green}18`:C.s2,color:active?C.green:disabled?C.dim:C.mid,fontSize:12,fontWeight:700,cursor:disabled?"default":"pointer",opacity:disabled?0.4:1,transition:"all .15s"}}>
+              <button onClick={disabled ? undefined : onClick} style={{padding:"6px 14px",borderRadius:999,border:`1.5px solid ${active?C.green:disabled?C.b1:C.b2}`,background:active?`${C.green}18`:C.s2,color:active?C.green:disabled?C.dim:C.mid,fontSize:14,fontWeight:700,cursor:disabled?"default":"pointer",opacity:disabled?0.4:1,transition:"all .15s"}}>
                 {label}
               </button>
             );
@@ -5122,7 +5122,7 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
                   ][i];
                   const flexes = [0.85, 1.35, 0.85, 1.0, 1.05];
                   return (
-                    <button key={label} onClick={disabled ? undefined : toggle} style={{flex:flexes[i],padding:"6px 4px",borderRadius:999,border:`1.5px solid ${active?C.green:disabled?C.b1:C.b2}`,background:active?`${C.green}18`:C.s2,color:active?C.green:disabled?C.dim:C.mid,fontSize:12,fontWeight:700,cursor:disabled?"default":"pointer",opacity:disabled?0.4:1,transition:"all .15s",textAlign:"center",whiteSpace:"nowrap"}}>
+                    <button key={label} onClick={disabled ? undefined : toggle} style={{flex:flexes[i],padding:"6px 4px",borderRadius:999,border:`1.5px solid ${active?C.green:disabled?C.b1:C.b2}`,background:active?`${C.green}18`:C.s2,color:active?C.green:disabled?C.dim:C.mid,fontSize:14,fontWeight:700,cursor:disabled?"default":"pointer",opacity:disabled?0.4:1,transition:"all .15s",textAlign:"center",whiteSpace:"nowrap"}}>
                       {label}
                     </button>
                   );
@@ -5140,7 +5140,7 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
                     if (!lu) return <div key={side}/>;
                     return (
                       <div key={side} style={{background:C.s1,border:`1px solid ${C.b1}`,borderRadius:10,padding:"8px 10px"}}>
-                        <div style={{fontSize:11,fontWeight:700,color:side==="home"?C.green:C.red,marginBottom:4,display:"flex",alignItems:"center",gap:4}}>
+                        <div style={{fontSize:13,fontWeight:700,color:side==="home"?C.green:C.red,marginBottom:4,display:"flex",alignItems:"center",gap:4}}>
                           <Crest team={team} size={14}/>
                           <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{team}</span>
                           {lu.formation && <span style={{marginLeft:"auto",fontSize:10,color:C.dim,fontWeight:600,flexShrink:0}}>{lu.formation}</span>}
@@ -5149,7 +5149,7 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
                         {lu.starters.map((p,i)=>(
                           <div key={i} style={{display:"flex",alignItems:"center",gap:4,padding:"2px 0",borderBottom:i<lu.starters.length-1?`1px solid ${C.b1}`:"none"}}>
                             {p.jersey && <span style={{fontSize:9,color:C.dim,minWidth:14,textAlign:"center"}}>{p.jersey}</span>}
-                            <span style={{fontSize:11,color:p.subbedOut?C.dim:C.text,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}{p.subbedOut?" ↓":""}</span>
+                            <span style={{fontSize:13,color:p.subbedOut?C.dim:C.text,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}{p.subbedOut?" ↓":""}</span>
                             <span style={{fontSize:9,color:C.dim,flexShrink:0}}>{p.pos}</span>
                           </div>
                         ))}
@@ -5158,7 +5158,7 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
                           {lu.bench.map((p,i)=>(
                             <div key={i} style={{display:"flex",alignItems:"center",gap:4,padding:"2px 0"}}>
                               {p.jersey && <span style={{fontSize:9,color:C.dim,minWidth:14,textAlign:"center"}}>{p.jersey}</span>}
-                              <span style={{fontSize:11,color:p.subbedIn?C.green:C.dim,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}{p.subbedIn?" ↑":""}</span>
+                              <span style={{fontSize:13,color:p.subbedIn?C.green:C.dim,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}{p.subbedIn?" ↑":""}</span>
                               <span style={{fontSize:9,color:C.dim,flexShrink:0}}>{p.pos}</span>
                             </div>
                           ))}
@@ -5195,9 +5195,9 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
                 const hPct = Math.round((hv/total)*100);
                 return (
                   <div key={label} style={{marginBottom:8}}>
-                    <div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:3}}>
+                    <div style={{display:"flex",justifyContent:"space-between",fontSize:14,marginBottom:3}}>
                       <span style={{fontWeight:700,color:C.green}}>{hv}{unit}</span>
-                      <span style={{color:C.dim,fontSize:11}}>{label}</span>
+                      <span style={{color:C.dim,fontSize:13}}>{label}</span>
                       <span style={{fontWeight:700,color:C.rival}}>{av}{unit}</span>
                     </div>
                     <div style={{height:4,background:C.s2,borderRadius:2,overflow:"hidden",display:"flex"}}>
@@ -5239,11 +5239,11 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
                     {timelineEvents.length > 0 && (
                       <div style={{display:"flex",gap:6,padding:"8px 0"}}>
                         {FILTERS.map(f=>(
-                          <button key={f.type} onClick={()=>toggleFilter(f.type)} style={{padding:"4px 10px",borderRadius:20,border:`1px solid ${evFilter.includes(f.type)?C.green:C.b2}`,background:evFilter.includes(f.type)?`${C.green}22`:C.s2,color:evFilter.includes(f.type)?C.green:C.dim,fontSize:12,fontWeight:600,cursor:"pointer"}}>{f.label}</button>
+                          <button key={f.type} onClick={()=>toggleFilter(f.type)} style={{padding:"4px 10px",borderRadius:20,border:`1px solid ${evFilter.includes(f.type)?C.green:C.b2}`,background:evFilter.includes(f.type)?`${C.green}22`:C.s2,color:evFilter.includes(f.type)?C.green:C.dim,fontSize:14,fontWeight:600,cursor:"pointer"}}>{f.label}</button>
                         ))}
                       </div>
                     )}
-                    {loading && <div style={{textAlign:"center",padding:"20px 0"}}><div style={{width:22,height:22,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto 8px"}}/><div style={{fontSize:12,color:C.mid}}>Loading events…</div></div>}
+                    {loading && <div style={{textAlign:"center",padding:"20px 0"}}><div style={{width:22,height:22,border:`3px solid ${C.green}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin .8s linear infinite",margin:"0 auto 8px"}}/><div style={{fontSize:14,color:C.mid}}>Loading events…</div></div>}
                     {!loading && filtered.length > 0 && filtered.map((ev,i)=>{
                       const isHome = normTeam(ev.team?.name||"")=== match.home;
                       const icon = ev.type==="Goal"?(ev.detail==="Own Goal"?"⚽🔴":ev.detail==="Penalty"?"⚽🎯":"⚽"):ev.type==="Card"?(ev.detail==="Yellow Card"?"🟨":"🟥"):ev.type==="subst"?"🔄":"•";
@@ -5254,7 +5254,7 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
                             {isHome && ev.type==="subst" && <div style={{fontSize:13}}><span style={{color:C.green,fontWeight:600}}>↑ {ev.player?.name||""}</span>{" "}<span style={{color:C.red,fontWeight:600}}>↓ {ev.assist?.name||""}</span></div>}
                           </div>
                           <div style={{display:"flex",flexDirection:"column",alignItems:"center",minWidth:52,flexShrink:0}}>
-                            <div style={{fontSize:11,fontWeight:700,color:C.gold}}>
+                            <div style={{fontSize:13,fontWeight:700,color:C.gold}}>
                               <TimelineMinuteLabel
                                 raw={ev.time?.display || (
                                   ev.time?.elapsed != null
@@ -5273,8 +5273,8 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
                         </div>
                       );
                     })}
-                    {!loading && filtered.length===0 && timelineEvents.length>0 && <div style={{fontSize:12,color:C.dim,textAlign:"center",padding:"12px 0"}}>No events match filter.</div>}
-                    {!loading && timelineEvents.length===0 && <div style={{fontSize:12,color:C.dim,textAlign:"center",padding:"16px 0"}}>No events yet.</div>}
+                    {!loading && filtered.length===0 && timelineEvents.length>0 && <div style={{fontSize:14,color:C.dim,textAlign:"center",padding:"12px 0"}}>No events match filter.</div>}
+                    {!loading && timelineEvents.length===0 && <div style={{fontSize:14,color:C.dim,textAlign:"center",padding:"16px 0"}}>No events yet.</div>}
                   </>
               </div>
             );
@@ -5353,7 +5353,7 @@ function TopScorersTab({ tabTop=116 }) {
           )}
           <div style={{fontWeight:700,fontSize:15,color:C.green}}>
             {selected ? selected : "TOP SCORERS"}
-            {!selected && <span style={{fontSize:11,color:C.dim,fontWeight:400}}>{" · "}{hasLive?"Live data":"Pre-tournament"}</span>}
+            {!selected && <span style={{fontSize:13,color:C.dim,fontWeight:400}}>{" · "}{hasLive?"Live data":"Pre-tournament"}</span>}
           </div>
         </div>
       </div>
@@ -5365,7 +5365,7 @@ function TopScorersTab({ tabTop=116 }) {
         const details = (goalDetails[selected] || []).slice().sort((a,b) => (a.minute||0)-(b.minute||0));
         return (
           <div style={{padding:"8px 13px"}}>
-            <div style={{fontSize:12,color:C.dim,marginBottom:10}}>
+            <div style={{fontSize:14,color:C.dim,marginBottom:10}}>
               {getFlag(liveScorers.find(s=>s.name===selected)?.team || "")}
               {" "}{liveScorers.find(s=>s.name===selected)?.team || ""}
               {" · "}{details.length} goal{details.length!==1?"s":""}
@@ -5381,8 +5381,8 @@ function TopScorersTab({ tabTop=116 }) {
                     <div style={{fontWeight:700,color:C.gold,fontSize:15,lineHeight:1}}>
                       {g.minute != null ? `${g.minute}${g.extra ? `+${g.extra}` : ""}'` : "—"}
                     </div>
-                    <div style={{fontSize:11,color:C.dim,marginTop:3}}>{matchLabel(g.match)}</div>
-                    {g.assist && <div style={{fontSize:11,color:C.mid,marginTop:2}}>Assist: {g.assist}</div>}
+                    <div style={{fontSize:13,color:C.dim,marginTop:3}}>{matchLabel(g.match)}</div>
+                    {g.assist && <div style={{fontSize:13,color:C.mid,marginTop:2}}>Assist: {g.assist}</div>}
                     {g.detail && g.detail !== "Normal Goal" && (
                       <div style={{fontSize:10,color:C.blue,marginTop:2}}>{g.detail}</div>
                     )}
@@ -5409,7 +5409,7 @@ function TopScorersTab({ tabTop=116 }) {
                   </div>
                   <div style={{flex:1}}>
                     <div style={{fontWeight:700,color:C.text,fontSize:14,marginBottom:2}}>{p.name}</div>
-                    <div style={{fontSize:11,color:C.dim}}>{getFlag(p.team)} {p.team}</div>
+                    <div style={{fontSize:13,color:C.dim}}>{getFlag(p.team)} {p.team}</div>
                   </div>
                   <div style={{textAlign:"center",minWidth:40}}>
                     <div style={{fontWeight:900,fontSize:24,color:i===0?C.green:i<3?C.gold:C.mid,lineHeight:1}}>{p.goals}</div>
@@ -5494,17 +5494,17 @@ function NotifyEnableBtn({ syncUid, syncPin }) {
   };
 
   if (state === "done") return (
-    <div style={{marginTop:10,padding:"8px 12px",background:`${C.green}12`,border:`1px solid ${C.green}33`,borderRadius:8,fontSize:12,color:C.green,textAlign:"center"}}>
+    <div style={{marginTop:10,padding:"8px 12px",background:`${C.green}12`,border:`1px solid ${C.green}33`,borderRadius:8,fontSize:14,color:C.green,textAlign:"center"}}>
       🔔 Notifications enabled on this device
     </div>
   );
   if (state === "denied") return (
-    <div style={{marginTop:10,padding:"8px 12px",background:`${C.red}12`,border:`1px solid ${C.red}33`,borderRadius:8,fontSize:12,color:C.red,textAlign:"center"}}>
+    <div style={{marginTop:10,padding:"8px 12px",background:`${C.red}12`,border:`1px solid ${C.red}33`,borderRadius:8,fontSize:14,color:C.red,textAlign:"center"}}>
       ❌ Notifications blocked — enable in browser settings
     </div>
   );
   return (
-    <button onClick={handleEnable} disabled={state==="loading"} style={{width:"100%",marginTop:10,padding:"9px",borderRadius:8,border:`1px solid ${C.gold}44`,background:`${C.gold}15`,color:C.gold,fontSize:12,fontWeight:700,cursor:"pointer",opacity:state==="loading"?0.6:1}}>
+    <button onClick={handleEnable} disabled={state==="loading"} style={{width:"100%",marginTop:10,padding:"9px",borderRadius:8,border:`1px solid ${C.gold}44`,background:`${C.gold}15`,color:C.gold,fontSize:14,fontWeight:700,cursor:"pointer",opacity:state==="loading"?0.6:1}}>
       {state==="loading" ? "Enabling..." : "🔔 Enable notifications on this device"}
     </button>
   );
@@ -5656,7 +5656,7 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
             {isSynced ? <>
               <div style={{fontSize:isDesktop?12:13,color:C.dim,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginTop:6}}>{syncProfile.email||"PIN User"}</div>
               {syncProfile.pin && <div style={{fontSize:isDesktop?12:13,color:C.mid,marginTop:2}}>PIN: <strong style={{color:C.gold,letterSpacing:"0.1em"}}>{syncProfile.pin}</strong></div>}
-            </> : <div style={{fontSize:11,color:C.dim,marginTop:3}}>Sign in to sync your saved matches, teams and bracket picks.</div>}
+            </> : <div style={{fontSize:13,color:C.dim,marginTop:3}}>Sign in to sync your saved matches, teams and bracket picks.</div>}
           </div>
         </div>
 
@@ -5669,17 +5669,17 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
             <span style={{fontSize:16}}>⭐</span>
             <div style={{textAlign:"left"}}>
               <div style={{fontSize:13,fontWeight:700,color:C.text}}>My Teams</div>
-              <div style={{fontSize:11,color:favTeams.length?C.gold:C.dim}}>{favTeams.length?favTeams.join(", "):"Tap to select up to 4 teams"}</div>
+              <div style={{fontSize:13,color:favTeams.length?C.gold:C.dim}}>{favTeams.length?favTeams.join(", "):"Tap to select up to 4 teams"}</div>
             </div>
           </div>
           <span style={{color:C.dim,fontSize:16,transition:"transform .2s",transform:teamsExpanded?"rotate(90deg)":"none"}}>›</span>
         </button>
         {teamsExpanded && (
           <div style={{background:C.s2,border:`1px solid ${C.gold}44`,borderTop:`1px solid ${C.b1}`,borderRadius:"0 0 10px 10px",padding:"10px 12px"}}>
-            {favTeams.length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>{favTeams.map(t=><div key={t} style={{display:"flex",alignItems:"center",gap:5,padding:"4px 8px",background:C.bg,border:`1px solid ${C.gold}44`,borderRadius:16}}><Crest team={t} size={16}/><span style={{fontSize:11,color:C.gold,fontWeight:600}}>{t}</span><button onClick={()=>setFavTeams(prev=>{const n=prev.filter(x=>x!==t);try{localStorage.setItem("wc2026_favs",JSON.stringify(n))}catch{};return n;})} style={{background:"none",border:"none",color:C.dim,fontSize:13,cursor:"pointer",padding:0}}>×</button></div>)}</div>}
+            {favTeams.length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>{favTeams.map(t=><div key={t} style={{display:"flex",alignItems:"center",gap:5,padding:"4px 8px",background:C.bg,border:`1px solid ${C.gold}44`,borderRadius:16}}><Crest team={t} size={16}/><span style={{fontSize:13,color:C.gold,fontWeight:600}}>{t}</span><button onClick={()=>setFavTeams(prev=>{const n=prev.filter(x=>x!==t);try{localStorage.setItem("wc2026_favs",JSON.stringify(n))}catch{};return n;})} style={{background:"none",border:"none",color:C.dim,fontSize:13,cursor:"pointer",padding:0}}>×</button></div>)}</div>}
             {favTeams.length<4
-              ? <div style={{display:"flex",gap:5,flexWrap:"wrap",maxHeight:150,overflowY:"auto"}}>{Object.values(GROUPS).flatMap(g=>g.teams).sort().filter(t=>!favTeams.includes(t)).map(t=><button key={t} onClick={()=>{setFavTeams(prev=>{if(prev.length>=4)return prev;const n=[...prev,t];try{localStorage.setItem("wc2026_favs",JSON.stringify(n))}catch{};if(n.length===4)setTeamsExpanded(false);return n;});}} style={{display:"flex",alignItems:"center",gap:4,padding:"4px 8px",borderRadius:14,border:`1px solid ${C.b2}`,background:C.bg,color:C.mid,fontSize:11,cursor:"pointer"}}><Crest team={t} size={13}/>{t}</button>)}</div>
-              : <div style={{fontSize:11,color:C.gold,textAlign:"center",padding:"6px 0"}}>4/4 teams selected ✓<button onClick={()=>setTeamsExpanded(false)} style={{display:"block",margin:"6px auto 0",padding:"5px 14px",borderRadius:8,border:`1px solid ${C.b2}`,background:"none",color:C.mid,fontSize:11,cursor:"pointer"}}>Done</button></div>
+              ? <div style={{display:"flex",gap:5,flexWrap:"wrap",maxHeight:150,overflowY:"auto"}}>{Object.values(GROUPS).flatMap(g=>g.teams).sort().filter(t=>!favTeams.includes(t)).map(t=><button key={t} onClick={()=>{setFavTeams(prev=>{if(prev.length>=4)return prev;const n=[...prev,t];try{localStorage.setItem("wc2026_favs",JSON.stringify(n))}catch{};if(n.length===4)setTeamsExpanded(false);return n;});}} style={{display:"flex",alignItems:"center",gap:4,padding:"4px 8px",borderRadius:14,border:`1px solid ${C.b2}`,background:C.bg,color:C.mid,fontSize:13,cursor:"pointer"}}><Crest team={t} size={13}/>{t}</button>)}</div>
+              : <div style={{fontSize:13,color:C.gold,textAlign:"center",padding:"6px 0"}}>4/4 teams selected ✓<button onClick={()=>setTeamsExpanded(false)} style={{display:"block",margin:"6px auto 0",padding:"5px 14px",borderRadius:8,border:`1px solid ${C.b2}`,background:"none",color:C.mid,fontSize:13,cursor:"pointer"}}>Done</button></div>
             }
           </div>
         )}
@@ -5687,7 +5687,7 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
 
       {/* My Matches */}
       <button onClick={()=>{onClose();onShowSaved();}} style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"13px 14px",background:C.s2,border:`1px solid ${C.b1}`,borderRadius:12,cursor:"pointer",marginBottom:4}}>
-        <div style={{display:"flex",alignItems:"center",gap:10}}><span style={{fontSize:18}}>⭐</span><div style={{textAlign:"left"}}><div style={{fontWeight:700,color:C.text,fontSize:14}}>{"My Matches"}</div><div style={{fontSize:11,color:C.dim}}>{saved.length} match{saved.length!==1?"es":""} saved</div></div></div>
+        <div style={{display:"flex",alignItems:"center",gap:10}}><span style={{fontSize:18}}>⭐</span><div style={{textAlign:"left"}}><div style={{fontWeight:700,color:C.text,fontSize:14}}>{"My Matches"}</div><div style={{fontSize:13,color:C.dim}}>{saved.length} match{saved.length!==1?"es":""} saved</div></div></div>
         <span style={{color:C.mid,fontSize:18}}>›</span>
       </button>
 
@@ -5696,7 +5696,7 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
       {/* Sync section */}
       {!isSynced ? (
         <div>
-          <div style={{fontSize:11,color:C.mid,fontWeight:700,letterSpacing:"0.08em",marginBottom:10}}>{"🔗 SYNC ACROSS DEVICES"}</div>
+          <div style={{fontSize:13,color:C.mid,fontWeight:700,letterSpacing:"0.08em",marginBottom:10}}>{"🔗 SYNC ACROSS DEVICES"}</div>
           <div style={{display:"flex",gap:8,marginBottom:8}}>
             <button onClick={()=>setScreen("pin-create")} style={{flex:1,padding:"11px 8px",borderRadius:12,border:`1px solid ${C.green}44`,background:`${C.green}15`,color:C.green,fontWeight:700,fontSize:13,cursor:"pointer"}}>🔢 Create PIN</button>
             <button onClick={()=>setScreen("pin-join")} style={{flex:1,padding:"11px 8px",borderRadius:12,border:`1px solid ${C.b2}`,background:C.bg,color:C.mid,fontWeight:600,fontSize:13,cursor:"pointer"}}>I have a PIN</button>
@@ -5706,16 +5706,16 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
       ) : (
         <>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>
-          <div style={{fontSize:11,color:C.dim,flex:1}}>✅ Syncing across devices</div>
-          {isSynced && <button onClick={()=>{persistProfile(null);onSignOut();setToast("Signed out.");onClose();}} style={{padding:"6px 12px",borderRadius:8,border:`1px solid ${C.b2}`,background:C.s2,color:C.mid,fontSize:11,fontWeight:600,cursor:"pointer",flexShrink:0}}>Sign out</button>}
-          {syncProfile?.pin&&<button onClick={()=>{setPin("");setScreen("pin-change");setError("");}} style={{padding:"6px 12px",borderRadius:8,border:`1px solid ${C.b2}`,background:C.s2,color:C.mid,fontSize:11,fontWeight:600,cursor:"pointer",flexShrink:0}}>🔁 Change PIN</button>}
+          <div style={{fontSize:13,color:C.dim,flex:1}}>✅ Syncing across devices</div>
+          {isSynced && <button onClick={()=>{persistProfile(null);onSignOut();setToast("Signed out.");onClose();}} style={{padding:"6px 12px",borderRadius:8,border:`1px solid ${C.b2}`,background:C.s2,color:C.mid,fontSize:13,fontWeight:600,cursor:"pointer",flexShrink:0}}>Sign out</button>}
+          {syncProfile?.pin&&<button onClick={()=>{setPin("");setScreen("pin-change");setError("");}} style={{padding:"6px 12px",borderRadius:8,border:`1px solid ${C.b2}`,background:C.s2,color:C.mid,fontSize:13,fontWeight:600,cursor:"pointer",flexShrink:0}}>🔁 Change PIN</button>}
         </div>
         {syncProfile?.pin && (
           <NotifyEnableBtn syncUid={syncUid} syncPin={syncProfile.pin}/>
         )}
         <div style={{textAlign:"center",marginTop:10,lineHeight:1.35}}>
           <div style={{fontSize:10,color:C.dim}}>{versionLabel}</div>
-          {versionSubLabel && <div style={{fontSize:9,color:C.dim,opacity:0.75}}>{versionSubLabel}</div>}
+          {versionSubLabel && <div style={{fontSize:9,color:C.dim,opacity:0.825}}>{versionSubLabel}</div>}
         </div>
         </>
       )}
@@ -5730,13 +5730,13 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
             </div>
             <div style={{display:"flex",borderBottom:`1px solid ${C.b1}`,flexShrink:0}}>
               {[["icons","⚽ Icons"],["flags","🏳️ Flags"],["upload","📷 Photo"]].map(([id,label])=>(
-                <button key={id} onClick={()=>{setAvatarTab(id);setAvatarSearch("");}} style={{flex:1,padding:"10px 4px",background:"none",border:"none",borderBottom:`2px solid ${avatarTab===id?C.green:"transparent"}`,color:avatarTab===id?C.green:C.dim,fontWeight:avatarTab===id?700:400,fontSize:12,cursor:"pointer"}}>{label}</button>
+                <button key={id} onClick={()=>{setAvatarTab(id);setAvatarSearch("");}} style={{flex:1,padding:"10px 4px",background:"none",border:"none",borderBottom:`2px solid ${avatarTab===id?C.green:"transparent"}`,color:avatarTab===id?C.green:C.dim,fontWeight:avatarTab===id?700:400,fontSize:14,cursor:"pointer"}}>{label}</button>
               ))}
             </div>
             <div style={{overflowY:"auto",padding:12,flex:1}}>
               {avatarTab==="icons"&&<div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8}}>{FOOTBALL_ICONS.map(icon=>{const active=userAvatar===icon.id;return(<button key={icon.id} onClick={()=>selectPresetAvatar(icon.id)} title={icon.label} style={{padding:"10px 4px",border:`2px solid ${active?C.green:C.b2}`,borderRadius:10,background:active?`${C.green}22`:C.s2,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>{icon.el(44)}<span style={{fontSize:9,color:active?C.green:C.dim,textAlign:"center"}}>{icon.label}</span></button>);})}</div>}
               {avatarTab==="flags"&&(<div><input value={avatarSearch} onChange={e=>setAvatarSearch(e.target.value)} placeholder="Search team..." style={{width:"100%",padding:"8px 12px",background:C.s2,border:`1px solid ${C.b2}`,borderRadius:8,color:C.text,fontSize:13,outline:"none",marginBottom:10,boxSizing:"border-box"}}/><div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:6}}>{filteredTeams.map(team=>{const code=FLAG_CODES_MAP[team];const id=`flag:${team}`;const active=userAvatar===id;return code?(<button key={team} onClick={()=>selectPresetAvatar(id)} title={team} style={{padding:0,border:`2px solid ${active?C.green:"transparent"}`,borderRadius:8,background:"transparent",cursor:"pointer",overflow:"hidden",aspectRatio:"3/2",position:"relative"}}><img src={`https://flagcdn.com/w80/${code}.png`} crossOrigin="anonymous" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}} alt={team} onError={e=>{e.target.style.display="none";}}/>{active&&<div style={{position:"absolute",top:2,right:2,width:12,height:12,borderRadius:"50%",background:C.green,fontSize:8,color:"#030a05",fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center"}}>✓</div>}</button>):null;})}</div></div>)}
-              {avatarTab==="upload"&&<div style={{textAlign:"center",padding:"20px 0"}}><div style={{width:80,height:80,borderRadius:"50%",margin:"0 auto 16px",border:`2px dashed ${C.b2}`,background:C.s2,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}>{userAvatar?.startsWith("data:")?<img src={userAvatar} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="avatar"/>:<span style={{fontSize:32}}>📷</span>}</div><label style={{display:"inline-block",padding:"12px 24px",borderRadius:12,background:`linear-gradient(135deg,${C.green},#22c55e)`,color:"#030a05",fontWeight:700,fontSize:15,cursor:"pointer"}}>Choose Photo<input type="file" accept="image/*" onChange={handlePhotoUpload} style={{display:"none"}}/></label>{userAvatar?.startsWith("data:")&&<button onClick={()=>{persistAvatar(null);setToast("Photo removed.");}} style={{display:"block",margin:"12px auto 0",background:"none",border:"none",color:C.dim,fontSize:12,cursor:"pointer",textDecoration:"underline"}}>Remove photo</button>}</div>}
+              {avatarTab==="upload"&&<div style={{textAlign:"center",padding:"20px 0"}}><div style={{width:80,height:80,borderRadius:"50%",margin:"0 auto 16px",border:`2px dashed ${C.b2}`,background:C.s2,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}>{userAvatar?.startsWith("data:")?<img src={userAvatar} style={{width:"100%",height:"100%",objectFit:"cover"}} alt="avatar"/>:<span style={{fontSize:32}}>📷</span>}</div><label style={{display:"inline-block",padding:"12px 24px",borderRadius:12,background:`linear-gradient(135deg,${C.green},#22c55e)`,color:"#030a05",fontWeight:700,fontSize:15,cursor:"pointer"}}>Choose Photo<input type="file" accept="image/*" onChange={handlePhotoUpload} style={{display:"none"}}/></label>{userAvatar?.startsWith("data:")&&<button onClick={()=>{persistAvatar(null);setToast("Photo removed.");}} style={{display:"block",margin:"12px auto 0",background:"none",border:"none",color:C.dim,fontSize:14,cursor:"pointer",textDecoration:"underline"}}>Remove photo</button>}</div>}
             </div>
           </div>
         </div>
@@ -5751,21 +5751,21 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
         <div style={{fontSize:13,color:C.dim,lineHeight:1.5,marginBottom:16}}>Choose a 6-digit PIN you'll remember. Enter it on any other device to sync your progress.</div>
         <input value={pin} onChange={e=>setPin(e.target.value.replace(/[^0-9]/g,"").slice(0,6))} placeholder="Choose a 6-digit PIN" inputMode="numeric" maxLength={6} style={{...inputStyle,fontSize:24,textAlign:"center",fontFamily:"monospace",letterSpacing:"0.2em",marginBottom:12}}/>
         <button onClick={handleCreatePIN} disabled={loading||pin.length<6} style={{...btnPrimary,opacity:loading||pin.length<6?0.5:1,marginBottom:8}}>{loading?"Saving...":"Set My PIN"}</button>
-        <div style={{textAlign:"center",margin:"8px 0 4px",fontSize:12,color:C.dim}}>or</div>
+        <div style={{textAlign:"center",margin:"8px 0 4px",fontSize:14,color:C.dim}}>or</div>
         <button onClick={()=>setScreen("email")} style={{...btnSecondary,marginTop:0,fontSize:13}}>✉️ Sign in with Email instead</button>
       </div>}
       {screen==="pin-created"&&<div style={{textAlign:"center"}}>
         <div style={{fontSize:13,color:C.dim,marginBottom:16,lineHeight:1.5}}>Your sync PIN is set. Use it on any device to restore your progress.</div>
         <div style={{background:C.s2,border:`1px solid ${C.green}44`,borderRadius:14,padding:"20px 16px",marginBottom:20}}>
-          <div style={{fontSize:11,color:C.mid,fontWeight:600,letterSpacing:"0.1em",marginBottom:8}}>YOUR PIN</div>
+          <div style={{fontSize:13,color:C.mid,fontWeight:600,letterSpacing:"0.1em",marginBottom:8}}>YOUR PIN</div>
           <div style={{fontSize:40,fontWeight:900,color:C.green,letterSpacing:"0.2em",fontFamily:"monospace"}}>{syncProfile?.pin||pin}</div>
         </div>
-        <div style={{fontSize:12,color:C.dim,marginBottom:20,lineHeight:1.5}}>Screenshot this. On another device, tap the profile icon → "I have a PIN".</div>
+        <div style={{fontSize:14,color:C.dim,marginBottom:20,lineHeight:1.5}}>Screenshot this. On another device, tap the profile icon → "I have a PIN".</div>
         <button onClick={onClose} style={btnPrimary}>Done</button>
         <button onClick={()=>{setPin("");setScreen("pin-change");setError("");}} style={{...btnSecondary,fontSize:13}}>🔁 Change PIN</button>
       </div>}
       {screen==="pin-change"&&<div>
-        {syncProfile?.pin&&<div style={{background:C.s2,border:`1px solid ${C.b1}`,borderRadius:10,padding:"12px 14px",marginBottom:16,display:"flex",alignItems:"center",justifyContent:"space-between"}}><div><div style={{fontSize:11,color:C.mid,fontWeight:600,marginBottom:2}}>CURRENT PIN</div><div style={{fontSize:24,fontWeight:900,color:C.dim,letterSpacing:"0.2em",fontFamily:"monospace"}}>{syncProfile.pin}</div></div><span style={{fontSize:11,color:C.dim}}>will be replaced</span></div>}
+        {syncProfile?.pin&&<div style={{background:C.s2,border:`1px solid ${C.b1}`,borderRadius:10,padding:"12px 14px",marginBottom:16,display:"flex",alignItems:"center",justifyContent:"space-between"}}><div><div style={{fontSize:13,color:C.mid,fontWeight:600,marginBottom:2}}>CURRENT PIN</div><div style={{fontSize:24,fontWeight:900,color:C.dim,letterSpacing:"0.2em",fontFamily:"monospace"}}>{syncProfile.pin}</div></div><span style={{fontSize:13,color:C.dim}}>will be replaced</span></div>}
         <div style={{fontSize:13,color:C.dim,lineHeight:1.5,marginBottom:12}}>Enter a new 6-digit PIN.</div>
         <input value={pin} onChange={e=>setPin(e.target.value.replace(/[^0-9]/g,"").slice(0,6))} placeholder="New 6-digit PIN" inputMode="numeric" maxLength={6} style={{...inputStyle,fontSize:24,textAlign:"center",fontFamily:"monospace",letterSpacing:"0.2em",marginBottom:12}}/>
         <button onClick={async()=>{
@@ -5791,7 +5791,7 @@ function SyncModal({ open, onClose, syncProfile, setSyncProfile, syncUid, saved,
         <div style={{fontSize:48,marginBottom:16}}>📬</div>
         <div style={{fontWeight:700,color:C.text,fontSize:17,marginBottom:8}}>Check your inbox</div>
         <div style={{fontSize:13,color:C.dim,lineHeight:1.6,marginBottom:20}}>We sent a sign-in link to <strong style={{color:C.text}}>{email}</strong>. The link expires in 15 minutes.</div>
-        <div style={{fontSize:12,color:C.mid,background:C.s2,borderRadius:10,padding:"10px 14px"}}>Didn't get it? Check spam, or <button onClick={()=>setScreen("email")} style={{background:"none",border:"none",color:C.green,cursor:"pointer",fontSize:12,fontWeight:600,padding:0}}>try again</button>.</div>
+        <div style={{fontSize:14,color:C.mid,background:C.s2,borderRadius:10,padding:"10px 14px"}}>Didn't get it? Check spam, or <button onClick={()=>setScreen("email")} style={{background:"none",border:"none",color:C.green,cursor:"pointer",fontSize:14,fontWeight:600,padding:0}}>try again</button>.</div>
       </div>}
     </div>
   );
@@ -5872,7 +5872,7 @@ export function QuickFacts({ tabTop }) {
 
   if (scores.length === 0) return (
     <div style={{background:C.s2,borderRadius:12,padding:16,marginBottom:16,border:`1px solid ${C.b1}`}}>
-      <div style={{fontSize:12,fontWeight:700,color:C.mid,letterSpacing:"0.08em",marginBottom:8}}>{tx("⚡ TOURNAMENT FACTS", "⚡ FATOS DO TORNEIO")}</div>
+      <div style={{fontSize:14,fontWeight:700,color:C.mid,letterSpacing:"0.08em",marginBottom:8}}>{tx("⚡ TOURNAMENT FACTS", "⚡ FATOS DO TORNEIO")}</div>
       <div style={{fontSize:13,color:C.dim,textAlign:"center",padding:"12px 0"}}>{tx("Facts will appear here as matches are played.", "Os fatos aparecerão aqui conforme os jogos forem disputados.")}</div>
     </div>
   );
@@ -5909,10 +5909,10 @@ export function QuickFacts({ tabTop }) {
 
   const detailRow = (rank, icon, main, sub, color=C.text) => (
     <div key={`${rank}-${main}-${sub || ""}`} style={{display:"flex",alignItems:"center",gap:9,padding:"7px 0",borderTop:rank===1?"none":`1px solid ${C.b1}`}}>
-      <div style={{width:22,height:22,borderRadius:999,display:"flex",alignItems:"center",justifyContent:"center",background:`${color}18`,border:`1px solid ${color}33`,color,fontSize:11,fontWeight:900,flexShrink:0}}>{rank}</div>
+      <div style={{width:22,height:22,borderRadius:999,display:"flex",alignItems:"center",justifyContent:"center",background:`${color}18`,border:`1px solid ${color}33`,color,fontSize:13,fontWeight:900,flexShrink:0}}>{rank}</div>
       <div style={{fontSize:16,flexShrink:0}}>{icon}</div>
       <div style={{minWidth:0,flex:1}}>
-        <div style={{fontSize:12,color:C.text,fontWeight:800,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{main}</div>
+        <div style={{fontSize:14,color:C.text,fontWeight:800,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{main}</div>
         {sub && <div style={{fontSize:10,color:C.dim,marginTop:1}}>{sub}</div>}
       </div>
     </div>
@@ -5958,7 +5958,7 @@ export function QuickFacts({ tabTop }) {
 
   return (
     <div style={{background:C.s2,borderRadius:12,padding:16,marginBottom:16,border:`1px solid ${C.b1}`}}>
-      <div style={{fontSize:12,fontWeight:700,color:C.mid,letterSpacing:"0.08em",marginBottom:12}}>{tx("⚡ TOURNAMENT FACTS SO FAR", "⚡ FATOS DO TORNEIO ATÉ AGORA")}</div>
+      <div style={{fontSize:14,fontWeight:700,color:C.mid,letterSpacing:"0.08em",marginBottom:12}}>{tx("⚡ TOURNAMENT FACTS SO FAR", "⚡ FATOS DO TORNEIO ATÉ AGORA")}</div>
       {facts.map((f,i) => {
         const open = expandedFact === f.key;
         const clickable = !!f.details;
@@ -5986,12 +5986,12 @@ export function QuickFacts({ tabTop }) {
               <span style={{fontSize:18,flexShrink:0,opacity:1,filter:"none",color:C.text}}>{f.icon}</span>
               <div style={{flex:1,minWidth:0}}>
                 <div style={{display:"flex",alignItems:"center",gap:6}}>
-                  <div style={{fontSize:11,color:C.dim,fontWeight:600}}>{f.label}</div>
+                  <div style={{fontSize:13,color:C.dim,fontWeight:600}}>{f.label}</div>
                   {f.hint && <div style={{fontSize:9,color:C.gold,fontWeight:800,background:`${C.gold}14`,border:`1px solid ${C.gold}33`,borderRadius:999,padding:"1px 6px"}}>{open?tx("Hide", "Ocultar"):tx("Top 3", "Top 3")}</div>}
                 </div>
                 <div style={{fontSize:13,color:C.text,fontWeight:600,marginTop:1,overflow:"hidden",textOverflow:"ellipsis"}}>{f.value}</div>
               </div>
-              {clickable && <span style={{fontSize:12,color:C.dim,transform:open?"rotate(180deg)":"none",transition:"transform .15s"}}>▾</span>}
+              {clickable && <span style={{fontSize:14,color:C.dim,transform:open?"rotate(180deg)":"none",transition:"transform .15s"}}>▾</span>}
             </button>
             {open && f.details && (
               <div style={{margin:"8px 0 0 28px",padding:"8px 10px",background:C.s1,border:`1px solid ${C.b1}`,borderRadius:10}}>
@@ -6268,7 +6268,7 @@ function LeagueInviteOnboarding({ leagueCode, leagueName, onDone }) {
         <input value={displayName} onChange={e=>setDisplayName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&handleName()}
           placeholder="Your name" autoFocus
           style={{width:"100%",padding:"13px 16px",background:C2.s2,border:`1px solid ${C2.b2}`,borderRadius:12,color:C2.text,fontSize:16,outline:"none",marginBottom:error?8:20,boxSizing:"border-box"}}/>
-        {error && <div style={{color:"#f87171",fontSize:12,marginBottom:12}}>{error}</div>}
+        {error && <div style={{color:"#f87171",fontSize:14,marginBottom:12}}>{error}</div>}
         <button onClick={handleName} style={{width:"100%",padding:"14px",borderRadius:14,border:"none",background:`linear-gradient(135deg,${C2.green},#22c55e)`,color:"#030a05",fontWeight:800,fontSize:16,cursor:"pointer"}}>
           Continue →
         </button>
@@ -6288,7 +6288,7 @@ function LeagueInviteOnboarding({ leagueCode, leagueName, onDone }) {
         <input value={pin2} onChange={e=>setPin2(e.target.value.replace(/\D/g,""))} placeholder="Confirm PIN"
           type="tel" maxLength={8}
           style={{width:"100%",padding:"13px 16px",background:C2.s2,border:`1px solid ${C2.b2}`,borderRadius:12,color:C2.text,fontSize:20,letterSpacing:"0.2em",outline:"none",marginBottom:error?8:20,textAlign:"center",boxSizing:"border-box"}}/>
-        {error && <div style={{color:"#f87171",fontSize:12,marginBottom:12}}>{error}</div>}
+        {error && <div style={{color:"#f87171",fontSize:14,marginBottom:12}}>{error}</div>}
         <button onClick={handlePin} disabled={loading} style={{width:"100%",padding:"14px",borderRadius:14,border:"none",background:`linear-gradient(135deg,${C2.gold},#f59e0b)`,color:"#030a05",fontWeight:800,fontSize:16,cursor:"pointer",opacity:loading?0.6:1}}>
           {loading ? "Setting up..." : "Create PIN & Join League →"}
         </button>
@@ -6437,7 +6437,7 @@ function AmazonBtn({ q, label }) {
     <a href={AFFILIATE.amazon(q)} target="_blank" rel="noopener noreferrer sponsored" style={{textDecoration:"none"}}>
       <div style={{display:"flex",alignItems:"center",gap:6,padding:"8px 14px",background:`${C.gold}18`,border:`1px solid ${C.gold}44`,borderRadius:10,cursor:"pointer"}}>
         <span style={{fontSize:13}}>🛒</span>
-        <span style={{fontSize:12,fontWeight:700,color:C.gold}}>{label}</span>
+        <span style={{fontSize:14,fontWeight:700,color:C.gold}}>{label}</span>
         <span style={{fontSize:10,color:C.dim,marginLeft:"auto"}}>Amazon ↗</span>
       </div>
     </a>
@@ -6458,22 +6458,22 @@ function ShopTab({ tabTop=116, geoData=null }) {
       {/* Header */}
       <div style={{padding:"16px 16px 8px"}}>
         <div style={{fontWeight:800,fontSize:18,color:C.green,marginBottom:4}}>⚽ {tx("Fan Shop", "Loja do Torcedor")}</div>
-        <div style={{fontSize:12,color:C.dim}}>{tx("Support the app — we earn a small commission at no cost to you.", "Apoie o app — podemos receber uma pequena comissão sem custo adicional para você.")}</div>
+        <div style={{fontSize:14,color:C.dim}}>{tx("Support the app — we earn a small commission at no cost to you.", "Apoie o app — podemos receber uma pequena comissão sem custo adicional para você.")}</div>
       </div>
 
       {/* Watch Live — Fubo */}
       <div style={{padding:"0 16px",marginTop:8}}>
-        <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10}}>📡 {tx("Watch Live", "Assista ao vivo")}</div>
+        <div style={{fontSize:13,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10}}>📡 {tx("Watch Live", "Assista ao vivo")}</div>
         <a href={AFFILIATE.fubo} target="_blank" rel="noopener noreferrer sponsored" style={{textDecoration:"none"}}>
           <div style={{display:"flex",alignItems:"center",gap:12,padding:"14px",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:12,cursor:"pointer"}}>
             <span style={{fontSize:28,flexShrink:0}}>📺</span>
             <div style={{flex:1}}>
               <div style={{fontWeight:700,fontSize:14,color:C.text}}>{tx("Watch on Fubo", "Assista no Fubo")}</div>
-              <div style={{fontSize:11,color:C.mid,marginTop:2}}>{tx("Stream every World Cup match live", "Transmita todos os jogos da Copa ao vivo")}</div>
+              <div style={{fontSize:13,color:C.mid,marginTop:2}}>{tx("Stream every World Cup match live", "Transmita todos os jogos da Copa ao vivo")}</div>
               <div style={{fontSize:10,color:C.dim,marginTop:2}}>FOX · FS1 · Telemundo · Peacock</div>
             </div>
             <div style={{background:`${C.green}22`,border:`1px solid ${C.green}44`,borderRadius:8,padding:"4px 10px"}}>
-              <div style={{fontSize:11,fontWeight:700,color:C.green}}>{tx("Try Free →", "Teste grátis →")}</div>
+              <div style={{fontSize:13,fontWeight:700,color:C.green}}>{tx("Try Free →", "Teste grátis →")}</div>
             </div>
           </div>
         </a>
@@ -6481,17 +6481,17 @@ function ShopTab({ tabTop=116, geoData=null }) {
 
       {/* Watch Abroad — NordVPN */}
       <div style={{padding:"0 16px",marginTop:12}}>
-        <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10}}>🌍 {tx("Watch Abroad", "Assista fora do país")}</div>
+        <div style={{fontSize:13,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10}}>🌍 {tx("Watch Abroad", "Assista fora do país")}</div>
         <a href={AFFILIATE.nordvpn} target="_blank" rel="noopener noreferrer sponsored" style={{textDecoration:"none"}}>
           <div style={{display:"flex",alignItems:"center",gap:12,padding:"14px",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:12,cursor:"pointer"}}>
             <span style={{fontSize:28,flexShrink:0}}>🔒</span>
             <div style={{flex:1}}>
               <div style={{fontWeight:700,fontSize:14,color:C.text}}>NordVPN</div>
-              <div style={{fontSize:11,color:C.mid,marginTop:2}}>{tx("Watch WC from anywhere in the world", "Assista à Copa de qualquer lugar do mundo")}</div>
+              <div style={{fontSize:13,color:C.mid,marginTop:2}}>{tx("Watch WC from anywhere in the world", "Assista à Copa de qualquer lugar do mundo")}</div>
               <div style={{fontSize:10,color:C.dim,marginTop:2}}>{tx("Unblock regional streams · 30-day guarantee", "Desbloqueie transmissões regionais · garantia de 30 dias")}</div>
             </div>
             <div style={{background:`${C.blue}22`,border:`1px solid ${C.blue}44`,borderRadius:8,padding:"4px 10px"}}>
-              <div style={{fontSize:11,fontWeight:700,color:C.blue}}>{tx("Get Deal →", "Ver oferta →")}</div>
+              <div style={{fontSize:13,fontWeight:700,color:C.blue}}>{tx("Get Deal →", "Ver oferta →")}</div>
             </div>
           </div>
         </a>
@@ -6500,17 +6500,17 @@ function ShopTab({ tabTop=116, geoData=null }) {
       {/* Hard Rock Bet — geo-gated */}
       {showHRB && (
         <div style={{padding:"0 16px",marginTop:12}}>
-          <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10}}>🎰 {tx("Bet on It", "Aposte")}</div>
+          <div style={{fontSize:13,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10}}>🎰 {tx("Bet on It", "Aposte")}</div>
           <a href={AFFILIATE.hrb} target="_blank" rel="noopener noreferrer sponsored" style={{textDecoration:"none"}}>
             <div style={{display:"flex",alignItems:"center",gap:12,padding:"14px",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:12,cursor:"pointer"}}>
               <span style={{fontSize:28,flexShrink:0}}>🎯</span>
               <div style={{flex:1}}>
                 <div style={{fontWeight:700,fontSize:14,color:C.text}}>Hard Rock Bet</div>
-                <div style={{fontSize:11,color:C.mid,marginTop:2}}>{tx("Bet on every World Cup match", "Aposte em todos os jogos da Copa")}</div>
+                <div style={{fontSize:13,color:C.mid,marginTop:2}}>{tx("Bet on every World Cup match", "Aposte em todos os jogos da Copa")}</div>
                 <div style={{fontSize:10,color:C.dim,marginTop:2}}>21+ · Gambling problem? Call 1-800-GAMBLER</div>
               </div>
               <div style={{background:`${C.red}22`,border:`1px solid ${C.red}44`,borderRadius:8,padding:"4px 10px"}}>
-                <div style={{fontSize:11,fontWeight:700,color:C.red}}>{tx("Bet Now →", "Aposte agora →")}</div>
+                <div style={{fontSize:13,fontWeight:700,color:C.red}}>{tx("Bet Now →", "Aposte agora →")}</div>
               </div>
             </div>
           </a>
@@ -6519,13 +6519,13 @@ function ShopTab({ tabTop=116, geoData=null }) {
 
       {/* Amazon — collapsible */}
       <div style={{padding:"0 16px",marginTop:16}}>
-        <div style={{fontSize:11,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10}}>🛍️ {tx("Buy World Cup Merchandise", "Produtos da Copa")}</div>
+        <div style={{fontSize:13,color:C.dim,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10}}>🛍️ {tx("Buy World Cup Merchandise", "Produtos da Copa")}</div>
         <button onClick={()=>setAmazonOpen(v=>!v)} style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 14px",background:C.s1,border:`1px solid ${C.b2}`,borderRadius:amazonOpen?"12px 12px 0 0":12,cursor:"pointer",color:C.text}}>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             <span style={{fontSize:20}}>🛒</span>
             <div style={{textAlign:"left"}}>
               <div style={{fontWeight:700,fontSize:14,color:C.text}}>{tx("Shop on Amazon", "Comprar na Amazon")}</div>
-              <div style={{fontSize:11,color:C.dim,marginTop:1}}>{tx("Jerseys, balls, decor & more", "Camisas, bolas, decoração e mais")}</div>
+              <div style={{fontSize:13,color:C.dim,marginTop:1}}>{tx("Jerseys, balls, decor & more", "Camisas, bolas, decoração e mais")}</div>
             </div>
           </div>
           <span style={{fontSize:16,color:C.gold,transform:amazonOpen?"rotate(90deg)":"none",transition:"transform .2s"}}>›</span>
@@ -6537,7 +6537,7 @@ function ShopTab({ tabTop=116, geoData=null }) {
                 <div style={{display:"flex",alignItems:"center",gap:12,padding:"11px 14px",background:C.s1,borderTop:i>0?`1px solid ${C.b1}`:"none",cursor:"pointer"}}>
                   <span style={{fontSize:20,flexShrink:0}}>{cat.icon}</span>
                   <span style={{fontSize:13,fontWeight:600,color:C.text,flex:1}}>{cat.label}</span>
-                  <span style={{fontSize:11,color:C.gold}}>{tx("Shop →", "Comprar →")}</span>
+                  <span style={{fontSize:13,color:C.gold}}>{tx("Shop →", "Comprar →")}</span>
                 </div>
               </a>
             ))}
@@ -6679,7 +6679,7 @@ function LanguageSelector({ language, setLanguage, C }) {
         border:`2px solid ${C.b1}`,
         background:C.s1,
         color:C.text,
-        fontSize:11,
+        fontSize:13,
         fontWeight:800,
         padding:"0 6px",
         cursor:"pointer",
@@ -6753,7 +6753,7 @@ function InstallBanner() {
         <img src="/icons/icon-192.png" alt="icon" style={{width:36,height:36,borderRadius:8,flexShrink:0}}/>
         <div style={{flex:1}}>
           <div style={{fontWeight:700,color:C.text,fontSize:13}}>Install World Cup 2026</div>
-          <div style={{fontSize:11,color:C.dim}}>Add to your home screen for the best experience</div>
+          <div style={{fontSize:13,color:C.dim}}>Add to your home screen for the best experience</div>
         </div>
         <button onClick={handleInstall} style={{padding:"8px 14px",borderRadius:20,background:`linear-gradient(135deg,${C.green},#22c55e)`,border:"none",color:"#030a05",fontWeight:700,fontSize:13,cursor:"pointer",flexShrink:0}}>
           {isIOS ? "How to" : "Install"}
@@ -6778,7 +6778,7 @@ function InstallBanner() {
                 <div style={{fontSize:13,color:C.text}}>{text}</div>
               </div>
             ))}
-            <div style={{marginTop:8,padding:12,background:`${C.gold}18`,border:`1px solid ${C.gold}33`,borderRadius:10,fontSize:12,color:C.mid}}>
+            <div style={{marginTop:8,padding:12,background:`${C.gold}18`,border:`1px solid ${C.gold}33`,borderRadius:10,fontSize:14,color:C.mid}}>
               💡 Must be using <strong style={{color:C.gold}}>Safari</strong> — Chrome on iOS doesn't support home screen install.
             </div>
             <button onClick={()=>setShowIOSInstructions(false)} style={{width:"100%",marginTop:16,padding:"12px 0",borderRadius:12,background:`linear-gradient(135deg,${C.green},#22c55e)`,border:"none",color:"#030a05",fontWeight:700,fontSize:15,cursor:"pointer"}}>Got it</button>
@@ -7264,11 +7264,11 @@ function AppContent() {
           <img src="/icons/icon-512.png" alt="WC 2026" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
         </div>
         <div style={{textAlign:"center",marginBottom:8}}>
-          <div style={{fontSize:11,color:"#4ade8088",fontWeight:700,letterSpacing:"0.15em",marginBottom:4}}>FIFA</div>
+          <div style={{fontSize:13,color:"#4ade8088",fontWeight:700,letterSpacing:"0.15em",marginBottom:4}}>FIFA</div>
           <div style={{fontSize:28,fontWeight:900,color:"#d4ead9",lineHeight:1.1,letterSpacing:"0.02em"}}>WORLD CUP</div>
           <div style={{fontSize:28,fontWeight:900,color:"#4ade80",lineHeight:1.1,letterSpacing:"0.02em"}}>2026™</div>
         </div>
-        <div style={{fontSize:12,color:"#3d6a4d",textAlign:"center",marginTop:8}}>Your tournament companion</div>
+        <div style={{fontSize:14,color:"#3d6a4d",textAlign:"center",marginTop:8}}>Your tournament companion</div>
       </div>
       <style>{`@keyframes splashIn{to{opacity:1;transform:translateY(0)}from{opacity:0;transform:translateY(16px)}}`}</style>
     </div>
@@ -7280,7 +7280,7 @@ function AppContent() {
         <div style={{position:"fixed",inset:0,zIndex:10000,background:"rgba(6,14,10,.94)",display:"flex",alignItems:"center",justifyContent:"center",padding:24}}>
           <div style={{width:"100%",maxWidth:380,borderRadius:22,border:`1px solid ${C.green}55`,background:`linear-gradient(135deg,${C.s1},${C.s2})`,boxShadow:DS.shadow.modal,padding:26,textAlign:"center"}}>
             <div style={{fontSize:42,marginBottom:12}}>🏆</div>
-            <div style={{fontSize:12,color:C.green,fontWeight:900,letterSpacing:".16em",textTransform:"uppercase",marginBottom:6}}>World Cup App Updated</div>
+            <div style={{fontSize:14,color:C.green,fontWeight:900,letterSpacing:".16em",textTransform:"uppercase",marginBottom:6}}>World Cup App Updated</div>
             <div style={{fontSize:22,fontWeight:900,color:C.text,marginBottom:4}}>Version {releaseUpdate.appVersion}</div>
             {releaseUpdate.releaseName && <div style={{fontSize:14,color:C.gold,fontWeight:800,marginBottom:12}}>“{releaseUpdate.releaseName}”</div>}
             <div style={{fontSize:13,color:C.mid,lineHeight:1.55,marginBottom:18}}>{releaseUpdate.message}</div>
@@ -7418,7 +7418,7 @@ function AppContent() {
               <div style={{fontSize:18,fontWeight:800,color:C.text,marginBottom:8}}>Get Kickoff Alerts</div>
               <div style={{fontSize:13,color:C.mid,lineHeight:1.6,marginBottom:20}}>Save matches + tap <strong style={{color:C.gold}}>&ldquo;Notify all&rdquo;</strong> in My Matches to get 30-min alerts before every kickoff — automatically.</div>
               <button onClick={()=>{dismissBanner();setTab("saved");}} style={{width:"100%",padding:"13px",background:`linear-gradient(135deg,${C.gold},#f59e0b)`,border:"none",borderRadius:12,color:"#030a05",fontSize:15,fontWeight:800,cursor:"pointer",marginBottom:8}}>{t("setup.notifications","Set up notifications →")}</button>
-              <button onClick={dismissBanner} style={{width:"100%",padding:"8px",background:"none",border:"none",color:C.dim,fontSize:12,cursor:"pointer"}}>Already set up on another device · dismiss</button>
+              <button onClick={dismissBanner} style={{width:"100%",padding:"8px",background:"none",border:"none",color:C.dim,fontSize:14,cursor:"pointer"}}>Already set up on another device · dismiss</button>
             </div>
           </div>
         )}
@@ -7430,7 +7430,7 @@ function AppContent() {
               <div style={{fontSize:18,fontWeight:800,color:C.text,marginBottom:8}}>Almost There!</div>
               <div style={{fontSize:13,color:C.mid,lineHeight:1.6,marginBottom:20}}>Notifications are enabled — tap <strong style={{color:C.green}}>&ldquo;Notify all&rdquo;</strong> in My Matches to complete setup and start receiving kickoff alerts.</div>
               <button onClick={()=>{dismissBanner();setTab("saved");}} style={{width:"100%",padding:"13px",background:`linear-gradient(135deg,${C.green},#22c55e)`,border:"none",borderRadius:12,color:"#030a05",fontSize:15,fontWeight:800,cursor:"pointer",marginBottom:8}}>{t("setup.finish","Finish setup →")}</button>
-              <button onClick={dismissBanner} style={{width:"100%",padding:"8px",background:"none",border:"none",color:C.dim,fontSize:12,cursor:"pointer"}}>Already set up on another device · dismiss</button>
+              <button onClick={dismissBanner} style={{width:"100%",padding:"8px",background:"none",border:"none",color:C.dim,fontSize:14,cursor:"pointer"}}>Already set up on another device · dismiss</button>
             </div>
           </div>
         )}
@@ -7446,7 +7446,7 @@ function AppContent() {
               <button onClick={()=>{ setPushToast(null); setFilter&&setFilter("upcoming"); }} style={{width:"100%",padding:"12px",background:`linear-gradient(135deg,${C.green},#22c55e)`,border:"none",borderRadius:12,color:"#030a05",fontSize:14,fontWeight:800,cursor:"pointer"}}>
                 🎯 Make your pick
               </button>
-              <button onClick={()=>setPushToast(null)} style={{width:"100%",padding:"8px",background:"none",border:"none",color:C.dim,fontSize:12,cursor:"pointer",marginTop:4}}>Dismiss</button>
+              <button onClick={()=>setPushToast(null)} style={{width:"100%",padding:"8px",background:"none",border:"none",color:C.dim,fontSize:14,cursor:"pointer",marginTop:4}}>Dismiss</button>
             </div>
           </div>
         )}
@@ -7462,7 +7462,7 @@ function AppContent() {
                     const cleared=[];
                     setInbox(cleared);
                     try{localStorage.setItem("wc2026_inbox",JSON.stringify(cleared));}catch{}
-                  }} style={{fontSize:11,color:C.dim,background:"none",border:"none",cursor:"pointer"}}>Clear all</button>}
+                  }} style={{fontSize:13,color:C.dim,background:"none",border:"none",cursor:"pointer"}}>Clear all</button>}
                   <button onClick={()=>setShowInbox(false)} style={{fontSize:18,color:C.dim,background:"none",border:"none",cursor:"pointer"}}>✕</button>
                 </div>
               </div>
@@ -7471,7 +7471,7 @@ function AppContent() {
                   <div style={{padding:"40px 20px",textAlign:"center",color:C.dim}}>
                     <div style={{fontSize:32,marginBottom:8}}>{masterPushSubscribed && saved.length>0 ? "⏳" : "🔕"}</div>
                     <div style={{fontSize:14,color:C.mid,fontWeight:600}}>No notifications yet</div>
-                    <div style={{fontSize:12,marginTop:6,lineHeight:1.6,color:C.dim}}>
+                    <div style={{fontSize:14,marginTop:6,lineHeight:1.6,color:C.dim}}>
                       {masterPushSubscribed && saved.length>0
                         ? "You're all set! Notifications will appear here when a saved match is about to kick off."
                         : saved.length>0
@@ -7494,7 +7494,7 @@ function AppContent() {
                       <span style={{fontSize:22,flexShrink:0}}>⚽</span>
                       <div style={{flex:1}}>
                         <div style={{fontWeight:700,fontSize:14,color:C.text}}>{msg.title}</div>
-                        <div style={{fontSize:12,color:C.mid,marginTop:3,lineHeight:1.5}}>{msg.body}</div>
+                        <div style={{fontSize:14,color:C.mid,marginTop:3,lineHeight:1.5}}>{msg.body}</div>
                         <div style={{fontSize:10,color:C.dim,marginTop:4}}>{new Date(msg.receivedAt).toLocaleString()}</div>
                       </div>
                       {isUnread && <span style={{width:8,height:8,borderRadius:"50%",background:C.gold,flexShrink:0,marginTop:4}}/>}
