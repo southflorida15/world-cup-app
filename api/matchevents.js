@@ -1236,21 +1236,11 @@ export default async function handler(req, res) {
   // stoppage-time display values such as 90'+5' and VAR/review outcomes.
   // Run repeatedly with a modest limit until updated=0.
   if (req.query.action === "parse-espn-stats") {
-    // Parse the working ESPN statistics endpoint
     const url = "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/statistics?seasontype=3";
     const r = await fetch(url, { headers: ESPN_HEADERS });
-    const data = await r.json();
-    // Show top-level keys and first scorer entry
-    const topKeys = Object.keys(data);
-    const leaders = data.leaders || data.athletes || data.statistics || data.categories || [];
-    const firstItem = Array.isArray(leaders) ? leaders[0] : leaders;
-    return res.status(200).json({
-      topKeys,
-      season: data.season,
-      firstLeaderKeys: firstItem ? Object.keys(firstItem) : [],
-      firstLeaderPreview: JSON.stringify(firstItem).slice(0, 500),
-      total: Array.isArray(leaders) ? leaders.length : typeof leaders,
-    });
+    const text = await r.text();
+    // Just show the first 3000 chars to understand structure without crashing
+    return res.status(200).json({ preview: text.slice(0, 3000), size: text.length });
   }
 
   if (req.query.action === "fetch-scorers-espn") {
