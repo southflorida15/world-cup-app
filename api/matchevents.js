@@ -1111,25 +1111,46 @@ function parseESPNStatistics(text, category) {
   const idx = text.indexOf(marker);
   if (idx === -1) return [];
 
-  // Find the leaders array start
   const leadersStart = text.indexOf('"leaders":[', idx);
   if (leadersStart === -1 || leadersStart - idx > 300) return [];
 
-  // Find end of this leaders array — next top-level stat category starts with },{"name":
-  const nextCat = text.indexOf('},{"name":', leadersStart);
-  const leadersEnd = nextCat > 0 ? nextCat + 1 : leadersStart + 150000;
-  const slice = text.slice(leadersStart + 10, Math.min(leadersEnd, leadersStart + 150000));
+  // Find end: next category starts with }},{"name": or similar
+  const nextCat = text.indexOf('",{"name":', leadersStart);
+  const slice = text.slice(leadersStart, nextCat > 0 ? nextCat : leadersStart + 200000);
 
   const results = [];
-  // Each entry looks like: {"displayValue":"...","value":6.0,"athlete":{..."displayName":"X"..."team":{..."displayName":"Y"...}}
-  // Split on entry boundaries
-  const entryRe = /"value":([\d.]+)[^{]*"athlete":\{[^{}]*"displayName":"([^"]+)"[^{}]*(?:\{[^{}]*\}[^{}]*)*?"team":\{[^{}]*?"displayName":"([^"]+)"/g;
-  let m;
-  while ((m = entryRe.exec(slice)) !== null && results.length < 30) {
-    const val  = Number(m[1]);
-    const name = m[2];
-    const team = m[3];
-    if (name && val > 0) {
+  let pos = 0;
+
+  while (results.length < 50) {
+    // Find next value
+    const valIdx = slice.indexOf('"value":', pos);
+    if (valIdx === -1) break;
+
+    // Extract value number
+    const valEnd = slice.indexOf(',', valIdx + 8);
+    const val = parseFloat(slice.slice(valIdx + 8, valEnd));
+    if (isNaN(val) || val <= 0) { pos = valIdx + 8; continue; }
+
+    // Find athlete displayName (first "displayName" after value)
+    const nameKey = '"displayName":"';
+    const nameIdx = slice.indexOf(nameKey, valIdx);
+    if (nameIdx === -1) break;
+    const nameEnd = slice.indexOf('"', nameIdx + nameKey.length);
+    const name = slice.slice(nameIdx + nameKey.length, nameEnd);
+
+    // Find team displayName (look for "team":{ then displayName within next 300 chars)
+    const teamKey = '"team":{';
+    const teamObj = slice.indexOf(teamKey, nameIdx);
+    let team = "";
+    if (teamObj !== -1 && teamObj - nameIdx < 3000) {
+      const tNameIdx = slice.indexOf(nameKey, teamObj);
+      if (tNameIdx !== -1 && tNameIdx - teamObj < 300) {
+        const tNameEnd = slice.indexOf('"', tNameIdx + nameKey.length);
+        team = slice.slice(tNameIdx + nameKey.length, tNameEnd);
+      }
+    }
+
+    if (name) {
       results.push({
         name,
         team,
@@ -1137,7 +1158,10 @@ function parseESPNStatistics(text, category) {
         assists: category === "assistsLeaders" ? val : 0,
       });
     }
+
+    pos = nameEnd + 1;
   }
+
   return results;
 }
 
@@ -1247,6 +1271,16 @@ export default async function handler(req, res) {
   // Backfill finished match timelines from ESPN, preserving official
   // stoppage-time display values such as 90'+5' and VAR/review outcomes.
   // Run repeatedly with a modest limit until updated=0.
+  if (req.query.action === "test-scorers") {
+    const url = "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/statistics?seasontype=3";
+    const r = await fetch(url, { headers: ESPN_HEADERS });
+    const text = await r.text();
+    await kv.del("wc2026:scorers_espn_v2").catch(()=>{});
+    const scorers = parseESPNStatistics(text, "goalsLeaders");
+    const assists = parseESPNStatistics(text, "assistsLeaders");
+    return res.status(200).json({ scorers: scorers.slice(0,10), assists: assists.slice(0,5), totalScorers: scorers.length });
+  }
+
   if (req.query.action === "parse-espn-stats") {
     const url = "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/statistics?seasontype=3";
     const r = await fetch(url, { headers: ESPN_HEADERS });
