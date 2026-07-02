@@ -1175,19 +1175,13 @@ async function seedESPNIds() {
   const dateStr = d => `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`;
   const now = new Date();
 
-  // Scan the full tournament date range (June 11 - July 19 2026)
-  // to discover all ESPN event IDs including R32, R16, QF, SF, Final
+  // Scan full tournament range June 11 - July 19 2026
   const tournamentStart = new Date("2026-06-11");
   const tournamentEnd   = new Date("2026-07-19");
-  const allDates = [];
+  const dates = [];
   for (let d = new Date(tournamentStart); d <= tournamentEnd; d.setDate(d.getDate() + 1)) {
-    allDates.push(dateStr(new Date(d)));
+    dates.push(dateStr(new Date(d)));
   }
-  // Also add yesterday + next 7 days for any edge cases
-  for (let i = -1; i <= 7; i++) {
-    allDates.push(dateStr(new Date(now.getTime() + i * 86400000)));
-  }
-  const dates = [...new Set(allDates)];
 
   const idMap = await kv.get(ESPN_ID_MAP_KEY).catch(() => ({})) || {};
   const before = Object.keys(idMap).length;
@@ -1198,18 +1192,30 @@ async function seedESPNIds() {
       if (!r.ok) continue;
       const data = await r.json();
       for (const event of (data.events || [])) {
+        // Only include FIFA World Cup events (league slug = fifa.world)
+        const leagueSlug = event.season?.slug || event.competitions?.[0]?.league?.slug || "";
+        const uid = event.uid || "";
+        // ESPN World Cup events have uid starting with s:600~l:606
+        if (!uid.includes("l:606") && !leagueSlug.includes("fifa")) continue;
+
         const comp = event.competitions?.[0];
         if (!comp) continue;
         const home = normESPN(comp.competitors?.find(c => c.homeAway === "home")?.team?.displayName || "");
         const away = normESPN(comp.competitors?.find(c => c.homeAway === "away")?.team?.displayName || "");
         if (!home || !away || !event.id) continue;
+        // Skip placeholder/TBD team names
+        if (/Winner|Place|TBD|\d[A-Z]/.test(home) || /Winner|Place|TBD|\d[A-Z]/.test(away)) continue;
         const key = `${home}|${away}`;
         idMap[key] = event.id;
-        console.log(`[seed-ids] ${key} -> ${event.id}`);
       }
     } catch(e) {
       console.warn(`[seed-ids] failed for ${date}:`, e.message);
     }
+  }
+
+  // Remove placeholder entries that may have crept in
+  for (const key of Object.keys(idMap)) {
+    if (/Winner|Place|Round|TBD|\d[A-Z]|Group [A-Z]/.test(key)) delete idMap[key];
   }
 
   const added = Object.keys(idMap).length - before;
