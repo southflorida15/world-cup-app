@@ -1240,19 +1240,24 @@ async function seedESPNIds() {
     if (/Winner|Place|Round|TBD|\d[A-Z]|Group [A-Z]/.test(key)) delete idMap[key];
   }
 
-  // Auto-dedup: collapse duplicate keys pointing to same event ID
-  // keeping only real team name versions (no placeholders)
-  const isPlaceholder = p => /Winner|Place|Round|TBD|\d[A-Z]|Group [A-Z]|Semifinal|Loser/.test(p);
+  // Auto-dedup: for each event ID, keep only the best key (real names over placeholders)
+  const isPlaceholder = p => /Winner|Place|Round|TBD|Semifinal|Loser|Group [A-Z]/.test(p);
   const byEventId = {};
   for (const [pair, id] of Object.entries(idMap)) {
-    if (isPlaceholder(pair)) { delete idMap[pair]; continue; }
-    if (!byEventId[id] || isPlaceholder(byEventId[id])) byEventId[id] = pair;
-    else if (pair !== byEventId[id]) delete idMap[pair]; // remove duplicate
+    const existing = byEventId[id];
+    if (!existing) { byEventId[id] = pair; continue; }
+    // Keep whichever is less placeholder-like
+    if (isPlaceholder(existing) && !isPlaceholder(pair)) byEventId[id] = pair;
+  }
+  // Rebuild clean map from winners
+  const cleanMap = {};
+  for (const [id, pair] of Object.entries(byEventId)) {
+    if (!isPlaceholder(pair)) cleanMap[pair] = id;
   }
 
-  const added = Object.keys(idMap).length - before;
-  await kv.set(ESPN_ID_MAP_KEY, idMap).catch(() => {});
-  return { added, total: Object.keys(idMap).length, datesScanned: dates.length };
+  const added = Object.keys(cleanMap).length - before;
+  await kv.set(ESPN_ID_MAP_KEY, cleanMap).catch(() => {});
+  return { added, total: Object.keys(cleanMap).length, datesScanned: dates.length };
 }
 
 
