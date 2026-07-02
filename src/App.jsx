@@ -15,7 +15,7 @@ import MatchHeader from "./components/MatchHeader";
 import MatchInfoSection from "./components/MatchInfoSection";
 import { buildMomentumEngineRows } from "./engine/momentum/momentumEngine";
 import React, { useState, useEffect, useContext, createContext, useCallback, useMemo, useRef } from "react";
-import { displayTeamName, displayStageName, displayVenueName } from "./i18n/display";
+import { displayTeamName, displayStageName, displayVenueName, formatDisplayMinute } from "./i18n/display";
 import { buildQualifiedThirdsFromSelectedTeams, buildThirdGroupsKey, ROUND_OF_16_TEMPLATE, QUARTER_FINAL_TEMPLATE, SEMI_FINAL_TEMPLATE, FINAL_TEMPLATE } from "./engine/fifa2026Bracket";
 import { getAnnexCMapping } from "./engine/annexC";
 import { WC_TEAM_HISTORY, getPlayerScoringLog } from "./data/wcTeamHistory";
@@ -1371,6 +1371,7 @@ export function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favT
   const tzLabel = timeMode === "venue" ? venueTzShort : userTzShort;
   const bc = getBroadcast(country);
   const isUS = country === "US" || !BROADCAST[country];
+  const { language } = useI18n();
   const countdown = useCountdown(m.id);
 
   // True from 30min before kickoff until ESPN confirms live — drives the gold highlight
@@ -4756,6 +4757,7 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
   const country = useContext(CountryCtx);
   const bc = getBroadcast(country);
   const isUS = country === "US" || !BROADCAST[country];
+  const { language } = useI18n();
 
   // Weather data used by both the in-app modal and the share/OG URL.
   // This must be declared in scope before shareMatch uses it.
@@ -5190,13 +5192,10 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
                           </div>
                           <div style={{display:"flex",flexDirection:"column",alignItems:"center",minWidth:52,flexShrink:0}}>
                             <div style={{fontSize:11,fontWeight:700,color:C.gold}}>
-                              {ev.time?.display || `${ev.time?.elapsed ?? ""}${ev.time?.extra ? `+${ev.time.extra}` : ""}'`}
-                              {(() => {
-                                const mins = parseInt(ev.time?.elapsed, 10);
-                                return !isNaN(mins) && mins > 45 && (
-                                  <span style={{color:C.dim,fontWeight:600}}> ({mins-45}' H2)</span>
-                                );
-                              })()}
+                              {formatDisplayMinute(
+                                ev.time?.display || `${ev.time?.elapsed ?? ""}${ev.time?.extra ? `+${ev.time.extra}` : ""}`,
+                                language
+                              )}
                             </div>
                             <div style={{fontSize:16}}>{icon}</div>
                           </div>
