@@ -664,7 +664,7 @@ function parseEvents(data, homeTeam) {
   // (data.commentary || []).forEach(item => add(normalizeCommentaryEvent(item, homeTeam)));
 
   // Fallback: plays array when ESPN exposes it directly.
-  (data.plays || []).forEach(play => add(normalizeEventFromESPN(play, homeTeam)));
+  //(data.plays || []).forEach(play => add(normalizeEventFromESPN(play, homeTeam)));
 
   // Roster player entries can contain individual plays; useful when summary
   // omits top-level plays but embeds key player events under each roster row.
