@@ -28,7 +28,8 @@ const DONE_STATUSES = new Set([
   "FT", "AET", "PEN",
   "finished", "ended", "after_extra_time", "after_penalties",
   "STATUS_FINAL", "STATUS_FULL_TIME", "STATUS_AET", "STATUS_AFTER_EXTRA_TIME",
-  "STATUS_END_OF_EXTRATIME", "STATUS_FINAL_PEN", "STATUS_PENALTIES"
+  "STATUS_END_OF_EXTRATIME", "STATUS_FINAL_PEN", "STATUS_PENALTIES",
+  "STATUS_FINAL_AET", "STATUS_FINAL_PEN_AET",
 ]);
 
 function isDoneStatus(status) {
@@ -1225,7 +1226,21 @@ export default async function handler(req, res) {
         if (!r.ok) { errors.push({ home, away, eventId, reason: `espn_${r.status}` }); continue; }
         const data = await r.json();
         const statusType = data.header?.competitions?.[0]?.status?.type?.name || "NS";
-        if (!isDoneStatus(statusType)) { skipped.push({ home, away, eventId, reason: "not_finished_yet", status: statusType }); continue; }
+        if (!isDoneStatus(statusType)) {
+          // If live, fold current events into scorers aggregate (don't persist to KV)
+          if (isLiveStatus(statusType)) {
+            const events = parseEvents(data, realHome);
+            if (events.length) {
+              await updateScorersAggregate(realHome, realAway, events).catch(() => {});
+              skipped.push({ home: realHome, away: realAway, eventId, reason: "live_goals_counted", status: statusType });
+            } else {
+              skipped.push({ home: realHome, away: realAway, eventId, reason: "not_finished_yet", status: statusType });
+            }
+          } else {
+            skipped.push({ home: realHome, away: realAway, eventId, reason: "not_finished_yet", status: statusType });
+          }
+          continue;
+        }
         // Use actual team names from ESPN response, not our key
         const comp = data.header?.competitions?.[0];
         const realHome = normESPN(comp?.competitors?.find(c => c.homeAway === "home")?.team?.displayName || home);
