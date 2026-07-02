@@ -1069,9 +1069,8 @@ async function backfillFinishedEvents({ limit = 10, force = false, targetHome = 
 
 
 async function getScorers() {
-  // Cache in KV for 5 minutes
   const CACHE_KEY = "wc2026:scorers_espn_v2";
-  const CACHE_TTL = 5 * 60 * 1000;
+  const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
   try {
     const cached = await kv.get(CACHE_KEY).catch(() => null);
@@ -1083,25 +1082,26 @@ async function getScorers() {
   try {
     const url = "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/statistics?seasontype=3";
     const r = await fetch(url, { headers: ESPN_HEADERS });
-    if (r.ok) {
-      const text = await r.text();
-      const scorers = parseESPNStatistics(text, "goalsLeaders");
-      const assists = parseESPNStatistics(text, "assistsLeaders");
-      // Merge assists into scorers
-      assists.forEach(a => {
-        const ex = scorers.find(s => s.name === a.name);
-        if (ex) ex.assists = a.assists;
-      });
-      if (scorers.length > 0) {
-        await kv.set(CACHE_KEY, { scorers, cards: [], ts: Date.now() }).catch(() => {});
-        return { scorers, cards: [], goalDetails: {}, source: "espn_statistics" };
-      }
+    if (!r.ok) throw new Error(`ESPN stats ${r.status}`);
+    const text = await r.text();
+
+    const scorers = parseESPNStatistics(text, "goalsLeaders");
+    const assists = parseESPNStatistics(text, "assistsLeaders");
+
+    assists.forEach(a => {
+      const ex = scorers.find(s => s.name === a.name);
+      if (ex) ex.assists = a.assists;
+    });
+
+    if (scorers.length > 0) {
+      await kv.set(CACHE_KEY, { scorers, cards: [], ts: Date.now() }).catch(() => {});
+      return { scorers, cards: [], goalDetails: {}, source: "espn_statistics" };
     }
   } catch(e) {
-    console.warn("[getScorers] ESPN statistics fetch failed:", e.message);
+    console.warn("[getScorers] ESPN statistics failed:", e.message);
   }
 
-  // Fallback to event aggregate
+  // Fallback
   const result = await buildScorersFromPersistedEvents({ persist: false });
   return { scorers: result.scorers, cards: result.cards, goalDetails: result.goalDetails || {}, source: "event_aggregate" };
 }
@@ -1314,6 +1314,39 @@ export default async function handler(req, res) {
       }
     }
     return res.status(200).json({ results });
+  }
+
+  if (req.query.action === "dedup-ids") {
+    const idMap = await kv.get(ESPN_ID_MAP_KEY).catch(() => ({})) || {};
+    
+    // Group all keys by event ID
+    const byId = {};
+    for (const [pair, id] of Object.entries(idMap)) {
+      if (!byId[id]) byId[id] = [];
+      byId[id].push(pair);
+    }
+
+    // For each event ID, keep only the best key (real team names, no placeholders)
+    const isPlaceholder = p => /Winner|Place|Round|TBD|\d[A-Z]|Group [A-Z]/.test(p);
+    const cleanMap = {};
+    let removed = 0;
+
+    for (const [id, pairs] of Object.entries(byId)) {
+      // Sort: real names first, placeholders last
+      pairs.sort((a, b) => isPlaceholder(a) - isPlaceholder(b));
+      // Keep only the best one
+      cleanMap[pairs[0]] = id;
+      removed += pairs.length - 1;
+    }
+
+    await kv.set(ESPN_ID_MAP_KEY, cleanMap).catch(() => {});
+    return res.status(200).json({
+      ok: true,
+      before: Object.keys(idMap).length,
+      after: Object.keys(cleanMap).length,
+      removed,
+      sample: Object.entries(cleanMap).slice(0, 5),
+    });
   }
 
   if (req.query.action === "dump-ids") {
