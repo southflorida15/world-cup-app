@@ -1371,7 +1371,6 @@ export function MatchCard({ m, onAction, onMatchTap=null, timeMode="local", favT
   const tzLabel = timeMode === "venue" ? venueTzShort : userTzShort;
   const bc = getBroadcast(country);
   const isUS = country === "US" || !BROADCAST[country];
-  const { language } = useI18n();
   const countdown = useCountdown(m.id);
 
   // True from 30min before kickoff until ESPN confirms live — drives the gold highlight
