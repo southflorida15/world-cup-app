@@ -35,9 +35,19 @@ const LINE_UPCOMING = "rgba(255,215,60,0.28)"; // upcoming inner rounds — gold
 const LW        = 1.6;
 const LW_DIM    = 0.8;
 
-const R32_ORDER = [73,75,74,77, 76,78,79,80, 83,84,81,82, 86,88,85,87];
-const R16_ORDER = [89,90,91,92, 93,94,95,96];
-const QF_ORDER  = [97,99,98,100];
+// Visual order follows the official FIFA knockout graph while preserving
+// the exact same circular bracket visuals. Only branch placement changes.
+//
+// SF101 side:
+//   QF97 = R16 89 + R16 90 = (74/77) + (73/75)
+//   QF98 = R16 93 + R16 94 = (83/84) + (81/82)
+//
+// SF102 side:
+//   QF99  = R16 91 + R16 92 = (76/78) + (79/80)   // Brazil branch
+//   QF100 = R16 95 + R16 96 = (86/88) + (85/87)   // ARG/CPV/AUS/EGY/COL/GHA/SUI/ALG branch
+const R32_ORDER = [74,77,73,75, 83,84,81,82, 76,78,79,80, 86,88,85,87];
+const R16_ORDER = [89,90,93,94, 91,92,95,96];
+const QF_ORDER  = [97,98,99,100];
 const SF_ORDER  = [101,102];
 
 function buildRanges(order, n) {
