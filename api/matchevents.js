@@ -1165,6 +1165,11 @@ export default async function handler(req, res) {
   // Backfill finished match timelines from ESPN, preserving official
   // stoppage-time display values such as 90'+5' and VAR/review outcomes.
   // Run repeatedly with a modest limit until updated=0.
+  if (req.query.action === "dump-ids") {
+    const idMap = await kv.get(ESPN_ID_MAP_KEY).catch(() => ({})) || {};
+    return res.status(200).json({ count: Object.keys(idMap).length, ids: idMap });
+  }
+
   if (req.query.action === "backfill-r32") {
     // Force-refetch only the R32 matches using hardcoded ESPN IDs
     const R32_IDS = Object.entries(HARDCODED_ESPN_IDS).filter(([,id]) => Number(id) >= 760480);
