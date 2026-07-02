@@ -132,64 +132,64 @@ export function displayMatchDate(date, language="en") {
 /**
  * formatDisplayMinute(raw, language)
  *
- * Converts a raw match minute (number or string like "90+5" or "90+5'")
- * into a human-readable label with an optional period-relative annotation.
+ * Converts a raw match minute (number or string like "90+5", "90'+5'",
+ * "120+5", or "120'+5'") into a human-readable label.
  *
- * Examples (en):
- *   30       → 30'            (plain 1H minute — no annotation)
- *   45+2     → 45+2' (2' 1H) (1H stoppage)
- *   75       → 75' (30' 2H)
- *   90+5     → 90+5' (45+5' 2H)
- *   105+2    → 105+2' (15+2' ET1)
- *   120+1    → 120+1' (15+1' ET2)
+ * Canonical display rules:
  *
- * Same examples in pt-BR:
- *   45+2     → 45+2' (2' 1T)
- *   90+5     → 90+5' (45+5' 2T)
- *   105+2    → 105+2' (15+2' PT1)
- *   120+1    → 120+1' (15+1' PT2)
+ * Regular time:
+ *   30       → 30'
+ *   45+2     → 45'+2'
+ *   75       → 75'
+ *   90+5     → 90'+5'
  *
- * This is the ONE canonical implementation. All timeline, commentary,
- * live-badge, and event-list renderers must call this function.
- * Do NOT add a second implementation elsewhere.
+ * Extra time:
+ *   96       → 96' (6' ET)
+ *   105+2    → 105'+2' (15'+2' ET)
+ *   117      → 117' (27' ET)
+ *   120+5    → 120'+5' (30'+5' ET)
+ *
+ * Portuguese:
+ *   96       → 96' (6' Pror.)
+ *   120+5    → 120'+5' (30'+5' Pror.)
+ *
+ * Important:
+ * - Keep canonical match values unchanged for APIs, scoring, brackets, and storage.
+ * - This is display-only.
+ * - This is the ONE canonical implementation. Timeline, commentary,
+ *   live-badge, match-event, and match-card renderers must call this function.
+ * - Do NOT add another minute formatter elsewhere.
  */
 export function formatDisplayMinute(raw, language = "en") {
   if (raw == null || raw === "") return "";
+
   const s = String(raw).trim();
-  // Strip trailing apostrophes so "90+5'" and "90+5" both parse cleanly
-  const m = s.replace(/'/g, "").match(/^(\d+)(?:\+(\d+))?$/);
-  if (!m) return s; // unrecognisable raw value — return as-is
+
+  // Accept ESPN styles:
+  //   "96'", "96", "120+5", "120'+5'", "120+5'"
+  const normalized = s
+    .replace(/’/g, "'")
+    .replace(/\s+/g, "")
+    .replace(/'/g, "");
+
+  const m = normalized.match(/^(\d+)(?:\+(\d+))?$/);
+  if (!m) return s;
 
   const base = parseInt(m[1], 10);
   const extra = m[2] != null ? parseInt(m[2], 10) : null;
-  const rawDisplay = extra != null ? `${base}+${extra}'` : `${base}'`;
-  const pt = language === "pt-BR";
+  const rawDisplay = extra != null ? `${base}'+${extra}'` : `${base}'`;
+  const pt = language === "pt-BR" || language === "pt";
 
-  // Plain 1H minutes (1–45, no stoppage) get no annotation — they're
-  // already unambiguous and adding "(30' 1H)" would just be noise.
-  if (base <= 45 && extra == null) return rawDisplay;
+  // Normal time stays clean. We do NOT annotate 2H minutes anymore.
+  // Example: 75' stays 75', 90'+5' stays 90'+5'.
+  if (base <= 90) return rawDisplay;
 
-  let rel;
-  if (base <= 45) {
-    // 1H stoppage: e.g. 45+2 → (2' 1H)
-    const period = pt ? "1T" : "1H";
-    rel = `${extra}' ${period}`;
-  } else if (base <= 90) {
-    // 2H: e.g. 75 → (30' 2H), 90+5 → (45+5' 2H)
-    const period = pt ? "2T" : "2H";
-    const relBase = base - 45;
-    rel = extra != null ? `${relBase}+${extra}' ${period}` : `${relBase}' ${period}`;
-  } else if (base <= 105) {
-    // ET first half: e.g. 105+2 → (15+2' ET1)
-    const period = pt ? "PT1" : "ET1";
-    const relBase = base - 90;
-    rel = extra != null ? `${relBase}+${extra}' ${period}` : `${relBase}' ${period}`;
-  } else {
-    // ET second half: e.g. 120+1 → (15+1' ET2)
-    const period = pt ? "PT2" : "ET2";
-    const relBase = base - 105;
-    rel = extra != null ? `${relBase}+${extra}' ${period}` : `${relBase}' ${period}`;
-  }
+  const etLabel = pt ? "Pror." : "ET";
+  const etMinute = base - 90;
 
-  return `${rawDisplay} (${rel})`;
+  const relative = extra != null
+    ? `${etMinute}'+${extra}' ${etLabel}`
+    : `${etMinute}' ${etLabel}`;
+
+  return `${rawDisplay} (${relative})`;
 }
