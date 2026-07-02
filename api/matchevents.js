@@ -1240,6 +1240,16 @@ async function seedESPNIds() {
     if (/Winner|Place|Round|TBD|\d[A-Z]|Group [A-Z]/.test(key)) delete idMap[key];
   }
 
+  // Auto-dedup: collapse duplicate keys pointing to same event ID
+  // keeping only real team name versions (no placeholders)
+  const isPlaceholder = p => /Winner|Place|Round|TBD|\d[A-Z]|Group [A-Z]|Semifinal|Loser/.test(p);
+  const byEventId = {};
+  for (const [pair, id] of Object.entries(idMap)) {
+    if (isPlaceholder(pair)) { delete idMap[pair]; continue; }
+    if (!byEventId[id] || isPlaceholder(byEventId[id])) byEventId[id] = pair;
+    else if (pair !== byEventId[id]) delete idMap[pair]; // remove duplicate
+  }
+
   const added = Object.keys(idMap).length - before;
   await kv.set(ESPN_ID_MAP_KEY, idMap).catch(() => {});
   return { added, total: Object.keys(idMap).length, datesScanned: dates.length };
