@@ -4753,10 +4753,10 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
   const modalRef = useRef(null);
   const { getScore } = useContext(LiveScoresCtx);
   const { favTeams=[] } = useContext(FavCtx);
+  const { language } = useI18n();
   const country = useContext(CountryCtx);
   const bc = getBroadcast(country);
   const isUS = country === "US" || !BROADCAST[country];
-  const { language } = useI18n();
 
   // Weather data used by both the in-app modal and the share/OG URL.
   // This must be declared in scope before shareMatch uses it.
@@ -5192,7 +5192,11 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
                           <div style={{display:"flex",flexDirection:"column",alignItems:"center",minWidth:52,flexShrink:0}}>
                             <div style={{fontSize:11,fontWeight:700,color:C.gold}}>
                               {formatDisplayMinute(
-                                ev.time?.display || `${ev.time?.elapsed ?? ""}${ev.time?.extra ? `+${ev.time.extra}` : ""}`,
+                                ev.time?.display || (
+                                  ev.time?.elapsed != null
+                                    ? `${ev.time.elapsed}${ev.time?.extra != null ? `+${ev.time.extra}` : ""}`
+                                    : ""
+                                ),
                                 language
                               )}
                             </div>
