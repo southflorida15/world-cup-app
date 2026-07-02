@@ -310,6 +310,7 @@ const ESPN_ID_MAP_KEY = "wc2026:espn_ids";
 
 // Hardcoded ESPN IDs for all group stage matches — never ages out
 const HARDCODED_ESPN_IDS = {
+  // Group stage
   "Mexico|South Africa":"760415","South Korea|Czechia":"760414",
   "Canada|Bosnia & Herz.":"760416","United States|Paraguay":"760417",
   "Qatar|Switzerland":"760418","Brazil|Morocco":"760419",
@@ -322,6 +323,15 @@ const HARDCODED_ESPN_IDS = {
   "Argentina|Algeria":"760432","Austria|Jordan":"760433",
   "Portugal|DR Congo":"760434","England|Croatia":"760435",
   "Ghana|Panama":"760436","Uzbekistan|Colombia":"760437",
+  // R32 - discovered from livescores feed
+  "Mexico|Ecuador":"760485","Brazil|Japan":"760488",
+  "Ivory Coast|Norway":"760487","Germany|Paraguay":"760489",
+  "Canada|Morocco":"760484","Netherlands|Sweden":"760490",
+  "France|Paraguay":"760483","United States|Egypt":"760486",
+  "Belgium|Senegal":"760491","Portugal|Croatia":"760492",
+  "England|DR Congo":"760493","Spain|Norway":"760494",
+  "Argentina|Austria":"760495","Switzerland|Bosnia & Herz.":"760496",
+  "Netherlands|Colombia":"760497","Canada|South Africa":"760498",
 };
 
 
@@ -1130,23 +1140,17 @@ export default async function handler(req, res) {
   }
 
   if (req.query.action === "flush-events") {
-    const R32_PAIRS = [
-      ["Mexico","South Africa"],["Ecuador","Iran"],["Netherlands","Colombia"],
-      ["Brazil","Ivory Coast"],["France","Paraguay"],["Ivory Coast","Norway"],
-      ["Mexico","DR Congo"],["England","DR Congo"],["England","Austria"],
-      ["United States","Egypt"],["Belgium","Senegal"],["Portugal","Colombia"],
-      ["Spain","Norway"],["Canada","South Africa"],["Argentina","Austria"],
-      ["Portugal","Croatia"],["Germany","Japan"],["Germany","Paraguay"],
-    ];
+    // Flush all known match event caches (group stage + R32)
+    const ALL_PAIRS = Object.keys(HARDCODED_ESPN_IDS);
     const deleted = [];
-    for (const [h,a] of R32_PAIRS) {
-      await kv.del(kvKey(h,a)).catch(()=>{});
-      delete memCache[`${h}|${a}`];
-      deleted.push(`${h}|${a}`);
+    for (const pair of ALL_PAIRS) {
+      const [h, a] = pair.split("|");
+      await kv.del(kvKey(h, a)).catch(()=>{});
+      delete memCache[pair];
+      deleted.push(pair);
     }
-    // Also clear the scorers aggregate so it gets rebuilt from clean data
     await kv.del(SCORERS_AGGREGATE_KEY).catch(()=>{});
-    return res.status(200).json({ ok:true, deleted, note:"Scorers aggregate also cleared. Run backfill then rebuild-scorers." });
+    return res.status(200).json({ ok:true, flushed: deleted.length, deleted, note:"Scorers aggregate also cleared. Run backfill then rebuild-scorers." });
   }
 
   if (req.query.action === "rebuild-scorers") {
