@@ -588,7 +588,7 @@ function normalizeEventFromESPN(ev, homeTeam) {
 
   return {
     time,
-    team: { name: teamName || normESPN(homeTeam || "") || "" },
+    team: { name: teamName || "" },
     player: { name: p0 || (type === "VAR" ? "VAR" : "") },
     assist: { name: (type === "Goal" || type === "subst") ? p1 : null },
     type,
@@ -626,7 +626,7 @@ function normalizeCommentaryEvent(item, homeTeam) {
 
   return {
     time,
-    team: { name: teamName || normESPN(homeTeam || "") || "" },
+    team: { name: teamName || "" },
     player: { name: p0 || (type === "VAR" ? "VAR" : "") },
     assist: { name: (type === "Goal" || type === "subst") ? p1 : null },
     type,
