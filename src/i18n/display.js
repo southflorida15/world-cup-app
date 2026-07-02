@@ -132,41 +132,28 @@ export function displayMatchDate(date, language="en") {
 /**
  * formatDisplayMinute(raw, language)
  *
- * Converts a raw match minute (number or string like "90+5", "90'+5'",
- * "120+5", or "120'+5'") into a human-readable label.
+ * Display-only minute formatter.
  *
- * Canonical display rules:
- *
- * Regular time:
- *   30       → 30'
- *   45+2     → 45'+2'
- *   75       → 75'
- *   90+5     → 90'+5'
- *
- * Extra time:
- *   96       → 96' (6' ET)
- *   105+2    → 105'+2' (15'+2' ET)
- *   117      → 117' (27' ET)
- *   120+5    → 120'+5' (30'+5' ET)
+ * Rules:
+ *   23'       → 23'
+ *   45'+5'    → 45'+5' (45'+5' H1)
+ *   82'       → 82' (37' H2)
+ *   90'+5'    → 90'+5' (45'+5' H2)
+ *   96'       → 96' (6' ET)
+ *   109'      → 109' (19' ET)
+ *   120'+5'   → 120'+5' (30'+5' ET)
  *
  * Portuguese:
- *   96       → 96' (6' Pror.)
- *   120+5    → 120'+5' (30'+5' Pror.)
- *
- * Important:
- * - Keep canonical match values unchanged for APIs, scoring, brackets, and storage.
- * - This is display-only.
- * - This is the ONE canonical implementation. Timeline, commentary,
- *   live-badge, match-event, and match-card renderers must call this function.
- * - Do NOT add another minute formatter elsewhere.
+ *   H1 → 1T
+ *   H2 → 2T
+ *   ET → Pror.
  */
 export function formatDisplayMinute(raw, language = "en") {
   if (raw == null || raw === "") return "";
 
   const s = String(raw).trim();
 
-  // Accept ESPN styles:
-  //   "96'", "96", "120+5", "120'+5'", "120+5'"
+  // Accept: 90+5, 90'+5', 120+5, 120'+5', 96'
   const normalized = s
     .replace(/’/g, "'")
     .replace(/\s+/g, "")
@@ -177,19 +164,37 @@ export function formatDisplayMinute(raw, language = "en") {
 
   const base = parseInt(m[1], 10);
   const extra = m[2] != null ? parseInt(m[2], 10) : null;
-  const rawDisplay = extra != null ? `${base}'+${extra}'` : `${base}'`;
   const pt = language === "pt-BR" || language === "pt";
 
-  // Normal time stays clean. We do NOT annotate 2H minutes anymore.
-  // Example: 75' stays 75', 90'+5' stays 90'+5'.
-  if (base <= 90) return rawDisplay;
+  const rawDisplay = extra != null
+    ? `${base}'+${extra}'`
+    : `${base}'`;
 
+  // Normal first-half minutes stay clean.
+  if (base < 45) return rawDisplay;
+
+  // First-half stoppage.
+  if (base === 45 && extra != null) {
+    const period = pt ? "1T" : "H1";
+    return `${rawDisplay} (45'+${extra}' ${period})`;
+  }
+
+  // Second half, including stoppage.
+  if (base <= 90) {
+    const period = pt ? "2T" : "H2";
+    const relBase = base - 45;
+    const rel = extra != null
+      ? `${relBase}'+${extra}' ${period}`
+      : `${relBase}' ${period}`;
+    return `${rawDisplay} (${rel})`;
+  }
+
+  // Extra time, measured from 90'.
   const etLabel = pt ? "Pror." : "ET";
   const etMinute = base - 90;
-
-  const relative = extra != null
+  const rel = extra != null
     ? `${etMinute}'+${extra}' ${etLabel}`
     : `${etMinute}' ${etLabel}`;
 
-  return `${rawDisplay} (${relative})`;
+  return `${rawDisplay} (${rel})`;
 }
