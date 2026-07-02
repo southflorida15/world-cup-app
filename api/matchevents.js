@@ -1165,6 +1165,30 @@ export default async function handler(req, res) {
   // Backfill finished match timelines from ESPN, preserving official
   // stoppage-time display values such as 90'+5' and VAR/review outcomes.
   // Run repeatedly with a modest limit until updated=0.
+  if (req.query.action === "backfill-r32") {
+    // Force-refetch only the R32 matches using hardcoded ESPN IDs
+    const R32_IDS = Object.entries(HARDCODED_ESPN_IDS).filter(([,id]) => Number(id) >= 760480);
+    const processed = [], errors = [];
+    for (const [pair, eventId] of R32_IDS) {
+      const [home, away] = pair.split("|");
+      try {
+        const r = await fetch(`${ESPN_BASE}/summary?event=${eventId}`, { headers: ESPN_HEADERS });
+        if (!r.ok) { errors.push({ home, away, eventId, reason: `espn_${r.status}` }); continue; }
+        const data = await r.json();
+        const statusType = data.header?.competitions?.[0]?.status?.type?.name || "NS";
+        if (!isDoneStatus(statusType)) { errors.push({ home, away, eventId, reason: "not_finished" }); continue; }
+        const events = parseEvents(data, home);
+        const stats  = parseStats(data.boxscore, home);
+        const lineups = parseLineups(data, home);
+        if (!events.length) { errors.push({ home, away, eventId, reason: "no_events" }); continue; }
+        await saveToKV(home, away, events, stats, lineups);
+        processed.push({ home, away, eventId, events: events.length });
+      } catch(e) { errors.push({ home, away, eventId, error: e.message }); }
+    }
+    const scorers = await buildScorersFromPersistedEvents({ persist: true }).catch(e => ({ error: e.message }));
+    return res.status(200).json({ ok: true, processed, errors, scorers: { count: scorers.scorers?.length } });
+  }
+
   if (req.query.action === "backfill-events" || req.query.action === "backfill") {
     try {
       res.setHeader("Cache-Control", "no-store");
