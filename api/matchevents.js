@@ -107,12 +107,18 @@ async function saveToKV(home, away, events, stats, lineups=null) {
 // gets checked repeatedly while it's still in progress.
 
 function scorerEventKey(matchKey, ev) {
-  const minute = ev?.time?.elapsed ?? "";
+  const elapsed = ev?.time?.elapsed ?? "";
   const type = ev?.type || "";
-  const detail = ev?.detail || "";
-  const team = ev?.team?.name || "";
   const player = ev?.player?.name || "";
-  return `${matchKey}|${type}|${detail}|${team}|${player}|${minute}`;
+  // For goals/cards: use minimal key matching deduplicateEvents — omit team/detail/text
+  // which vary across ESPN sources (details vs keyEvents vs commentary).
+  // For subs: include team+player to allow multiple subs at same minute.
+  if (type === "Goal" || type === "Card") {
+    return `${matchKey}|${type}|${player}|${elapsed}`;
+  }
+  const team = ev?.team?.name || "";
+  const assist = ev?.assist?.name || "";
+  return `${matchKey}|${type}|${team}|${player}|${assist}|${elapsed}`;
 }
 
 function ensureScorersAggregateShape(aggregate) {
@@ -133,7 +139,9 @@ function ensureScorersAggregateShape(aggregate) {
 function foldEventsIntoScorersAggregate(aggregate, matchKey, events) {
   aggregate = ensureScorersAggregateShape(aggregate);
   if (!aggregate.processedEventKeys[matchKey]) aggregate.processedEventKeys[matchKey] = {};
+  if (!aggregate.goalDetails) aggregate.goalDetails = {};
   const seenForMatch = aggregate.processedEventKeys[matchKey];
+  const matchPair = matchKey.replace("wc2026:events:", ""); // "Home|Away"
 
   let addedGoals = 0;
   let addedCards = 0;
@@ -151,6 +159,16 @@ function foldEventsIntoScorersAggregate(aggregate, matchKey, events) {
       aggregate.goals[name].team = aggregate.goals[name].team || team;
       aggregate.goals[name].goals++;
       addedGoals++;
+
+      // Store per-goal detail for player drill-down
+      if (!aggregate.goalDetails[name]) aggregate.goalDetails[name] = [];
+      aggregate.goalDetails[name].push({
+        match: matchPair,
+        minute: ev.time?.elapsed ?? null,
+        extra: ev.time?.extra ?? null,
+        assist: ev.assist?.name || null,
+        detail: ev.detail || null,
+      });
 
       const assist = ev.assist?.name;
       if (assist) {
@@ -204,55 +222,20 @@ async function updateScorersAggregate(home, away, events) {
 // omits team name from key so empty-team duplicates collapse with named ones.
 // Multiple subs at the same minute are kept (legitimate).
 function deduplicateEvents(events) {
-  if (!Array.isArray(events)) return [];
-
+  if (!events?.length) return events || [];
   const seen = new Set();
-
   return events.filter(ev => {
-
-    if (!ev) return false;
-
-    // Ignore broken goal events
-    if (ev.type === "Goal") {
-
-      const player = (ev.player?.name || "").trim();
-
-      if (!player) return false;
-
-      const key = [
-        "goal",
-        player.toLowerCase(),
-        (ev.team?.name || "").toLowerCase(),
-        ev.time?.elapsed ?? "",
-        ev.time?.extra ?? ""
-      ].join("|");
-
-      if (seen.has(key)) return false;
-
-      seen.add(key);
-      return true;
+    let key;
+    if (ev.type === "Goal" || ev.type === "Card") {
+      // For goals/cards: type + player + elapsed is sufficient and stable across ESPN sources.
+      // Omit team, detail, text — these vary between details/keyEvents/commentary.
+      key = `${ev.type}|${ev.player?.name || ""}|${ev.time?.elapsed ?? ""}`;
+    } else {
+      // For subs: include team + both players so multiple subs at same minute are kept.
+      key = `${ev.type}|${ev.team?.name || ""}|${ev.player?.name || ""}|${ev.assist?.name || ""}|${ev.time?.elapsed ?? ""}`;
     }
-
-    if (ev.type === "Card") {
-
-      const player = (ev.player?.name || "").trim();
-
-      if (!player) return false;
-
-      const key = [
-        "card",
-        player.toLowerCase(),
-        (ev.team?.name || "").toLowerCase(),
-        ev.detail || "",
-        ev.time?.elapsed ?? ""
-      ].join("|");
-
-      if (seen.has(key)) return false;
-
-      seen.add(key);
-      return true;
-    }
-
+    if (seen.has(key)) return false;
+    seen.add(key);
     return true;
   });
 }
@@ -301,6 +284,7 @@ async function buildScorersFromPersistedEvents({ persist=false } = {}) {
   return {
     scorers: Object.values(aggregate.goals).sort((a,b) => b.goals-a.goals || b.assists-a.assists || String(a.name).localeCompare(String(b.name))).slice(0,30),
     cards: Object.values(aggregate.cards).sort((a,b) => (b.red*2+b.yellow)-(a.red*2+a.yellow) || String(a.name).localeCompare(String(b.name))).slice(0,20),
+    goalDetails: aggregate.goalDetails || {},
     matchCount: Object.keys(aggregate.processedEventKeys || {}).length,
     rebuiltAt: aggregate.rebuiltAt,
     goalEvents,
@@ -669,9 +653,9 @@ function parseEvents(data, homeTeam) {
   // Roster player entries can contain individual plays; useful when summary
   // omits top-level plays but embeds key player events under each roster row.
   (data.rosters || []).forEach(r => {
-     (r.roster || r.entries || r.players || r.athletes || []).forEach(player => {
+    (r.roster || r.entries || r.players || r.athletes || []).forEach(player => {
       (player.plays || []).forEach(play => add(normalizeEventFromESPN(play, homeTeam)));
-   });
+    });
   });
 
   const deduped = deduplicateEvents(events);
@@ -1061,61 +1045,15 @@ async function backfillFinishedEvents({ limit = 10, force = false, targetHome = 
 
 
 
-// Cache for ESPN leaders data — refresh every 5 minutes
-let espnLeadersCache = null;
-let espnLeadersCacheTs = 0;
-const ESPN_LEADERS_TTL = 5 * 60 * 1000;
-
 async function getScorers() {
-  // Fetch directly from ESPN leaders API — authoritative scorer data, no duplicate counting
-  if (espnLeadersCache && Date.now() - espnLeadersCacheTs < ESPN_LEADERS_TTL) {
-    return espnLeadersCache;
-  }
-  try {
-    const url = "https://sports.core.api.espn.com/v2/sports/soccer/leagues/fifa.world/leaders";
-    const r = await fetch(url, { headers: ESPN_HEADERS });
-    if (r.ok) {
-      const data = await r.json();
-      const result = parseESPNLeaders(data);
-      if (result.scorers.length > 0) {
-        espnLeadersCache = result;
-        espnLeadersCacheTs = Date.now();
-        return result;
-      }
-    }
-  } catch(e) {
-    console.warn("[getScorers] ESPN leaders fetch failed:", e.message);
-  }
-  // Fallback to persisted events aggregate
-  console.warn("[getScorers] falling back to KV aggregate");
-  const result = await buildScorersFromPersistedEvents({ persist:false });
-  return { scorers: result.scorers, cards: result.cards, matchCount: result.matchCount, rebuiltAt: result.rebuiltAt };
-}
-
-function parseESPNLeaders(data) {
-  const scorers = [];
-  for (const cat of (data.categories || [])) {
-    const nm = (cat.name || cat.displayName || "").toLowerCase();
-    for (const leader of (cat.leaders || [])) {
-      const athlete = leader.athlete;
-      const name = athlete?.displayName || athlete?.fullName || "";
-      const team = athlete?.team?.displayName || athlete?.teamName || "";
-      const val = Number(leader.value || 0);
-      if (!name) continue;
-      if (nm.includes("goal") && !nm.includes("against")) {
-        const ex = scorers.find(s => s.name === name);
-        if (ex) ex.goals = val;
-        else scorers.push({ name, team, goals: val, assists: 0 });
-      }
-      if (nm.includes("assist")) {
-        const ex = scorers.find(s => s.name === name);
-        if (ex) ex.assists = val;
-        else scorers.push({ name, team, goals: 0, assists: val });
-      }
-    }
-  }
-  scorers.sort((a, b) => b.goals - a.goals || b.assists - a.assists);
-  return { scorers: scorers.filter(s => s.goals > 0).slice(0, 30), cards: [], matchCount: 0, rebuiltAt: Date.now(), source: "espn_leaders" };
+  const result = await buildScorersFromPersistedEvents({ persist: false });
+  return {
+    scorers:     result.scorers,
+    cards:       result.cards,
+    goalDetails: result.goalDetails || {},
+    matchCount:  result.matchCount,
+    rebuiltAt:   result.rebuiltAt,
+  };
 }
 
 // ── Seed ESPN IDs for today + next 7 days + merge hardcoded ─────────────────
@@ -1250,18 +1188,8 @@ export default async function handler(req, res) {
     }
   }
 
-  // Seed ESPN IDs for today + next 7 days
-  if (req.query.action === "seed-ids") {
-    try {
-      res.setHeader("Cache-Control", "no-store");
-      return res.status(200).json({ ok: true, ...(await seedESPNIds()) });
-    } catch (e) {
-      return res.status(500).json({ ok: false, action: "seed-ids", error: e.message });
-    }
-  }
-
   // Seed ESPN IDs for today + tomorrow
-  let { home, away, debug, flush, fixtureId } = req.query;
+    let { home, away, debug, flush, fixtureId } = req.query;
   if ((!home || !away) && fixtureId && fixtureId.includes("|")) {
     [home, away] = fixtureId.split("|");
   }

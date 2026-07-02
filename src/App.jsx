@@ -4262,10 +4262,8 @@ const LIGHT = {
 
 // ── MATCH EVENTS API ──────────────────────────────────────────────────────
 const eventsCache = {};
-const EVENTS_CACHE_VERSION = 2; // bump to invalidate browser session cache
 async function fetchMatchEvents(fixtureId) {
-  const cacheKey = `${EVENTS_CACHE_VERSION}:${fixtureId}`;
-  if (eventsCache[cacheKey]) return eventsCache[cacheKey];
+  if (eventsCache[fixtureId]) return eventsCache[fixtureId];
   try {
     const res = await fetch(`/api/matchevents?fixtureId=${encodeURIComponent(fixtureId)}&t=${Date.now()}`);
     if (!res.ok) throw new Error(res.statusText);
@@ -4277,7 +4275,7 @@ async function fetchMatchEvents(fixtureId) {
   result?.stats ||
   result?.lineups
 ) {
-    eventsCache[cacheKey] = result;
+  eventsCache[fixtureId] = result;
 }
     return result;
   } catch(e) {
@@ -4819,11 +4817,9 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
     });
     return { h, a };
   }, [events, match]);
-  const correctedSc = sc && hasScore
-    ? sc  // trust getScore() — it comes from persisted Redis/ESPN data
-    : (sc && eventsScore)
-      ? { ...sc, hg: eventsScore.h, ag: eventsScore.a }  // fallback: no score yet, use event count
-      : sc;
+  const correctedSc = sc && eventsScore
+    ? { ...sc, hg: Math.max(sc.hg ?? 0, eventsScore.h), ag: Math.max(sc.ag ?? 0, eventsScore.a) }
+    : sc;
 
   if (!match) return null;
 
@@ -4982,9 +4978,7 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
             const hasLineups = !!(lineups && (lineups.home || lineups.away));
             const hasStats   = !!(matchStats && isPlayed);
             const hasTimeline = isPlayed;
-            const goals = correctedSc?.hg != null && correctedSc?.ag != null
-              ? (correctedSc.hg + correctedSc.ag)
-              : (events ? events.filter(e=>e.type==="Goal").length : 0);
+            const goals = events ? events.filter(e=>e.type==="Goal").length : 0;
             const cards = events ? events.filter(e=>e.type==="Card").length : 0;
             const redCards = (events||[]).filter(e=>e.type==="Card" && e.detail==="Red Card").length;
             const yellowCards = Math.max(0, cards - redCards);
@@ -5111,9 +5105,7 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
           {/* ── MATCH EVENTS ── */}
           {isPlayed && evOpen && (() => {
             const toggleFilter = (t) => setEvFilter(f => f.includes(t) ? f.filter(x=>x!==t) : [...f,t]);
-            const goals  = correctedSc?.hg != null && correctedSc?.ag != null
-              ? (correctedSc.hg + correctedSc.ag)
-              : (events ? events.filter(e=>e.type==="Goal").length : 0);
+            const goals  = events ? events.filter(e=>e.type==="Goal").length : 0;
             const cards  = events ? events.filter(e=>e.type==="Card").length : 0;
             const redCards = events ? events.filter(e=>e.type==="Card" && e.detail==="Red Card").length : 0;
             const subs   = events ? events.filter(e=>e.type==="subst").length : 0;
@@ -5199,68 +5191,100 @@ const ONES_TO_WATCH = [
 ];
 
 function TopScorersTab({ tabTop=116 }) {
-  const [filter, setFilter] = useState("all");
   const [liveScorers, setLiveScorers] = useState([]);
+  const [goalDetails, setGoalDetails] = useState({});
   const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState(null); // player name for drill-down
 
   useEffect(() => {
     setLoading(true);
     fetch(`/api/matchevents?action=scorers&t=${Date.now()}`)
       .then(r => r.json())
-      .then(d => { if (d.scorers?.length) setLiveScorers(d.scorers); })
+      .then(d => {
+        if (d.scorers?.length) setLiveScorers(d.scorers);
+        if (d.goalDetails)     setGoalDetails(d.goalDetails);
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
   const hasLive = liveScorers.length > 0;
-  const _tshRef = useRef(null); const _tshH = useElemHeight(_tshRef);
+
+  // Format "Home|Away" match pair into readable label
+  const matchLabel = (pair) => {
+    if (!pair) return "";
+    const [h, a] = pair.split("|");
+    return `${h} vs ${a}`;
+  };
 
   return (
     <div>
-      <div ref={_tshRef} style={{position:"relative",top:0,left:"auto",transform:"none",width:"100%",maxWidth:700,zIndex:2,background:C.bg,borderBottom:`1px solid ${C.b2}`,boxShadow:DS.shadow.sticky,padding:"8px 13px"}}>
-        <div style={{fontWeight:700,fontSize:15,color:C.green,marginBottom:!hasLive?4:0}}>{"TOP SCORERS"} <span style={{fontSize:11,color:C.dim,fontWeight:400}}>{hasLive?"· "+"Live data":"· "+"Pre-tournament"}</span></div>
-        {!hasLive && (
-          <div style={{display:"flex",gap:6}}>
-            <Pill active={filter==="all"} onClick={()=>setFilter("all")}  color={C.green}>{"All"}</Pill>
-            <Pill active={filter==="FW"}  onClick={()=>setFilter("FW")}   color={C.red}>{"Strikers"}</Pill>
-            <Pill active={filter==="MF"}  onClick={()=>setFilter("MF")}   color={C.gold}>{"Midfielders"}</Pill>
-            <Pill active={filter==="DF"}  onClick={()=>setFilter("DF")}   color={C.blue}>{"Defenders"}</Pill>
+      {/* Header */}
+      <div style={{position:"relative",width:"100%",maxWidth:700,zIndex:2,background:C.bg,
+        borderBottom:`1px solid ${C.b2}`,boxShadow:DS.shadow.sticky,padding:"8px 13px"}}>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          {selected && (
+            <button onClick={()=>setSelected(null)}
+              style={{background:"none",border:"none",color:C.green,fontSize:18,cursor:"pointer",padding:"0 4px"}}>
+              ←
+            </button>
+          )}
+          <div style={{fontWeight:700,fontSize:15,color:C.green}}>
+            {selected ? selected : "TOP SCORERS"}
+            {!selected && <span style={{fontSize:11,color:C.dim,fontWeight:400}}>{" · "}{hasLive?"Live data":"Pre-tournament"}</span>}
           </div>
-        )}
-      </div>
-      
-      <div style={{height:0}}/>
-      {!hasLive && (
-          <div>
-          {ONES_TO_WATCH.filter(p=>filter==="all"||p.pos===filter).map((p,i) => (
-            <Card key={p.name} style={{marginBottom:7}}>
-              <div style={{padding:"10px 13px",display:"flex",alignItems:"center",gap:10}}>
-                <div style={{fontWeight:700,color:C.dim,minWidth:24,fontSize:13,textAlign:"center"}}>#{i+1}</div>
-                <div style={{flex:1}}>
-                  <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2}}>
-                    <span style={{fontWeight:700,color:C.text,fontSize:14}}>{p.name}</span>
-                    <span style={{fontSize:10,fontWeight:700,padding:"1px 6px",borderRadius:6,
-                      background:p.pos==="FW"?`${C.red}22`:p.pos==="MF"?`${C.gold}22`:`${C.blue}22`,
-                      color:p.pos==="FW"?C.red:p.pos==="MF"?C.gold:C.blue}}>{p.pos}</span>
-                  </div>
-                  <div style={{fontSize:11,color:C.dim}}>{p.flag} {p.team} · {p.club}</div>
-                  <div style={{fontSize:11,color:C.mid,marginTop:2,fontStyle:"italic"}}>{p.note}</div>
-                </div>
-                <Crest team={p.team} size={28}/>
-              </div>
-            </Card>
-          ))}
         </div>
-      )}
+      </div>
 
-      {hasLive && (
-        <div>
-          {liveScorers.slice(0,20).map((p,i) => {
+      {loading && <div style={{padding:20,textAlign:"center",color:C.dim,fontSize:13}}>Loading…</div>}
+
+      {/* Player goal drill-down */}
+      {selected && (() => {
+        const details = (goalDetails[selected] || []).slice().sort((a,b) => (a.minute||0)-(b.minute||0));
+        return (
+          <div style={{padding:"8px 13px"}}>
+            <div style={{fontSize:12,color:C.dim,marginBottom:10}}>
+              {getFlag(liveScorers.find(s=>s.name===selected)?.team || "")}
+              {" "}{liveScorers.find(s=>s.name===selected)?.team || ""}
+              {" · "}{details.length} goal{details.length!==1?"s":""}
+            </div>
+            {details.length === 0 && (
+              <div style={{color:C.dim,fontSize:13}}>No goal detail available.</div>
+            )}
+            {details.map((g, i) => (
+              <Card key={i} style={{marginBottom:8}}>
+                <div style={{padding:"10px 13px",display:"flex",alignItems:"center",gap:12}}>
+                  <div style={{fontSize:20}}>⚽</div>
+                  <div style={{flex:1}}>
+                    <div style={{fontWeight:700,color:C.gold,fontSize:15,lineHeight:1}}>
+                      {g.minute != null ? `${g.minute}${g.extra ? `+${g.extra}` : ""}'` : "—"}
+                    </div>
+                    <div style={{fontSize:11,color:C.dim,marginTop:3}}>{matchLabel(g.match)}</div>
+                    {g.assist && <div style={{fontSize:11,color:C.mid,marginTop:2}}>Assist: {g.assist}</div>}
+                    {g.detail && g.detail !== "Normal Goal" && (
+                      <div style={{fontSize:10,color:C.blue,marginTop:2}}>{g.detail}</div>
+                    )}
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        );
+      })()}
+
+      {/* Scorers list */}
+      {!selected && hasLive && (
+        <div style={{padding:"0 0 8px"}}>
+          {liveScorers.slice(0,30).map((p,i) => {
             const medal = i===0?"🥇":i===1?"🥈":i===2?"🥉":null;
+            const hasDetail = (goalDetails[p.name]?.length || 0) > 0;
             return (
-              <Card key={p.name} style={{marginBottom:7}}>
+              <Card key={p.name} style={{marginBottom:7,cursor:hasDetail?"pointer":"default"}}
+                onClick={hasDetail ? ()=>setSelected(p.name) : undefined}>
                 <div style={{padding:"10px 13px",display:"flex",alignItems:"center",gap:10}}>
-                  <div style={{fontWeight:700,color:C.dim,minWidth:26,fontSize:14,textAlign:"center"}}>{medal||`#${i+1}`}</div>
+                  <div style={{fontWeight:700,color:C.dim,minWidth:26,fontSize:14,textAlign:"center"}}>
+                    {medal||`#${i+1}`}
+                  </div>
                   <div style={{flex:1}}>
                     <div style={{fontWeight:700,color:C.text,fontSize:14,marginBottom:2}}>{p.name}</div>
                     <div style={{fontSize:11,color:C.dim}}>{getFlag(p.team)} {p.team}</div>
@@ -5273,10 +5297,17 @@ function TopScorersTab({ tabTop=116 }) {
                     <div style={{fontWeight:700,fontSize:16,color:C.blue,lineHeight:1}}>{p.assists}</div>
                     <div style={{fontSize:9,color:C.dim}}>assists</div>
                   </div>
+                  {hasDetail && <div style={{fontSize:16,color:C.dim}}>›</div>}
                 </div>
               </Card>
             );
           })}
+        </div>
+      )}
+
+      {!selected && !hasLive && !loading && (
+        <div style={{padding:"16px 13px",color:C.dim,fontSize:13}}>
+          No live scorer data yet. Check back once matches begin.
         </div>
       )}
     </div>
