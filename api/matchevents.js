@@ -1276,9 +1276,10 @@ export default async function handler(req, res) {
     const r = await fetch(url, { headers: ESPN_HEADERS });
     const text = await r.text();
     await kv.del("wc2026:scorers_espn_v2").catch(()=>{});
-    const scorers = parseESPNStatistics(text, "goalsLeaders");
-    const assists = parseESPNStatistics(text, "assistsLeaders");
-    return res.status(200).json({ scorers: scorers.slice(0,10), assists: assists.slice(0,5), totalScorers: scorers.length });
+    // Find Mbappe entry and show 2000 chars around it
+    const mIdx = text.indexOf('"Kylian Mbapp');
+    const context = text.slice(Math.max(0, mIdx - 200), mIdx + 1500);
+    return res.status(200).json({ context });
   }
 
   if (req.query.action === "parse-espn-stats") {
