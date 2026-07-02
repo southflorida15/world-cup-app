@@ -1069,6 +1069,36 @@ async function backfillFinishedEvents({ limit = 10, force = false, targetHome = 
 
 
 async function getScorers() {
+  // Try ESPN CDN stats endpoint — powers the espn.com/soccer/stats page
+  // Cache in KV for 10 minutes to avoid hammering ESPN
+  const SCORERS_CACHE_KEY = "wc2026:scorers_espn_cache";
+  const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+
+  try {
+    const cached = await kv.get(SCORERS_CACHE_KEY).catch(() => null);
+    if (cached && cached.ts && Date.now() - cached.ts < CACHE_TTL) {
+      return { scorers: cached.scorers, cards: cached.cards || [], goalDetails: {}, source: "espn_kv_cache" };
+    }
+  } catch(e) {}
+
+  try {
+    // ESPN CDN endpoint that powers the stats page
+    const url = "https://cdn.espn.com/core/soccer/stats?xhr=1&league=fifa.world&view=scoring&limit=50";
+    const r = await fetch(url, { headers: ESPN_HEADERS });
+    if (r.ok) {
+      const data = await r.json();
+      const scorers = parseESPNCDNScorers(data);
+      if (scorers.length > 0) {
+        await kv.set(SCORERS_CACHE_KEY, { scorers, cards: [], ts: Date.now() }).catch(() => {});
+        return { scorers, cards: [], goalDetails: {}, source: "espn_cdn" };
+      }
+    }
+  } catch(e) {
+    console.warn("[getScorers] ESPN CDN fetch failed:", e.message);
+  }
+
+  // Fallback to our event-based aggregate
+  console.warn("[getScorers] falling back to event aggregate");
   const result = await buildScorersFromPersistedEvents({ persist: false });
   return {
     scorers:     result.scorers,
@@ -1076,7 +1106,27 @@ async function getScorers() {
     goalDetails: result.goalDetails || {},
     matchCount:  result.matchCount,
     rebuiltAt:   result.rebuiltAt,
+    source:      "event_aggregate",
   };
+}
+
+function parseESPNCDNScorers(data) {
+  // ESPN CDN /core/soccer/stats returns athletes array under content.stats.athletes
+  try {
+    const athletes = data?.content?.stats?.athletes ||
+                     data?.content?.leaders?.athletes ||
+                     data?.athletes || [];
+    if (!athletes.length) return [];
+
+    return athletes.slice(0, 30).map(a => ({
+      name:    a.athlete?.displayName || a.displayName || "",
+      team:    a.athlete?.team?.displayName || a.teamName || "",
+      goals:   Number(a.stats?.find(s => s.name === "goals" || s.abbreviation === "G")?.value || a.goals || 0),
+      assists: Number(a.stats?.find(s => s.name === "assists" || s.abbreviation === "A")?.value || a.assists || 0),
+    })).filter(s => s.name && s.goals > 0);
+  } catch(e) {
+    return [];
+  }
 }
 
 // ── Seed ESPN IDs for today + next 7 days + merge hardcoded ─────────────────
@@ -1185,6 +1235,27 @@ export default async function handler(req, res) {
   // Backfill finished match timelines from ESPN, preserving official
   // stoppage-time display values such as 90'+5' and VAR/review outcomes.
   // Run repeatedly with a modest limit until updated=0.
+  if (req.query.action === "fetch-scorers-espn") {
+    // Try multiple ESPN stats endpoint patterns to find which one works
+    const attempts = [
+      "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/statistics?seasontype=3",
+      "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/leaders",
+      "https://sports.core.api.espn.com/v2/sports/soccer/leagues/fifa.world/leaders",
+      "https://site.web.api.espn.com/apis/common/v3/sports/soccer/fifa.world/statistics/byathlete?category=scoring&sort=goals&limit=50",
+    ];
+    const results = [];
+    for (const url of attempts) {
+      try {
+        const r = await fetch(url, { headers: ESPN_HEADERS });
+        const text = await r.text();
+        results.push({ url, status: r.status, bytes: text.length, preview: text.slice(0, 200) });
+      } catch(e) {
+        results.push({ url, error: e.message });
+      }
+    }
+    return res.status(200).json({ results });
+  }
+
   if (req.query.action === "dump-ids") {
     const idMap = await kv.get(ESPN_ID_MAP_KEY).catch(() => ({})) || {};
     return res.status(200).json({ count: Object.keys(idMap).length, ids: idMap });
