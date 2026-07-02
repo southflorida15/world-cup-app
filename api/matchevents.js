@@ -1119,46 +1119,42 @@ function parseESPNStatistics(text, category) {
 
   const results = [];
   let pos = 0;
+  const nameKey = '"displayName":"';
 
   while (results.length < 50) {
-    // Find next leader entry by its value field
-    const valIdx = slice.indexOf('"value":', pos);
-    if (valIdx === -1) break;
+    // Find "athlete":{ — this marks the start of a leader entry's athlete data
+    const athleteIdx = slice.indexOf('"athlete":{', pos);
+    if (athleteIdx === -1) break;
 
-    const valEnd = slice.indexOf(',', valIdx + 8);
-    const val = parseFloat(slice.slice(valIdx + 8, valEnd));
-    if (isNaN(val) || val <= 0) { pos = valIdx + 8; continue; }
+    // The value is BEFORE "athlete":{ — look back for the most recent "value":N
+    const beforeAthlete = slice.slice(Math.max(0, athleteIdx - 300), athleteIdx);
+    const valMatch = /"value":([\d.]+)/.exec(beforeAthlete.split('').reverse().join(''));
+    // Reverse search: find last "value": before athlete
+    const lastValIdx = beforeAthlete.lastIndexOf('"value":');
+    if (lastValIdx === -1) { pos = athleteIdx + 10; continue; }
+    const val = parseFloat(beforeAthlete.slice(lastValIdx + 8));
+    if (isNaN(val) || val <= 0) { pos = athleteIdx + 10; continue; }
 
-    // Find "athlete":{ after this value
-    const athleteIdx = slice.indexOf('"athlete":{', valIdx);
-    if (athleteIdx === -1 || athleteIdx - valIdx > 200) { pos = valIdx + 8; continue; }
-
-    // Extract displayName — first one inside athlete block is player name
-    const nameKey = '"displayName":"';
+    // Player name: first displayName inside athlete block
     const nameIdx = slice.indexOf(nameKey, athleteIdx);
-    if (nameIdx === -1) { pos = athleteIdx; continue; }
+    if (nameIdx === -1) break;
     const nameEnd = slice.indexOf('"', nameIdx + nameKey.length);
     const name = slice.slice(nameIdx + nameKey.length, nameEnd);
 
-    // Skip stat label names ("Stats", "Splits", "Matches", "News", "Bio", etc.)
-    // These appear inside "text":"..." fields in links arrays
-    // The real player name comes right after "athlete":{ with no "text": before it
-    // Validate: real names don't contain spaces between single letters
-    if (!name || name.length < 2 || /^(Stats|Splits|Matches|News|Bio|Index|Schedule|Standings|Scores|Teams|Overview|Transfers|Player Card|Clubhouse)$/.test(name)) {
-      pos = nameIdx + 1; continue;
-    }
-
-    // Find team displayName — look for "team":{ inside athlete block
-    const teamKey = '"team":{';
-    const teamIdx = slice.indexOf(teamKey, athleteIdx);
+    // Team: find "team":{ inside athlete block, then first displayName inside it
+    const teamIdx = slice.indexOf('"team":{', athleteIdx);
     let team = "";
-    if (teamIdx !== -1 && teamIdx - athleteIdx < 5000) {
+    if (teamIdx !== -1 && teamIdx - athleteIdx < 8000) {
       const tNameIdx = slice.indexOf(nameKey, teamIdx);
       if (tNameIdx !== -1 && tNameIdx - teamIdx < 500) {
         const tNameEnd = slice.indexOf('"', tNameIdx + nameKey.length);
         team = slice.slice(tNameIdx + nameKey.length, tNameEnd);
       }
     }
+
+    // Skip obvious non-player names from link text fields
+    const SKIP = new Set(["Stats","Splits","Matches","News","Bio","Overview","Transfers","Player Card","Clubhouse","Schedule","Standings","Index"]);
+    if (!name || name.length < 2 || SKIP.has(name)) { pos = nameIdx + 1; continue; }
 
     results.push({
       name,
@@ -1167,7 +1163,7 @@ function parseESPNStatistics(text, category) {
       assists: category === "assistsLeaders" ? val : 0,
     });
 
-    pos = nameEnd + 1;
+    pos = teamIdx > 0 ? teamIdx + 10 : nameEnd + 1;
   }
 
   return results;
