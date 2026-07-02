@@ -1199,31 +1199,48 @@ export default async function handler(req, res) {
   }
 
   if (req.query.action === "backfill-r32") {
-    // Force-refetch R32+ matches using hardcoded IDs + KV id map
     const kvIdMap = await kv.get(ESPN_ID_MAP_KEY).catch(() => ({})) || {};
-    // Merge KV ids with hardcoded, preferring KV (more accurate)
     const allIds = { ...HARDCODED_ESPN_IDS, ...kvIdMap };
-    // Filter to R32+ matches (IDs >= 760480)
-    const R32_ENTRIES = Object.entries(allIds).filter(([,id]) => Number(id) >= 760480);
+
+    // Deduplicate by eventId — only process each ESPN event once,
+    // preferring entries with real team names (no "Winner", "Place", "Round")
+    const byEventId = {};
+    for (const [pair, eventId] of Object.entries(allIds)) {
+      if (Number(eventId) < 760480) continue; // skip group stage
+      const isPlaceholder = /Winner|Place|Round|TBD|\d+[A-Z]/.test(pair);
+      const existing = byEventId[eventId];
+      if (!existing || isPlaceholder === false && /Winner|Place|Round|TBD/.test(existing.pair)) {
+        byEventId[eventId] = { pair, eventId };
+      }
+    }
+
     const processed = [], errors = [], skipped = [];
-    for (const [pair, eventId] of R32_ENTRIES) {
+    for (const { pair, eventId } of Object.values(byEventId)) {
       const [home, away] = pair.split("|");
+      if (/Winner|Place|Round|TBD/.test(home) || /Winner|Place|Round|TBD/.test(away)) {
+        skipped.push({ home, away, eventId, reason: "placeholder_names" }); continue;
+      }
       try {
         const r = await fetch(`${ESPN_BASE}/summary?event=${eventId}`, { headers: ESPN_HEADERS });
         if (!r.ok) { errors.push({ home, away, eventId, reason: `espn_${r.status}` }); continue; }
         const data = await r.json();
         const statusType = data.header?.competitions?.[0]?.status?.type?.name || "NS";
-        if (!isDoneStatus(statusType)) { skipped.push({ home, away, eventId, reason: "not_finished_yet" }); continue; }
-        const events = parseEvents(data, home);
-        const stats  = parseStats(data.boxscore, home);
-        const lineups = parseLineups(data, home);
-        if (!events.length) { errors.push({ home, away, eventId, reason: "no_events" }); continue; }
-        await saveToKV(home, away, events, stats, lineups);
-        processed.push({ home, away, eventId, events: events.length });
+        if (!isDoneStatus(statusType)) { skipped.push({ home, away, eventId, reason: "not_finished_yet", status: statusType }); continue; }
+        // Use actual team names from ESPN response, not our key
+        const comp = data.header?.competitions?.[0];
+        const realHome = normESPN(comp?.competitors?.find(c => c.homeAway === "home")?.team?.displayName || home);
+        const realAway = normESPN(comp?.competitors?.find(c => c.homeAway === "away")?.team?.displayName || away);
+        const events = parseEvents(data, realHome);
+        const stats  = parseStats(data.boxscore, realHome);
+        const lineups = parseLineups(data, realHome);
+        if (!events.length) { errors.push({ home: realHome, away: realAway, eventId, reason: "no_events" }); continue; }
+        await saveToKV(realHome, realAway, events, stats, lineups);
+        await saveESPNId(realHome, realAway, eventId).catch(() => {});
+        processed.push({ home: realHome, away: realAway, eventId, events: events.length });
       } catch(e) { errors.push({ home, away, eventId, error: e.message }); }
     }
     const scorers = await buildScorersFromPersistedEvents({ persist: true }).catch(e => ({ error: e.message }));
-    return res.status(200).json({ ok: true, processed, skipped, errors, scorers: { count: scorers.scorers?.length, top3: scorers.scorers?.slice(0,3) } });
+    return res.status(200).json({ ok: true, processed, skipped: skipped.filter(s => s.reason !== "placeholder_names"), errors, scorers: { count: scorers.scorers?.length, top5: scorers.scorers?.slice(0,5) } });
   }
 
   if (req.query.action === "backfill-events" || req.query.action === "backfill") {
