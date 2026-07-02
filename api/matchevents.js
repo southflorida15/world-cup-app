@@ -1239,8 +1239,10 @@ export default async function handler(req, res) {
     const url = "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/statistics?seasontype=3";
     const r = await fetch(url, { headers: ESPN_HEADERS });
     const text = await r.text();
-    // Just show the first 3000 chars to understand structure without crashing
-    return res.status(200).json({ preview: text.slice(0, 3000), size: text.length });
+    // Find the goalsLeaders section and extract just that
+    const idx = text.indexOf('"goalsLeaders"');
+    const slice = text.slice(idx, idx + 8000);
+    return res.status(200).json({ goalsLeadersSlice: slice.slice(0, 4000) });
   }
 
   if (req.query.action === "fetch-scorers-espn") {
