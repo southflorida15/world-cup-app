@@ -1114,7 +1114,6 @@ function parseESPNStatistics(text, category) {
   const leadersStart = text.indexOf('"leaders":[', idx);
   if (leadersStart === -1 || leadersStart - idx > 300) return [];
 
-  // Find end: next category starts with }},{"name": or similar
   const nextCat = text.indexOf('",{"name":', leadersStart);
   const slice = text.slice(leadersStart, nextCat > 0 ? nextCat : leadersStart + 200000);
 
@@ -1122,42 +1121,51 @@ function parseESPNStatistics(text, category) {
   let pos = 0;
 
   while (results.length < 50) {
-    // Find next value
+    // Find next leader entry by its value field
     const valIdx = slice.indexOf('"value":', pos);
     if (valIdx === -1) break;
 
-    // Extract value number
     const valEnd = slice.indexOf(',', valIdx + 8);
     const val = parseFloat(slice.slice(valIdx + 8, valEnd));
     if (isNaN(val) || val <= 0) { pos = valIdx + 8; continue; }
 
-    // Find athlete displayName (first "displayName" after value)
+    // Find "athlete":{ after this value
+    const athleteIdx = slice.indexOf('"athlete":{', valIdx);
+    if (athleteIdx === -1 || athleteIdx - valIdx > 200) { pos = valIdx + 8; continue; }
+
+    // Extract displayName — first one inside athlete block is player name
     const nameKey = '"displayName":"';
-    const nameIdx = slice.indexOf(nameKey, valIdx);
-    if (nameIdx === -1) break;
+    const nameIdx = slice.indexOf(nameKey, athleteIdx);
+    if (nameIdx === -1) { pos = athleteIdx; continue; }
     const nameEnd = slice.indexOf('"', nameIdx + nameKey.length);
     const name = slice.slice(nameIdx + nameKey.length, nameEnd);
 
-    // Find team displayName (look for "team":{ then displayName within next 300 chars)
+    // Skip stat label names ("Stats", "Splits", "Matches", "News", "Bio", etc.)
+    // These appear inside "text":"..." fields in links arrays
+    // The real player name comes right after "athlete":{ with no "text": before it
+    // Validate: real names don't contain spaces between single letters
+    if (!name || name.length < 2 || /^(Stats|Splits|Matches|News|Bio|Index|Schedule|Standings|Scores|Teams|Overview|Transfers|Player Card|Clubhouse)$/.test(name)) {
+      pos = nameIdx + 1; continue;
+    }
+
+    // Find team displayName — look for "team":{ inside athlete block
     const teamKey = '"team":{';
-    const teamObj = slice.indexOf(teamKey, nameIdx);
+    const teamIdx = slice.indexOf(teamKey, athleteIdx);
     let team = "";
-    if (teamObj !== -1 && teamObj - nameIdx < 3000) {
-      const tNameIdx = slice.indexOf(nameKey, teamObj);
-      if (tNameIdx !== -1 && tNameIdx - teamObj < 300) {
+    if (teamIdx !== -1 && teamIdx - athleteIdx < 5000) {
+      const tNameIdx = slice.indexOf(nameKey, teamIdx);
+      if (tNameIdx !== -1 && tNameIdx - teamIdx < 500) {
         const tNameEnd = slice.indexOf('"', tNameIdx + nameKey.length);
         team = slice.slice(tNameIdx + nameKey.length, tNameEnd);
       }
     }
 
-    if (name) {
-      results.push({
-        name,
-        team,
-        goals:   category === "goalsLeaders"   ? val : 0,
-        assists: category === "assistsLeaders" ? val : 0,
-      });
-    }
+    results.push({
+      name,
+      team,
+      goals:   category === "goalsLeaders"   ? val : 0,
+      assists: category === "assistsLeaders" ? val : 0,
+    });
 
     pos = nameEnd + 1;
   }
@@ -1276,10 +1284,9 @@ export default async function handler(req, res) {
     const r = await fetch(url, { headers: ESPN_HEADERS });
     const text = await r.text();
     await kv.del("wc2026:scorers_espn_v2").catch(()=>{});
-    // Find Mbappe entry and show 2000 chars around it
-    const mIdx = text.indexOf('"Kylian Mbapp');
-    const context = text.slice(Math.max(0, mIdx - 200), mIdx + 1500);
-    return res.status(200).json({ context });
+    const scorers = parseESPNStatistics(text, "goalsLeaders");
+    const assists = parseESPNStatistics(text, "assistsLeaders");
+    return res.status(200).json({ scorers: scorers.slice(0,10), totalScorers: scorers.length, totalAssists: assists.length });
   }
 
   if (req.query.action === "parse-espn-stats") {
