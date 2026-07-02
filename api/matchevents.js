@@ -1069,64 +1069,98 @@ async function backfillFinishedEvents({ limit = 10, force = false, targetHome = 
 
 
 async function getScorers() {
-  // Try ESPN CDN stats endpoint — powers the espn.com/soccer/stats page
-  // Cache in KV for 10 minutes to avoid hammering ESPN
-  const SCORERS_CACHE_KEY = "wc2026:scorers_espn_cache";
-  const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+  // Cache in KV for 5 minutes
+  const CACHE_KEY = "wc2026:scorers_espn_v2";
+  const CACHE_TTL = 5 * 60 * 1000;
 
   try {
-    const cached = await kv.get(SCORERS_CACHE_KEY).catch(() => null);
-    if (cached && cached.ts && Date.now() - cached.ts < CACHE_TTL) {
+    const cached = await kv.get(CACHE_KEY).catch(() => null);
+    if (cached?.ts && Date.now() - cached.ts < CACHE_TTL && cached.scorers?.length) {
       return { scorers: cached.scorers, cards: cached.cards || [], goalDetails: {}, source: "espn_kv_cache" };
     }
   } catch(e) {}
 
   try {
-    // ESPN CDN endpoint that powers the stats page
-    const url = "https://cdn.espn.com/core/soccer/stats?xhr=1&league=fifa.world&view=scoring&limit=50";
+    const url = "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/statistics?seasontype=3";
     const r = await fetch(url, { headers: ESPN_HEADERS });
     if (r.ok) {
-      const data = await r.json();
-      const scorers = parseESPNCDNScorers(data);
+      const text = await r.text();
+      const scorers = parseESPNStatistics(text, "goalsLeaders");
+      const assists = parseESPNStatistics(text, "assistsLeaders");
+      // Merge assists into scorers
+      assists.forEach(a => {
+        const ex = scorers.find(s => s.name === a.name);
+        if (ex) ex.assists = a.assists;
+      });
       if (scorers.length > 0) {
-        await kv.set(SCORERS_CACHE_KEY, { scorers, cards: [], ts: Date.now() }).catch(() => {});
-        return { scorers, cards: [], goalDetails: {}, source: "espn_cdn" };
+        await kv.set(CACHE_KEY, { scorers, cards: [], ts: Date.now() }).catch(() => {});
+        return { scorers, cards: [], goalDetails: {}, source: "espn_statistics" };
       }
     }
   } catch(e) {
-    console.warn("[getScorers] ESPN CDN fetch failed:", e.message);
+    console.warn("[getScorers] ESPN statistics fetch failed:", e.message);
   }
 
-  // Fallback to our event-based aggregate
-  console.warn("[getScorers] falling back to event aggregate");
+  // Fallback to event aggregate
   const result = await buildScorersFromPersistedEvents({ persist: false });
-  return {
-    scorers:     result.scorers,
-    cards:       result.cards,
-    goalDetails: result.goalDetails || {},
-    matchCount:  result.matchCount,
-    rebuiltAt:   result.rebuiltAt,
-    source:      "event_aggregate",
-  };
+  return { scorers: result.scorers, cards: result.cards, goalDetails: result.goalDetails || {}, source: "event_aggregate" };
 }
 
-function parseESPNCDNScorers(data) {
-  // ESPN CDN /core/soccer/stats returns athletes array under content.stats.athletes
-  try {
-    const athletes = data?.content?.stats?.athletes ||
-                     data?.content?.leaders?.athletes ||
-                     data?.athletes || [];
-    if (!athletes.length) return [];
+function parseESPNStatistics(text, category) {
+  // Extract leaders array for a given category name from the raw JSON text
+  // Uses string search to avoid parsing the full 666KB response
+  const marker = `"${category}"`;
+  const idx = text.indexOf(marker);
+  if (idx === -1) return [];
 
-    return athletes.slice(0, 30).map(a => ({
-      name:    a.athlete?.displayName || a.displayName || "",
-      team:    a.athlete?.team?.displayName || a.teamName || "",
-      goals:   Number(a.stats?.find(s => s.name === "goals" || s.abbreviation === "G")?.value || a.goals || 0),
-      assists: Number(a.stats?.find(s => s.name === "assists" || s.abbreviation === "A")?.value || a.assists || 0),
-    })).filter(s => s.name && s.goals > 0);
-  } catch(e) {
-    return [];
+  // Find the "leaders" array after the category name
+  const leadersIdx = text.indexOf('"leaders":[', idx);
+  if (leadersIdx === -1 || leadersIdx - idx > 500) return [];
+
+  // Extract entries by finding each {..."value":N..."athlete":{..."displayName":"..."team":{..."displayName":"..."}} pattern
+  const results = [];
+  let pos = leadersIdx + 10;
+  const isGoals   = category === "goalsLeaders";
+  const isAssists = category === "assistsLeaders";
+
+  // Find the closing bracket of the leaders array for this category
+  const nextCategory = text.indexOf('{"name":', leadersIdx + 100);
+  const endIdx = nextCategory > 0 ? nextCategory : leadersIdx + 200000;
+  const slice = text.slice(leadersIdx, Math.min(endIdx, leadersIdx + 100000));
+
+  // Parse each leader entry
+  const valueRe = /"value":([\d.]+)/g;
+  const nameRe  = /"displayName":"([^"]+)"/g;
+  const teamRe  = /"team":\{[^}]*"displayName":"([^"]+)"/g;
+
+  // Reset and extract structured entries by splitting on "athlete" boundaries
+  const entries = slice.split('"athlete":{');
+  entries.shift(); // remove prefix before first athlete
+
+  for (const entry of entries) {
+    if (results.length >= 30) break;
+    // Get value from before this athlete block (it precedes "athlete" key)
+    const beforeAthlete = slice.slice(
+      slice.lastIndexOf('"value":', slice.indexOf('"athlete":{' + entry.slice(0, 20))) ,
+      slice.indexOf('"athlete":{' + entry.slice(0, 20))
+    );
+    const valMatch = /"value":([\d.]+)/.exec(beforeAthlete);
+    const val = valMatch ? Number(valMatch[1]) : 0;
+
+    const nameMatch = /"displayName":"([^"]+)"/.exec(entry);
+    const teamMatch = /"team":\{[^}]*?"displayName":"([^"]+)"/.exec(entry);
+
+    if (nameMatch && val > 0) {
+      results.push({
+        name:    nameMatch[1],
+        team:    teamMatch?.[1] || "",
+        goals:   isGoals   ? val : 0,
+        assists: isAssists ? val : 0,
+      });
+    }
   }
+
+  return results;
 }
 
 // ── Seed ESPN IDs for today + next 7 days + merge hardcoded ─────────────────
