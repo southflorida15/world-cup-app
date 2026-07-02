@@ -313,25 +313,37 @@ const HARDCODED_ESPN_IDS = {
   // Group stage
   "Mexico|South Africa":"760415","South Korea|Czechia":"760414",
   "Canada|Bosnia & Herz.":"760416","United States|Paraguay":"760417",
-  "Qatar|Switzerland":"760418","Brazil|Morocco":"760419",
-  "Haiti|Scotland":"760420","Australia|Turkiye":"760421",
-  "Germany|Curacao":"760422","Netherlands|Japan":"760423",
-  "Ivory Coast|Ecuador":"760424","Sweden|Tunisia":"760425",
-  "Spain|Cape Verde":"760426","Belgium|Egypt":"760427",
-  "Saudi Arabia|Uruguay":"760428","Iran|New Zealand":"760429",
-  "France|Senegal":"760430","Iraq|Norway":"760431",
-  "Argentina|Algeria":"760432","Austria|Jordan":"760433",
-  "Portugal|DR Congo":"760434","England|Croatia":"760435",
-  "Ghana|Panama":"760436","Uzbekistan|Colombia":"760437",
-  // R32 - discovered from livescores feed
-  "Mexico|Ecuador":"760485","Brazil|Japan":"760488",
-  "Ivory Coast|Norway":"760487","Germany|Paraguay":"760489",
-  "Canada|Morocco":"760484","Netherlands|Sweden":"760490",
-  "France|Paraguay":"760483","United States|Egypt":"760486",
-  "Belgium|Senegal":"760491","Portugal|Croatia":"760492",
-  "England|DR Congo":"760493","Spain|Norway":"760494",
-  "Argentina|Austria":"760495","Switzerland|Bosnia & Herz.":"760496",
-  "Netherlands|Colombia":"760497","Canada|South Africa":"760498",
+  "Qatar|Switzerland":"760420","Brazil|Morocco":"760419",
+  "Haiti|Scotland":"760418","Australia|Turkiye":"760421",
+  "Germany|Curacao":"760422","Netherlands|Japan":"760425",
+  "Ivory Coast|Ecuador":"760423","Sweden|Tunisia":"760424",
+  "Spain|Cape Verde":"760428","Belgium|Egypt":"760426",
+  "Saudi Arabia|Uruguay":"760429","Iran|New Zealand":"760427",
+  "France|Senegal":"760432","Iraq|Norway":"760430",
+  "Argentina|Algeria":"760433","Austria|Jordan":"760431",
+  "Portugal|DR Congo":"760434","England|Croatia":"760437",
+  "Ghana|Panama":"760434","Uzbekistan|Colombia":"760436",
+  // R32 (correct IDs from KV)
+  "Croatia|Ghana":"760480",
+  "Colombia|Portugal":"760481",
+  "Congo DR|Uzbekistan":"760482",
+  "Jordan|Argentina":"760483",
+  "Algeria|Austria":"760484",
+  "Panama|England":"760485",
+  "Brazil|Japan":"760487",
+  "Netherlands|Morocco":"760488",
+  "Germany|Paraguay":"760489",
+  "Ivory Coast|Norway":"760490",
+  "Mexico|Ecuador":"760491",
+  "France|Sweden":"760492",
+  "Belgium|Senegal":"760493",
+  "England|Congo DR":"760495",
+  "Portugal|Croatia":"760496",
+  "Spain|Austria":"760497",
+  "Switzerland|Algeria":"760498",
+  "Australia|Egypt":"760499",
+  "Argentina|Cape Verde":"760500",
+  "Colombia|Ghana":"760501",
 };
 
 
@@ -1072,12 +1084,20 @@ async function seedESPNIds() {
   const dateStr = d => `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`;
   const now = new Date();
 
-  // Fetch yesterday + next 7 days.
-  // Yesterday matters because a match can finish shortly before midnight
-  // and still need its ESPN event ID seeded after full-time.
-  const dates = Array.from({length: 8}, (_, i) => dateStr(new Date(now.getTime() + (i - 1) * 86400000)));
+  // Scan the full tournament date range (June 11 - July 19 2026)
+  // to discover all ESPN event IDs including R32, R16, QF, SF, Final
+  const tournamentStart = new Date("2026-06-11");
+  const tournamentEnd   = new Date("2026-07-19");
+  const allDates = [];
+  for (let d = new Date(tournamentStart); d <= tournamentEnd; d.setDate(d.getDate() + 1)) {
+    allDates.push(dateStr(new Date(d)));
+  }
+  // Also add yesterday + next 7 days for any edge cases
+  for (let i = -1; i <= 7; i++) {
+    allDates.push(dateStr(new Date(now.getTime() + i * 86400000)));
+  }
+  const dates = [...new Set(allDates)];
 
-  // Start from existing KV only — never seed from hardcoded (they may be wrong)
   const idMap = await kv.get(ESPN_ID_MAP_KEY).catch(() => ({})) || {};
   const before = Object.keys(idMap).length;
 
@@ -1093,9 +1113,8 @@ async function seedESPNIds() {
         const away = normESPN(comp.competitors?.find(c => c.homeAway === "away")?.team?.displayName || "");
         if (!home || !away || !event.id) continue;
         const key = `${home}|${away}`;
-        // Always overwrite with real ESPN data — fixes any previously wrong IDs
         idMap[key] = event.id;
-        console.log(`[seed-ids] ${key} → ${event.id}`);
+        console.log(`[seed-ids] ${key} -> ${event.id}`);
       }
     } catch(e) {
       console.warn(`[seed-ids] failed for ${date}:`, e.message);
@@ -1104,9 +1123,9 @@ async function seedESPNIds() {
 
   const added = Object.keys(idMap).length - before;
   await kv.set(ESPN_ID_MAP_KEY, idMap).catch(() => {});
-
-  return { added, total: Object.keys(idMap).length, dates };
+  return { added, total: Object.keys(idMap).length, datesScanned: dates.length };
 }
+
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -1170,18 +1189,31 @@ export default async function handler(req, res) {
     return res.status(200).json({ count: Object.keys(idMap).length, ids: idMap });
   }
 
+  if (req.query.action === "seed-ids") {
+    try {
+      const result = await seedESPNIds();
+      return res.status(200).json({ ok: true, ...result });
+    } catch(e) {
+      return res.status(500).json({ error: e.message });
+    }
+  }
+
   if (req.query.action === "backfill-r32") {
-    // Force-refetch only the R32 matches using hardcoded ESPN IDs
-    const R32_IDS = Object.entries(HARDCODED_ESPN_IDS).filter(([,id]) => Number(id) >= 760480);
-    const processed = [], errors = [];
-    for (const [pair, eventId] of R32_IDS) {
+    // Force-refetch R32+ matches using hardcoded IDs + KV id map
+    const kvIdMap = await kv.get(ESPN_ID_MAP_KEY).catch(() => ({})) || {};
+    // Merge KV ids with hardcoded, preferring KV (more accurate)
+    const allIds = { ...HARDCODED_ESPN_IDS, ...kvIdMap };
+    // Filter to R32+ matches (IDs >= 760480)
+    const R32_ENTRIES = Object.entries(allIds).filter(([,id]) => Number(id) >= 760480);
+    const processed = [], errors = [], skipped = [];
+    for (const [pair, eventId] of R32_ENTRIES) {
       const [home, away] = pair.split("|");
       try {
         const r = await fetch(`${ESPN_BASE}/summary?event=${eventId}`, { headers: ESPN_HEADERS });
         if (!r.ok) { errors.push({ home, away, eventId, reason: `espn_${r.status}` }); continue; }
         const data = await r.json();
         const statusType = data.header?.competitions?.[0]?.status?.type?.name || "NS";
-        if (!isDoneStatus(statusType)) { errors.push({ home, away, eventId, reason: "not_finished" }); continue; }
+        if (!isDoneStatus(statusType)) { skipped.push({ home, away, eventId, reason: "not_finished_yet" }); continue; }
         const events = parseEvents(data, home);
         const stats  = parseStats(data.boxscore, home);
         const lineups = parseLineups(data, home);
@@ -1191,7 +1223,7 @@ export default async function handler(req, res) {
       } catch(e) { errors.push({ home, away, eventId, error: e.message }); }
     }
     const scorers = await buildScorersFromPersistedEvents({ persist: true }).catch(e => ({ error: e.message }));
-    return res.status(200).json({ ok: true, processed, errors, scorers: { count: scorers.scorers?.length } });
+    return res.status(200).json({ ok: true, processed, skipped, errors, scorers: { count: scorers.scorers?.length, top3: scorers.scorers?.slice(0,3) } });
   }
 
   if (req.query.action === "backfill-events" || req.query.action === "backfill") {
