@@ -21,7 +21,7 @@ const ESPN_HEADERS = {
 const LIVE_STATUSES = new Set([
   "LIVE", "1H", "HT", "2H", "ET", "BT", "P",
   "inprogress", "first_half", "halftime", "second_half", "extra_time", "penalties",
-  "STATUS_IN_PROGRESS", "STATUS_HALFTIME", "STATUS_OVERTIME", "STATUS_SHOOTOUT"
+  "STATUS_IN_PROGRESS", "STATUS_HALFTIME", "STATUS_OVERTIME", "STATUS_END_OF_REGULATION", "STATUS_SHOOTOUT"
 ]);
 
 const DONE_STATUSES = new Set([
@@ -228,18 +228,34 @@ async function updateScorersAggregate(home, away, events) {
 // omits team name from key so empty-team duplicates collapse with named ones.
 // Multiple subs at the same minute are kept (legitimate).
 function deduplicateEvents(events) {
-  if (!events?.length) return events || [];
+  if (!Array.isArray(events)) return [];
   const seen = new Set();
+
   return events.filter(ev => {
+    if (!ev || !ev.type) return false;
+
+    const player = String(ev.player?.name || "").trim();
+    const team = String(ev.team?.name || "").trim();
+    const assist = String(ev.assist?.name || "").trim();
+    const elapsed = ev.time?.elapsed ?? "";
+    const extra = ev.time?.extra ?? "";
+    const detail = String(ev.detail || "").trim();
+
+    if (ev.type === "Goal" && !player) return false;
+    if (ev.type === "Card" && !player) return false;
+
     let key;
-    if (ev.type === "Goal" || ev.type === "Card") {
-      // For goals/cards: type + player + elapsed is sufficient and stable across ESPN sources.
-      // Omit team, detail, text — these vary between details/keyEvents/commentary.
-      key = `${ev.type}|${ev.player?.name || ""}|${ev.time?.elapsed ?? ""}`;
+    if (ev.type === "Goal") {
+      // Goal identity is player/team/minute/stoppage. Do not include detail/text:
+      // ESPN can mark the same goal as Penalty/Normal Goal depending on source.
+      key = ["Goal", player.toLowerCase(), team.toLowerCase(), elapsed, extra].join("|");
+    } else if (ev.type === "Card") {
+      key = ["Card", player.toLowerCase(), team.toLowerCase(), detail.toLowerCase(), elapsed, extra].join("|");
     } else {
       // For subs: include team + both players so multiple subs at same minute are kept.
-      key = `${ev.type}|${ev.team?.name || ""}|${ev.player?.name || ""}|${ev.assist?.name || ""}|${ev.time?.elapsed ?? ""}`;
+      key = [ev.type, team.toLowerCase(), player.toLowerCase(), assist.toLowerCase(), elapsed, extra].join("|");
     }
+
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
@@ -689,19 +705,15 @@ function parseEvents(data, homeTeam) {
   (data.header?.competitions?.[0]?.details || []).forEach(ev => add(normalizeEventFromESPN(ev, homeTeam)));
   (data.keyEvents || []).forEach(ev => add(normalizeEventFromESPN(ev, homeTeam)));
 
-  // Commentary has the richest minute strings and many VAR/review outcomes.
-  (data.commentary || []).forEach(item => add(normalizeCommentaryEvent(item, homeTeam)));
+  // Commentary and roster player.play feeds are intentionally excluded here.
+  // ESPN repeats the same goal/card across details, keyEvents, commentary and
+  // roster-level plays with slightly different payloads; including all sources
+  // created duplicate timeline rows and inflated derived event counts.
+  // Keep commentary available as a future separate feature, but do not mix it
+  // into canonical match events.
 
   // Fallback: plays array when ESPN exposes it directly.
   (data.plays || []).forEach(play => add(normalizeEventFromESPN(play, homeTeam)));
-
-  // Roster player entries can contain individual plays; useful when summary
-  // omits top-level plays but embeds key player events under each roster row.
-  (data.rosters || []).forEach(r => {
-    (r.roster || r.entries || r.players || r.athletes || []).forEach(player => {
-      (player.plays || []).forEach(play => add(normalizeEventFromESPN(play, homeTeam)));
-    });
-  });
 
   const deduped = deduplicateEvents(events);
 

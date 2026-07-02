@@ -709,18 +709,12 @@ export const statusIsLive = (s) => {
     "1H","HT","2H","ET","BT","P",
     "LIVE","INPROGRESS","FIRST_HALF","HALFTIME","SECOND_HALF","EXTRA_TIME","PENALTIES",
     "STATUS_IN_PROGRESS","STATUS_HALFTIME","STATUS_EXTRA_TIME","STATUS_OVERTIME","STATUS_END_OF_PERIOD",
-    "STATUS_END_OF_REGULATION",
     "STATUS_PENALTY","STATUS_PENALTY_SHOOTOUT","STATUS_SHOOTOUT","STATUS_PENALTIES"
   ].includes(u);
 };
 export const statusIsFinished = (s) => {
   const u = upperStatus(s);
-  return [
-    "FT","AET","PEN","FINISHED","ENDED","AFTER_EXTRA_TIME","AFTER_PENALTIES",
-    "STATUS_FINAL","STATUS_FULL_TIME","STATUS_FINAL_PEN","STATUS_FINAL_PENALTY",
-    "STATUS_FINAL_PENALTIES","STATUS_FINAL_AET","STATUS_END_OF_EXTRATIME",
-    "STATUS_FINAL_PEN_AET"
-  ].includes(u);
+  return ["FT","AET","PEN","FINISHED","ENDED","AFTER_EXTRA_TIME","AFTER_PENALTIES","STATUS_FINAL","STATUS_FULL_TIME","STATUS_FINAL_PEN","STATUS_FINAL_PENALTY","STATUS_FINAL_PENALTIES","STATUS_FINAL_AET"].includes(u);
 };
 const statusLabel = (s,e,ex) => {
   s = normStatus(s);
@@ -1718,11 +1712,7 @@ export function RecentForm({ team, staticData }) {
       .map(m => {
         const sc = getScore(m.home, m.away);
         if (!sc || sc.hg === null || sc.ag === null) return null;
-        // Show the last four played matches, including live/ET/PK matches.
-        // Previously this required FT only, so teams with one ongoing knockout
-        // match showed only three rows even though a fourth match had already
-        // started and had a score.
-        if (!statusIsFinished(sc.status) && !statusIsLive(sc.status)) return null;
+        if (!statusIsFinished(sc.status)) return null;
         const isHome = m.home === team;
         const teamGoals = isHome ? sc.hg : sc.ag;
         const oppGoals  = isHome ? sc.ag : sc.hg;
@@ -4309,53 +4299,8 @@ function WeatherBadge({ lat, lon }) {
 }
 
 
-
-function cleanMatchEvents(events = []) {
-  if (!Array.isArray(events)) return [];
-
-  const seen = new Set();
-
-  return events.filter(ev => {
-    if (!ev || !ev.type) return false;
-
-    const player = String(ev.player?.name || "").trim();
-    const team = String(ev.team?.name || "").trim();
-    const assist = String(ev.assist?.name || "").trim();
-    const elapsed = ev.time?.elapsed ?? "";
-    const extra = ev.time?.extra ?? "";
-    const detail = String(ev.detail || "").trim();
-
-    // Goal rows without a scorer are ESPN feed artifacts. They created the
-    // blank duplicate soccer-ball entries in the timeline.
-    if (ev.type === "Goal" && !player) return false;
-
-    // Cards without a player are not useful to users and can duplicate
-    // structured card rows.
-    if (ev.type === "Card" && !player) return false;
-
-    let key;
-    if (ev.type === "Goal") {
-      // Do not include detail/text. ESPN can report the same penalty/goal
-      // differently across details/keyEvents/commentary.
-      key = ["Goal", player.toLowerCase(), team.toLowerCase(), elapsed, extra].join("|");
-    } else if (ev.type === "Card") {
-      key = ["Card", player.toLowerCase(), team.toLowerCase(), detail.toLowerCase(), elapsed, extra].join("|");
-    } else if (ev.type === "subst") {
-      // Multiple substitutions can happen at the same minute, so include both
-      // players and team.
-      key = ["subst", team.toLowerCase(), player.toLowerCase(), assist.toLowerCase(), elapsed, extra].join("|");
-    } else {
-      key = [ev.type, team.toLowerCase(), player.toLowerCase(), detail.toLowerCase(), elapsed, extra].join("|");
-    }
-
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-}
-
 function MatchMomentum({ match, events=[], momentum=[], stats, C, score=null }) {
-  const safeEvents = cleanMatchEvents(events);
+  const safeEvents = Array.isArray(events) ? events : [];
   const safeMomentum = Array.isArray(momentum) ? momentum : [];
   const [engine, setEngine] = useState("hybrid");
 
@@ -4776,7 +4721,7 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
     setEvents(null); setLoading(true); setEvOpen(true); setEvFilter(["Goal","Card","subst"]); setLineups(null); setCommentary([]); setMomentumData([]); setLineupsOpen(false); setStatsOpen(false); setMomentumOpen(false); setCommentaryOpen(false);
     fetchMatchEvents(`${match.home}|${match.away}`)
       .then(d => {
-        setEvents(cleanMatchEvents(d?.events || []));
+        setEvents(d?.events || []);
         setMatchStats(d?.stats || null);
         setLineups(d?.lineups || null);
         setCommentary(d?.commentary || []);
@@ -5160,18 +5105,17 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
           {/* ── MATCH EVENTS ── */}
           {isPlayed && evOpen && (() => {
             const toggleFilter = (t) => setEvFilter(f => f.includes(t) ? f.filter(x=>x!==t) : [...f,t]);
-            const timelineEvents = cleanMatchEvents(events || []);
-            const goals  = timelineEvents.filter(e=>e.type==="Goal").length;
-            const cards  = timelineEvents.filter(e=>e.type==="Card").length;
-            const redCards = timelineEvents.filter(e=>e.type==="Card" && e.detail==="Red Card").length;
-            const subs   = timelineEvents.filter(e=>e.type==="subst").length;
-            const filtered = timelineEvents.filter(e=>evFilter.includes(e.type));
+            const goals  = events ? events.filter(e=>e.type==="Goal").length : 0;
+            const cards  = events ? events.filter(e=>e.type==="Card").length : 0;
+            const redCards = events ? events.filter(e=>e.type==="Card" && e.detail==="Red Card").length : 0;
+            const subs   = events ? events.filter(e=>e.type==="subst").length : 0;
+            const filtered = events ? events.filter(e=>evFilter.includes(e.type)) : [];
             const yellowCards = Math.max(0, cards - redCards);
             const FILTERS = [{type:"Goal",label:`⚽ ${goals}`},{type:"Card",label:`🟨 ${yellowCards}${redCards ? `  🟥 ${redCards}` : ""}`},{type:"subst",label:`🔄 ${subs}`}];
             return (
               <div style={{marginBottom:12}}>
                 <>
-                    {timelineEvents.length > 0 && (
+                    {events && events.length > 0 && (
                       <div style={{display:"flex",gap:6,padding:"8px 0"}}>
                         {FILTERS.map(f=>(
                           <button key={f.type} onClick={()=>toggleFilter(f.type)} style={{padding:"4px 10px",borderRadius:20,border:`1px solid ${evFilter.includes(f.type)?C.green:C.b2}`,background:evFilter.includes(f.type)?`${C.green}22`:C.s2,color:evFilter.includes(f.type)?C.green:C.dim,fontSize:12,fontWeight:600,cursor:"pointer"}}>{f.label}</button>
@@ -5207,8 +5151,8 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
                         </div>
                       );
                     })}
-                    {!loading && filtered.length===0 && timelineEvents.length>0 && <div style={{fontSize:12,color:C.dim,textAlign:"center",padding:"12px 0"}}>No events match filter.</div>}
-                    {!loading && timelineEvents.length===0 && <div style={{fontSize:12,color:C.dim,textAlign:"center",padding:"16px 0"}}>No events yet.</div>}
+                    {!loading && filtered.length===0 && events && events.length>0 && <div style={{fontSize:12,color:C.dim,textAlign:"center",padding:"12px 0"}}>No events match filter.</div>}
+                    {!loading && (!events||events.length===0) && <div style={{fontSize:12,color:C.dim,textAlign:"center",padding:"16px 0"}}>No events yet.</div>}
                   </>
               </div>
             );
