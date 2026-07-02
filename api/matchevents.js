@@ -242,32 +242,33 @@ function deduplicateEvents(events) {
 }
 
 async function buildScorersFromPersistedEvents({ persist=false } = {}) {
-  let allKeys = [];
-  let cursor = 0;
-  do {
-    const [next, batch] = await kv.scan(cursor, { match: "wc2026:events:*", count: 200 });
-    cursor = parseInt(next) || 0;
-    allKeys.push(...batch);
-  } while (cursor !== 0);
+  // Use known match keys from HARDCODED_ESPN_IDS + KV id map
+  // Do NOT scan all KV keys — that picks up stale/duplicate entries
+  const kvIdMap = await kv.get(ESPN_ID_MAP_KEY).catch(() => ({})) || {};
+  const allPairs = { ...HARDCODED_ESPN_IDS, ...kvIdMap };
 
-  // If no cached matches exist yet, seed them once so the leaderboard can
-  // populate without relying on the old mutable aggregate.
-  if (!allKeys.length) {
-    await autoSeedEvents().catch(e => console.warn("[scorers] seed before rebuild failed:", e.message));
-    cursor = 0;
-    do {
-      const [next, batch] = await kv.scan(cursor, { match: "wc2026:events:*", count: 200 });
-      cursor = parseInt(next) || 0;
-      allKeys.push(...batch);
-    } while (cursor !== 0);
+  // Deduplicate: only one key per ESPN event ID, prefer real team names
+  const byEventId = {};
+  for (const [pair, eventId] of Object.entries(allPairs)) {
+    const isPlaceholder = /Winner|Place|Round|TBD|\d[A-Z]/.test(pair);
+    const existing = byEventId[eventId];
+    if (!existing) { byEventId[eventId] = pair; continue; }
+    const existingIsPlaceholder = /Winner|Place|Round|TBD|\d[A-Z]/.test(existing);
+    if (existingIsPlaceholder && !isPlaceholder) byEventId[eventId] = pair;
   }
 
-  let aggregate = ensureScorersAggregateShape({ goals: {}, cards: {}, processedCounts: {}, processedEventKeys: {} });
+  // Build KV keys from deduplicated pairs
+  const keysToRead = Object.values(byEventId).map(pair => {
+    const [h, a] = pair.split("|");
+    return kvKey(h, a);
+  });
+
+  let aggregate = ensureScorersAggregateShape({ goals: {}, cards: {}, processedCounts: {}, processedEventKeys: {}, goalDetails: {} });
   let goalEvents = 0;
   let cardEvents = 0;
 
-  for (let i = 0; i < allKeys.length; i += 50) {
-    const keys = allKeys.slice(i, i + 50);
+  for (let i = 0; i < keysToRead.length; i += 50) {
+    const keys = keysToRead.slice(i, i + 50);
     const records = await kv.mget(...keys).catch(() => keys.map(() => null));
     records.forEach((record, idx) => {
       if (!record?.events?.length) return;
@@ -288,10 +289,9 @@ async function buildScorersFromPersistedEvents({ persist=false } = {}) {
     goalDetails: aggregate.goalDetails || {},
     matchCount: Object.keys(aggregate.processedEventKeys || {}).length,
     rebuiltAt: aggregate.rebuiltAt,
-    goalEvents,
-    cardEvents,
   };
 }
+
 
 async function rebuildScorersAggregate() {
   const result = await buildScorersFromPersistedEvents({ persist:true });
