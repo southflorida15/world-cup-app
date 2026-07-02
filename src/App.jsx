@@ -4310,6 +4310,70 @@ function WeatherBadge({ lat, lon }) {
 
 
 
+function TimelineMinuteLabel({ raw, language="en" }) {
+  const label = formatDisplayMinute(raw, language);
+  const splitAt = label.indexOf(" (");
+
+  if (splitAt === -1) {
+    return <span style={{whiteSpace:"nowrap"}}>{label}</span>;
+  }
+
+  const primary = label.slice(0, splitAt);
+  const context = label.slice(splitAt + 1); // keeps parentheses
+  const isET = context.includes("ET") || context.includes("Pror.");
+  const isH2 = context.includes("H2") || context.includes("2T");
+  const contextColor = isET ? "#c4b5fd" : isH2 ? "#93c5fd" : C.dim;
+
+  return (
+    <span style={{whiteSpace:"nowrap"}}>
+      <span>{primary}</span>{" "}
+      <span style={{
+        fontSize:"0.82em",
+        fontWeight:500,
+        color:contextColor,
+        fontStyle:"italic",
+        opacity:0.92
+      }}>
+        {context}
+      </span>
+    </span>
+  );
+}
+
+function eventPlayerQualifier(ev, language="en") {
+  const detail = String(ev?.detail || "").toLowerCase();
+  const pt = language === "pt-BR" || language === "pt";
+
+  if (ev?.type === "Goal" && detail.includes("own")) {
+    return pt ? "(contra)" : "(OG)";
+  }
+
+  return "";
+}
+
+function EventPlayerName({ ev, language="en" }) {
+  const name = ev?.player?.name || "";
+  const qualifier = eventPlayerQualifier(ev, language);
+
+  return (
+    <>
+      {name}
+      {qualifier && (
+        <span style={{
+          marginLeft:4,
+          fontSize:"0.86em",
+          fontWeight:500,
+          color:C.dim,
+          fontStyle:"italic"
+        }}>
+          {qualifier}
+        </span>
+      )}
+    </>
+  );
+}
+
+
 function cleanMatchEvents(events = []) {
   if (!Array.isArray(events)) return [];
 
@@ -5186,24 +5250,24 @@ function MatchEventsModal({ match, open, onClose, onAction, savedIds=new Set(), 
                       return (
                         <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 0",borderBottom:`1px solid ${C.b1}`}}>
                           <div style={{flex:1,textAlign:"right"}}>
-                            {isHome && ev.type!=="subst" && <span style={{fontSize:13,color:C.text,fontWeight:ev.type==="Goal"?700:400}}>{ev.player?.name||""}</span>}
+                            {isHome && ev.type!=="subst" && <span style={{fontSize:13,color:C.text,fontWeight:ev.type==="Goal"?700:400}}><EventPlayerName ev={ev} language={language}/></span>}
                             {isHome && ev.type==="subst" && <div style={{fontSize:13}}><span style={{color:C.green,fontWeight:600}}>↑ {ev.player?.name||""}</span>{" "}<span style={{color:C.red,fontWeight:600}}>↓ {ev.assist?.name||""}</span></div>}
                           </div>
                           <div style={{display:"flex",flexDirection:"column",alignItems:"center",minWidth:52,flexShrink:0}}>
                             <div style={{fontSize:11,fontWeight:700,color:C.gold}}>
-                              {formatDisplayMinute(
-                                ev.time?.display || (
+                              <TimelineMinuteLabel
+                                raw={ev.time?.display || (
                                   ev.time?.elapsed != null
                                     ? `${ev.time.elapsed}${ev.time?.extra != null ? `+${ev.time.extra}` : ""}`
                                     : ""
-                                ),
-                                language
-                              )}
+                                )}
+                                language={language}
+                              />
                             </div>
                             <div style={{fontSize:16}}>{icon}</div>
                           </div>
                           <div style={{flex:1}}>
-                            {!isHome && ev.type!=="subst" && <span style={{fontSize:13,color:C.text,fontWeight:ev.type==="Goal"?700:400}}>{ev.player?.name||""}</span>}
+                            {!isHome && ev.type!=="subst" && <span style={{fontSize:13,color:C.text,fontWeight:ev.type==="Goal"?700:400}}><EventPlayerName ev={ev} language={language}/></span>}
                             {!isHome && ev.type==="subst" && <div style={{fontSize:13}}><span style={{color:C.green,fontWeight:600}}>↑ {ev.player?.name||""}</span>{" "}<span style={{color:C.red,fontWeight:600}}>↓ {ev.assist?.name||""}</span></div>}
                           </div>
                         </div>
