@@ -1226,8 +1226,12 @@ export default async function handler(req, res) {
         if (!r.ok) { errors.push({ home, away, eventId, reason: `espn_${r.status}` }); continue; }
         const data = await r.json();
         const statusType = data.header?.competitions?.[0]?.status?.type?.name || "NS";
+        // Use actual team names from ESPN response, not our key
+        const comp = data.header?.competitions?.[0];
+        const realHome = normESPN(comp?.competitors?.find(c => c.homeAway === "home")?.team?.displayName || home);
+        const realAway = normESPN(comp?.competitors?.find(c => c.homeAway === "away")?.team?.displayName || away);
+
         if (!isDoneStatus(statusType)) {
-          // If live, fold current events into scorers aggregate (don't persist to KV)
           if (isLiveStatus(statusType)) {
             const events = parseEvents(data, realHome);
             if (events.length) {
@@ -1241,10 +1245,6 @@ export default async function handler(req, res) {
           }
           continue;
         }
-        // Use actual team names from ESPN response, not our key
-        const comp = data.header?.competitions?.[0];
-        const realHome = normESPN(comp?.competitors?.find(c => c.homeAway === "home")?.team?.displayName || home);
-        const realAway = normESPN(comp?.competitors?.find(c => c.homeAway === "away")?.team?.displayName || away);
         const events = parseEvents(data, realHome);
         const stats  = parseStats(data.boxscore, realHome);
         const lineups = parseLineups(data, realHome);
