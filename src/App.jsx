@@ -1,4 +1,5 @@
 // ── IMPORT COMPONENTS ──────────────────────────────────────────────────
+import ThankYouModal from "./components/ThankYouModal";
 import FantasyScoringRules from "./components/FantasyScoringRules";
 import MyWorldCupTab from "./tabs/MyWorldCupTab.jsx";
 import SchedTab from "./tabs/SchedTab.jsx";
@@ -6923,6 +6924,15 @@ function AppContent() {
     return () => clearTimeout(t);
   }, []);
   const [tab, setTab] = useState("home");
+
+  const [showThankYou, setShowThankYou] = useState(() => {
+  try {
+    return localStorage.getItem("wc2026_thank_you_seen") !== "1";
+  } catch {
+    return true;
+  }
+});
+
   const { language, setLanguage, t } = useI18n();
   const [languageRenderRev, setLanguageRenderRev] = useState(0);
   const setAppLanguage = useCallback((next) => {
@@ -7470,8 +7480,19 @@ function AppContent() {
             try{localStorage.removeItem("wc2026_favs")}catch{}
           }}
         />
+        
         <MatchEventsModal match={eventsModal.match} open={eventsModal.open} onClose={()=>setEventsModal({open:false,match:null})} onAction={onAction} savedIds={savedIds} userPredHg={eventsModal.predHg} userPredAg={eventsModal.predAg}/>
+
         <Toast msg={toast} onDone={()=>setToast("")}/>
+        {showThankYou && (
+          <ThankYouModal
+            onClose={() => {
+            localStorage.setItem("wc2026_thank_you_seen", "1");
+            setShowThankYou(false);
+            }}
+          />
+        )}
+
         <InstallBanner/>
         {showLeagueInvite && leagueInvite && (
           <LeagueInviteOnboarding
