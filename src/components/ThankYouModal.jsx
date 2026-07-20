@@ -2,8 +2,8 @@ import React from "react";
 
 export default function ThankYouModal({ onClose, dark }) {
   const bg = dark ? "#000000" : "#ffffff";
-  const text = "#1a3828";
-  const border = "#1a3828";
+  const text = "#4ade80";
+  const secondaryText = dark ? "#d4ead9" : "#1a3828";
 
   return (
     <div
