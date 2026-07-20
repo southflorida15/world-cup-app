@@ -6925,18 +6925,33 @@ function AppContent() {
   }, []);
   const [tab, setTab] = useState("home");
 
-  const THANK_YOU_END_DATE = "2026-09-01";
+  const [showThankYou, setShowThankYou] = useState(false);
 
-  const [showThankYou, setShowThankYou] = useState(() => {
-  try {
-    const expired = new Date() > new Date(THANK_YOU_END_DATE);
-    const seen = localStorage.getItem("wc2026_thank_you_seen") === "1";
+useEffect(() => {
+  async function checkThankYouModal() {
+    try {
+      const res = await fetch("/version.json?ts=" + Date.now());
+      const config = await res.json();
 
-    return !expired && !seen;
-  } catch {
-    return true;
+      const enabled = config.thankYou?.enabled;
+      const endDate = config.thankYou?.endDate;
+
+      const expired = endDate
+        ? new Date() > new Date(endDate)
+        : false;
+
+      const seen = localStorage.getItem("wc2026_thank_you_seen") === "1";
+
+      setShowThankYou(Boolean(enabled && !expired && !seen));
+
+    } catch (e) {
+      console.warn("Thank you modal config failed", e);
+      setShowThankYou(false);
+    }
   }
-});
+
+  checkThankYouModal();
+}, []);
   
   const { language, setLanguage, t } = useI18n();
   const [languageRenderRev, setLanguageRenderRev] = useState(0);
