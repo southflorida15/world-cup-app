@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>WC 2026 · Admin</title>
+  <style>
+    :root {
+      --bg: #060e0a; --s1: #0c1a12; --s2: #112618; --b1: #1a3828; --b2: #234833;
+      --green: #4ade80; --gold: #fbbf24; --blue: #60a5fa; --red: #f87171;
+      --text: #d4ead9; --mid: #7aaa8a; --dim: #3d6a4d;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; min-height: 100vh; }
+    #login { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+    .login-box { background: var(--s1); border: 1px solid var(--b2); border-radius: 16px; padding: 40px 32px; width: 100%; max-width: 360px; text-align: center; }
+    .login-box h1 { font-size: 22px; font-weight: 800; color: var(--green); margin-bottom: 6px; }
+    .login-box p { font-size: 13px; color: var(--mid); margin-bottom: 28px; }
+    .login-box input { width: 100%; padding: 12px 16px; background: var(--s2); border: 1px solid var(--b2); border-radius: 10px; color: var(--text); font-size: 16px; outline: none; margin-bottom: 12px; }
+    .login-box button { width: 100%; padding: 13px; background: linear-gradient(135deg, var(--green), #22c55e); border: none; border-radius: 10px; color: #030a05; font-weight: 800; font-size: 15px; cursor: pointer; }
+    .error { color: var(--red); font-size: 12px; margin-top: 8px; }
+    #dashboard { display: none; max-width: 960px; margin: 0 auto; padding: 24px 16px 80px; }
+    .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
+    .header h1 { font-size: 20px; font-weight: 800; color: var(--green); }
+    .header-meta { font-size: 11px; color: var(--dim); }
+    .logout { font-size: 12px; background: none; border: 1px solid var(--b2); border-radius: 8px; padding: 5px 12px; cursor: pointer; color: var(--dim); }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 28px; }
+    .stat-card { background: var(--s1); border: 1px solid var(--b1); border-radius: 12px; padding: 16px; }
+    .stat-card .val { font-size: 32px; font-weight: 900; color: var(--green); line-height: 1; }
+    .stat-card .lbl { font-size: 11px; color: var(--mid); margin-top: 4px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+    .section { margin-bottom: 28px; }
+    .section-title { font-size: 11px; font-weight: 700; color: var(--dim); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px; }
+    .collapsible { cursor: pointer; display: flex; align-items: center; justify-content: space-between; user-select: none; }
+    .collapsible:hover { color: var(--mid); }
+    .collapsible .chevron { font-size: 14px; transition: transform .2s; color: var(--dim); }
+    .collapsible.open .chevron { transform: rotate(90deg); }
+    .collapsible-body { display: none; }
+    .collapsible.open + .collapsible-body { display: block; }
+    .card { background: var(--s1); border: 1px solid var(--b1); border-radius: 12px; padding: 16px; }
+    .tool-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+    .tool-row:last-child { margin-bottom: 0; }
+    .admin-btn { font-size: 12px; font-weight: 700; border: 1px solid var(--b2); background: var(--s1); color: var(--green); border-radius: 10px; padding: 9px 14px; cursor: pointer; white-space: nowrap; }
+    .admin-btn:hover { background: var(--s2); }
+    .admin-btn.warn { color: var(--gold); border-color: rgba(251,191,36,.45); background: rgba(251,191,36,.08); }
+    .admin-btn.danger { color: var(--red); border-color: rgba(248,113,113,.45); background: rgba(248,113,113,.08); }
+    .admin-btn.blue { color: var(--blue); border-color: rgba(96,165,250,.45); background: rgba(96,165,250,.08); }
+    .admin-note { color: var(--mid); font-size: 12px; line-height: 1.5; margin-top: 8px; }
+    .input-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
+    .input-row input, .input-row textarea { background: var(--s2); border: 1px solid var(--b2); border-radius: 8px; color: var(--text); font-size: 13px; padding: 8px 12px; outline: none; flex: 1; min-width: 120px; }
+    .input-row textarea { min-height: 70px; resize: vertical; font-family: inherit; }
+    .result-box { margin-top: 10px; padding: 10px 12px; background: var(--bg); border: 1px solid var(--b2); border-radius: 8px; font-size: 12px; color: var(--mid); white-space: pre-wrap; font-family: monospace; max-height: 200px; overflow-y: auto; display: none; position: relative; }
+    .result-close { position: sticky; bottom: 0; display: block; text-align: right; font-size: 10px; color: var(--dim); margin-top: 6px; font-family: sans-serif; cursor: pointer; background: var(--bg); padding-top: 4px; }
+    .result-close:hover { color: var(--red); }
+    /* Tooltips */
+    [data-tip] { position: relative; }
+    [data-tip]:hover::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); background: #1a3828; border: 1px solid var(--b2); color: var(--text); font-size: 11px; font-weight: 400; padding: 6px 10px; border-radius: 8px; white-space: nowrap; max-width: 260px; white-space: normal; text-align: center; z-index: 100; pointer-events: none; line-height: 1.4; }
+    [data-tip]:hover::before { content: ""; position: absolute; bottom: calc(100% + 1px); left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: var(--b2); z-index: 101; pointer-events: none; }
+    .chart { background: var(--s1); border: 1px solid var(--b1); border-radius: 12px; padding: 16px; }
+    .bars { display: flex; align-items: flex-end; gap: 4px; height: 80px; margin-bottom: 8px; }
+    .bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; justify-content: flex-end; }
+    .bar { background: var(--green); border-radius: 3px 3px 0 0; width: 100%; min-height: 2px; }
+    .bar.today { background: var(--gold); }
+    .bar-label { font-size: 8px; color: var(--dim); white-space: nowrap; }
+    .tabs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
+    .tab-bar { background: var(--s1); border: 1px solid var(--b1); border-radius: 10px; padding: 10px 12px; }
+    .tab-bar-name { font-size: 11px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+    .tab-bar-track { background: var(--b1); border-radius: 3px; height: 6px; overflow: hidden; }
+    .tab-bar-fill { background: var(--blue); height: 100%; border-radius: 3px; }
+    .tab-bar-count { font-size: 10px; color: var(--mid); margin-top: 4px; }
+    .table { background: var(--s1); border: 1px solid var(--b1); border-radius: 12px; overflow: hidden; }
+    .row { display: grid; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--b1); font-size: 12px; gap: 10px; }
+    .row:last-child { border-bottom: none; }
+    .row.head { font-size: 10px; font-weight: 700; color: var(--dim); text-transform: uppercase; letter-spacing: 0.08em; padding: 8px 14px; background: var(--s2); }
+    .badge { font-size: 9px; padding: 2px 7px; border-radius: 10px; font-weight: 600; display: inline-block; }
+    .badge-ios { background: rgba(96,165,250,.15); color: var(--blue); }
+    .badge-android { background: rgba(74,222,128,.15); color: var(--green); }
+    .badge-desktop { background: rgba(251,191,36,.15); color: var(--gold); }
+    .badge-unknown { background: var(--s2); color: var(--dim); }
+    .badge-active { background: rgba(74,222,128,.2); color: var(--green); border: 1px solid rgba(74,222,128,.4); }
+    .pill-btn { font-size: 12px; font-weight: 700; border: 1px solid var(--b2); background: var(--s1); color: var(--mid); border-radius: 20px; padding: 7px 14px; cursor: pointer; transition: all .15s; }
+    .pill-btn:hover { background: var(--s2); color: var(--text); }
+    .pill-btn.active { background: rgba(74,222,128,.12); border-color: var(--green); color: var(--green); }
+    .spinner { width: 24px; height: 24px; border: 3px solid var(--green); border-top-color: transparent; border-radius: 50%; animation: spin .7s linear infinite; margin: 0 auto 16px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .divider { border: none; border-top: 1px solid var(--b1); margin: 14px 0; }
+    .active-dot { width: 7px; height: 7px; background: var(--green); border-radius: 50%; display: inline-block; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    @media(max-width:600px){ .row { grid-template-columns: 1fr !important; } .row.head { display: none; } }
+  </style>
+</head>
+<body>
+
+<div id="login">
+  <div class="login-box">
+    <div style="font-size:36px;margin-bottom:12px">⚽</div>
+    <h1>WC 2026 Admin</h1>
+    <p>Enter your admin secret to continue</p>
+    <input type="password" id="secret-input" placeholder="Admin secret" onkeydown="if(event.key==='Enter')doLogin()"/>
+    <button onclick="doLogin()">Sign In</button>
+    <div class="error" id="login-error"></div>
+  </div>
+</div>
+
+<div id="dashboard">
+  <div class="loading" id="loading"><div class="spinner"></div>Loading...</div>
+  <div id="content" style="display:none">
+    <div class="header">
+      <div>
+        <h1>⚽ WC 2026 Admin</h1>
+        <div class="header-meta" id="generated-at"></div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <a href="/" style="text-decoration:none"><button class="admin-btn blue">← Back to App</button></a>
+        <button class="logout" onclick="logout()">Sign out</button>
+      </div>
+    </div>
+
+    <!-- Top stats -->
+    <div class="stats-grid" id="stats-grid"></div>
+
+    <!-- Analytics Tools -->
+    <div class="section">
+      <div class="section-title collapsible open" onclick="toggle(this)">⚙️ Analytics Tools <span class="chevron">›</span></div>
+      <div class="collapsible-body" style="display:block">
+      <div class="card">
+        <div class="tool-row">
+          <button class="admin-btn" id="admin-device-btn" onclick="markAdminDevice()">🧪 Mark this device as admin/test</button>
+          <button class="admin-btn danger" onclick="resetAnalytics()">🗑 Reset Analytics</button>
+        </div>
+        <div class="admin-note" id="admin-device-note">Mark your devices so your own visits don't count as new users.</div>
+      </div>
+
+      <!-- Analytics data pills -->
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">
+        <button class="pill-btn" onclick="togglePill('pill-chart')">📈 Daily Visitors</button>
+        <button class="pill-btn" onclick="togglePill('pill-tabs')">📊 Tab Usage</button>
+        <button class="pill-btn" onclick="togglePill('pill-accounts')">👤 Accounts</button>
+        <button class="pill-btn" onclick="togglePill('pill-users')">🎯 Predictor Users</button>
+        <button class="pill-btn" onclick="togglePill('pill-visitors')">🌍 All Visitors</button>
+      </div>
+
+      <div id="pill-chart" style="display:none;margin-top:12px">
+        <div class="chart">
+          <div class="bars" id="bars"></div>
+          <div style="font-size:10px;color:var(--dim);text-align:right;margin-top:4px">Today highlighted in gold</div>
+        </div>
+      </div>
+      <div id="pill-tabs" style="display:none;margin-top:12px">
+        <div class="tabs-grid" id="tabs-grid"></div>
+      </div>
+      <div id="pill-accounts" style="display:none;margin-top:12px">
+        <div class="table">
+          <div class="row head" style="grid-template-columns:2fr 90px 90px 60px 100px">
+            <div>User</div><div>PIN</div><div>Saved/Picks</div><div>Notif</div><div>Actions</div>
+          </div>
+          <div id="accounts-list"></div>
+        </div>
+      </div>
+      <div id="pill-users" style="display:none;margin-top:12px">
+        <div class="table">
+          <div class="row head" style="grid-template-columns:1fr 120px 90px 80px">
+            <div>Name</div><div>Location</div><div>Joined</div><div>Device</div>
+          </div>
+          <div id="users-list"></div>
+        </div>
+      </div>
+      <div id="pill-visitors" style="display:none;margin-top:12px">
+        <div id="my-uid-banner" style="margin-bottom:8px"></div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:8px">
+          <button class="admin-btn" style="padding:5px 10px;font-size:11px" onclick="highlightMyVisitor()">🙋 Select Mine (this browser)</button>
+          <button class="admin-btn danger" style="padding:5px 10px;font-size:11px" onclick="deleteSelectedVisitors()">🗑️ Delete Selected</button>
+        </div>
+        <div class="table">
+          <div class="row head" style="grid-template-columns:24px 1fr 80px 60px 100px 100px 50px">
+            <div><input type="checkbox" id="visitors-select-all" onchange="toggleAllVisitors(this.checked)"/></div><div>Location</div><div>Device</div><div>Visits</div><div>First seen</div><div>Last seen</div><div></div>
+          </div>
+          <div id="visitors-list"></div>
+        </div>
+      </div>
+      </div>
+    </div>
+
+    <!-- Live Operations -->
+    <div class="section">
+      <div class="section-title collapsible open" onclick="toggle(this)">🔧 Live Operations <span class="chevron">›</span></div>
+      <div class="collapsible-body" style="display:block">
+      <div class="card">
+
+        <!-- 1. Flush cache -->
+        <div class="tool-row">
+          <button class="admin-btn warn" data-tip="Clears the KV livescores cache so the next app request fetches fresh data from ESPN. Use when scores are stuck." onclick="doAction('flush-livescores',{},'flush-result')">🔄 Flush Livescores Cache</button>
+          <button class="admin-btn" data-tip="Writes all known FT results to KV permanently. Use after a matchday if Fantasy Scored tab is missing matches." onclick="doAction('seed-livescores',{},'seed-ls-result')">🌱 Seed Livescores</button>
+          <button class="admin-btn" data-tip="Pre-populates ESPN event IDs for the next 7 days. Run before each matchday to ensure Match Events load correctly." onclick="doAction('seed-espn-ids',{},'seed-ids-result')">🔢 Seed ESPN IDs</button>
+          <button class="admin-btn blue" data-tip="Shows users who have been active in the last 30 minutes." onclick="doAction('active-today',{},'active-result')">👥 Active Users Now</button>
+          <button class="admin-btn" data-tip="Debug: shows all push subscriptions with their stored UID and PIN." onclick="doAction('get-push-subs',{},'push-subs-result')">🔔 View Push Subs</button>
+        </div>
+        <div class="result-box" id="flush-result"></div>
+        <div class="result-box" id="seed-ls-result"></div>
+        <div class="result-box" id="seed-ids-result"></div>
+        <div class="result-box" id="active-result"></div>
+        <div class="result-box" id="push-subs-result" style="cursor:default"></div>
+
+        <hr class="divider"/>
+
+        <!-- 2. Persisted Results -->
+        <div style="font-size:11px;font-weight:700;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">📊 Persisted Match Results</div>
+        <div class="tool-row">
+          <button class="admin-btn" data-tip="Shows all match results currently persisted in KV." onclick="doAction('get-results',{},'results-view')">View All Results</button>
+        </div>
+        <div class="result-box" id="results-view"></div>
+        <div class="input-row" style="margin-top:10px">
+          <input id="r-home" placeholder="Home team (e.g. Germany)"/>
+          <input id="r-away" placeholder="Away team (e.g. Curacao)"/>
+          <input id="r-hg" placeholder="Home goals" style="max-width:90px"/>
+          <input id="r-ag" placeholder="Away goals" style="max-width:90px"/>
+          <button class="admin-btn" data-tip="Save or correct a match result. Then run Force Re-score to update fantasy points." onclick="setResult()">Set Result</button>
+          <button class="admin-btn danger" data-tip="Remove a persisted result entirely. The live feed will re-populate it on next fetch." onclick="delResult()">Delete</button>
+        </div>
+        <div class="result-box" id="result-edit-box"></div>
+
+        <hr class="divider"/>
+
+        <!-- 3. Force re-score -->
+        <div style="font-size:11px;font-weight:700;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">🎯 Fantasy Scoring</div>
+        <div class="tool-row">
+          <button class="admin-btn warn" data-tip="Re-runs fantasy scoring for all users using current persisted results. Use after correcting a wrong result." onclick="doAction('rescore-all',{},'rescore-result')">⚡ Force Re-score All Picks</button>
+        </div>
+        <div class="result-box" id="rescore-result"></div>
+
+        <hr class="divider"/>
+
+        <!-- 4. ESPN ID map -->
+        <div style="font-size:11px;font-weight:700;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">🔢 ESPN ID Map</div>
+        <div class="tool-row">
+          <button class="admin-btn" data-tip="Shows all ESPN event IDs stored in KV. Use to spot wrong mappings." onclick="doAction('get-espn-ids',{},'espn-ids-view')">View All IDs</button>
+        </div>
+        <div class="result-box" id="espn-ids-view"></div>
+        <div class="input-row" style="margin-top:10px">
+          <input id="espn-home" placeholder="Home team"/>
+          <input id="espn-away" placeholder="Away team"/>
+          <input id="espn-id" placeholder="ESPN event ID" style="max-width:110px"/>
+          <button class="admin-btn" data-tip="Manually set the correct ESPN event ID for a match. Use when Match Events load the wrong game." onclick="setESPNId()">Set ID</button>
+          <button class="admin-btn danger" data-tip="Remove a wrong ESPN ID. The livescores feed will auto-correct it on next fetch." onclick="delESPNId()">Delete</button>
+        </div>
+        <div class="result-box" id="espn-id-edit-box"></div>
+      </div>
+      </div>
+    </div>
+
+    <!-- League Management -->
+    <div class="section">
+      <div class="section-title collapsible open" onclick="toggle(this)">🏆 League Management <span class="chevron">›</span></div>
+      <div class="collapsible-body" style="display:block">
+      <div class="card">
+
+        <!-- View all leagues -->
+        <div style="font-size:11px;font-weight:700;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">📋 Leagues</div>
+        <div class="tool-row">
+          <button class="admin-btn" data-tip="View all leagues and their members." onclick="doAction('league-list',{},'league-list-result')">View All Leagues</button>
+          <button class="admin-btn" data-tip="Cross-reference league members with accounts." onclick="crossRefLeague()">🔍 Cross-Reference</button>
+        </div>
+        <div class="result-box" id="league-list-result"></div>
+
+        <hr class="divider"/>
+
+        <!-- Migrate all users -->
+        <div style="font-size:11px;font-weight:700;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">🔄 Migrate All Fantasy Users</div>
+        <div class="admin-note" style="margin-bottom:8px">Adds all existing fantasy users to a league. Creates the league if it doesn't exist.</div>
+        <div class="input-row">
+          <input id="migrate-code" placeholder="League code (e.g. BRZBRD)" style="text-transform:uppercase"/>
+          <input id="migrate-name" placeholder="League name (e.g. Brazucas em Broward)"/>
+          <button class="admin-btn warn" data-tip="Migrates all fantasy users into this league." onclick="migrateAll()">⚡ Migrate All</button>
+        </div>
+        <div class="result-box" id="migrate-result"></div>
+
+        <hr class="divider"/>
+
+        <!-- Merge users -->
+        <div style="font-size:11px;font-weight:700;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">🔀 Merge User Picks</div>
+        <div class="admin-note" style="margin-bottom:8px">Copies picks from one user into another, only for matches where the target has no pick. Scores are also copied if available.</div>
+        <div class="input-row">
+          <input id="merge-from-uid" placeholder="From UID (e.g. Mike Bar's UID)"/>
+          <input id="merge-to-uid" placeholder="To UID (e.g. Maykel's UID)"/>
+          <button class="admin-btn warn" onclick="mergeUser()">🔀 Merge</button>
+        </div>
+        <div class="result-box" id="merge-result"></div>
+        <div style="font-size:11px;font-weight:700;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">👤 Add / Remove User</div>
+        <div class="input-row">
+          <input id="league-pin" placeholder="User PIN"/>
+          <input id="league-code" placeholder="League code" style="text-transform:uppercase;max-width:120px"/>
+          <button class="admin-btn" data-tip="Add user to league by PIN." onclick="leagueAdd()">+ Add</button>
+          <button class="admin-btn danger" data-tip="Remove user from league by PIN." onclick="leagueRemove()">− Remove</button>
+        </div>
+        <div class="result-box" id="league-member-result"></div>
+
+      </div>
+      </div>
+    </div>
+
+    <!-- Push Notifications -->
+    <div class="section">
+      <div class="section-title collapsible open" onclick="toggle(this)">🔔 Push Notifications <span class="chevron">›</span></div>
+      <div class="collapsible-body" style="display:block">
+      <div class="card">
+        <div class="admin-note" style="margin-bottom:12px">Send notifications to all subscribers or to a specific user by UID.</div>
+
+        <!-- Broadcast -->
+        <div style="font-size:11px;font-weight:700;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">📢 Broadcast — Send to All</div>
+        <div class="input-row">
+          <input id="push-title" placeholder="Title (e.g. ⚽ USA vs Mexico kicks off in 30 min!)"/>
+        </div>
+        <div class="input-row">
+          <textarea id="push-body" placeholder="Body text (e.g. Open the app for live scores and match events)"></textarea>
+        </div>
+        <div class="input-row">
+          <input id="push-url" placeholder="URL to open (default: /)" value="/"/>
+          <button class="admin-btn blue" data-tip="Sends a push notification to every subscriber." onclick="sendPush()">📤 Send to All</button>
+        </div>
+        <div class="result-box" id="push-result"></div>
+
+        <hr class="divider"/>
+
+        <!-- Individual -->
+        <div style="font-size:11px;font-weight:700;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">🎯 Individual — Send to One User</div>
+        <div class="input-row">
+          <input id="push-pin" placeholder="PIN (e.g. 161116) — easiest way to target a user"/>
+          <span style="color:var(--dim);font-size:12px;white-space:nowrap">or UID:</span>
+          <input id="push-uid" placeholder="User UID (from Accounts ↑)"/>
+        </div>
+        <div class="input-row">
+          <input id="push-title-uid" placeholder="Notification title"/>
+        </div>
+        <div class="input-row">
+          <textarea id="push-body-uid" placeholder="Notification body text"></textarea>
+        </div>
+        <div class="input-row">
+          <input id="push-url-uid" placeholder="URL to open (default: /)" value="/"/>
+          <button class="admin-btn blue" data-tip="Sends a push notification to a single user by their UID." onclick="sendPushToUser()">📤 Send to User</button>
+        </div>
+        <div class="result-box" id="push-uid-result"></div>
+      </div>
+      </div>
+    </div>
+
+
+  </div>
+</div>
+
+<script>
+function copyUID(uid) {
+  navigator.clipboard.writeText(uid).then(() => {
+    document.getElementById("push-uid").value = uid;
+    alert(`UID copied and pasted into the notification field:\n${uid}`);
+  }).catch(() => {
+    document.getElementById("push-uid").value = uid;
+    alert(`UID pasted into the notification field:\n${uid}`);
+  });
+}
+
+function togglePill(id) {
+  const el = document.getElementById(id);
+  const btn = document.querySelector(`[onclick="togglePill('${id}')"]`);
+  const isOpen = el.style.display !== "none";
+  el.style.display = isOpen ? "none" : "block";
+  btn.classList.toggle("active", !isOpen);
+}
+
+async function sendPushToUser() {
+  const pin = document.getElementById("push-pin").value.trim();
+  const uid = document.getElementById("push-uid").value.trim();
+  const title = document.getElementById("push-title-uid").value.trim();
+  const body = document.getElementById("push-body-uid").value.trim();
+  const url = document.getElementById("push-url-uid").value.trim() || "/";
+  if (!pin && !uid) return alert("Enter a PIN or UID");
+  if (!title || !body) return alert("Title and body required");
+  const target = pin ? `PIN ${pin}` : `UID ${uid}`;
+  if (!confirm(`Send push to ${target}?\n\n"${title}"\n${body}`)) return;
+  await doAction("send-push-user", { pin: pin||undefined, uid: uid||undefined, title, body, url }, "push-uid-result");
+}
+
+async function mergeUser() {
+  const fromUid = document.getElementById("merge-from-uid").value.trim();
+  const toUid = document.getElementById("merge-to-uid").value.trim();
+  if (!fromUid || !toUid) return alert("Both UIDs required");
+  if (!confirm(`Merge picks from\n${fromUid}\ninto\n${toUid}?\n\nOnly matches where the target has no pick will be copied.`)) return;
+  await doAction("merge-user", { fromUid, toUid }, "merge-result");
+}
+
+async function crossRefLeague() {
+  const box = document.getElementById("league-list-result");
+  box.style.display = "block";
+  box.innerHTML = "⏳ Cross-referencing...";
+
+  try {
+    // Fetch both leagues and accounts in parallel
+    const [leagueData, dashData] = await Promise.all([
+      adminAction({ adminAction: "league-list" }),
+      fetch("/api/admin", { headers: { "Authorization": `Bearer ${SECRET}` } }).then(r => r.json())
+    ]);
+
+    const accounts = dashData.accounts?.records || [];
+    const accountsByUid = Object.fromEntries(accounts.map(a => [a.uid, a]));
+
+    let html = "";
+    for (const league of (leagueData.leagues || [])) {
+      html += `<div style="margin-bottom:16px">`;
+      html += `<div style="font-weight:700;color:var(--green);margin-bottom:6px">🏆 ${league.name} (${league.code}) — ${league.members.length} members</div>`;
+      html += `<table style="width:100%;border-collapse:collapse;font-size:11px">`;
+      html += `<tr style="color:var(--dim);border-bottom:1px solid var(--b2)"><th style="text-align:left;padding:3px 6px">Name</th><th style="padding:3px 6px">PIN</th><th style="padding:3px 6px">Picks</th><th style="padding:3px 6px">Pts</th><th style="padding:3px 6px">In Accounts?</th></tr>`;
+      for (const m of league.members) {
+        const acc = accountsByUid[m.uid];
+        const inAccounts = !!acc;
+        const name = acc?.displayName || acc?.predictorName || m.name || m.uid.slice(0,8);
+        const picks = acc?.predCount || 0;
+        const pts = acc?.pts || 0;
+        html += `<tr style="border-bottom:1px solid var(--b1);color:${inAccounts?'var(--text)':'var(--red)'}">
+          <td style="padding:3px 6px">${esc(name)}</td>
+          <td style="padding:3px 6px;text-align:center;color:var(--gold)">${m.pin||'—'}</td>
+          <td style="padding:3px 6px;text-align:center">${picks}</td>
+          <td style="padding:3px 6px;text-align:center">${pts}</td>
+          <td style="padding:3px 6px;text-align:center">${inAccounts?'✅':'❌ No account'}</td>
+        </tr>`;
+      }
+      html += `</table></div>`;
+    }
+
+    box.innerHTML = html + `<span class="result-close" onclick="this.parentElement.style.display='none'">✕ close</span>`;
+  } catch(e) {
+    box.innerHTML = `<span style="color:var(--red)">❌ ${e.message}</span>`;
+  }
+}
+
+async function migrateAll() {
+  const code = document.getElementById("migrate-code").value.trim().toUpperCase();
+  const leagueName = document.getElementById("migrate-name").value.trim();
+  if (!code) return alert("Enter a league code");
+  if (!confirm(`Migrate ALL fantasy users to league "${leagueName || code}" (${code})?`)) return;
+  await doAction("league-migrate", { code, leagueName }, "migrate-result");
+}
+
+async function leagueAdd() {
+  const targetPin = document.getElementById("league-pin").value.trim();
+  const code = document.getElementById("league-code").value.trim().toUpperCase();
+  if (!targetPin || !code) return alert("PIN and league code required");
+  await doAction("league-add", { targetPin, code }, "league-member-result");
+}
+
+async function leagueRemove() {
+  const targetPin = document.getElementById("league-pin").value.trim();
+  const code = document.getElementById("league-code").value.trim().toUpperCase();
+  if (!targetPin || !code) return alert("PIN and league code required");
+  if (!confirm(`Remove PIN ${targetPin} from league ${code}?`)) return;
+  await doAction("league-remove", { targetPin, code }, "league-member-result");
+}
+
+function toggle(el) {
+  el.classList.toggle("open");
+}
+
+let SECRET = "";
+
+function doLogin() {
+  const val = document.getElementById("secret-input").value.trim();
+  if (!val) return;
+  SECRET = val;
+  document.getElementById("login").style.display = "none";
+  document.getElementById("dashboard").style.display = "block";
+  loadData();
+}
+
+function logout() {
+  SECRET = "";
+  document.getElementById("login").style.display = "flex";
+  document.getElementById("dashboard").style.display = "none";
+  document.getElementById("secret-input").value = "";
+  document.getElementById("content").style.display = "none";
+  document.getElementById("loading").style.display = "block";
+}
+
+async function adminAction(payload) {
+  const r = await fetch("/api/admin", {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${SECRET}`, "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.error || `${r.status}`);
+  return d;
+}
+
+async function doAction(action, extra, resultId) {
+  const box = document.getElementById(resultId);
+  box.style.display = "block";
+  box.style.color = "var(--mid)";
+  box.onclick = null;
+  box.innerHTML = "⏳ Working...";
+  try {
+    const d = await adminAction({ adminAction: action, ...extra });
+    box.innerHTML = `<span style="color:var(--green)">${JSON.stringify(d, null, 2)}</span><span class="result-close" onclick="this.parentElement.style.display='none'">✕ close</span>`;
+  } catch(e) {
+    box.innerHTML = `<span style="color:var(--red)">❌ ${e.message}</span><span class="result-close" onclick="this.parentElement.style.display='none'">✕ close</span>`;
+  }
+}
+
+async function setResult() {
+  const home = document.getElementById("r-home").value.trim();
+  const away = document.getElementById("r-away").value.trim();
+  const hg = document.getElementById("r-hg").value.trim();
+  const ag = document.getElementById("r-ag").value.trim();
+  if (!home || !away || hg === "" || ag === "") return alert("All fields required");
+  await doAction("set-result", { home, away, hg, ag }, "result-edit-box");
+}
+
+async function delResult() {
+  const home = document.getElementById("r-home").value.trim();
+  const away = document.getElementById("r-away").value.trim();
+  if (!home || !away) return alert("Home and away required");
+  if (!confirm(`Delete result for ${home} vs ${away}?`)) return;
+  await doAction("delete-result", { home, away }, "result-edit-box");
+}
+
+async function setESPNId() {
+  const home = document.getElementById("espn-home").value.trim();
+  const away = document.getElementById("espn-away").value.trim();
+  const id = document.getElementById("espn-id").value.trim();
+  if (!home || !away || !id) return alert("All fields required");
+  await doAction("set-espn-id", { home, away, id }, "espn-id-edit-box");
+}
+
+async function delESPNId() {
+  const home = document.getElementById("espn-home").value.trim();
+  const away = document.getElementById("espn-away").value.trim();
+  if (!home || !away) return alert("Home and away required");
+  if (!confirm(`Delete ESPN ID for ${home} vs ${away}?`)) return;
+  await doAction("delete-espn-id", { home, away }, "espn-id-edit-box");
+}
+
+async function sendPush() {
+  const title = document.getElementById("push-title").value.trim();
+  const body = document.getElementById("push-body").value.trim();
+  const url = document.getElementById("push-url").value.trim() || "/";
+  if (!title || !body) return alert("Title and body required");
+  if (!confirm(`Send push notification to ALL subscribers?\n\n"${title}"\n${body}`)) return;
+  await doAction("send-push", { title, body, url }, "push-result");
+}
+
+function markAdminDevice() {
+  localStorage.setItem("wc2026_disable_analytics", "1");
+  checkAdminDevice();
+}
+
+function unmarkAdminDevice() {
+  localStorage.removeItem("wc2026_disable_analytics");
+  checkAdminDevice();
+}
+
+function checkAdminDevice() {
+  const isAdmin = localStorage.getItem("wc2026_disable_analytics") === "1";
+  const note = document.getElementById("admin-device-note");
+  const btn = document.getElementById("admin-device-btn");
+  if (isAdmin) {
+    note.textContent = "✅ This browser is marked as admin/test — your visits are excluded from analytics.";
+    note.style.color = "var(--green)";
+    btn.textContent = "✅ Marked as admin/test (click to unmark)";
+    btn.style.background = "var(--green)";
+    btn.style.color = "#030a05";
+    btn.style.borderColor = "var(--green)";
+    btn.onclick = unmarkAdminDevice;
+  } else {
+    note.textContent = "Mark your devices so your own visits don't count as new users.";
+    note.style.color = "";
+    btn.textContent = "🧪 Mark this device as admin/test";
+    btn.style.background = "";
+    btn.style.color = "";
+    btn.style.borderColor = "";
+    btn.onclick = markAdminDevice;
+  }
+}
+
+async function resetAnalytics() {
+  if (!confirm("Reset visitor analytics and tab usage? Accounts, predictions, brackets, and notifications will be kept.")) return;
+  try {
+    await adminAction({ adminAction: "reset-analytics" });
+    await loadData();
+    alert("Analytics reset complete.");
+  } catch (e) { alert(e.message); }
+}
+
+function getMyUid() {
+  try { return localStorage.getItem("wc2026_uid") || null; } catch { return null; }
+}
+
+function highlightMyVisitor() {
+  const banner = document.getElementById("my-uid-banner");
+  const myUid = getMyUid();
+  if (!myUid) {
+    banner.innerHTML = `<div class="admin-note">No UID found in this browser — you may not have opened the main app (not just /admin.html) here before.</div>`;
+    return;
+  }
+  document.querySelectorAll(".visitor-check").forEach(cb => {
+    cb.checked = false;
+    cb.closest(".row").style.outline = "";
+    cb.closest(".row").style.background = "";
+  });
+  const matches = document.querySelectorAll(`.visitor-check[value="${myUid.replace(/"/g,'')}"]`);
+  if (matches.length) {
+    matches.forEach(cb => {
+      cb.checked = true;
+      cb.closest(".row").style.outline = "1.5px solid var(--gold)";
+      cb.closest(".row").style.background = "rgba(250,204,21,0.06)";
+    });
+    banner.innerHTML = `<div class="admin-note" style="color:var(--gold)">🙋 This browser's UID is <span style="font-family:monospace">${esc(myUid)}</span> — matching row(s) highlighted and checked below. Click "Delete Selected" to remove.</div>`;
+  } else {
+    banner.innerHTML = `<div class="admin-note">This browser's UID (<span style="font-family:monospace">${esc(myUid)}</span>) has no matching entry in the current visitor list — it may already be excluded from analytics, or hasn't synced a visit yet.</div>`;
+  }
+}
+
+async function deleteAccount(uid, label) {
+  if (!uid) return;
+  if (!confirm(`Delete account ${label || uid}? This cannot be undone.`)) return;
+  try {
+    await adminAction({ adminAction: "delete-account", uid });
+    await loadData();
+  } catch (e) { alert(e.message); }
+}
+
+async function deleteVisitor(uid, label) {
+  if (!uid) return;
+  if (!confirm(`Remove visitor record for ${label || uid}? This only removes the analytics entry, not any account.`)) return;
+  try {
+    await adminAction({ adminAction: "delete-visitor", uid });
+    await loadData();
+  } catch (e) { alert(e.message); }
+}
+
+function toggleAllVisitors(checked) {
+  document.querySelectorAll(".visitor-check").forEach(cb => cb.checked = checked);
+}
+
+async function deleteSelectedVisitors() {
+  const uids = Array.from(document.querySelectorAll(".visitor-check:checked")).map(cb => cb.value);
+  if (!uids.length) { alert("No visitors selected."); return; }
+  if (!confirm(`Remove ${uids.length} visitor record${uids.length>1?"s":""}? This only removes the analytics entries, not any accounts.`)) return;
+  try {
+    await adminAction({ adminAction: "delete-visitor", uids });
+    await loadData();
+  } catch (e) { alert(e.message); }
+}
+
+async function loadData() {
+  try {
+    const [r, subsR] = await Promise.all([
+      fetch("/api/admin", { headers: { "Authorization": `Bearer ${SECRET}` } }),
+      fetch("/api/admin", { method:"POST", headers: { "Authorization": `Bearer ${SECRET}`, "Content-Type":"application/json" }, body: JSON.stringify({ adminAction:"get-push-subs" }) })
+    ]);
+    if (r.status === 401) {
+      document.getElementById("login-error").textContent = "Incorrect secret.";
+      logout();
+      document.getElementById("login").style.display = "flex";
+      return;
+    }
+    const d = await r.json();
+    const subsData = await subsR.json().catch(() => ({}));
+    const subs = subsData.subs || [];
+    document.getElementById("loading").style.display = "none";
+    document.getElementById("content").style.display = "block";
+    renderDashboard(d, subs);
+    checkAdminDevice();
+    highlightMyVisitor();
+  } catch(e) {
+    document.getElementById("loading").innerHTML = `<div style="color:var(--red)">Error: ${e.message}</div>`;
+  }
+}
+
+function renderDashboard(d, subs=[]) {
+  // Build a set of subscribed UIDs and PINs for quick lookup
+  const subbedUids = new Set(subs.map(s => s.uid).filter(Boolean));
+  const subbedPins = new Set(subs.map(s => s.pin).filter(Boolean).map(String));
+  document.getElementById("generated-at").textContent = `Updated ${new Date(d.generatedAt).toLocaleString()}`;
+
+  const todayKey = new Date().toISOString().slice(0,10);
+  const todayCount = d.visitors.daily.find(x => x.date === todayKey)?.count || 0;
+  const stats = [
+    { val: d.visitors.total, lbl: "Unique Visitors" },
+    { val: todayCount, lbl: "Visitors Today" },
+    { val: d.accounts?.total || d.users.total, lbl: "Accounts" },
+    { val: d.pins.total, lbl: "PIN Accounts" },
+    { val: d.predictions?.total || 0, lbl: "Predictions Made" },
+  ];
+  document.getElementById("stats-grid").innerHTML = stats.map(s =>
+    `<div class="stat-card"><div class="val">${s.val}</div><div class="lbl">${s.lbl}</div></div>`
+  ).join("");
+
+  // Daily chart
+  const daily = d.visitors.daily;
+  const maxCount = Math.max(...daily.map(x => x.count), 1);
+  document.getElementById("bars").innerHTML = daily.map(x => {
+    const isToday = x.date === todayKey;
+    const h = Math.max((x.count / maxCount) * 72, x.count > 0 ? 4 : 2);
+    return `<div class="bar-wrap">
+      <div class="bar${isToday?" today":""}" style="height:${h}px" title="${x.count} visitors"></div>
+      <div class="bar-label">${x.date.slice(5)}</div>
+    </div>`;
+  }).join("");
+
+  // Tab usage
+  const tabs = d.tabs || {};
+  const tabLabels = { live:"🔴 Live", schedule:"📋 Schedule", groups:"🗂️ Groups", stats:"📊 Stats", ask:"🔎 Ask", predictor:"🎯 Fantasy", shop:"🏪 Shop", news:"📰 WC News", predict:"📈 Odds", sim:"🎮 Simulator", bracket:"🏆 Bracket" };
+  const maxTab = Math.max(...Object.values(tabs), 1);
+  document.getElementById("tabs-grid").innerHTML = Object.entries(tabLabels).map(([id, label]) => {
+    const count = tabs[id] || 0;
+    return `<div class="tab-bar">
+      <div class="tab-bar-name">${label}</div>
+      <div class="tab-bar-track"><div class="tab-bar-fill" style="width:${Math.round((count/maxTab)*100)}%"></div></div>
+      <div class="tab-bar-count">${count.toLocaleString()} taps</div>
+    </div>`;
+  }).join("");
+
+  // Accounts
+  const accounts = (d.accounts?.records || []).sort((a,b) => (b.updatedAt||0) - (a.updatedAt||0));
+  document.getElementById("accounts-list").innerHTML = accounts.length ? accounts.map(a => {
+    const label = a.displayName || a.predictorName || a.email || a.uid;
+    const saved = `${a.savedMatches||0} matches${a.hasBracket?" · bracket":""}`;
+    const isSubbed = subbedUids.has(a.uid) || (a.pin && subbedPins.has(String(a.pin)));
+    const notifBadge = isSubbed
+      ? `<span style="font-size:10px;color:var(--green)">🔔</span>`
+      : `<span style="font-size:10px;color:var(--dim)" title="Not subscribed to notifications">🔕</span>`;
+    return `<div class="row" style="grid-template-columns:2fr 90px 90px 60px 100px">
+      <div style="overflow:hidden">
+        <div style="font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${isSubbed?'🔔':'🔕'} ${esc(label)}</div>
+        <div style="font-size:9px;color:var(--dim);font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(a.uid)}</div>
+      </div>
+      <div style="color:var(--gold);font-weight:700">${esc(a.pin||"—")}</div>
+      <div style="color:var(--mid);font-size:10px">${a.savedMatches||0}💾 ${a.predCount||0}🎯${a.pts?` ${a.pts}pts`:""}</div>
+      <div style="text-align:center;font-size:11px;color:${isSubbed?'var(--green)':'var(--dim)'}">${isSubbed?'✅':'—'}</div>
+      <div style="display:flex;gap:4px">
+        <button class="admin-btn" style="padding:4px 7px;font-size:10px" title="Copy UID" onclick="copyUID('${escA(a.uid)}')">📋</button>
+        <button class="admin-btn danger" style="padding:4px 7px;font-size:10px" onclick="deleteAccount('${escA(a.uid)}','${escA(label)}')">Del</button>
+      </div>
+    </div>`;
+  }).join("") : `<div style="padding:20px;text-align:center;color:var(--dim);font-size:13px">No accounts yet</div>`;
+
+  // Users
+  const users = (d.users.records || []).sort((a,b) => (b.registeredAt||0) - (a.registeredAt||0));
+  document.getElementById("users-list").innerHTML = users.length ? users.map(u => {
+    const loc = [u.city, u.country].filter(Boolean).join(", ") || "—";
+    const joined = u.registeredAt ? new Date(u.registeredAt).toLocaleDateString() : "—";
+    const dc = (u.device||"").includes("iOS")?"ios":(u.device||"").includes("Android")?"android":(u.device||"").includes("Desktop")?"desktop":"unknown";
+    return `<div class="row" style="grid-template-columns:1fr 120px 90px 80px">
+      <div style="font-weight:600;color:var(--text)">${esc(u.name||"—")}</div>
+      <div style="color:var(--mid)">${esc(loc)}</div>
+      <div style="color:var(--dim)">${joined}</div>
+      <div><span class="badge badge-${dc}">${esc(u.device||"—")}</span></div>
+    </div>`;
+  }).join("") : `<div style="padding:20px;text-align:center;color:var(--dim);font-size:13px">No users yet</div>`;
+
+  // Visitors
+  const visitors = (d.visitors.records || []).sort((a,b) => (b.lastSeen||0) - (a.lastSeen||0));
+  const now = Date.now();
+  document.getElementById("visitors-list").innerHTML = visitors.length ? visitors.map(v => {
+    const loc = [v.city, v.country].filter(Boolean).join(", ") || "—";
+    const dc = (v.device||"").includes("iOS")?"ios":(v.device||"").includes("Android")?"android":(v.device||"").includes("Desktop")?"desktop":"unknown";
+    const isActive = v.lastSeen && now - v.lastSeen < 30 * 60 * 1000;
+    return `<div class="row" style="grid-template-columns:24px 1fr 80px 60px 100px 100px 50px">
+      <div><input type="checkbox" class="visitor-check" value="${escA(v.uid)}"/></div>
+      <div style="overflow:hidden">
+        <div style="display:flex;align-items:center;gap:6px">${isActive?`<span class="active-dot"></span>`:""}${esc(loc)}</div>
+        <div style="font-size:9px;color:var(--dim);font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(v.uid)}</div>
+      </div>
+      <div><span class="badge badge-${dc}">${esc(v.device||"—")}</span></div>
+      <div style="font-weight:600">${v.visits||1}</div>
+      <div style="color:var(--dim);font-size:11px">${v.firstSeen?new Date(v.firstSeen).toLocaleDateString():"—"}</div>
+      <div style="color:var(--dim);font-size:11px">${v.lastSeen?new Date(v.lastSeen).toLocaleString():"—"}</div>
+      <div><button class="admin-btn danger" style="padding:4px 7px;font-size:10px" onclick="deleteVisitor('${escA(v.uid)}','${escA(loc)}')">Del</button></div>
+    </div>`;
+  }).join("") : `<div style="padding:20px;text-align:center;color:var(--dim);font-size:13px">No visitor data yet</div>`;
+}
+
+function esc(s) { return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function escA(s) { return esc(s).replace(/'/g,"&#39;").replace(/"/g,"&quot;"); }
+</script>
+</body>
+</html>

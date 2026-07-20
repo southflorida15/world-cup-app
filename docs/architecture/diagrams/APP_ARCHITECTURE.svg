@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="680" viewBox="0 0 1100 680" role="img" aria-label="World Cup app architecture diagram">
+  <defs>
+    <style>
+      .bg{fill:#06100b}.box{fill:#0c1a12;stroke:#2f5d3d;stroke-width:2;rx:16}.box2{fill:#10251a;stroke:#4ade80;stroke-width:2;rx:16}.api{fill:#132033;stroke:#60a5fa;stroke-width:2;rx:16}.data{fill:#2b2110;stroke:#fbbf24;stroke-width:2;rx:16}.txt{font-family:Inter,Arial,sans-serif;fill:#d4ead9;font-size:18px;font-weight:700}.small{font-family:Inter,Arial,sans-serif;fill:#9bc9a8;font-size:13px}.arrow{stroke:#7aaa8a;stroke-width:3;fill:none;marker-end:url(#arrow)}
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#7aaa8a"/></marker>
+  </defs>
+  <rect class="bg" width="1100" height="680"/>
+  <text x="550" y="48" text-anchor="middle" class="txt" font-size="28">World Cup App Architecture</text>
+
+  <rect x="390" y="85" width="320" height="82" class="box2"/>
+  <text x="550" y="118" text-anchor="middle" class="txt">React + Vite Frontend</text>
+  <text x="550" y="143" text-anchor="middle" class="small">Tabs, cards, fantasy, bracket, stats</text>
+
+  <rect x="70" y="235" width="260" height="92" class="box"/>
+  <text x="200" y="270" text-anchor="middle" class="txt">Tournament Engine</text>
+  <text x="200" y="296" text-anchor="middle" class="small">Groups • Annex C • Knockouts</text>
+
+  <rect x="420" y="235" width="260" height="92" class="box"/>
+  <text x="550" y="270" text-anchor="middle" class="txt">Feature State</text>
+  <text x="550" y="296" text-anchor="middle" class="small">Actual Bracket • Fantasy • Saved</text>
+
+  <rect x="770" y="235" width="260" height="92" class="api"/>
+  <text x="900" y="270" text-anchor="middle" class="txt">Vercel API Layer</text>
+  <text x="900" y="296" text-anchor="middle" class="small">livescores • zafronix • events</text>
+
+  <rect x="120" y="435" width="220" height="82" class="data"/>
+  <text x="230" y="468" text-anchor="middle" class="txt">Static Data</text>
+  <text x="230" y="493" text-anchor="middle" class="small">MATCHES • TEAMS • history</text>
+
+  <rect x="440" y="435" width="220" height="82" class="data"/>
+  <text x="550" y="468" text-anchor="middle" class="txt">Upstash Redis</text>
+  <text x="550" y="493" text-anchor="middle" class="small">Shared cache + stale fallback</text>
+
+  <rect x="760" y="410" width="250" height="132" class="data"/>
+  <text x="885" y="444" text-anchor="middle" class="txt">External Providers</text>
+  <text x="885" y="470" text-anchor="middle" class="small">football-data.org</text>
+  <text x="885" y="493" text-anchor="middle" class="small">Highlightly fallback</text>
+  <text x="885" y="516" text-anchor="middle" class="small">Zafronix history</text>
+
+  <path class="arrow" d="M550 167 L550 228"/>
+  <path class="arrow" d="M430 160 C280 185 210 200 200 230"/>
+  <path class="arrow" d="M670 160 C805 185 890 205 900 230"/>
+  <path class="arrow" d="M200 327 L230 430"/>
+  <path class="arrow" d="M900 327 L890 405"/>
+  <path class="arrow" d="M780 475 L665 475"/>
+  <path class="arrow" d="M550 435 L550 330"/>
+</svg>

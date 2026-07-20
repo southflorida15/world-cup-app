@@ -1,0 +1,13 @@
+{
+  "match": "México x Inglaterra",
+  "verified": true,
+  "confidence": 90,
+  "tv": [],
+  "stream": [
+    "CazéTV"
+  ],
+  "sources": [
+    "User-provided Brazil R16 broadcast list"
+  ],
+  "updatedAt": "2026-07-04T04:30:00Z"
+}

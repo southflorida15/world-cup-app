@@ -1,0 +1,32 @@
+{
+  "86": {
+    "verified": true,
+    "tv": [
+      "Globo",
+      "SporTV"
+    ],
+    "stream": [
+      "CazéTV",
+      "ge TV"
+    ],
+    "sources": [
+      "UOL",
+      "ge"
+    ],
+    "sourceCount": 2,
+    "updatedAt": "2026-07-03T20:00:00Z"
+  },
+  "87": {
+    "verified": true,
+    "tv": [],
+    "stream": [
+      "CazéTV"
+    ],
+    "sources": [
+      "UOL",
+      "ESPN Brasil"
+    ],
+    "sourceCount": 2,
+    "updatedAt": "2026-07-03T22:00:00Z"
+  }
+}

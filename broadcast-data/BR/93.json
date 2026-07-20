@@ -1,0 +1,19 @@
+{
+  "match": "Portugal x Espanha",
+  "verified": true,
+  "confidence": 90,
+  "tv": [
+    "Globo",
+    "SporTV",
+    "SBT"
+  ],
+  "stream": [
+    "ge TV",
+    "CazéTV"
+  ],
+  "sources": [
+    "User-provided Brazil R16 broadcast list"
+  ],
+  "updatedAt": "2026-07-04T04:30:00Z",
+  "notes": "Original list also included NSports; hidden from compact cards by product decision."
+}

@@ -1,0 +1,27 @@
+{
+  "name": "World Cup 2026",
+  "short_name": "WC 2026",
+  "description": "FIFA World Cup 2026 companion app — live scores, predictions, groups & more",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#060e0a",
+  "theme_color": "#4ade80",
+  "categories": ["sports", "entertainment"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "related_applications": []
+}

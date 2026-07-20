@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Environment variables — NEVER commit these
+.env
+.env.local
+.env.*.local
+
+# Vercel
+.vercel/
+
+# Editor / OS
+.DS_Store
+.vscode/
+*.swp
+.vercel
+.env*

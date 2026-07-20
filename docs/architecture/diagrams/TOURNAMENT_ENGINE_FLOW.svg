@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="620" viewBox="0 0 1100 620" role="img" aria-label="Tournament engine flow">
+  <defs><style>.bg{fill:#06100b}.box{fill:#0c1a12;stroke:#4ade80;stroke-width:2;rx:16}.gold{fill:#2b2110;stroke:#fbbf24;stroke-width:2;rx:16}.txt{font-family:Inter,Arial,sans-serif;fill:#d4ead9;font-size:18px;font-weight:700}.small{font-family:Inter,Arial,sans-serif;fill:#9bc9a8;font-size:13px}.arrow{stroke:#7aaa8a;stroke-width:3;fill:none;marker-end:url(#arrow)}</style><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#7aaa8a"/></marker></defs>
+  <rect class="bg" width="1100" height="620"/>
+  <text x="550" y="48" text-anchor="middle" class="txt" font-size="28">Tournament Engine Flow</text>
+  <rect x="80" y="110" width="240" height="82" class="box"/><text x="200" y="144" text-anchor="middle" class="txt">Group Stage</text><text x="200" y="169" text-anchor="middle" class="small">12 groups • 72 matches</text>
+  <rect x="430" y="110" width="240" height="82" class="box"/><text x="550" y="144" text-anchor="middle" class="txt">Qualifiers</text><text x="550" y="169" text-anchor="middle" class="small">Top 2 + best 8 thirds</text>
+  <rect x="780" y="110" width="240" height="82" class="gold"/><text x="900" y="144" text-anchor="middle" class="txt">Annex C</text><text x="900" y="169" text-anchor="middle" class="small">495 mapping scenarios</text>
+  <rect x="80" y="300" width="240" height="82" class="box"/><text x="200" y="334" text-anchor="middle" class="txt">Round of 32</text><text x="200" y="359" text-anchor="middle" class="small">Matches 73-88</text>
+  <rect x="430" y="300" width="240" height="82" class="box"/><text x="550" y="334" text-anchor="middle" class="txt">Winner References</text><text x="550" y="359" text-anchor="middle" class="small">W73, W74, W89...</text>
+  <rect x="780" y="300" width="240" height="82" class="box"/><text x="900" y="334" text-anchor="middle" class="txt">Later Rounds</text><text x="900" y="359" text-anchor="middle" class="small">R16 • QF • SF • Final</text>
+  <rect x="350" y="480" width="400" height="70" class="gold"/><text x="550" y="510" text-anchor="middle" class="txt">Actual Bracket is Source of Truth</text><text x="550" y="535" text-anchor="middle" class="small">Fantasy reads actual progression, not personal score picks</text>
+  <path class="arrow" d="M320 151 L425 151"/><path class="arrow" d="M670 151 L775 151"/><path class="arrow" d="M900 192 C900 250 270 240 210 295"/><path class="arrow" d="M320 341 L425 341"/><path class="arrow" d="M670 341 L775 341"/><path class="arrow" d="M900 382 C850 455 710 480 635 480"/>
+</svg>
