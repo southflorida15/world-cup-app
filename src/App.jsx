@@ -6925,15 +6925,20 @@ function AppContent() {
   }, []);
   const [tab, setTab] = useState("home");
 
-  const [showThankYou, setShowThankYou] = useState(false);
+ const [showThankYou, setShowThankYou] = useState(false);
 
 useEffect(() => {
   async function checkThankYouModal() {
     try {
       const res = await fetch("/version.json?ts=" + Date.now());
+
+      if (!res.ok) {
+        throw new Error("version.json not found");
+      }
+
       const config = await res.json();
 
-      const enabled = config.thankYou?.enabled;
+      const enabled = config.thankYou?.enabled === true;
       const endDate = config.thankYou?.endDate;
 
       const expired = endDate
@@ -6942,7 +6947,14 @@ useEffect(() => {
 
       const seen = localStorage.getItem("wc2026_thank_you_seen") === "1";
 
-      setShowThankYou(Boolean(enabled && !expired && !seen));
+      console.log("THANK YOU CONFIG", {
+        enabled,
+        endDate,
+        expired,
+        seen
+      });
+
+      setShowThankYou(enabled && !expired && !seen);
 
     } catch (e) {
       console.warn("Thank you modal config failed", e);
