@@ -6925,14 +6925,19 @@ function AppContent() {
   }, []);
   const [tab, setTab] = useState("home");
 
+  const THANK_YOU_END_DATE = "2026-09-01";
+
   const [showThankYou, setShowThankYou] = useState(() => {
   try {
-    return localStorage.getItem("wc2026_thank_you_seen") !== "1";
+    const expired = new Date() > new Date(THANK_YOU_END_DATE);
+    const seen = localStorage.getItem("wc2026_thank_you_seen") === "1";
+
+    return !expired && !seen;
   } catch {
     return true;
   }
 });
-
+  
   const { language, setLanguage, t } = useI18n();
   const [languageRenderRev, setLanguageRenderRev] = useState(0);
   const setAppLanguage = useCallback((next) => {
