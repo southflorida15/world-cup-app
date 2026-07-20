@@ -10,7 +10,7 @@ export default function ThankYouModal({ onClose, dark }) {
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(0,0,0,.72)",
+        background: "rgba(0,0,0,.40)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
