@@ -1,47 +1,93 @@
 import React from "react";
 
-export default function ThankYouModal({ onClose }) {
+export default function ThankYouModal({ onClose, dark }) {
+  const bg = dark ? "#000000" : "#ffffff";
+  const text = "#1a3828";
+  const border = "#1a3828";
+
   return (
     <div
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(0,0,0,0.65)",
+        background: "rgba(0,0,0,.72)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        zIndex: 9999,
+        zIndex: 99999,
+        padding: 24
       }}
     >
       <div
         style={{
-          background: "white",
-          borderRadius: "16px",
-          padding: "32px",
-          maxWidth: "500px",
+          width: "100%",
+          maxWidth: 380,
+          background: bg,
+          border: `1px solid ${border}`,
+          borderRadius: 20,
+          padding: 28,
           textAlign: "center",
-          boxShadow: "0 10px 30px rgba(0,0,0,0.3)",
+          boxShadow: "0 12px 40px rgba(0,0,0,.5)"
         }}
       >
-        <h2>🏆 Thank You!</h2>
+        <div
+          style={{
+            fontSize: 48,
+            marginBottom: 12
+          }}
+        >
+          🏆
+        </div>
 
-        <p>
-          Thank you for following the FIFA World Cup 2026 journey with us.
-          We hope you enjoyed the matches, brackets, fantasy, stats, and
-          tournament experience.
-        </p>
+        <div
+          style={{
+            fontSize: 22,
+            fontWeight: 900,
+            color: text,
+            marginBottom: 12
+          }}
+        >
+          Thank You!
+        </div>
+
+        <div
+          style={{
+            fontSize: 14,
+            lineHeight: 1.6,
+            color: text,
+            marginBottom: 24
+          }}
+        >
+          <div>
+            Thank you for following the FIFA World Cup 2026 with us.
+            We hope this app made your tournament experience better!
+          </div>
+
+          <div
+            style={{
+              marginTop: 12,
+              fontWeight: 800
+            }}
+          >
+            See you again in 2030!
+          </div>
+        </div>
 
         <button
           onClick={onClose}
           style={{
-            marginTop: "20px",
-            padding: "12px 24px",
-            borderRadius: "8px",
-            border: "none",
-            cursor: "pointer",
+            width: "100%",
+            padding: "12px 20px",
+            borderRadius: 12,
+            border: `1px solid ${border}`,
+            background: "transparent",
+            color: text,
+            fontSize: 15,
+            fontWeight: 800,
+            cursor: "pointer"
           }}
         >
-          Continue to the App
+          Continue
         </button>
       </div>
     </div>

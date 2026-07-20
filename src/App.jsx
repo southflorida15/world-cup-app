@@ -7485,12 +7485,14 @@ function AppContent() {
 
         <Toast msg={toast} onDone={()=>setToast("")}/>
         {showThankYou && (
+          
           <ThankYouModal
+            dark={dark}
             onClose={() => {
-            localStorage.setItem("wc2026_thank_you_seen", "1");
-            setShowThankYou(false);
-            }}
-          />
+              localStorage.setItem("wc2026_thank_you_seen", "1");
+              setShowThankYou(false);
+           }}
+         />
         )}
 
         <InstallBanner/>
