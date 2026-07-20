@@ -1,10 +1,17 @@
 {
   "appVersion": "3.3",
   "version": "3.3",
-  "refreshVersion": "16",
+  "refreshVersion": "17",
   "releaseName": "Adding 3rd Place Match",
-  "releaseDate": "2026-07-15",
-  "released": "2026-07-15",
+  "releaseDate": "2026-07-19",
+  "released": "2026-07-19",
+
+  "thankYou": {
+    "enabled": true,
+    "endDate": "2026-09-01",
+    "message": "Thank you for following the World Cup 2026 with us!"
+  },
+
   "forceRefresh": true,
   "message": "Updating your World Cup app with the correct 3rd place match. Final brackets are there!"
 }
