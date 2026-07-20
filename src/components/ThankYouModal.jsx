@@ -10,12 +10,12 @@ export default function ThankYouModal({ onClose, dark }) {
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(0,0,0,.40)",
+        background: "rgba(0,0,0,.45)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         zIndex: 99999,
-        padding: 24
+        padding: 24,
       }}
     >
       <div
@@ -27,13 +27,13 @@ export default function ThankYouModal({ onClose, dark }) {
           borderRadius: 20,
           padding: 28,
           textAlign: "center",
-          boxShadow: "0 12px 40px rgba(0,0,0,.5)"
+          boxShadow: "0 12px 40px rgba(0,0,0,.35)",
         }}
       >
         <div
           style={{
             fontSize: 48,
-            marginBottom: 12
+            marginBottom: 12,
           }}
         >
           🏆
@@ -44,7 +44,7 @@ export default function ThankYouModal({ onClose, dark }) {
             fontSize: 22,
             fontWeight: 900,
             color: text,
-            marginBottom: 12
+            marginBottom: 12,
           }}
         >
           Thank You!
@@ -53,24 +53,16 @@ export default function ThankYouModal({ onClose, dark }) {
         <div
           style={{
             fontSize: 14,
-            lineHeight: 1.6,
+            lineHeight: 1.7,
             color: text,
-            marginBottom: 24
+            marginBottom: 24,
           }}
         >
-          <div>
-            Thank you for following the FIFA World Cup 2026 with us.
-            We hope this app made your tournament experience better!
-          </div>
-
-          <div
-            style={{
-              marginTop: 12,
-              fontWeight: 800
-            }}
-          >
-            See you again in 2030!
-          </div>
+          Thank you for following the FIFA World Cup 2026 with us.
+          <br /><br />
+          We hope this app made your tournament experience better!
+          <br /><br />
+          See you again in 2030!
         </div>
 
         <button
@@ -84,7 +76,7 @@ export default function ThankYouModal({ onClose, dark }) {
             color: text,
             fontSize: 15,
             fontWeight: 800,
-            cursor: "pointer"
+            cursor: "pointer",
           }}
         >
           Continue
