@@ -1,16 +1,17 @@
 import React from "react";
 
 export default function ThankYouModal({ onClose, dark }) {
-  const bg = dark ? "#000000" : "#ffffff";
-  const text = "#4ade80";
-  const secondaryText = dark ? "#d4ead9" : "#1a3828";
+  const bg = dark ? "#08120d" : "#ffffff";
+  const titleColor = "#4ade80";
+  const bodyColor = dark ? "#d4ead9" : "#1a3828";
+  const border = "#1a3828";
 
   return (
     <div
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(0,0,0,.45)",
+        background: "rgba(0,0,0,.25)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -43,7 +44,7 @@ export default function ThankYouModal({ onClose, dark }) {
           style={{
             fontSize: 22,
             fontWeight: 900,
-            color: text,
+            color: titleColor,
             marginBottom: 12,
           }}
         >
@@ -54,14 +55,16 @@ export default function ThankYouModal({ onClose, dark }) {
           style={{
             fontSize: 14,
             lineHeight: 1.7,
-            color: text,
+            color: bodyColor,
             marginBottom: 24,
           }}
         >
           Thank you for following the FIFA World Cup 2026 with us.
-          <br /><br />
+          <br />
+          <br />
           We hope this app made your tournament experience better!
-          <br /><br />
+          <br />
+          <br />
           See you again in 2030!
         </div>
 
@@ -73,7 +76,7 @@ export default function ThankYouModal({ onClose, dark }) {
             borderRadius: 12,
             border: `1px solid ${border}`,
             background: "transparent",
-            color: text,
+            color: titleColor,
             fontSize: 15,
             fontWeight: 800,
             cursor: "pointer",
