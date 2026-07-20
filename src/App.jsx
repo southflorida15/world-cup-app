@@ -1,4 +1,4 @@
-// ── VARIOUS IMPORT COMPONENTS ──────────────────────────────────────────────────
+// ── IMPORT COMPONENTS ──────────────────────────────────────────────────
 import FantasyScoringRules from "./components/FantasyScoringRules";
 import MyWorldCupTab from "./tabs/MyWorldCupTab.jsx";
 import SchedTab from "./tabs/SchedTab.jsx";
@@ -6874,152 +6874,7 @@ function analyticsDisabled() {
   }
 }
 
-function ThankYouModal({ onClose }) {
-  return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,.82)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 999999,
-        backdropFilter: "blur(6px)"
-      }}
-    >
-      <div
-        style={{
-          width: "min(92vw,700px)",
-          background: "#111827",
-          color: "#fff",
-          borderRadius: 24,
-          padding: 36,
-          textAlign: "center",
-          border: "1px solid rgba(255,255,255,.08)",
-          boxShadow: "0 25px 60px rgba(0,0,0,.45)"
-        }}
-      >
-        <div style={{ fontSize: 64 }}>🏆</div>
-
-        <h1
-          style={{
-            marginTop: 12,
-            marginBottom: 6,
-            fontSize: 34,
-            fontWeight: 800
-          }}
-        >
-          The Final Whistle
-        </h1>
-
-        <div
-          style={{
-            color: "#93c5fd",
-            fontWeight: 600,
-            marginBottom: 26
-          }}
-        >
-          FIFA World Cup 2026 has officially concluded.
-        </div>
-
-        <p
-          style={{
-            lineHeight: 1.75,
-            fontSize: 17,
-            color: "#e5e7eb",
-            marginBottom: 20
-          }}
-        >
-          Thank you for being part of this journey.
-        </p>
-
-        <p
-          style={{
-            lineHeight: 1.75,
-            fontSize: 17,
-            color: "#d1d5db",
-            marginBottom: 20
-          }}
-        >
-          This project started as an idea to build the World Cup experience I
-          always wanted: live scores, schedules, fantasy brackets, predictions,
-          broadcaster information, statistics, and a beautiful interface that
-          evolved every single day throughout the tournament.
-        </p>
-
-        <p
-          style={{
-            lineHeight: 1.75,
-            fontSize: 17,
-            color: "#d1d5db",
-            marginBottom: 20
-          }}
-        >
-          Many of the features you see today were inspired by feedback from
-          friends, family, and football fans around the world.
-        </p>
-
-        <p
-          style={{
-            lineHeight: 1.75,
-            fontSize: 17,
-            color: "#d1d5db",
-            marginBottom: 34
-          }}
-        >
-          Although the tournament is over, all match results, statistics,
-          brackets and historical information remain available for you to
-          explore until the end of July 2026.
-        </p>
-
-        <div
-          style={{
-            fontSize: 22,
-            fontWeight: 700,
-            marginBottom: 28
-          }}
-        >
-          ⚽ Thank you for following the World Cup with us.
-        </div>
-
-        <button
-          onClick={() => {
-            localStorage.setItem("wc26-thankyou-dismissed", "true");
-            onClose();
-          }}
-          style={{
-            background: "#2563eb",
-            color: "#fff",
-            border: 0,
-            padding: "14px 34px",
-            borderRadius: 12,
-            fontSize: 18,
-            fontWeight: 700,
-            cursor: "pointer"
-          }}
-        >
-          Continue to the App
-        </button>
-
-        <div
-          style={{
-            marginTop: 28,
-            fontSize: 14,
-            color: "#9ca3af"
-          }}
-        >
-          See you for the next World Cup in 2030.
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function AppContent() {
-  const [showThankYouModal, setShowThankYouModal] = useState(() => {
-  return localStorage.getItem("wc26-thankyou-dismissed") !== "true";
- });
   const [releaseUpdate, setReleaseUpdate] = useState(null);
 
   useEffect(() => {
@@ -7729,11 +7584,6 @@ function AppContent() {
     </>
   );
 }
-{showThankYouModal && (
-  <ThankYouModal
-    onClose={() => setShowThankYouModal(false)}
-  />
-)}
 
 export default function App() {
   return (
